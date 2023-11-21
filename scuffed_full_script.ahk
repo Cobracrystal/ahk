@@ -1,7 +1,4 @@
-﻿;// TODO: EDIT THE TRAY MENU TO BE SHORTER / HAVE SUBMENUS
-;// TODO: FIX BUG WITH TRANSPARENT TASKBAR TIMER NOT DETECTING SEAMLESS FULLSCREEN
-;  ____________________________________________________________________________________________________
-;	INITILIZATION	: MODES
+﻿;	INITILIZATION	: MODES
 ;{ ____________________________________________________________________________________________________
 #NoEnv ;// Compatibility for future via empty variable assignment
 #KeyHistory 500
@@ -9,7 +6,6 @@
 SendMode Input ; // Faster
 SetTitleMatchMode, 3 ;// Must Match Exact Title
 CoordMode,Mouse,Window ;// Coordinates for Click are relativ to upper left corner of active Window
-; CoordMode,ToolTip,Window ;// that's the default anyway dumbass
 Thread, NoTimers	;// Any hotkey or menu has priority over timers. So that the custom tray menu doesn't collide with taskbarTransparencyTimer
 #MaxHotkeysPerInterval 5000
 ;// this would change the standard editing program for ahk to n++, but i changed the tray menu anyway so it works.
@@ -55,8 +51,6 @@ taskBarTimer := Func("updateTaskbarFunction")
 ;// transparent taskbar initilization
 updateTaskbarFunction(0, 1)
 SetTimer, %taskBarTimer%, 200
-;// better icon, but it sucks so i don't care
-; Menu, Tray, Icon, % A_WinDir "\system32\netshell.dll" , 86
 ;// replace the tray menu with my own
 createBetterTrayMenu()
 ;// Initialize LaTeX Hotstrings
