@@ -137,6 +137,7 @@ createHotkeyManagerGui(hotkeyManagerGuiPosX, hotkeyManagerGuiPosY) {
 		LV_ModifyCol()
 		LV_ModifyCol(1,"38 Integer")
 		LV_ModifyCol(2,60)
+		LV_ModifyCol(3,45)
 		LV_ModifyCol(5,155)
 		createHotkeyManagerHotstringEditor()
 		Gui, HotkeyManager:Show, x%hotkeyManagerGuiPosX%y%hotkeyManagerGuiPosY% Autosize, HotkeyList
