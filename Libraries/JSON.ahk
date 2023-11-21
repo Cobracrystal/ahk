@@ -227,7 +227,7 @@ class JSON
 	 */
 	class Dump extends JSON.Functor
 	{
-		Call(self, value, replacer:="", space:="")
+		Call(self, value, replacer:="", space:="", escape_unicode:=true)
 		{
 			this.rep := IsObject(replacer) ? replacer : ""
 
@@ -243,10 +243,10 @@ class JSON
 				this.indent := "`n"
 			}
 
-			return this.Str({"": value}, "")
+			return this.Str({"": value}, "", escape_unicode)
 		}
 
-		Str(holder, key)
+		Str(holder, key, escape_unicode:=true)
 		{
 			value := holder[key]
 
@@ -279,18 +279,18 @@ class JSON
 							if (this.gap)
 								str .= this.indent
 							
-							v := this.Str(value, A_Index)
+							v := this.Str(value, A_Index, escape_unicode)
 							str .= (v != "") ? v . "," : "null,"
 						}
 					} else {
 						colon := this.gap ? ": " : ":"
 						for k in value {
-							v := this.Str(value, k)
+							v := this.Str(value, k, escape_unicode)
 							if (v != "") {
 								if (this.gap)
 									str .= this.indent
 
-								str .= this.Quote(k) . colon . v . ","
+								str .= this.Quote(k, escape_unicode) . colon . v . ","
 							}
 						}
 					}
@@ -308,10 +308,10 @@ class JSON
 				}
 			
 			} else ; is_number ? value : "value"
-				return ObjGetCapacity([value], 1)=="" ? value : this.Quote(value)
+				return ObjGetCapacity([value], 1)=="" ? value : this.Quote(value, escape_unicode)
 		}
 
-		Quote(string)
+		Quote(string, escape_unicode:=true)
 		{
 			static quot := Chr(34), bashq := "\" . quot
 
@@ -324,10 +324,12 @@ class JSON
 				, string := StrReplace(string, "`n",  "\n")
 				, string := StrReplace(string, "`r",  "\r")
 				, string := StrReplace(string, "`t",  "\t")
-
+				
 				static rx_escapable := A_AhkVersion<"2" ? "O)[^\x20-\x7e]" : "[^\x20-\x7e]"
-				while RegExMatch(string, rx_escapable, m)
-					string := StrReplace(string, m.Value, Format("\u{1:04x}", Ord(m.Value)))
+				if (escape_unicode) {
+					while RegExMatch(string, rx_escapable, m)
+						string := StrReplace(string, m.Value, Format("\u{1:04x}", Ord(m.Value)))
+				}
 			}
 
 			return quot . string . quot

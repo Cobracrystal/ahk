@@ -1,5 +1,5 @@
-﻿ReminderManagerGuiPosX := 564
-ReminderManagerGuiPosY := 300
+﻿; OPTION TO MAKE REMINDER MESSAGE A TOOLTIP.
+; have text already inside the edit fields of the GUI. The method of both text and edit control is not a problem, its precisely what we want since blank content -> current date/hour whatever. Can't be hardcoded then tho.
 ; todo: manage reminders
 ; todo b: save reminders over multiple restarts in ini file.
 ; then just load those up on starting -> no need to call 1337 reminder everytime. tada
@@ -13,9 +13,11 @@ ReminderManagerGuiPosY := 300
 ; WHEN THE SCRIPT STARTS IT READS THAT TIME, IT CALCULATES THE TIMESPAN
 ; NOW IF A REMINDER IS SET FOR A DATE THAT LIES IN THAT TIMESPAN AKA IS SET IN THE PAST
 ; THEN IT TRIGGERS IMMEDIATELY
+; ONLY FOR [LOADED] REMINDERS THO, WOULD BE BAD ON THE 4 AM OR 1337 REMINDER.
+
+; REMOVE ALL GLOBAL VARIABLES, GUICONTROLGET CAN BE USED WITH HANDLES TO RETRIEVE CONTENT OF CONTROLS. USE this.settings TO STORE HANDLES, WORKS PERFECTLY.
 
 
-; BINDING GUI CLOSE FUNCTIONS INSIDE A CLASS !!!! https://www.autohotkey.com/boards/viewtopic.php?t=64337
 /*
 toggleTimer(timerFunc, delay := 1000) {
 	static timerContainer := []
@@ -31,37 +33,51 @@ toggleTimer(timerFunc, delay := 1000) {
 
 */
 
-/*
-asdasd := new ReminderManager()
-asdasd.createReminder()
-asdasd.deleteReminder()
-asdasd.createGUI()
-asdasd.closeGUI()
-*/
-
 class ReminderManager {
+	static controls
+	static settings
 	static timerList
-	static flagDebug
-	static guiPosX
-	static guiPosY
 	static discordBot
 	
-
-	__New(flagDebug := 0, flagLoad := 0, discordToken := "", guiPosX := 350, guiPosY := 350) {
+	ReminderManagerGUI(mode := "O") {
+		mode := SubStr(mode, 1, 1)
+		if (WinExist("ahk_id " . this.controls.guiMain.handle)) {
+			if (mode == "O") ; if gui exists and mode = open, activate window
+				WinActivate, % "ahk_id " . this.controls.guiMain.handle
+			else {	; if gui exists and mode = close/toggle, close
+				this.controls.guiMain.coords := windowGetCoordinates(this.controls.guiMain.handle)
+				Gui, ReminderManager:Destroy
+				this.controls.guiMain.handle  := ""
+			}
+		}
+		else if (mode != "C") ; if gui doesn't exist and mode = open/toggle, create
+			this.controls.guiMain.handle := this.guiCreate() 
+	}
+	
+	initialize(flagDebug := 0, flagLoad := 0, discordToken := "", guiPosX := 565, guiPosY := 300) {
+		; Tray Menu
+		tObj := this.ReminderManagerGUI.Bind(this)
+		if (!this.settings.initialized) {
+			Menu, GUIS, Add, Open Reminder Handler, % tObj
+			Menu, Tray, Add, GUIs, :GUIS
+			Menu, Tray, NoStandard
+			Menu, Tray, Standard
+		}
+		; init class variables
+		; this format is necessary to establish objects.
+		this.controls := {"guiMain": {"text": "Reminder Manager", "coords": [guiPosX, guiPosY]}}
+		this.settings := {"initialized": 1, "flagDebug": flagDebug, "flagLoad": flagLoad}
 		this.timerList := {}
-		this.guiPosX := guiPosX
-		this.guiPosY := guiPosY
-		this.flagDebug := flagDebug
-		if (flagLoad)
-			; load reminders from file in appdata or smth.
-			msgbox not yet implemented tm
-		if (discordToken != "")
+		if (discordToken != 0)
 			this.discordBot := new DiscordClient(discordToken)
-		return this
+		if (flagLoad) 
+			; load reminders from file in appdata or smth.
+			msgbox not implemented lol
 	}
 		
-	setSingleTimerIn(days := 0,hours := 0,minutes := 0,seconds := 0, function := "", message := "", debug:=false) {
-		msgbox % "func " . function "`n" . "message " . message "`n" . "days " . days "`n" . "h " . hours "`n" . "mins " . minutes "`n" . "secs " . seconds
+	setSingleTimerIn(days := 0, hours := 0, minutes := 0, seconds := 0, function := "", message := "") {
+		if (this.settings.flagDebug)
+			msgbox % "func " . function "`n" . "message " . message "`n" . "days " . days "`n" . "h " . hours "`n" . "mins " . minutes "`n" . "secs " . seconds
 		if (days < 0 || hours < 0 || minutes < 0 || seconds < 0)
 			return 0
 		tC := A_Now
@@ -69,10 +85,10 @@ class ReminderManager {
 		EnvAdd, tC, hours, Hours
 		EnvAdd, tC, minutes, Minutes
 		EnvAdd, tC, seconds, Seconds
-		return this.setSpecificTimer(function,message,0,-1,SubStr(tC,9,2),SubStr(tC,11,2),SubStr(tC,13,2),SubStr(tC,7,2),SubStr(tC,5,2),debug)
+		return this.setSpecificTimer(function,message,,,SubStr(tC,9,2),SubStr(tC,11,2),SubStr(tC,13,2),SubStr(tC,7,2),SubStr(tC,5,2))
 	}
 	
-	setSpecificTimer(function := "", message := "", multiReminder := 0, period := -1, hours := -1, minutes := -1, seconds := -1, day := -1, month := -1, debug := false, target := "") {
+	setSpecificTimer(function := "", message := "", multiReminder := 0, period := -1, hours := -1, minutes := -1, seconds := -1, day := -1, month := -1, target := "") {
 		flagWeekly := 0
 		largestSetUnit := "Minute"
 		if (month == -1) {
@@ -108,11 +124,10 @@ class ReminderManager {
 		seconds := (seconds == -1 ? 0 : seconds)
 		
 		tStamp := this.validateTime(month, day, hours, minutes, seconds)
-		if (debug)
-			msgbox % tStamp
 		if !(tStamp)
 			throw Exception("Timestamp is invalid")
 		timeDiff := this.compareTime(tStamp)
+		msgboxStr := Format("First Guess:`nTimestamp: {} (Reminder on {:02}.{:02}, {:02}:{:02}:{:02})`nTime Difference: {}", tStamp, day, month, hours, minutes, seconds, timeDiff) . ( timeDiff < 0 ? " (invalid)" : Format(" (Reminder in {:02}:{:02}:{:02})", timeDiff//3600, mod(timeDiff,3600)//60, mod(timeDiff,60)) )
 		if (timeDiff < 0) {
 			switch largestSetUnit {
 				case "Month":
@@ -127,17 +142,14 @@ class ReminderManager {
 				case "Minute":
 					EnvAdd, tStamp, 1, Hours
 			}
+			timeDiff := this.compareTime(tStamp)
+			msgBoxStr .= Format("`nSecond Guess:`nTimestamp: {} (Reminder on {})`nTime Difference: {} (Reminder in {:02}:{:02}:{:02})", tStamp, formatTimeFunc(tStamp,"dd.MM, HH:mm:ss") , timeDiff, timeDiff//3600, mod(timeDiff,3600)//60, mod(timeDiff,60))
 		}
-		if (debug)
-			msgbox % timeDiff . " = " . Format("{:02}", timeDiff//3600) . ":" . Format("{:02}", mod(timeDiff,3600)//60) . ":" . Format("{:02}", mod(timeDiff,60))
-		timeDiff := this.compareTime(tStamp)
-		if (debug)
-			msgbox % timeDiff . " = " . Format("{:02}", timeDiff//3600) . ":" . Format("{:02}", mod(timeDiff,3600)//60) . ":" . Format("{:02}", mod(timeDiff,60))
 		if (timeDiff == "")
 			throw Exception("Time comparison was blank")
 		nextTimeMS := this.getTimeStampinMS(timeDiff)
-		if (debug)
-			msgbox % nextTimeMS
+		if (this.settings.flagDebug)
+			msgbox % msgBoxStr . "`nMilliseconds until Reminder: " . nextTimeMS
 		if (function != "") {
 			if (function == "discordReminder" && target != "")
 				reminderFunc := this.discordReminder.Bind(this, message, target)
@@ -209,8 +221,8 @@ class ReminderManager {
 	}
 	
 	defaultReminder(text) {
-		FormatTime, temp, L1033, dddd, dd.MM.yyyy, HH:mm:ss ; L1033 -> en-US for day name.
-		message := "It is " . temp . "`nYou set a reminder for this point in time.`nReminder Message: "
+	;	L1033 -> en-US for day name.
+		message := "It is " . FormatTimeFunc("L1033","dddd, dd.MM.yyyy, HH:mm:ss") . "`nYou set a reminder for this point in time.`nReminder Message: "
 		if (text == "")
 			message .= "None (No reminder message set)"
 		else
@@ -243,57 +255,61 @@ class ReminderManager {
 		return this.timerList
 	}
 
-	guiCreate(ReminderManagerGuiPosX, ReminderManagerGuiPosY) {
-		Gui, ReminderManager:New, +Border +HwndReminderManagerGuiHwnd ; +AlwaysOnTop
+	guiCreate() {
+		Gui, ReminderManager:New, % "+Border +HwndguiHandle +Label" . this.__Class . ".__on"
 		Gui, ReminderManager:Submit, NoHide
 		Gui, ReminderManager:Add, GroupBox, Section w425 h90, Add Reminder in
-		Gui, Font, s9 Norm
-		Gui, ReminderManager:Add, Text, Center ys+22 xs+10, Remind me in 
-		Gui, ReminderManager:Add, Edit, vNewReminderTimeDays ys+20 x+5 r1 w30
-		Gui, ReminderManager:Add, Text, Center ys+22 x+5, d
-		Gui, ReminderManager:Add, Edit, vNewReminderTimeHours ys+20 x+5 r1 w30
-		Gui, ReminderManager:Add, Text, Center ys+22 x+5, h
-		Gui, ReminderManager:Add, Edit, vNewReminderTimeMinutes ys+20 x+5 r1 w30
-		Gui, ReminderManager:Add, Text, Center ys+22 x+5, m 
-		if (this.flagDebug) {
-			Gui, ReminderManager:Add, Edit, vNewReminderTimeSeconds ys+20 x+5 r1 w30
-			Gui, ReminderManager:Add, Text, Center ys+22 x+5, s
-		}
-		Gui, ReminderManager:Add, Text, Center ys+22 x+5, with the following message:
-		Gui, ReminderManager:Add, Edit, vNewReminderMessage ys+47 xs+10 r2 w375
-		Gui, ReminderManager:Add, Button, ys+5 h60 w80 Default HwndReminderButton, Add Reminder
-		fn := ReminderManager.createReminderFromGUI.bind(this, 1)
-		GuiControl +g, %ReminderButton%, %fn%
+			Gui, Font, s9 Norm
+			Gui, ReminderManager:Add, Text, Center ys+22 xs+10, Remind me in 
+			Gui, ReminderManager:Add, Edit, vNewReminderTimeDays ys+20 x+5 r1 w30
+			Gui, ReminderManager:Add, Text, Center ys+22 x+5, d
+			Gui, ReminderManager:Add, Edit, vNewReminderTimeHours ys+20 x+5 r1 w30
+			Gui, ReminderManager:Add, Text, Center ys+22 x+5, h
+			Gui, ReminderManager:Add, Edit, vNewReminderTimeMinutes ys+20 x+5 r1 w30
+			Gui, ReminderManager:Add, Text, Center ys+22 x+5, m 
+			if (this.settings.flagDebug) {
+				Gui, ReminderManager:Add, Edit, vNewReminderTimeSeconds ys+20 x+5 r1 w30
+				Gui, ReminderManager:Add, Text, Center ys+22 x+5, s
+			}
+			Gui, ReminderManager:Add, Text, Center ys+22 x+5, with the following message:
+			Gui, ReminderManager:Add, Edit, vNewReminderMessage ys+47 xs+10 r2 w375
+		Gui, ReminderManager:Add, Button, ys+5 h60 w80 Default HwndcHandle, Add Reminder
+			gHandle := this.createReminderFromGUI.bind(this, 1)
+			GuiControl +g, % cHandle, % gHandle
 		
 		Gui, ReminderManager:Add, GroupBox, xs Section w425 h90, Add Reminder on
-		Gui, Font, s9 Norm
-		Gui, ReminderManager:Add, Text, Center ys+22 xs+10, Remind me on
-		Gui, ReminderManager:Add, Edit, vNewReminderDateDay ys+20 x+5 r1 w30
-		Gui, ReminderManager:Add, Text, Center ys+22 x+5, .
-		Gui, ReminderManager:Add, Edit, vNewReminderDateMonth ys+20 x+5 r1 w30
-		Gui, ReminderManager:Add, Text, Center ys+22 x+5, `, at
-		Gui, ReminderManager:Add, Edit, vNewReminderDateHour ys+20 x+5 r1 w30
-		Gui, ReminderManager:Add, Text, Center ys+22 x+5, :
-		Gui, ReminderManager:Add, Edit, vNewReminderDateMinute ys+20 x+5 r1 w30
-		if (this.flagDebug) {
+			Gui, Font, s9 Norm
+			Gui, ReminderManager:Add, Text, Center ys+22 xs+10, Remind me on
+			Gui, ReminderManager:Add, Edit, vNewReminderDateDay ys+20 x+5 r1 w30
+			Gui, ReminderManager:Add, Text, Center ys+22 x+5, .
+			Gui, ReminderManager:Add, Edit, vNewReminderDateMonth ys+20 x+5 r1 w30
+			Gui, ReminderManager:Add, Text, Center ys+22 x+5, `, at
+			Gui, ReminderManager:Add, Edit, vNewReminderDateHour ys+20 x+5 r1 w30
 			Gui, ReminderManager:Add, Text, Center ys+22 x+5, :
-			Gui, ReminderManager:Add, Edit, vNewReminderDateSecond ys+20 x+5 r1 w30
-		}
-		Gui, ReminderManager:Add, Text, Center ys+22 x+5, with the following message:
-		Gui, ReminderManager:Add, Edit, vNewReminderMessageOn ys+47 xs+10 r2 w375
-		Gui, ReminderManager:Add, Button, ys+5 h60 w80 Default HwndReminderButton, Add Reminder
-		fn := ReminderManager.createReminderFromGUI.bind(this, 2)
-		GuiControl +g, %ReminderButton%, %fn%
+			Gui, ReminderManager:Add, Edit, vNewReminderDateMinute ys+20 x+5 r1 w30
+			if (this.settings.flagDebug) {
+				Gui, ReminderManager:Add, Text, Center ys+22 x+5, :
+				Gui, ReminderManager:Add, Edit, vNewReminderDateSecond ys+20 x+5 r1 w30
+			}
+			Gui, ReminderManager:Add, Text, Center ys+22 x+5, with the following message:
+			Gui, ReminderManager:Add, Edit, vNewReminderMessageOn ys+47 xs+10 r2 w375
+		Gui, ReminderManager:Add, Button, ys+5 h60 w80 Default HwndcHandle, Add Reminder
+			gHandle := this.createReminderFromGUI.bind(this, 2)
+			GuiControl +g, % cHandle, % gHandle
 	; list of reminders to manage: TODO
 	;	Gui, ReminderManager:Add, ListView
-		Gui, ReminderManager:Show, x%ReminderManagerGuiPosX%y%ReminderManagerGuiPosY% Autosize, WindowList
-		return ReminderManagerGuiHwnd
+		Gui, ReminderManager:Show, % Format("x{1}y{2} Autosize", this.controls.guiMain.coords[1], this.controls.guiMain.coords[2]), % this.controls.guiMain.text
+		return guiHandle
 	}
 	
-	guiClose(hwnd) {
-		ReminderManagerGuiClose(hwnd)
+	__onEscape() {
+		ReminderManager.ReminderManagerGUI("Close")
 	}
 	
+	__onClose() {
+		ReminderManager.ReminderManagerGUI("Close")
+	}
+		
 	createReminderFromGUI(button) {
 		global NewReminderTimeDays
 		global NewReminderTimeHours
@@ -307,55 +323,55 @@ class ReminderManager {
 		global NewReminderMessage
 		global NewReminderMessageOn
 		Gui, ReminderManager:Submit, NoHide
+		if !(NewReminderMessage ) {
+			MsgBox, 1, Confirm, % "You have not set a reminder message. Proceed?"
+			IfMsgBox, Cancel
+				return
+		} ; ??????????????????????????????????????????????? WHAT ABOUT THE OTHER REMINDER MESSAGE
 		if (button == 1) {
-			if !(NewReminderMessage) {
-				MsgBox, 1, Confirm, % "You have not set a reminder message. Proceed?"
-				IfMsgBox, Cancel
-					return
-			}
 			NewReminderTimeDays := (NewReminderTimeDays ? NewReminderTimeDays : 0)
 			NewReminderTimeHours := (NewReminderTimeHours ? NewReminderTimeHours : 0)
 			NewReminderTimeMinutes := (NewReminderTimeMinutes ? NewReminderTimeMinutes : 0)
-			f := this.setSingleTimerIn(NewReminderTimeDays, NewReminderTimeHours, NewReminderTimeMinutes, 0, ,NewReminderMessage)
-			if (!f)
+			NewReminderTimeSeconds := (NewReminderTimeSeconds ? NewReminderTimeSeconds : 0)
+			f := this.setSingleTimerIn(NewReminderTimeDays, NewReminderTimeHours, NewReminderTimeMinutes, NewReminderTimeSeconds, ,NewReminderMessage)
+			if (!f) {
 				msgbox % "Problem setting the Reminder. Check if entered time is valid."
+				return 0
+			}
 			else {
-				msgbox % "Success"
+				timedTooltip("Success!", 1000)
 				GuiControl, ReminderManager:, NewReminderTimeDays, % ""
 				GuiControl, ReminderManager:, NewReminderTimeHours, % ""
 				GuiControl, ReminderManager:, NewReminderTimeMinutes, % ""
+				GuiControl, ReminderManager:, NewReminderTimeSeconds, % ""
 				GuiControl, ReminderManager:, NewReminderMessage, % ""		
 			}
 		}
-	}	
-
-}
-
-
-ReminderManagerGuiEscape(GuiHwnd) {
-	ReminderManagerGuiClose(GuiHwnd)
-}
-
-ReminderManagerGuiClose(GuiHwnd) {
-	WinGet, minimize_status, MinMax, ahk_id %GuiHwnd%
-	if (minimize_status != -1) 
-		WinGetPos, ReminderManagerGuiPosX, ReminderManagerGuiPosY,,, ahk_id %GuiHwnd%
-	else {
-		VarSetCapacity(pos, 44, 0)
-		NumPut(44, pos)
-		DllCall("GetWindowPlacement", "uint", GuiHwnd, "uint", &pos)
-		ReminderManagerGuiPosX := NumGet(pos, 28, "int")
-		ReminderManagerGuiPosY := NumGet(pos, 32, "int")
+		else if (button == 2) {
+			NewReminderDateMonth := (NewReminderDateMonth ? NewReminderDateMonth : -1)
+			NewReminderDateDay := (NewReminderDateDay ? NewReminderDateDay : -1)
+			NewReminderDateHour := (NewReminderDateHour ? NewReminderDateHour : -1)
+			NewReminderDateMinute := (NewReminderDateMinute ? NewReminderDateMinute : -1)
+			NewReminderDateSecond := (NewReminderDateSecond ? NewReminderDateSecond : -1)
+			f := this.setSpecificTimer(,NewReminderMessageOn,,, NewReminderDateHour, NewReminderDateMinute, NewReminderDateSecond, NewReminderDateDay, NewReminderDateMonth)
+			if (!f) {
+				msgbox % "Problem setting the Reminder. Check if entered time is valid."
+				return 0
+			}
+			else {
+				timedTooltip("Success!", 1000)
+				GuiControl, ReminderManager:, NewReminderDateMonth, % ""
+				GuiControl, ReminderManager:, NewReminderDateDay, % ""
+				GuiControl, ReminderManager:, NewReminderDateHour, % ""
+				GuiControl, ReminderManager:, NewReminderDateMinute, % ""
+				GuiControl, ReminderManager:, NewReminderDateSecond, % ""
+				GuiControl, ReminderManager:, NewReminderMessageOn, % ""		
+			}
+		}
+		return 1
 	}
-	Gui, ReminderManager:Destroy
-	return 0
+
 }
-
-
-
-
-
-
 
 1337reminder(message) {
 	; SetTimer, 1337reminder, % (24*3600)*1000

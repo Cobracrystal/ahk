@@ -1,10 +1,11 @@
 ﻿#Include %A_ScriptDir%\Libraries\BasicUtilities.ahk
 
+; NOTE: DOES NOT ACKNOWLEDGE SUMMER/WINTER TIME. INTERPRETS LOCALE TIME, IF AFFECTED BY SUMMER/WINTER TIME, AS ±1 TIMEZONE.
 textTimestampConverter(hotkey) {
 	text := fastCopy()
 	text := Trim(text)
 	if (text = "") {
-		validatedTimestamp := A_NowUTC
+		validatedTimestamp := A_Now
 		unixTimestamp := UnixTimeStamp(A_NowUTC)
 		flag := 25
 	}
@@ -12,8 +13,8 @@ textTimestampConverter(hotkey) {
 		arr := parseToTimeFormat(text)
 		timestamp := arr[1]
 		flag := arr[2]
-		FormatTime, validatedTimestamp, %timestamp%, yyyyMMddHHmmss
-		unixTimestamp := UnixTimeStamp(validatedTimestamp)
+		FormatTime, validatedTimestamp, % timestamp, yyyyMMddHHmmss
+		unixTimestamp := UnixTimeStamp(validatedTimestamp, true)
 		if (unixTimestamp = -1)
 			flag := 6
 	}
@@ -35,44 +36,43 @@ createTimeStampMenu(flag, unixTimestamp, validatedTimestamp) {
 		Menu, timestampMenu, Disable, Nice
 	}
 	timeStampHandlerVar := Func("timestampHandler").Bind(unixTimestamp, validatedTimestamp)
-	tMode := A_TitleMatchMode
 	SetTitleMatchMode, RegEx
 ;// Flags: 1 = no year, 2 = no date, 3 = no seconds, 4 = only hours, 5 = no time, 6 = invalid date
-	if (flag = 6) {
+	if (flag == 6) {
 		Menu, timestampMenu, Add, Invalid Date, doNothing
 		Menu, timestampMenu, Disable, Invalid Date
 	}
-	else if (WinActive("Discord ahk_exe Discord.*\.exe")) {
-		if (flag = 23)
-			Menu, timestampMenu, Add, Paste short time (t) (%t%), % timeStampHandlerVar
-		else {
-			if (flag = 5 || flag = 15 || flag = 25)
-				Menu, timestampMenu, Add, Paste short date (d) (%d%), % timeStampHandlerVar
-			if (flag = 5 || flag = 15)
-				Menu, timestampMenu, Add, Paste long date (D) (%bigD%), % timeStampHandlerVar
-			if (flag = 2 || flag = 25)
-				Menu, timestampMenu, Add, Paste long time (T) (%bigT%), % timeStampHandlerVar
-			if (flag = 1 || flag = 4 || flag = 3 || flag = 13 || flag = 14 || flag = 25 || flag = "") {
-				Menu, timestampMenu, Add, Paste full date (f) (%f%), % timeStampHandlerVar
-				Menu, timestampMenu, Add, Paste long full date (F) (%bigF%), % timeStampHandlerVar
+	else {
+		if (WinActive("Discord ahk_exe Discord.*\.exe")) {
+			if (flag = 23)
+				Menu, timestampMenu, Add, Paste short time (t) (%t%), % timeStampHandlerVar
+			else {
+				if (flag = 5 || flag = 15 || flag = 25)
+					Menu, timestampMenu, Add, Paste short date (d) (%d%), % timeStampHandlerVar
+				if (flag = 5 || flag = 15)
+					Menu, timestampMenu, Add, Paste long date (D) (%bigD%), % timeStampHandlerVar
+				if (flag = 2 || flag = 25)
+					Menu, timestampMenu, Add, Paste long time (T) (%bigT%), % timeStampHandlerVar
+				if (flag = 1 || flag = 4 || flag = 3 || flag = 13 || flag = 14 || flag = 25 || flag = "") {
+					Menu, timestampMenu, Add, Paste full date (f) (%f%), % timeStampHandlerVar
+					Menu, timestampMenu, Add, Paste long full date (F) (%bigF%), % timeStampHandlerVar
+				}
 			}
+			if (flag == 25)
+				Menu, timestampMenu, Add, Paste formatted current date (long) (%l%), % timeStampHandlerVar
+			else
+				Menu, timestampMenu, Add, Paste 'related' format (R) (<t:%unixTimestamp%:R>), % timeStampHandlerVar
 		}
-		if (flag != 25)
-			Menu, timestampMenu, Add, Paste 'related' format (R) (<t:%unixTimestamp%:R>), % timeStampHandlerVar
-		else
-			Menu, timestampMenu, Add, Paste formatted current date (long) (%l%), % timeStampHandlerVar
+		else if (flag == 25) {
+			FormatTime, d, %A_Now%, dd/MM/yyyy
+			FormatTime, bigT, %A_Now%, HH:mm:ss
+			Menu, timestampMenu, Add, Paste numeric Timestamp (UNIX) (%unixTimestamp%), % timeStampHandlerVar
+			Menu, timestampMenu, Add, Paste current date (short) (%d%), % timeStampHandlerVar
+			Menu, timestampMenu, Add, Paste current date (long) (%l%), % timeStampHandlerVar
+			Menu, timestampMenu, Add, Paste current time (%bigT%), % timeStampHandlerVar
+		}
+		Menu, timestampMenu, Add, Paste numeric Timestamp (UNIX) (%unixTimestamp%), % timeStampHandlerVar	
 	}
-	else if (flag != 6 && flag != 25)
-			Menu, timestampMenu, Add, Paste Timestamp (UNIX) (%unixTimestamp%), % timeStampHandlerVar
-	else if (flag = 25) {
-		FormatTime, d, %A_Now%, dd/MM/yyyy
-		FormatTime, bigT, %A_Now%, HH:mm:ss
-		Menu, timestampMenu, Add, Paste current Timestamp (UNIX) (%unixTimestamp%), % timeStampHandlerVar
-		Menu, timestampMenu, Add, Paste current date (short) (%d%), % timeStampHandlerVar
-		Menu, timestampMenu, Add, Paste current date (long) (%l%), % timeStampHandlerVar
-		Menu, timestampMenu, Add, Paste current time (%bigT%), % timeStampHandlerVar
-	}
-	SetTitleMatchMode, %tMode%
 	Menu, timestampMenu, Show
 	Menu, timestampMenu, DeleteAll
 }
@@ -87,20 +87,21 @@ timestampHandler(unixTimestamp, validatedTimestamp, menuLabel) {
 	FormatTime, bigT, 	%validatedTimestamp%, HH:mm:ss
 	FormatTime, f, 		%validatedTimestamp%, MMMM dd, yyyy HH:mm
 	FormatTime, bigF, 	%validatedTimestamp%, dddd, MMMM dd, yyyy HH:mm
-	if (format != "U" && format != "s" && format != "l" && !RegexMatch(format, "\d"))
-		date := "<t:" . UnixTimeStamp . ":" . format . ">"
-	else switch format {
+	switch format {
 		case "U":
-			date := unixTimestamp
+			str := unixTimestamp
 		case "s":
-			FormatTime, date, %validatedTimestamp%, dd.MM.yyyy
+			FormatTime, str, %validatedTimestamp%, dd.MM.yyyy
 		case "l":
-			FormatTime, date, %validatedTimestamp%, dd.MM.yyyy, HH:mm
+			FormatTime, str, %validatedTimestamp%, dd.MM.yyyy, HH:mm
 		default:
-			FormatTime, date, %validatedTimestamp%, HH:mm:ss
+			if (RegexMatch(format, "\d"))
+				FormatTime, str, %validatedTimestamp%, HH:mm:ss
+			else
+				str := "<t:" . UnixTimeStamp . ":" . format . ">"
 	}
-	Sleep, 100
-	fastPrint(date)
+	Sleep, 50
+	fastPrint(str)
 }
 
 parseToTimeFormat(text) {
@@ -141,8 +142,8 @@ parseToTimeFormat(text) {
 		}
 		else {
 			if (flag = 2) {
+				hhmiss := A_Hour . A_Min . A_Sec
 				flag .= 5
-				return A_NowUTC
 			}
 			else {
 				posTime := RegexMatch(text, "[0-9]{2}")
@@ -161,65 +162,22 @@ parseToTimeFormat(text) {
 	return [yyyymmdd . hhmiss, flag]
 }
 
-UnixTimeStamp(time_orig)	{	;// stolen from https://autohotkey.com/board/topic/2486-code-to-convert-fromto-unix-timestamp/
-	StringLen, date_len, time_orig
-	if (date_len != 14) || (time_orig is not integer)
-	  return -1
-
-	StringLeft, now_year, time_orig, 4
-	StringMid, now_month, time_orig, 5, 2
-	StringMid, now_day, time_orig, 7, 2
-	StringMid, now_hour, time_orig, 9, 2
-	StringMid, now_min, time_orig, 11, 2
-	StringRight, now_sec, time_orig, 2
-
-	year_sec := 31536000*(now_year - 1970)
-
-	leap_days := (now_year - 1972)/4 + 1
-	Transform, leap_days, Floor, %leap_days%
-
-	this_leap := now_year/4
-	Transform, this_leap_round, Floor, %this_leap%
-	If (this_leap = this_leap_round)
-	  If (now_month <= 2)
-		leap_days-- 
-	leap_sec := leap_days*86400
-	switch now_month {
-		case "01":
-			month_sec = 0
-		case "02":
-			month_sec = 2678400
-		case "03":
-			month_sec = 5097600
-		case "04":
-			month_sec = 7776000
-		case "05":
-			month_sec = 10368000
-		case "06":
-			month_sec = 13046400
-		case "07":
-			month_sec = 15638400
-		case "08":
-			month_sec = 18316800
-		case "09":
-			month_sec = 20995200
-		case "10":
-			month_sec = 23587200
-		case "11":
-			month_sec = 26265600
-		case "12":
-			month_sec = 28857600
-		default:
-			return -1
-	}
-	
-	day_sec := (now_day - 1)*86400
-
-	hour_sec := now_hour*3600 
-
-	min_sec := now_min*60
-
-	date_sec := year_sec + month_sec + day_sec + leap_sec + hour_sec + min_sec + now_sec
-
-	return date_sec
+UnixTimeStamp(timeYMDHMS, use_locale := false)	{
+	if (StrLen(timeYMDHMS) != 14) || (timeYMDHMS is not integer)
+		throw Exception("Invalid YYYYMMDDHHMISS Timestamp given to UnixTimestamp(): " . timeYMDHMS)
+	yyyy := SubStr(timeYMDHMS, 1, 4)
+	mm := SubStr(timeYMDHMS, 5, 2)
+	dd := SubStr(timeYMDHMS, 7, 2)
+	hh := SubStr(timeYMDHMS, 9, 2)
+	mi := SubStr(timeYMDHMS, 11, 2)
+	ss := SubStr(timeYMDHMS, 13, 2)
+	unix_month := ((mm > 2 ? 28 : 0) + floor(mm>8?(mm+1)/2:mm/2)*31 + floor(mm>8 ? (mm-4)/2 : (mm>3 ? (mm-3)/2 : 0))*30)*86400
+	unix_leap := Floor((yyyy - 1968)/4) * 86400
+	if (mod(yyyy,4) == 0 && mm <= 2)
+		unix_leap -= 86400
+	unix_full := 31536000*(yyyy - 1970) + unix_month + (dd - 1)*86400 + unix_leap + hh*3600 + mi*60 + ss
+	if (use_locale)
+		unix_full += UnixTimeStamp(A_NowUTC) - UnixTimeStamp(A_Now)
+	return unix_full
 }
+

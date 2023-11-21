@@ -3,7 +3,7 @@ SetWorkingDir %A_ScriptDir%\script_files\GlobesweeperSaves
 #Persistent
 IniRead, counter, GlobesweeperSaves.ini, variables, counter, 1
 savestatebackup()
-SetTimer, savestatebackup, 120000
+SetTimer, savestatebackup, 240000
 return
 
 savestatebackup() {
@@ -25,11 +25,13 @@ savestaterestore()
 return
 
 savestaterestore() {
+	SetTimer, savestatebackup, off
 	WinClose, ahk_exe Globesweeper.exe
 	Sleep, 3000
-	FileCopy, %counter%GameInfo.dat, C:\Users\Simon\AppData\LocalLow\IncandescentGames\Globesweeper\GameInfo.dat, true
-	FileCopy, %counter%GamePref.dat, C:\Users\Simon\AppData\LocalLow\IncandescentGames\Globesweeper\GamePref.dat, true
-	FileCopy, %counter%GameStat.dat, C:\Users\Simon\AppData\LocalLow\IncandescentGames\Globesweeper\GameStat.dat, true
+	i := counter-1
+	FileCopy, %i%GameInfo.dat, C:\Users\Simon\AppData\LocalLow\IncandescentGames\Globesweeper\GameInfo.dat, true
+	FileCopy, %i%GamePref.dat, C:\Users\Simon\AppData\LocalLow\IncandescentGames\Globesweeper\GamePref.dat, true
+	FileCopy, %i%GameStat.dat, C:\Users\Simon\AppData\LocalLow\IncandescentGames\Globesweeper\GameStat.dat, true
 	Sleep, 1000
 	SetTimer, savestatebackup, 120000
 	Run, steam://launch/982220

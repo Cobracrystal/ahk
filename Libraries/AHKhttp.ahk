@@ -1,165 +1,287 @@
+/* all (most) documentation is stolen */ 
+
+/**
+ * Handles URI encoding/decoding.
+*/
 class Uri
 {
-    Decode(str) {
-        Loop
-            If RegExMatch(str, "i)(?<=%)[\da-f]{1,2}", hex)
-                StringReplace, str, str, `%%hex%, % Chr("0x" . hex), All
-            Else Break
-        Return, str
+    ; stolen from https://github.com/ahkscript/libcrypt.ahk/blob/master/src/URI.ahk
+
+    Encode(Url) { ; keep ":/;?@,&=+$#."
+        return this.LC_UriEncode(Url, "[0-9a-zA-Z:/;?@,&=+$#.]")
     }
 
-    Encode(str) {
-        f = %A_FormatInteger%
-        SetFormat, Integer, Hex
-        If RegExMatch(str, "^\w+:/{0,2}", pr)
-            StringTrimLeft, str, str, StrLen(pr)
-        StringReplace, str, str, `%, `%25, All
-        Loop
-            If RegExMatch(str, "i)[^\w\.~%]", char)
-                StringReplace, str, str, %char%, % "%" . Asc(char), All
-            Else Break
-        SetFormat, Integer, %f%
-        Return, pr . str
+    Decode(url) {
+        return this.LC_UriDecode(url)
+    }
+
+    LC_UriEncode(Uri, RE="[0-9A-Za-z]") {
+        VarSetCapacity(Var, StrPut(Uri, "UTF-8"), 0), StrPut(Uri, &Var, "UTF-8")
+        While Code := NumGet(Var, A_Index - 1, "UChar")
+            Res .= (Chr:=Chr(Code)) ~= RE ? Chr : Format("%{:02X}", Code)
+        Return, Res
+    }
+
+    LC_UriDecode(Uri) {
+        Pos := 1
+        While Pos := RegExMatch(Uri, "i)(%[\da-f]{2})+", Code, Pos)
+        {
+            VarSetCapacity(Var, StrLen(Code) // 3, 0), Code := SubStr(Code,2)
+            Loop, Parse, Code, `%
+                NumPut("0x" A_LoopField, Var, A_Index-1, "UChar")
+            Decoded := StrGet(&Var, "UTF-8")
+            Uri := SubStr(Uri, 1, Pos-1) . Decoded . SubStr(Uri, Pos+StrLen(Code)+1)
+            Pos += StrLen(Decoded)+1
+        }
+        Return, Uri
     }
 }
 
-class HttpServer
+/**
+ * Creates a new HTTP server.
+ *
+ * Example usage:
+ *     server := new HttpServer()
+ *     server.SetPaths(paths)
+ *     server.Serve(8000)
+ */
+ 
+class HttpServer 
 {
     static servers := {}
 
+    /**
+     * Creates a new HttpServer instance.
+     */
+    __New() {
+        if (FileExist(A_WorkingDir . "\favicon.ico")) {
+            this.faviconFileName := A_WorkingDir . "\favicon.ico"
+        }
+    }
+
+    /**
+     * 
+     * Adds a MIME type mapping to the server.
+     * 
+     * @param {string} file
+     *     Path to the file containing the mime types.
+     */
     LoadMimes(file) {
-        if (!FileExist(file))
+        if (!FileExist(file)) {
             return false
+        }
 
         FileRead, data, % file
         types := StrSplit(data, "`n")
         this.mimes := {}
+
         for i, data in types {
             info := StrSplit(data, " ")
-            type := info.Remove(1)
-            ; Seperates type of content and file types
-            info := StrSplit(LTrim(SubStr(data, StrLen(type) + 1)), " ")
+            extType := info.Remove(1)
+
+            ; Separates type of content and file types
+            info := StrSplit(LTrim(SubStr(data, StrLen(extType) + 1)), " ")
 
             for i, ext in info {
-                this.mimes[ext] := type
+                this.mimes[Trim(ext, "`r`n")] := extType
             }
         }
+
         return true
     }
 
+    /**
+     * Returns the MIME type of the given file.
+     * 
+     * @param {string} file
+     *     Path to the file.
+     *
+     * @return {string} The MIME type of the given file if one can be found
+     * otherwise the default "text/plain".
+     */
     GetMimeType(file) {
-        default := "text/plain"
-        if (!this.mimes)
-            return default
+        defaultType := "text/plain; charset=utf-8"
+
+        if (!this.mimes) {
+            return defaultType
+        }
 
         SplitPath, file,,, ext
-        type := this.mimes[ext]
-        if (!type)
-            return default
-        return type
+        extType := this.mimes[ext]
+
+        if (!extType) {
+            return defaultType
+        }
+
+        return extType
     }
 
+    /**
+     * Serves the given file to the client.
+     * 
+     * @param {obj} ByRef response
+     *     The response object provided by the handler function.  
+     * @param {string} file
+     *     Path to the file to server.
+     */
     ServeFile(ByRef response, file) {
         f := FileOpen(file, "r")
         length := f.RawRead(data, f.Length)
         f.Close()
 
         response.SetBody(data, length)
-        res.headers["Content-Type"] := this.GetMimeType(file)
+        response.headers["Content-Type"] := this.GetMimeType(file)
     }
 
+    /**
+     * Sets the given file as the Favicon to serve.
+     * 
+     * @param {string} file
+     *     Path to the icon file.
+     */
+    SetFavicon(file) {
+        this.faviconFileName := file
+    }
+
+    /**
+     * Sets the paths that should be handled by the server.
+     * 
+     * @param {obj} paths
+     *     An object where each key is a string containing the route
+     *     for a given path, and its value is the controller function for that route.
+     */
     SetPaths(paths) {
-        this.paths := paths
+        this.paths := {}
+        this.wildcardPaths := {}
+
+        for path, funcRef in paths {
+            if (path ~= "\*(?!$)") {
+                throw Exception("Illegal path: " . path . "`nWildcard char must be last char in path", -1)
+            }
+
+            if (SubStr(path, -1) == "/*") {
+
+                ; Discard the trailing slash and asterisk
+                StringTrimRight, trimmedPath, path, 2
+                this.wildcardPaths[trimmedPath] := funcRef
+
+            } else {
+                this.paths[path . ""] := funcRef ; // add . "" to prevent 404 string <-> number shenanigans
+            }
+        }
     }
 
+    /**
+     * Handles the request, routing it to the correct controller function.
+     * 
+     * @param {obj} ByRef request
+     *     The request object provided by the handler function.
+     */
     Handle(ByRef request) {
         response := new HttpResponse()
-        if (!this.paths[request.path]) {
-            func := this.paths["404"]
-            response.status := 404
-            if (func)
-                func.(request, response, this)
-            return response
-        } else {
+		; Check specific paths, if matching we're done
+        if (this.paths[request.path]) {
             this.paths[request.path].(request, response, this)
+            return response
         }
+
+        ; Look for the longest partial match
+        pathFunction := this.CheckPartialPathMatch(request.path, this.wildcardPaths)
+        if (pathFunction) {
+            pathFunction.(request, response, this)
+            return response
+        }
+		
+		; Favicon request
+        if (request.path == "/favicon.ico" && this.faviconFileName) {
+            this.ServeFile(response, this.faviconFileName)
+            response.status := 200
+            return response
+        }
+        ; If no matches found, return 404
+        response.status := 404
+
+        func := this.paths["404"]
+        if (func) {
+            func.(request, response, this)
+        }
+
         return response
     }
 
+    /**
+     * Starts the server on the given port.
+     * 
+     * @param {number} port
+     *     The port number to listen on.
+     */
     Serve(port) {
         this.port := port
         HttpServer.servers[port] := this
 
         AHKsock_Listen(port, "HttpHandler")
     }
-}
 
-HttpHandler(sEvent, iSocket = 0, sName = 0, sAddr = 0, sPort = 0, ByRef bData = 0, bDataLength = 0) {
-    static sockets := {}
-
-    if (!sockets[iSocket]) {
-        sockets[iSocket] := new Socket(iSocket)
-        AHKsock_SockOpt(iSocket, "SO_KEEPALIVE", true)
-    }
-    socket := sockets[iSocket]
-
-    if (sEvent == "DISCONNECTED") {
-        socket.request := false
-        sockets[iSocket] := false
-    } else if (sEvent == "SEND") {
-        if (socket.TrySend()) {
-            socket.Close()
+    /**
+     * Attempts to resolve a wildcard path.
+     * 
+     * @param {string} path
+     *     The path string to resolve.
+     * @param {array} wildcardPaths
+     *     An array of wildcard paths to resolve against.
+     *
+     * @return {func} Returns the controller function for the matching wildcard
+     * path if one is found, otherwise returns false.
+     */
+    CheckPartialPathMatch(path, wildcardPaths) {
+        if (wildcardPaths.GetCapacity() == 0) {
+            return false
         }
 
-    } else if (sEvent == "RECEIVED") {
-        server := HttpServer.servers[sPort]
+        requestPathParts := StrSplit(path, "/")
+        requestPathLength := requestPathParts.Count()
 
-        text := StrGet(&bData, "UTF-8")
+        matchingPathFunction := ""
+        longestMatch := 0
 
-        ; New request or old?
-        if (socket.request) {
-            ; Get data and append it to the existing request body
-            socket.request.bytesLeft -= StrLen(text)
-            socket.request.body := socket.request.body . text
-            request := socket.request
-        } else {
-            ; Parse new request
-            request := new HttpRequest(text)
+        for eachPath in wildcardPaths {
+            pathParts := StrSplit(eachPath, "/")
 
-            length := request.headers["Content-Length"]
-            request.bytesLeft := length + 0
+            if (pathParts.Count() > requestPathLength) {
+                continue
+            }
 
-            if (request.body) {
-                request.bytesLeft -= StrLen(request.body)
+            for i, part in pathParts {
+                if (i <= longestMatch || !part) {
+                    continue
+                }
+
+                requestPathPart := requestPathParts[i]
+
+                if (part == requestPathPart) {
+                    matchingPathFunction := wildcardPaths[eachPath]
+                    longestMatch := i
+                } else {
+                    break
+                }
             }
         }
 
-        if (request.bytesLeft <= 0) {
-            request.done := true
-        } else {
-            socket.request := request
-        }
-
-        if (request.done || request.IsMultipart()) {
-            response := server.Handle(request)
-            if (response.status) {
-                socket.SetData(response.Generate())
-            }
-        }
-        if (socket.TrySend()) {
-            if (!request.IsMultipart() || request.done) {
-                socket.Close()
-            }
-        }    
-
+        return matchingPathFunction
     }
 }
 
+/**
+ * The request object the server receives from a client.
+ *
+ * TODO: Understand and document this class.
+ */
 class HttpRequest
 {
     __New(data = "") {
-        if (data)
+        if (data) {
             this.Parse(data)
+        }
     }
 
     GetPathInfo(top) {
@@ -217,8 +339,15 @@ class HttpRequest
     }
 }
 
+/**
+ * The response object the server sends back to the client.
+ *
+ */
 class HttpResponse
 {
+    /**
+     * Creates a new instance.
+     */
     __New() {
         this.headers := {}
         this.status := 0
@@ -228,23 +357,28 @@ class HttpResponse
     }
 
     Generate() {
-        FormatTime, date,, ddd, d MMM yyyy HH:mm:ss
-        this.headers["Date"] := date
+		FormatTime, date,, ddd, d MMM yyyy HH:mm:ss
+		this.headers["Date"] := date
 
-        headers := this.protocol . " " . this.status . "`r`n"
-        for key, value in this.headers {
-            headers := headers . key . ": " . value . "`r`n"
-        }
-        headers := headers . "`r`n"
-        length := this.headers["Content-Length"]
+		if (!this.headers["Content-Type"]) {
+			this.headers["Content-Type"] := "text/plain; charset=utf-8"
+		}
 
-        buffer := new Buffer((StrLen(headers) * 2) + length)
-        buffer.WriteStr(headers)
+		headers := this.protocol . " " . this.status . "`r`n"
+		for key, value in this.headers {
+			headers := headers . key . ": " . value . "`r`n"
+		}
 
-        buffer.Append(this.body)
-        buffer.Done()
+		headers := headers . "`r`n"
+		length := this.headers["Content-Length"]
 
-        return buffer
+		buffer := new Buffer((StrLen(headers) * 2) + length)
+		buffer.WriteStr(headers)
+
+		buffer.Append(this.body)
+		buffer.Done()
+
+		return buffer
     }
 
     SetBody(ByRef body, length) {
@@ -253,14 +387,17 @@ class HttpResponse
         this.headers["Content-Length"] := length
     }
 
-    SetBodyText(text) {
+    SetBodyText(text, type := "text/plain; charset=utf-8") {
         this.body := Buffer.FromString(text)
         this.headers["Content-Length"] := this.body.length
+		this.headers["Content-Type"] := type
     }
-
-
 }
 
+/**
+ * The socket instance used to interface with AHKsock.
+ *
+ */
 class Socket
 {
     __New(socket) {
@@ -306,6 +443,10 @@ class Socket
     }
 }
 
+/**
+ * Buffer class to help working with byte-data.
+ *
+ */
 class Buffer
 {
     __New(len) {
@@ -356,5 +497,76 @@ class Buffer
 
     Done() {
         this.SetCapacity("buffer", this.length)
+    }
+}
+
+/**
+ * The handler function used with AHKsock.
+ *
+ * @see AHKsock documentation for a detailed explanation of the data passed to this
+ * function.
+ */
+HttpHandler(sEvent, iSocket = 0, sName = 0, sAddr = 0, sPort = 0, ByRef bData = 0, bDataLength = 0) {
+    static sockets := {}
+
+    if (!sockets[iSocket]) {
+        sockets[iSocket] := new Socket(iSocket)
+        AHKsock_SockOpt(iSocket, "SO_KEEPALIVE", true)
+    }
+
+    socket := sockets[iSocket]
+
+    if (sEvent == "DISCONNECTED") {
+
+        socket.request := false
+        sockets[iSocket] := false
+
+    } else if (sEvent == "SEND") {
+
+        if (socket.TrySend()) {
+            socket.Close()
+        }
+
+    } else if (sEvent == "RECEIVED") {
+        server := HttpServer.servers[sPort]
+
+        text := StrGet(&bData, "UTF-8")
+
+        ; New request or old?
+        if (socket.request) {
+            ; Get data and append it to the existing request body
+            socket.request.bytesLeft -= StrLen(text)
+            socket.request.body := socket.request.body . text
+            request := socket.request
+        } else {
+            ; Parse new request
+            request := new HttpRequest(text)
+
+            length := request.headers["Content-Length"]
+            request.bytesLeft := length + 0
+
+            if (request.body) {
+                request.bytesLeft -= StrLen(request.body)
+            }
+        }
+
+        if (request.bytesLeft <= 0) {
+            request.done := true
+        } else {
+            socket.request := request
+        }
+
+        if (request.done || request.IsMultipart()) {
+            response := server.Handle(request)
+            if (response.status) {
+                socket.SetData(response.Generate())
+            }
+        }
+        if (socket.TrySend()) {
+            if (!request.IsMultipart() || request.done) {
+                socket.Close()
+            }
+        }
+
     }
 }

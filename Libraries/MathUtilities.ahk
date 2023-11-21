@@ -1,7 +1,7 @@
 ﻿#Include %A_ScriptDir%\Libraries\BasicUtilities.ahk
 
 ;// MAIN FUNCTION
-calculateExpression() {
+calculateExpression(mode := "print") {
 	expression := fastCopy()
 	result := createResult(expression)
 ;//	if (Instr(expression, "x"))	;// bad for recognizing equations.
@@ -11,8 +11,16 @@ calculateExpression() {
 	if (result = "")
 		return
 	Send {Right}
-	fastPrint(endSymbol . result)
+	switch (SubStr(mode,1,1)) {
+		case "p":
+			fastPrint(endSymbol . result)
+		case "c":
+			clipboard := result
+		default:
+			msgbox % result
+	}
 }
+
 
 /* ExecScript functions
 	Asc(string) -> gives ascii code

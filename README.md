@@ -1,4 +1,0 @@
-# ahk-functionalities
-A bunch of 'libraries' written in ahk to include in scripts to make my life easier
-
-See EXAMPLE_script.ahk how to use the libraries

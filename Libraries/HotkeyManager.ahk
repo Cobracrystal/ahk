@@ -41,74 +41,105 @@ HotkeyManager(mode := "O") {
 
 ; -------- LOADING IN DATA
 Hotkeys(ByRef Hotkeys)	{
-    FileRead, Script, %A_ScriptFullPath%
-    Script :=  RegExReplace(Script, "ms`a)^\s*/\*.*?^\s*\*/\s*|^\s*\(.*?^\s*\)\s*") ;// no comments like /* this */
+    FileRead, script, %A_ScriptFullPath%
+    cleanScript := cleanComments(script) 
+	; no comments like /* this */ or ( this )
     Hotkeys := {}
-    Loop, Parse, Script, `n, `r
-		if RegExMatch(A_LoopField,"^((?!\s*(;|:.*:.*:`:|.*=.*:`:|.*"".*:`:|Gui)).*)::(?:.*;)?\s*(.*)",Match)	{  ;//matches hotkey text and recognizes ";", hotstrings, quotes and Gui as negative lookaheads
-			if (Match3 = "")
-				Match3 = None
-            if !(RegExMatch(Match1,"(Shift|Alt|Ctrl|Win)") && !RegExMatch(Match1,"LWin"))	{
-				Match1 := StrReplace(Match1, "+", "Shift+", limit:=1)
-				Match1 := StrReplace(Match1, "<^>!", "AltGr+", limit:=1)
-				Match1 := StrReplace(Match1, "<", "Left", limit:=-1)
-				Match1 := StrReplace(Match1, ">", "Right", limit:=-1)
-				Match1 := StrReplace(Match1, "!", "Alt+", limit:=1)
-				Match1 := StrReplace(Match1, "^", "Ctrl+", limit:=1)
-				Match1 := StrReplace(Match1, "#", "Win+", limit:=1)
-				Match1 := StrReplace(Match1, "*","", limit:=1)
-				Match1 := StrReplace(Match1, "$","", limit:=1)
-				Match1 := StrReplace(Match1, "~","", limit:=1)
-            }
-            Hotkeys.Push({"Line":A_Index, "Hotkey":Match1, "Comment":Match3})
-        }
-    return Hotkeys
+	Loop, Parse, cleanScript, `n, `r
+	if RegExMatch(A_LoopField,"O)^((?!\s*(;|:.*:.*:`:|.*=.*:`:|.*"".*:`:|Gui)).*)::(?:.*;)?\s*(.*)",match)	{  ;//matches hotkey text and recognizes ";", hotstrings, quotes and Gui as negative lookaheads
+		comment := (match[3] == "" ? "None" : match[3])
+		hkey := match[1]
+	;	if !(RegExMatch(hkey,"(Shift|Alt|Ctrl|Win)"))	{
+			hkey := (InStr(hkey, "+") == StrLen(hkey) ? hkey : StrReplace(hkey, "+", "Shift+", limit:=1))
+			hkey := StrReplace(hkey, "<^>!", "AltGr+", limit:=1)
+			hkey := StrReplace(hkey, "<", "Left", limit:=-1)
+			hkey := StrReplace(hkey, ">", "Right", limit:=-1)
+			hkey := StrReplace(hkey, "!", "Alt+", limit:=1)
+			hkey := StrReplace(hkey, "^", "Ctrl+", limit:=1)
+			hkey := StrReplace(hkey, "#", "Win+", limit:=1)
+			hkey := StrReplace(hkey, "*","", limit:=1)
+			hkey := StrReplace(hkey, "$","", limit:=1)
+			hkey := StrReplace(hkey, "~","", limit:=1)
+	;	}
+		Hotkeys.Push({"Line":A_Index, "Hotkey":hkey, "Comment":comment})
+	}
+	return Hotkeys
 }
 
 Hotstrings(ByRef Hotstrings)	{
-    FileRead, Script, %A_ScriptFullPath%
-    Script :=  RegExReplace(Script, "ms`a)^\s*/\*.*?^\s*\*/\s*|^\s*\(.*?^\s*\)\s*")
+    FileRead, script, %A_ScriptFullPath%
+    cleanScript := cleanComments(script)
     Hotstrings := {}
-    Loop, Parse, Script, `n, `r
-        if RegExMatch(A_LoopField,"^\s*:([0-9\*\?BbCcKkOoPpRrSsIiEeZz]*?):(.*?):`:(.*)\;?\s*(.*)", Match) || RegexMatch(A_LoopField, "^\s*(?:HotString|Hotstring)\(\"":([0-9\*\?BbCcKkOoPpRrSsIiEeZz]*?):(.*?)\"",\""(?:(.*)\""),.*?\)\s*\;?\s*(.*)", Match)	{
+    Loop, Parse, cleanScript, `n, `r
+        if RegExMatch(A_LoopField,"Oi)^\s*:([0-9\*\?BCKOPRSIEZ]*?):(.*?):`:(.*)\;?\s*(.*)", match) || RegexMatch(A_LoopField, "Oi)^\s*(?:HotString|Hotstring)\(\"":([0-9\*\?BCKOPRSIEZ]*?):(.*?)\"",\""(?:(.*)\""),.*?\)\s*\;?\s*(.*)", match)	{
 			;// EXPLANATION: start of line : [possible modifiers only once]:[string]:(escape char):(seconds string)[check for spaces][comment] OR ALTERNATIVELY
 			;// HotString(" (<- escaped via "" which turns into ", and that escaped via \ so \"" = ")[modifiers]:[string]","[replacement]", [variable which we don't need])
-			if (Match4 = "")	{
-				Match4 := "None"
-			}
-			if RegExMatch(Match2,"({:}|{!})")	{
-				Match2 := StrReplace(Match2, "{:}", ":", limit:=-1)
-				Match2 := StrReplace(Match2, "{!}", "!", limit:=-1)
+			hString := match[2]
+			rString := match[3]
+			comment := (match[4] == "" ? "None" : match[4])
+			if RegExMatch(hString,"({:}|{!})")	{
+				hString := StrReplace(hString, "{:}", ":", limit:=-1)
+				hString := StrReplace(hString, "{!}", "!", limit:=-1)
             }
-			if RegExMatch(Match3,"({:}|{!}||{Space})")	{
-				Match3 := StrReplace(Match3, "{:}", ":", limit:=-1)
-				Match3 := StrReplace(Match3, "{!}", "!", limit:=-1)
-				Match3 := StrReplace(Match3, "{Space}", " ", limit:=-1)
+			if RegExMatch(rString,"({:}|{!}||{Space})")	{
+				rString := StrReplace(rString, "{:}", ":", limit:=-1)
+				rString := StrReplace(rString, "{!}", "!", limit:=-1)
+				rString := StrReplace(rString, "{Space}", " ", limit:=-1)
             }
-			if RegexMatch(Match1, ".*b0.*")
-				Match3 := Match2 . Match3
-            Hotstrings.Push({"Line":A_Index, "Options":Match1, "Hotstring":Match2, "Replacestring":Match3, "Comment":Match4})
+			if RegexMatch(match[1], ".*b0.*")
+				rString := hString . rString
+            Hotstrings.Push({"Line":A_Index, "Options":match[1], "Hotstring":hString, "Replacestring":rString, "Comment":match[4]})
         }
     return Hotstrings
 }
 
 SavedHotkeys(ByRef SavedHotkeys)	{
-	if 	!(FileExist("SavedHotkeys.txt")) {
+	if 	!(FileExist("HotkeyManager\SavedHotkeys.txt")) {
 		MsgBox, % "Created SavedHotkeys.txt in script folder in case of Custom Hotkeys added by user"
-		FileAppend, % "// Add Custom Hotkeys not from the script here to show up in the Hotkey List.`n// Format is Hotkey/Hotstring:[hotkey/hotstring], [Program], [Command (optional)]", SavedHotkeys.txt
+		FileCreateDir, % "HotkeyManager"
+		FileAppend, % "// Add Custom Hotkeys not from the script here to show up in the Hotkey List.`n// Format is Hotkey/Hotstring:[hotkey/hotstring], [Program], [Command (optional)]", HotkeyManager\SavedHotkeys.txt
 		return
 	}
-	FileRead, Script, SavedHotkeys.txt
+	FileRead, Script, HotkeyManager\SavedHotkeys.txt
     SavedHotkeys := {}
     Loop, Parse, Script, `n, `r
-        if RegExMatch(A_LoopField,"^(?!\s*;|//)Hotkey:\s*(.*)\s*,\s*(.*)\s*,\s*(.*)\s*",Match)	{ 
-			if (Match3 = "")
-				Match3 = None
-            SavedHotkeys.Push({"Hotkey":Match1, "Program":Match2, "Comment":Match3})
+        if RegExMatch(A_LoopField,"O)^(?!\s*;|//)Hotkey:\s*(.*)\s*,\s*(.*)\s*,\s*(.*)\s*",match)	{ 
+			comment := (match[3] == "" ? "None" : match[3])
+            SavedHotkeys.Push({"Hotkey":match[1], "Program":match[2], "Comment":comment})
         }
     return SavedHotkeys
 }
 
+cleanComments(script) {
+	flagCom := false
+	flagMult := false
+	cleanScript := ""
+	Loop, Parse, script, `n, `r
+	{
+		if (flagCom) {
+			if (RegExMatch(A_Loopfield, "^\s*\*\/"))
+				flagCom := false
+			cleanScript .= "`n"
+		}
+		else if (RegExMatch(A_Loopfield, "^\s*\/\*")) {
+			flagCom := true
+			cleanScript .= "`n"
+		}
+		else if (flagMult) {
+			if (RegExMatch(A_Loopfield, "^\s*\)"))
+				flagMult := false
+			cleanScript .= "`n"
+		}
+		else if (RegExMatch(A_Loopfield, "^\s*\(")) {
+			flagMult := true
+			cleanScript .= "`n"
+		}
+		else
+			cleanScript .= A_LoopField . "`n"
+	}
+	return cleanScript
+;	return RegExReplace(script, "ms`a)^\s*\/\*.*?^\s*\*\/\s*|^\s*\(.*?^\s*\)\s*") 
+}
 ; -------- MAIN GUI
 
 hotkeyManagerGuiCreate(guiX, guiY) {
@@ -116,24 +147,30 @@ hotkeyManagerGuiCreate(guiX, guiY) {
 	Gui, HotkeyManager:New, +Border +HwndguiHWND
 	Gui, HotkeyManager:Add, Tab3, w526 h500, AHK Hotkeys|Other Hotkeys|Hotstrings|Settings
 	Gui, Tab, 1 ; below controls belong to first tab
-	Gui, HotkeyManager:Add, ListView, vHotkeyListView AltSubmit gHotkeyGuiEvent R25 w500, LINE|KEYS|PROGRAM|COMMENT
+	Gui, HotkeyManager:Add, ListView, vHotkeyListView AltSubmit gHotkeyGuiEvent R25 w500, LINE|KEYS|COMMENT
 		for Index, Element in Hotkeys(Hotkeys)
-			LV_Add("",Element.Line, Element.Hotkey, "ahk", Element.Comment)
+			LV_Add("",Element.Line, Element.Hotkey, Element.Comment)
 		LV_ModifyCol()
 		LV_ModifyCol(1,"38 Integer")
-		LV_ModifyCol(3,68)
+		LV_ModifyCol(2)
 	Gui, Tab, 2
 	Gui, HotkeyManager:Add, ListView, vSavedHotkeyListView AltSubmit gHotkeyGuiEvent R25 w500, LINE|KEYS|PROGRAM|COMMENT
 		for Index, Element in SavedHotkeys(SavedHotkeys)
 			LV_Add("","*", Element.Hotkey, Element.Program, Element.Comment)
+		LV_ModifyCol()
+		LV_ModifyCol(1,"38 Integer")
+		LV_ModifyCol(3,68)
 	Gui, Tab, 3
-	Gui, HotkeyManager:Add, ListView, vHotstringListView AltSubmit gHotstringGuiEvent R25 w500, LINE|OPTIONS|TEXT|CORRECTION|COMMENT
+	Gui, HotkeyManager:Add, ListView, vHotstringListView AltSubmit gHotstringGuiEvent R22 w500, LINE|OPTIONS|TEXT|CORRECTION|COMMENT
 		for Index, Element in Hotstrings(Hotstrings)
 			LV_Add("",Element.Line, Element.Options, Element.Hotstring, Element.Replacestring,  Element.Comment)
 		LV_ModifyCol()
 		LV_ModifyCol(1,"38 Integer")
 		LV_ModifyCol(5,155)
 		createHotkeyManagerHotstringEditor()
+	Gui, Tab, 4
+		Gui, Add, Text, Section, Enable Settings
+		Gui, Add, Checkbox, xs, Enable Settings
 	Gui, HotkeyManager:Show, x%guiX%y%guiY% Autosize, HotkeyList
 	return guiHWND
 }
@@ -176,8 +213,8 @@ HotkeyGuiEvent() {
 	switch A_GuiEvent {
 		case "DoubleClick": 
 			if hotkeyLine is integer
-				Run, "C:\Program Files\Notepad++\notepad++.exe" %A_ScriptFullPath% -n%hotkeyLine%
-		Default: return ; //for future compatibility
+				Run, notepad++ %A_ScriptFullPath% -n%hotkeyLine%
+		Default: return
 	}
 }
 
@@ -189,7 +226,7 @@ HotstringGuiEvent() {
 		Case "DoubleClick": 
 			if hotstringLine is integer 
 				Run, Notepad++ %A_ScriptFullPath% -n%hotstringLine%
-		Default: return ; //for future compatibility
+		Default: return
 	}
 }
 
@@ -197,7 +234,7 @@ HotstringGuiEvent() {
 
 createHotkeyManagerHotstringEditor() {
 	Gui, Font, s11
-	Gui, HotkeyManager:Add, GroupBox, w500 h80, Custom Hotstrings
+	Gui, HotkeyManager:Add, GroupBox, w500 h55, Custom Hotstrings
 		Gui, Font, s15 
 		Gui, HotkeyManager:Add, Text, Section Center xp+15 yp+15, :
 		Gui, Font, s9 Norm
@@ -220,7 +257,6 @@ createHotkeyManagerHotstringEditor() {
 		Gui, HotkeyManager:Add, Text, xp+3 yp+3, Comment (optional)
 		Gui, HotkeyManager:Add, Button, ys+5 w80 Default gCustomHotstringCreator, Add HotString
 		Gui, HotkeyManager:Add, Text, vInvalidHotstringText Hidden, Invalid Hotstring!
-		Gui, HotkeyManager:Add, Text, xs, Common Hotstring Modifiers: *, ?, b0 , c, c1, o, r, x, z
 } 
 
 CustomHotstringCreator() {
@@ -230,7 +266,7 @@ CustomHotstringCreator() {
 	global CustomHotstringComment
 	global InvalidHotstringText
 	Gui, HotkeyManager:Submit, NoHide
-	if !(RegexMatch(CustomHotstringModifiers, "^[0-9\*\?BbCcKkOoPpRrSsIiEeZz]*?$") && CustomHotstringInput != "" && CustomHotstringReplacement != "") {
+	if !(RegexMatch(CustomHotstringModifiers, "i)^[0-9\*\?BCKOPRSIEZ]*?$") && CustomHotstringInput != "" && CustomHotstringReplacement != "") {
 		GuiControl, HotkeyManager:Show, InvalidHotstringText
 		Gui, HotkeyManager:Flash
 		SoundPlay, *-1
@@ -252,8 +288,8 @@ CustomHotstringCreator() {
 
 editSavedHotkeys() {
 	try {
-		run, Notepad++ SavedHotkeys.txt
+		run, Notepad++ HotkeyManager\SavedHotkeys.txt
 	} catch e {
-		run, notepad SavedHotkeys.txt
+		run, notepad HotkeyManager\SavedHotkeys.txt
 	}
 }

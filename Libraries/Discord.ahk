@@ -157,7 +157,7 @@
 	; Called by the JS on WS close
 	OnClose(Event)
 	{
-		throw Exception("Unhandled Discord.ahk WebSocket Close???")
+		throw Exception("Unhandled Discord.ahk WebSocket Close")
 	}
 	
 	; Gets called periodically by a timer to send a heartbeat operation

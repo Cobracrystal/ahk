@@ -1,6 +1,6 @@
 ﻿fastCopy() {
 	ClipboardOld := ClipboardAll
-	Clipboard := "" 
+	Clipboard := "" ; free clipboard so that ClipWait is more reliable
 	Send ^c
 	ClipWait 1
 	if ErrorLevel {
@@ -16,21 +16,30 @@ fastPrint(text) {
 	ClipboardOld := ClipboardAll
 	Clipboard := ""
 	Clipboard := text
-	ClipWait 1
+	ClipWait 1 ; in the event of "text" being very large, prevent script from sending before windows has fully registered it
 	if ErrorLevel {
 		Clipboard := ClipboardOld
-		return
+		return 0
 	}
-	Send ^v
-	Sleep, 50
+	SendEvent ^v
+	Sleep, 150
 	Clipboard := ClipboardOld
+	VarSetCapacity(ClipboardOld, 0)
+	return 1
 }
 
 arrayContains(array, t) {
 	for index, element in array
 		if(element = t)
-			return A_Index
+			return index
 	return 0
+}
+
+keyArrayContains(array, key, value) {
+	for i, e in array
+		if (e[key] == value)
+			return i
+	return 0		
 }
 
 arrayRemove(ByRef array, t, removeAll := 1) {
@@ -53,6 +62,43 @@ arrayRemove(ByRef array, t, removeAll := 1) {
 		array.removeAt(tV)
 	}
 }
+
+reverseArray(array) { ; linear array, gives weird stuff with assoc
+	arr := []
+	for i, e in array
+		arr[array.Count() - i + 1] := e
+	return arr
+}	
+
+sortArray(arr, mode := "") {
+	arr2 := {}
+	for i, e in arr
+		str .= e . "`n"
+	Sort, str, % mode
+	Loop, Parse, str, `n
+		(A_LoopField == "" ? continue : arr2.push(A_Loopfield))
+	return arr2
+}
+
+sortKeyArray(keyArr, key, mode := "") {
+	arr2 := {}
+	arr3 := {}
+	l := keyArr.Count()
+	for i, el in keyArr
+	{
+		arr2[el[key] . ""] := i ; IF el[key] OCCURS TWICE, IT OVERWRITES A VALUE (EG count = 1231 for two usernames -> only last one gets taken)
+		str .= el[key] . "`n"
+	}
+	Sort, str, % mode
+	strArr := StrSplit(str, "`n")
+	strArr.Pop()
+	for i, e in strArr
+	{
+		arr3.push(keyArr[arr2[e . ""]])
+	}
+	return arr3
+}
+
 
 reverseString(text) {
 	result := ""
@@ -80,6 +126,16 @@ ReplaceChars(Text, Chars, ReplaceChars) {
 	return ReplacedText
 }
 
+recursiveReplaceMap(string, ByRef from, to, index := 1) { ; why not map/keyarray? because maps aren't ordered, and this replaces in priority (in fact its impossible to replace properly at all without priority)
+	replacedString := ""
+	if (index == from.Count())
+		return StrReplace(string, from[index], to[index])
+	strArr := StrSplit(string, from[index])
+	for i, e in strArr
+		replacedString .= recursiveReplaceMap(e, from, to, index + 1) . (i == strArr.Count() ? "" : to[index])
+	return replacedString
+}
+
 ExecScript(expression, Wait:=true) {
 	input := "FileAppend % (" . expression . "), *"
     shell := ComObjCreate("WScript.Shell")
@@ -90,9 +146,52 @@ ExecScript(expression, Wait:=true) {
         return exec.StdOut.ReadAll()
 }
 
+cmdRet(sCmd, callBackFuncObj := "", encoding := "CP0") {
+	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
+	static HANDLE_FLAG_INHERIT := 0x00000001, flags := HANDLE_FLAG_INHERIT
+		, STARTF_USESTDHANDLES := 0x100, CREATE_NO_WINDOW := 0x08000000
+
+	DllCall("CreatePipe", "PtrP", hPipeRead, "PtrP", hPipeWrite, "Ptr", 0, "UInt", 0)
+	DllCall("SetHandleInformation", "Ptr", hPipeWrite, "UInt", flags, "UInt", HANDLE_FLAG_INHERIT)
+
+	VarSetCapacity(STARTUPINFO , siSize :=    A_PtrSize*4 + 4*8 + A_PtrSize*5, 0)
+	NumPut(siSize              , STARTUPINFO)
+	NumPut(STARTF_USESTDHANDLES, STARTUPINFO, A_PtrSize*4 + 4*7)
+	NumPut(hPipeWrite          , STARTUPINFO, A_PtrSize*4 + 4*8 + A_PtrSize*3)
+	NumPut(hPipeWrite          , STARTUPINFO, A_PtrSize*4 + 4*8 + A_PtrSize*4)
+
+	VarSetCapacity(PROCESS_INFORMATION, A_PtrSize*2 + 4*2, 0)
+
+	if !DllCall("CreateProcess", "Ptr", 0, "Str", sCmd, "Ptr", 0, "Ptr", 0, "UInt", true, "UInt", CREATE_NO_WINDOW
+		, "Ptr", 0, "Ptr", 0, "Ptr", &STARTUPINFO, "Ptr", &PROCESS_INFORMATION)	{
+		DllCall("CloseHandle", "Ptr", hPipeRead)
+		DllCall("CloseHandle", "Ptr", hPipeWrite)
+		throw Exception("CreateProcess has failed")
+	}
+	DllCall("CloseHandle", "Ptr", hPipeWrite)
+	VarSetCapacity(sTemp, 4096), nSize := 0
+	while DllCall("ReadFile", "Ptr", hPipeRead, "Ptr", &sTemp, "UInt", 4096, "UIntP", nSize, "UInt", 0) {
+		; add potential fallback! (via static variable check or something like that.)
+		stdOut := StrGet(&sTemp, nSize, encoding)
+		sOutput .= stdOut
+		if (callBackFuncObj)
+			callBackFuncObj.call(stdOut)
+	}
+	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION))
+	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, A_PtrSize))
+	DllCall("CloseHandle", "Ptr", hPipeRead)
+	return sOutput
+}
+
+execShell(command) {
+    shell := ComObjCreate("WScript.Shell")
+    exec := shell.Exec(ComSpec " /C " command)
+    return exec.StdOut.ReadAll()
+}
+
 readFileIntoVar(path, encoding := "UTF-8") {
-		dataFile := FileOpen(path, "r", encoding)
-		return dataFile.Read()
+	dataFile := FileOpen(path, "r", encoding)
+	return dataFile.Read()
 }
 
 windowGetCoordinates(windowHWND) {
@@ -107,6 +206,41 @@ windowGetCoordinates(windowHWND) {
 		y := NumGet(pos, 32, "int")
 	}
 	return [x,y]
+}
+
+timedTooltip(text := "", durationMS := 1000, x := "", y := "", whichTooltip := 1) {
+	if (durationMS == -1 || !durationMS)
+		Tooltip
+	else {
+		Tooltip, % text, % x, % y, % whichTooltip
+		fn := Func("timedTooltip").Bind(,-1,,,whichTooltip)
+		SetTimer, % fn, % "-" . durationMS
+	}
+}
+
+normalizePath(path) {	; ONLY ABSOLUTE PATHS
+	path := StrReplace(path, "/", "\")
+	path := StrReplace(path, "\\", "\")
+	if (!RegexMatch(path, "i)^[a-z]:\\") || RegexMatch(path, "i)^[a-z]:\\\.\."))
+		return ""
+	Loop {
+		path := RegexReplace(path, "\\(?!\.\.\\)[^\\]+?\\\.\.\\", "\", rCount)
+		if (rCount == 0)
+			break
+	}
+	if (InStr(path, "\..\"))
+		return ""
+	return path
+}
+
+formatTimeFunc(timestamp := "", formatString := "") {
+	FormatTime, outputvar, % timestamp, % formatString
+	return outputvar
+}
+
+sortFunc(varS, formatString := "") {
+	Sort, varS, % formatString
+	return varS
 }
 
 doNothing() {

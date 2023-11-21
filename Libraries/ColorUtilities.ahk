@@ -4,9 +4,9 @@
 	color_G := []
 	color_B := []
 	gradient := []
-	if (amount < colors.length()-2)
+	if (amount < colors.Count()-2)
 		return 0
-	else if (amount == colors.length()-2)
+	else if (amount == colors.Count()-2)
 		return colors
 	for index, color in colors
 	{	; just bitshift to get single RGB vals
@@ -17,7 +17,7 @@
 	; first color given, format with 6 padded 0s in case of black
 	gradient[1] := format("0x{:06X}", colors[1])
 	; amount of color gradients to perform
-	segments := colors.length()-1
+	segments := colors.Count()-1
 	Loop %amount% {
 		; current gradient segment we are in
 		segment := floor((A_Index/(amount+1))*segments)+1
@@ -31,26 +31,36 @@
 		gradient[A_Index+1] := hex
 	}
 	; last color given, same as first
-	gradient[amount+2] := format("0x{:06X}", colors[colors.length()])
+	gradient[amount+2] := format("0x{:06X}", colors[colors.Count()])
 	; return array of amount+2 colors
 	return gradient
 }
 
+rainbowArr(num, intensity := 0xFF) {
+	if (num < 7)
+		return 0
+	if (intensity < 0 || intensity > 255)
+		return 0
+	intensity := format("{:#x}", intensity)
+	r := intensity * 0x010000
+	g := intensity * 0x000100
+	b := intensity * 0x000001
+	return colorGradientArr(num-2, r, r|g/2, r|g, g, g|b, g/2|b, b, b|r, r)
+}
+
 changeColorFormat(clr, reverse := true, alph := "") {
 	/*	alph = -1 to remove alpha, reverse for RGB<->BGR
-		clr HAS to be in 0x[hex*6] format, alph is either decimal or 0x[hex*2]
-		RGB -> RGB		BGR -> RGB		ABGR -> RGB		ARGB -> RGB
-		RGB -> BGR		BGR -> BGR		ABGR -> BGR		ARGB -> BGR
-		RGB -> ARGB		BGR -> ARGB		ABGR -> ARGB	ARGB -> ARGB
-		RGB -> ABGR		BGR -> ABGR		ABGR -> ABGR	ARGB -> ABGR
+		clr in (0x)[hex*6/8] format, alph is either decimal or (0x)[hex*2]
+		(RGB -> RGB)	 BGR -> RGB		 ABGR -> RGB	 ARGB -> RGB
+		 RGB -> BGR		(BGR -> BGR)	 ABGR -> BGR	 ARGB -> BGR
+		 RGB -> ABGR	 BGR -> ABGR	(ABGR -> ABGR)	 ARGB -> ABGR
+		 RGB -> ARGB	 BGR -> ARGB	 ABGR -> ARGB	(ARGB -> ARGB)
 	*/
-	if (RegExMatch(clr, "^0x[[:xdigit:]]{8}$")) {
-		al := format("{1:02X}", ((clr & 0xFF000000) >> 24))
-		rb := ((clr & 0xFF0000) >> 16)
-		gg := ((clr & 0xFF00) >> 8)
-		br := (clr & 0xFF)
-	}
-	else if (RegExMatch(clr, "^(0x)?[[:xdigit:]]{6}$")) {
+	if (RegexMatch(clr, "^[[:xdigit:]]{6}([[:xdigit:]]{2})?$"))
+		clr := "0x" . clr
+	if (RegExMatch(clr, "P)^0x[[:xdigit:]]{6}(?:[[:xdigit:]]{2})?$", mL)) {
+		if (mL == 10)
+			al := format("{1:02X}", ((clr & 0xFF000000) >> 24))
 		rb := ((clr & 0xFF0000) >> 16)
 		gg := ((clr & 0xFF00) >> 8)
 		br := (clr & 0xFF)
@@ -58,23 +68,25 @@ changeColorFormat(clr, reverse := true, alph := "") {
 	else 
 		throw Exception("Color provided is not in correct Format")
 	; if alph is given, its always prioritized.
-	if (alph == -1)
-		al := ""
-	else if (RegExMatch(alph, "^(0x)?[[:xdigit:]]{2}$"))
+	if (RegExMatch(alph, "^[[:xdigit:]]{2}$"))
+		al := format("{1:02X}", "0x" . alph)
+	else if (alph >= 0 && alph < 256)
 		al := format("{1:02X}", alph)
+	else if (alph == -1)
+		al := ""
+	else 
+		throw Exception("Color provided is not in correct Format")
 	if (reverse)
 		return format("0x{4}{1:02X}{2:02X}{3:02X}", br, gg, rb, al)
 	else
 		return format("0x{4}{1:02X}{2:02X}{3:02X}", rb, gg, br, al)
 }
-
+; 0xFF00FFA2k
 hexcodeColorPreview(hotkey) {
 	text := fastCopy()
 	if text is not xdigit
 		return
-	if (InStr(text, "0x"))
-		text := StrReplace(text, "0x")
-	if (Strlen(text) != 6)
+	if (text == "")
 		return
 	tcm := A_CoordModeMouse
 	CoordMode, Mouse

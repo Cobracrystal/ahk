@@ -385,7 +385,7 @@ removeSelectedRows(launchedFromMenu := 0) {
 		LV_GetText(trueN, rowN, 1) ;// retrieve trueIndex
 		selectedDataRows.push(trueN)
 	}
-	if !(selectedRows.Length())
+	if !(selectedRows.Count())
 		return
 	selectedDataRowsSorted := arraySort(selectedDataRows, "N R")
 	selectedRowsSorted := arraySort(selectedRows, "N R")
@@ -422,7 +422,7 @@ removeSelectedRows(launchedFromMenu := 0) {
 dataBaseItemRemove(n) {
 	global data
 	data.removeAt(n)
-	l := data.Length()
+	l := data.Count()
 	for i, r in data
 	{
 		if (l-i+1 < n)
@@ -434,7 +434,7 @@ dataBaseItemRemove(n) {
 dataBaseItemInsert(n, r) {
 	global data
 	data.insertAt(n, r)
-	l := data.Length()
+	l := data.Count()
 	for i, r in data
 	{
 		if (l-i < n)	;// no +1 because i want it to stop at n, not after n
@@ -694,7 +694,7 @@ tableFilterCategoryMenuHandler(ItemName, ItemPos, MenuName) {
 		LV_GetText(trueN, rowN, 1) ;// retrieve trueIndex
 		selectedDataRows.push(trueN)
 	}
-	if !(selectedDataRows.Length())
+	if !(selectedDataRows.Count())
 		return
 	for index, trueN in selectedDataRows
 	{
@@ -1066,9 +1066,9 @@ createTrayMenu(darkModeToggle, iconPath) {
 }
 
 trayMenuHandler(menuLabel) {
-	global darkModeToggle, appDataPath, reloadHotkeyAsString
+	global darkModeToggle, appDataPath, reloadHotkeyAsString, openWindowHotkeyAsString
 	switch menuLabel {
-		case "Open GUI":
+		case "Open GUI: " . openWindowHotkeyAsString:
 			createMainGUI()
 		case "Use Darkmode":
 			darkModeToggle := !darkModeToggle

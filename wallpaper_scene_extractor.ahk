@@ -64,7 +64,7 @@ verifyFile(folderPath) {
 }
 
 extractRepkg(a) {
-	return
+	Run, % "repkg" . " """ . a """"
 }
 
 

@@ -4,6 +4,7 @@
 class DiscordClient {
 	static BaseURL := "https://discord.com/api/v10"
 	static token
+	static waitingTime := 0
 	
 	__New(token) {
 		this.token := token
@@ -22,8 +23,13 @@ class DiscordClient {
 		return this.callApi("POST", "/channels/" . channelID . "/messages", {"content":content})
 	}
 	
-	getMessages(channelID) {
-		return this.callApi("GET", "/channels/" . channelID . "/messages")
+	getMessages(channelID, limit := 100, mType := "", mID := 0) {
+		switch mType {
+			case "","after","before","around":
+			default:
+				throw Exception("Bad Message Request: Requested Message with Query Type """ . mType . """")
+		}
+		return this.callApi("GET", "/channels/" . channelID . "/messages?limit=" . limit . (mType ? "&" . mType . "=" . mID : ""))
 	}
 	
 	getMessage(channelID, messageID) {
@@ -36,6 +42,18 @@ class DiscordClient {
 	
 	getUser(userID) {
 		return this.callApi("GET", "/users/" . userID)
+	}
+	
+	getGuild(serverID, member_count := false) {
+		return this.callAPI("GET", "/guilds/" . serverID . (member_count ? "&with_counts=true" : ""))
+	}
+	
+	getMembers(serverID, limit := "1", after := "0") {
+		return this.callAPI("GET", "/guilds/" . serverID . "/members?limit=" . limit . (after ? "&after=" . after : ""))
+	}
+	
+	getRoles(serverID) {
+		return this.callAPI("GET", "/guilds/" . serverID . "/roles")
 	}
 	
 	CallAPI(method, endPoint, content := "") {
@@ -55,7 +73,8 @@ class DiscordClient {
 					throw Exception("Failed to load rate limit retry_after")
 				else
 				{
-					Sleep, % response.retry_after
+					this.waitingTime += response.retry_after * 1000
+					Sleep, % response.retry_after * 1000 + 5
 					continue
 				}
 			}
