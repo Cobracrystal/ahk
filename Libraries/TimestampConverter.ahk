@@ -1,29 +1,26 @@
 ﻿#Include %A_ScriptDir%\Libraries\BasicUtilities.ahk
 
-textTimestampConverter() {
-	global flag
-	global unixTimestamp
-	global validatedTimestamp
+textTimestampConverter(hotkey) {
 	text := fastCopy()
 	text := Trim(text)
 	if (text = "") {
+		validatedTimestamp := A_NowUTC
 		unixTimestamp := UnixTimeStamp(A_NowUTC)
 		flag := 25
 	}
 	else {
-		timestamp := parseToTimeFormat(text)
+		arr := parseToTimeFormat(text)
+		timestamp := arr[1]
+		flag := arr[2]
 		FormatTime, validatedTimestamp, %timestamp%, yyyyMMddHHmmss
 		unixTimestamp := UnixTimeStamp(validatedTimestamp)
 		if (unixTimestamp = -1)
 			flag := 6
 	}
-	createTimeStampMenu(flag)
+	createTimeStampMenu(flag, unixTimestamp, validatedTimestamp)
 }
 
-createTimeStampMenu(flag) {
-	global unixTimestamp
-	global validatedTimestamp
-	global clickedMenu := false
+createTimeStampMenu(flag, unixTimestamp, validatedTimestamp) {
 	FormatTime, l, 		%validatedTimestamp%, dd.MM.yyyy, HH:mm
 	FormatTime, d, 		%validatedTimestamp%, dd/MM/yyyy
 	FormatTime, bigD, 	%validatedTimestamp%, MMMM dd, yyyy
@@ -37,6 +34,7 @@ createTimeStampMenu(flag) {
 		Menu, timestampMenu, Default, Nice
 		Menu, timestampMenu, Disable, Nice
 	}
+	timeStampHandlerVar := Func("timestampHandler").Bind(unixTimestamp, validatedTimestamp)
 	tMode := A_TitleMatchMode
 	SetTitleMatchMode, RegEx
 ;// Flags: 1 = no year, 2 = no date, 3 = no seconds, 4 = only hours, 5 = no time, 6 = invalid date
@@ -46,45 +44,40 @@ createTimeStampMenu(flag) {
 	}
 	else if (WinActive("Discord ahk_exe Discord.*\.exe")) {
 		if (flag = 23)
-			Menu, timestampMenu, Add, Paste short time (t) (%t%), timestampHandler
+			Menu, timestampMenu, Add, Paste short time (t) (%t%), % timeStampHandlerVar
 		else {
 			if (flag = 5 || flag = 15 || flag = 25)
-				Menu, timestampMenu, Add, Paste short date (d) (%d%), timestampHandler
+				Menu, timestampMenu, Add, Paste short date (d) (%d%), % timeStampHandlerVar
 			if (flag = 5 || flag = 15)
-				Menu, timestampMenu, Add, Paste long date (D) (%bigD%), timestampHandler
+				Menu, timestampMenu, Add, Paste long date (D) (%bigD%), % timeStampHandlerVar
 			if (flag = 2 || flag = 25)
-				Menu, timestampMenu, Add, Paste long time (T) (%bigT%), timestampHandler
+				Menu, timestampMenu, Add, Paste long time (T) (%bigT%), % timeStampHandlerVar
 			if (flag = 1 || flag = 4 || flag = 3 || flag = 13 || flag = 14 || flag = 25 || flag = "") {
-				Menu, timestampMenu, Add, Paste full date (f) (%f%), timestampHandler
-				Menu, timestampMenu, Add, Paste long full date (F) (%bigF%), timestampHandler
+				Menu, timestampMenu, Add, Paste full date (f) (%f%), % timeStampHandlerVar
+				Menu, timestampMenu, Add, Paste long full date (F) (%bigF%), % timeStampHandlerVar
 			}
 		}
 		if (flag != 25)
-			Menu, timestampMenu, Add, Paste 'related' format (R) (<t:%unixTimestamp%:R>), timestampHandler
+			Menu, timestampMenu, Add, Paste 'related' format (R) (<t:%unixTimestamp%:R>), % timeStampHandlerVar
 		else
-			Menu, timestampMenu, Add, Paste formatted current date (long) (%l%), timestampHandler
+			Menu, timestampMenu, Add, Paste formatted current date (long) (%l%), % timeStampHandlerVar
 	}
 	else if (flag != 6 && flag != 25)
-			Menu, timestampMenu, Add, Paste Timestamp (UNIX) (%unixTimestamp%), timestampHandler
+			Menu, timestampMenu, Add, Paste Timestamp (UNIX) (%unixTimestamp%), % timeStampHandlerVar
 	else if (flag = 25) {
 		FormatTime, d, %A_Now%, dd/MM/yyyy
 		FormatTime, bigT, %A_Now%, HH:mm:ss
-		Menu, timestampMenu, Add, Paste current Timestamp (UNIX) (%unixTimestamp%), timestampHandler
-		Menu, timestampMenu, Add, Paste current date (short) (%d%), timestampHandler
-		Menu, timestampMenu, Add, Paste current date (long) (%l%), timestampHandler
-		Menu, timestampMenu, Add, Paste current time (%bigT%), timestampHandler
+		Menu, timestampMenu, Add, Paste current Timestamp (UNIX) (%unixTimestamp%), % timeStampHandlerVar
+		Menu, timestampMenu, Add, Paste current date (short) (%d%), % timeStampHandlerVar
+		Menu, timestampMenu, Add, Paste current date (long) (%l%), % timeStampHandlerVar
+		Menu, timestampMenu, Add, Paste current time (%bigT%), % timeStampHandlerVar
 	}
 	SetTitleMatchMode, %tMode%
 	Menu, timestampMenu, Show
-	if !(clickedMenu)
-		Menu, timestampMenu, DeleteAll
+	Menu, timestampMenu, DeleteAll
 }
 
-
-timestampHandler(menuLabel) {
-	global clickedMenu := true
-	global unixTimestamp
-	global validatedTimestamp
+timestampHandler(unixTimestamp, validatedTimestamp, menuLabel) {
 	pos := RegexMatch(menuLabel, "\(.*?\)")
 	format := SubStr(menuLabel, pos+1, 1)
 	FormatTime, l, 		%validatedTimestamp%, dd.MM.yyyy, HH:mm
@@ -106,12 +99,11 @@ timestampHandler(menuLabel) {
 		default:
 			FormatTime, date, %validatedTimestamp%, HH:mm:ss
 	}
+	Sleep, 100
 	fastPrint(date)
-	Menu, timestampMenu, DeleteAll
 }
 
 parseToTimeFormat(text) {
-	global flag
 	flag := ""
 	text := RegexReplace(text, "/", ".")
 	posDate := RegexMatch(text, "[0-9]{2}\.[0-9]{2}\.[0-9]{4}")
@@ -166,7 +158,7 @@ parseToTimeFormat(text) {
 		}
 			
 	}
-	return yyyymmdd . hhmiss
+	return [yyyymmdd . hhmiss, flag]
 }
 
 UnixTimeStamp(time_orig)	{	;// stolen from https://autohotkey.com/board/topic/2486-code-to-convert-fromto-unix-timestamp/

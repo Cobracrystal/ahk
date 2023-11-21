@@ -1,4 +1,5 @@
-﻿;//		MAIN FUNCTION
+﻿;//		MADE BY COBRACRYSTAL
+;//		MAIN FUNCTION
 
 createMacro(startEndKey) {	;// Generating Function. Call this from the hotkey.
 	macro := recordMacro(startEndKey)	;// this records everything. stops as soon as startEndKey is pressed
@@ -213,14 +214,30 @@ replaceSleepTime() {
 AddCodeToScript() {
 	global Code
 	Gui, macroGen:Submit, NoHide
-	hotkey := SubStr(Code, 1, InStr(Code, "::")-1)
-	if(StrLen(hotkey) < 2)
-		MsgBox, 0, No Hotkey found.
-	if (hotkey="^Insert")
-		msgBoxtext := "DEFAULT Hotkey`n	" . hotkey . "`nto the script.`nProceed Anyway?"
-	else
-		msgBoxtext := "Hotkey`n	" . hotkey . "`nto the script.`nProceed?"
-	MsgBox, 4, Add to Script, % "This will add the recorded Macro with the " . msgBoxtext ;// 4 = Yes/No
+	if (!Instr(Code, "::")) {
+		MsgBox, 0, % "Problem while adding", % "No Hotkey found."
+		return
+	}
+	hkey := SubStr(Code, 1, InStr(Code, "::")-1)
+;	if (Instr(Code, "#If")) {
+;		; todo: do a hotkey, if, expression before checking for validity of hotkey, to validify the if expression.	
+;	}
+	errorExplain := "Error Code :	Description`n0		Hotkey already exists within the script`n2		Key Name is not recognized or unsupported`n3		Unsupported Prefix key.`n98		Limit of hotkeys is reached. (32762)`n99		Ran out of memory."
+	Hotkey, % hkey,, UseErrorLevel
+	if (ErrorLevel == 5 || ErrorLevel == 6) {
+		Hotkey, % hkey, AddCodeToScript, UseErrorLevel
+		if (ErrorLevel) {
+			MsgBox, 0, % "Problem while adding", % "Error encountered in (Hotkey): Error Code " . ErrorLevel . "`n`n" . errorExplain
+			return
+		}
+		Hotkey, % hkey, Off
+	}
+	else {	
+		MsgBox, 0, % "Problem while adding", % "Error encountered in (Hotkey): Error Code " . ErrorLevel . "`n`n" . errorExplain
+		return
+	}
+	msgBoxtext := "This will add the recorded Macro with the " . (hkey == "^Insert" ? "DEFAULT " : " ") . "Hotkey `n " . hkey . "`nto the script.`nProceed anyway?"
+	MsgBox, 4, Add to Script, % msgBoxtext ;// 4 = Yes/No
 	IfMsgBox Yes
 		FileAppend, `n%Code%, %A_ScriptFullPath%
 	else 
@@ -246,6 +263,8 @@ macroGenGuiClose() {	;// Close GUI
 	MsgBox, 1, Delete macro?, % "Close GUI and delete recording?"
 	IfMsgBox OK
 		Gui, macroGen:Destroy
+	else
+		return true ; necessary to stop it from hiding
 }
 
 
