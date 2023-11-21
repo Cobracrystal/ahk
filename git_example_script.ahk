@@ -15,13 +15,6 @@ SetWorkingDir %A_ScriptDir%\everything
 #Include %A_ScriptDir%\Libraries\MacroRecorder.ahk
 #Include %A_ScriptDir%\Libraries\TimestampConversion.ahk
 
-
-
-taskBarTimer := Func("updateTaskbarFunction")			
-
-updateTaskbarFunction(0, 1)
-SetTimer, %taskBarTimer%, 200
-
 return
 ; ---- END OF AUTOEXECUTE SECION
 
