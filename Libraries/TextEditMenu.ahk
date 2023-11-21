@@ -4,8 +4,10 @@ TextEditMenuVar := Func("textMenuHandler")
 Menu, textModify, Add, Spongebobify, % TextEditMenuVar
 Menu, textModify, Add, Spaceit, % TextEditMenuVar
 Menu, textModify, Add, Reverse, % TextEditMenuVar
+Menu, textModify, Add, Mirror, % TextEditMenuVar
 Menu, textModify, Add, Smallify, % TextEditMenuVar
 Menu, textModify, Add, Smallcapify, % TextEditMenuVar
+Menu, textModify, Add, Upsidedownify, % TextEditMenuVar
 Menu, runifyMenu, Add, Runify (DE), % TextEditMenuVar
 Menu, runifyMenu, Add, Runify (EN), % TextEditMenuVar
 Menu, textModify, Add, Runify, :runifyMenu
@@ -25,10 +27,14 @@ textMenuHandler(menuLabel) {
 			result := spreadString(text, " ")
 		case "Reverse":
 			result := reverseString(text)
+		case "Mirror":
+			result := mirrorify(text)
 		case "Smallify":
 			result := smallify(text)
 		case "Smallcapify":
 			result := smallcapify(text)
+		case "Upsidedownify":
+			result := upsidedownify(text)
 		case "Runify (DE)":
 			result := runify(text, "DE")
 		case "Runify (EN)":
@@ -53,6 +59,10 @@ spongebobify(text) {
 			c := Format("{:U}", A_LoopField)
 		else 
 			c := Format("{:L}", A_LoopField)
+		if (A_LoopField = "I" || A_LoopField = "i")
+			c := "i"
+		else if (A_LoopField = "L" || A_LoopField = "l")
+			c := "L"
 		result := result . c
 	}
 	return result
@@ -78,12 +88,22 @@ reverseString(text) {
 	return result
 }
 
+mirrorify(text) {
+	text := reverseString(text)
+	return ReplaceChars(text, "abcdefghijklmnopqrstuvwxyz", "ɒdɔbɘʇϱʜiįʞlmnoqpɿƨɈυvwxγz")
+}
+
 smallify(text) {
 	return ReplaceChars(text, "abcdefghijklmnopqrstuvwxyz", "ᵃᵇᶜᵈᵉᶠᵍʰᶦʲᵏˡᵐⁿᵒᵖᵠʳˢᵗᵘᵛʷˣʸᶻ")
 }
 
 smallcapify(text) {
 	return ReplaceChars(text, "abcdefghijklmnopqrstuvwxyz", "ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ")
+}
+
+upsidedownify(text) {
+	text := reverseString(text)
+	return ReplaceChars(text, "abcdefghijklmnopqrstuvwxyz", "ɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇnʌʍxʎz")
 }
 
 runify(text, language) {
