@@ -21,11 +21,11 @@ Thread, NoTimers	;// Any hotkey or menu has priority over timers. So that the cu
 if !InStr(FileExist("everything"), "D")
 	FileCreateDir, everything
 SetWorkingDir %A_ScriptDir%\everything
-#Include %A_ScriptDir%\Script_Functionalities\TransparentTaskbar.ahk 
-#Include %A_ScriptDir%\Script_Functionalities\HotkeyMenu.ahk 
-#Include %A_ScriptDir%\Script_Functionalities\WindowManager.ahk
-#Include %A_ScriptDir%\Script_Functionalities\TextEditMenu.ahk
-#Include %A_ScriptDir%\Script_Functionalities\MacroRecorder.ahk
+#Include %A_ScriptDir%\Libraries\TransparentTaskbar.ahk 
+#Include %A_ScriptDir%\Libraries\HotkeyMenu.ahk 
+#Include %A_ScriptDir%\Libraries\WindowManager.ahk
+#Include %A_ScriptDir%\Libraries\TextEditMenu.ahk
+#Include %A_ScriptDir%\Libraries\MacroRecorder.ahk
 
 ;} ----------------------------------------------------------------------------------------------------
 ;					: VARIABLES

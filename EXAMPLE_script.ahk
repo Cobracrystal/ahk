@@ -8,11 +8,12 @@ Thread, NoTimers	;// Any hotkey or menu has priority over timers. So that the cu
 if !InStr(FileExist("everything"), "D") ;// For the Savedhotkeys.txt file being created by the hotkey manager. Also more clean in general.
 	FileCreateDir, everything
 SetWorkingDir %A_ScriptDir%\everything
-#Include %A_ScriptDir%\Script_Functionalities\TransparentTaskbar.ahk 
-#Include %A_ScriptDir%\Script_Functionalities\HotkeyMenu.ahk 
-#Include %A_ScriptDir%\Script_Functionalities\WindowManager.ahk
-#Include %A_ScriptDir%\Script_Functionalities\TextEditMenu.ahk
-#Include %A_ScriptDir%\Script_Functionalities\MacroRecorder.ahk
+#Include %A_ScriptDir%\Libraries\TransparentTaskbar.ahk 
+#Include %A_ScriptDir%\Libraries\HotkeyMenu.ahk 
+#Include %A_ScriptDir%\Libraries\WindowManager.ahk
+#Include %A_ScriptDir%\Libraries\TextEditMenu.ahk
+#Include %A_ScriptDir%\Libraries\MacroRecorder.ahk
+#Include %A_ScriptDir%\Libraries\TimestampConversion.ahk
 
 
 ; These are available settings aka global variables to avoid editing the library files. Set to the default.
@@ -62,6 +63,9 @@ else
 	SetTimer, %taskBarTimer%, 200
 return
 
+^5::	; Can convert timestamps and dates
+	textTimestampConverter()
+return
 
 ^+LButton::	; Text Modification Menu
 	Menu, textModify, Show
@@ -70,7 +74,7 @@ return
 ; -----------
 ; Example hotkey and hotstring for the hotkey manager:
 
-^5::	; Shows a message box
+^0::	; Shows a message box
 MsgBox, % "you pressed Ctrl+K"
 return
 
