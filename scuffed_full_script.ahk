@@ -1,11 +1,15 @@
-﻿;	INITILIZATION	: MODES
+﻿;// TODO: EDIT THE TRAY MENU TO BE SHORTER / HAVE SUBMENUS
+;// TODO: FIX BUG WITH TRANSPARENT TASKBAR TIMER NOT DETECTING SEAMLESS FULLSCREEN
+;  ____________________________________________________________________________________________________
+;	INITILIZATION	: MODES
 ;{ ____________________________________________________________________________________________________
-#NoEnv ;// Compatibility for future via empty variable assignment
+#NoEnv ;// Compatibility for future and optimization blabla
 #KeyHistory 500
 #Persistent
 SendMode Input ; // Faster
 SetTitleMatchMode, 3 ;// Must Match Exact Title
-CoordMode,Mouse,Window ;// Coordinates for Click are relativ to upper left corner of active Window
+; CoordMode,Mouse,Window ;// Coordinates for Click are relativ to upper left corner of active Window (Look TimeClickers hotkey/Timer for usage)
+; CoordMode,ToolTip,Window ;// both this and above are the default anyway, leaving for future reference
 Thread, NoTimers	;// Any hotkey or menu has priority over timers. So that the custom tray menu doesn't collide with taskbarTransparencyTimer
 #MaxHotkeysPerInterval 5000
 ;// this would change the standard editing program for ahk to n++, but i changed the tray menu anyway so it works.
@@ -18,14 +22,18 @@ Thread, NoTimers	;// Any hotkey or menu has priority over timers. So that the cu
 ;					: SUB FILES
 ;{ ____________________________________________________________________________________________________
 
+if !InStr(FileExist("script_files"), "D")
+	FileCreateDir, script_files
+SetWorkingDir %A_ScriptDir%\script_files
 if !InStr(FileExist("everything"), "D")
 	FileCreateDir, everything
-SetWorkingDir %A_ScriptDir%\everything
+SetWorkingDir %A_ScriptDir%\script_files\everything
 #Include %A_ScriptDir%\Libraries\TransparentTaskbar.ahk 
 #Include %A_ScriptDir%\Libraries\HotkeyMenu.ahk 
 #Include %A_ScriptDir%\Libraries\WindowManager.ahk
 #Include %A_ScriptDir%\Libraries\TextEditMenu.ahk
 #Include %A_ScriptDir%\Libraries\MacroRecorder.ahk
+#Include %A_ScriptDir%\Libraries\TimestampConversion.ahk
 
 ;} ----------------------------------------------------------------------------------------------------
 ;					: VARIABLES
@@ -69,6 +77,10 @@ return
 	Menu, textModify, Show
 return
 
+^U::	; Time/Date Converter
+	textTimestampConverter()
+return
+
 ^+!NumpadSub::	; Record Macro
 	createMacro(A_ThisHotkey)
 return
@@ -87,7 +99,7 @@ else
 	WindowManagerGuiClose(windowManagerGuiHwnd)
 return
 
-^+F11:: ; Gives Key History (innate from ahk)
+^+F11:: ; Gives Key History
 KeyHistory
 return
 
@@ -156,6 +168,33 @@ else {
 }
 return
 
+
+!NumpadMult::	; Toggle Mouse Cursor Visibility
+SystemCursor("T")
+return
+
+^!H::	; Make Window Circle Visible
+if (toggleExp := !toggleExp) {
+	MouseGetPos, xPosCircle, yPosCircle, circleWindow
+	xPosCircle -= 100
+	yPosCircle -= 100
+	WinSet, Region, %xPosCircle%-%yPosCircle% w200 h200 E, ahk_id %circleWindow%
+	WinSet, Style, -0xC00000, ahk_id %circleWindow% ; make it alwaysonTop
+;	MsgBox, %xPosCircle%, %yPosCircle%, ahk_id %circleWindow%
+}
+else {
+	WinSet, Region,, ahk_id %circleWindow%
+	WinSet, Style, +0xC00000, ahk_id %circleWindow%
+}
+return
+
+^!+K:: ; Tiles Windows Vertically
+shell := ComObjCreate("Shell.Application")
+MsgBox, 1, ConfirmDialog, Tile Windows Vertically?, 10
+IfMsgBox Ok
+	shell.tileWindowsVertically()
+tileCurrentWindows()
+return
 ^!+I:: ; Center & Adjust Active Window
 center_window_on_monitor(WinExist("A"), 0.8)
 return
@@ -167,7 +206,7 @@ else
 	WinSet, Transparent, Off, A
 return
 
-^+H:: ; Make Taskbar invisible (on main monitor)
+^+H:: ; Make Taskbar invisible
 if (TranspToggle2 := !TranspToggle2) {
 	WinSet, Transparent, 0, ahk_class Shell_TrayWnd
 	; WinSet, Transparent, 0, ahk_class Shell_SecondaryTrayWnd
@@ -188,7 +227,7 @@ else {
 }
 return
 
-<^>!M::		; Minimizes Active Window and Restore it later
+<^>!M::		; Minimizes Active Window
 if (togglewinmin := !togglewinmin) {
 	WinGet, prevWindowID, ID, A
 	WinMinimize, ahk_id %prevWindowID%
@@ -217,7 +256,8 @@ return
 
 showcoords() {		
 	MouseGetPos, ttx, tty
-	Tooltip, %ttx%`, %tty%
+	PixelGetColor, ttc, ttx, tty
+	Tooltip, %ttx%`, %tty%`, %ttc%
 }
 
 
@@ -237,6 +277,39 @@ center_window_on_monitor(winHandle, size_percentage := 0.714286) {
 				 , (workBottom - workTop) * size_percentage	; // height
 }
 
+SystemCursor(OnOff=1) {   ;// stolen from https://www.autohotkey.com/boards/viewtopic.php?t=6167 
+	;// INIT = "I"/"Init", OFF = 0/"Off", TOGGLE = -1/"T"/"Toggle", ON = 1 
+    static AndMask, XorMask, $, h_cursor
+        ,c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13 ; system cursors
+        , b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13   ; blank cursors
+        , h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13   ; handles of default cursors
+    if (OnOff = "Init" or OnOff = "I" or $ = "")       ; init when requested or at first call
+    {
+        $ = h                                          ; active default cursors
+        VarSetCapacity( h_cursor,4444, 1 )
+        VarSetCapacity( AndMask, 32*4, 0xFF )
+        VarSetCapacity( XorMask, 32*4, 0 )
+        system_cursors = 32512,32513,32514,32515,32516,32642,32643,32644,32645,32646,32648,32649,32650
+        StringSplit c, system_cursors, `,
+        Loop %c0%
+        {
+            h_cursor   := DllCall( "LoadCursor", "Ptr",0, "Ptr",c%A_Index% )
+            h%A_Index% := DllCall( "CopyImage", "Ptr",h_cursor, "UInt",2, "Int",0, "Int",0, "UInt",0 )
+            b%A_Index% := DllCall( "CreateCursor", "Ptr",0, "Int",0, "Int",0
+                , "Int",32, "Int",32, "Ptr",&AndMask, "Ptr",&XorMask )
+        }
+    }
+    if (OnOff = 0 or OnOff = "Off" or $ = "h" and (OnOff < 0 or OnOff = "Toggle" or OnOff = "T"))
+        $ = b  ; use blank cursors
+    else
+        $ = h  ; use the saved cursors
+
+    Loop %c0%
+    {
+        h_cursor := DllCall( "CopyImage", "Ptr",%$%%A_Index%, "UInt",2, "Int",0, "Int",0, "UInt",0 )
+        DllCall( "SetSystemCursor", "Ptr",h_cursor, "UInt",c%A_Index% )
+    }
+}																						 
 
 ;} ----------------------------------------------------------------------------------------------------
 ;					: STANDARD
@@ -281,13 +354,16 @@ trayMenuHandler(menuLabel) {
 			ListLines
 			return
 		case "Help":
-			Run, C:\Program Files\AutoHotkey\AutoHotkey.chm
+			str := RegexReplace(A_AhkPath, "AutoHotkey.exe$", "AutoHotkey.chm")
+			Run, %str%
 			WinWait, AutoHotkey Help
-			WinMaximize, AutoHotkey Help
+			center_window_on_monitor(WinActive("AutoHotkey Help"), 0.8)
 			return
 		case "Window Spy":
-			if !WinExist("Window Spy")
-				Run, C:\Program Files\AutoHotkey\WindowSpy.ahk
+			if !WinExist("Window Spy") {
+				str := RegexReplace(A_AhkPath, "AutoHotkey.exe$", "WindowSpy.ahk")
+				Run, %str%
+			}
 			else
 				WinActivate, Window Spy
 			return
@@ -295,10 +371,16 @@ trayMenuHandler(menuLabel) {
 			reload()
 		case "Edit in Notepad++":
 			try {
-				Run, C:\Program Files\Notepaad++\notepad++.exe %A_ScriptFullPath%
+				Run, Notepad++ %A_ScriptFullPath%
 			} catch e {
-				MsgBox, % e . "`nSince Notepad++ was not found, opening script in notepad instead"
-				Run, notepad %A_ScriptFullPath%
+				try {
+					str := A_ProgramFiles . "\Notepad++\notepad++.exe " . A_ScriptFullPath
+					Run, %str%
+				} catch f {
+					MsgBox, Could not find Notepad++ on your machine. Launching notepad.
+					str := A_WinDir . "\system32\notepad.exe " . A_ScriptFullPath
+					Run, %str%
+				}
 			}
 			return
 		case "Pause Script":
@@ -319,12 +401,14 @@ trayMenuHandler(menuLabel) {
 }
 
 reload() {
+	SystemCursor("On")
 	Reload
 }
 
 OnExit("exit")
 
 exit() {
+	SystemCursor("On")
 	ExitApp
 }
 
