@@ -16,18 +16,7 @@ SetWorkingDir %A_ScriptDir%\everything
 #Include %A_ScriptDir%\Libraries\TimestampConversion.ahk
 
 
-; These are available settings aka global variables to avoid editing the library files. Set to the default.
 
-;//Window Manager
-windowManagerGuiPosX := 200
-windowManagerGuiPosY := 200
-;//Hotkey Manager
-hotkeyManagerGuiPosX := 530
-hotkeyManagerGuiPosY := 35		
-;//Taskbar Transparency
-accent_color = 0xD0473739 		; This is literally just gray
-passive_mode := 2	
-;// global variable to set a timer with a function easily
 taskBarTimer := Func("updateTaskbarFunction")			
 
 updateTaskbarFunction(0, 1)
