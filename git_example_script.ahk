@@ -5,8 +5,8 @@ SendMode Input ; // Faster
 SetTitleMatchMode, 3 ;// Must Match Exact Title
 Thread, NoTimers	;// Any hotkey or menu has priority over timers. So that the custom tray menu doesn't collide with taskbarTransparencyTimer
 
-if !InStr(FileExist("everything"), "D") ;// For the Savedhotkeys.txt file being created by the hotkey manager. Also more clean in general.
-	FileCreateDir, everything
+if !InStr(FileExist("script_files"), "D")
+	FileCreateDir, script_files
 SetWorkingDir %A_ScriptDir%\everything
 #Include %A_ScriptDir%\Libraries\TransparentTaskbar.ahk 
 #Include %A_ScriptDir%\Libraries\HotkeyMenu.ahk 
