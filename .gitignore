@@ -1,6 +1,9 @@
-.md
-.ahk
-.exe
-**/archive
-**/not_mine_or_examples
-**/script_files
+/*
+!/*.ahk
+/wallpaper_scene_extractor.ahk
+/discordSendBot.ahk
+/httpserver.ahk
+/everything.ahk
+!/*.md
+!/.gitignore
+!/script_files/
