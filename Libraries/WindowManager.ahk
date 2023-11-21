@@ -242,5 +242,4 @@ viewWindowPath() {
 	WinGet, process_path, ProcessPath, ahk_id %windowID%
 	folder_path := RegexReplace(process_path, "(.*\\).*", "$1")
 	run, explorer.exe "%folder_path%"
-	
 }

@@ -7,7 +7,7 @@ global accent_color = 0xD0473739 ; This is literally just gray
 global passive_mode := 2
 
 ;// Adds Simple Timer Menu to display if Script is active or not
-Menu, Timers, Add, Taskbar Transparency Timer: Off, doNothing
+Menu, Timers, Add, Taskbar Transparency Timer, doNothing
 Menu, Timers, Disable, 1&
 Menu, Tray, Add, Timers, :Timers
 Menu, Tray, NoStandard
@@ -21,15 +21,15 @@ updateTaskbarFunction(reset := 0, logAll := 0) {
 		init := 1
 	}
 	if !(timer) {
-		Menu, Timers, Rename, Taskbar Transparency Timer: Off, Taskbar Transparency Timer: On
-		Menu, Timers, Check, Taskbar Transparency Timer: On
+	;	Menu, Timers, Rename, Taskbar Transparency Timer: Off, Taskbar Transparency Timer: On
+		Menu, Timers, Check, Taskbar Transparency Timer
 		timer := 1
 	}
 	try {
 		if (reset) {
 			taskbarTransparency := [0,0]
-			Menu, Timers, Rename, Taskbar Transparency Timer: On, Taskbar Transparency Timer: Off
-			Menu, Timers, Uncheck, Taskbar Transparency Timer: Off
+		;	Menu, Timers, Rename, Taskbar Transparency Timer: On, Taskbar Transparency Timer: Off
+			Menu, Timers, Uncheck, Taskbar Transparency Timer
 			timer := 0
 			for Index, Element in monitors
 				TaskBar_SetAttr(2, Element.MonitorNumber, 0xD0473739)
@@ -135,5 +135,3 @@ TaskBar_SetAttr(accent_state := 0, monitor := -1, gradient_color := "0x01000000"
 		}
 	return true
 }
-
-
