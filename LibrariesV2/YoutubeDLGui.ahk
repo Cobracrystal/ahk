@@ -1,6 +1,4 @@
 ﻿; https://github.com/cobracrystal/ahk
-; todo
-; setting option to reset settings to defaults (all) (aka caling getdefaultsettings)
 /*
 todo:
 clean links from stuff
@@ -267,12 +265,14 @@ class YoutubeDLGui {
 			this.controls.editFFmpegPath := this.guiSettings.AddEdit("xs r1 w400 -Multi Readonly", this.settings.ffmpegPath)
 			this.guiSettings.AddButton("vButtonYTDLPath xs-1", "Choose YTDL Executable Path").OnEvent("Click", this.settingsHandler.bind(this))
 			this.controls.editYTDLPath := this.guiSettings.AddEdit("xs r1 w400 -Multi Readonly", this.settings.ytdlPath)
-
+			this.guiSettings.AddButton("xs-1", "Reset Settings").OnEvent("Click", this.resetSettings.bind(this))
 			this.guiSettings.Show(Format("x{1}y{2} Autosize", this.data.coords[1] + 20, this.data.coords[2] + 20))
 		}
 		else if (mode == "C") {
+			WinSetAlwaysOnTop(1, this.gui)
 			this.guiSettings.Destroy()
 			this.gui.Opt("-Disabled")
+			WinSetAlwaysOnTop(0, this.gui)
 			WinActivate(this.gui)
 		}
 	}
@@ -287,6 +287,22 @@ class YoutubeDLGui {
 		this.data.outputLastLine := ""
 		this.data.outputLastLineCFlag := 0
 		this.gui := 0
+	}
+
+	resetSettings(*) {
+		if (MsgBox("Are you sure? This will reset all settings to their default values.", "Reset Settings", "0x1") == "Cancel")
+			return
+		newSettings := YoutubeDLGui.getDefaultSettings()
+		options := YoutubeDLGui.getOptions()
+		this.settings := newSettings
+		this.options := options
+		this.settings.options := this.options
+		this.ytdlOptionHandler()
+		this.settingsGUI("Close")
+		this.settingsGUI("Open")
+		this.gui["CheckboxConvertToAudio"].Value := 0
+		this.gui["CheckboxUpdate"].Value := 0
+		this.settingsManager("Save")
 	}
 
 	settingsManager(mode := "Save") {
@@ -313,8 +329,6 @@ class YoutubeDLGui {
 			for i, e in YoutubeDLGui.getOptions()
 				this.options[i] := (this.settings.options.HasOwnProp(i) ? this.settings.options.%i% : e)
 			this.settings.options := this.options
-			for i, e in ["ignore-config", "output", "no-overwrites", "no-playlist", "retries", "limit-rate", "format", "ffmpeg-location", "merge-output-format"]
-				this.options[e].selected := true
 			; maybe [,"ignore-config","no-playlist","retries"]
 			return 1
 		}
@@ -380,6 +394,8 @@ class YoutubeDLGui {
 		youtubeDLOptions["convert-thumbnails"] := { param: "jpg" }
 		for i, e in youtubeDLOptions
 			youtubeDLOptions[i].selected := false
+		for i, e in ["ignore-config", "output", "no-overwrites", "no-playlist", "retries", "limit-rate", "format", "ffmpeg-location", "merge-output-format"]
+			youtubeDLOptions[e].selected := true
 		return youtubeDLOptions
 	}
 }
