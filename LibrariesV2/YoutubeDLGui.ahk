@@ -45,7 +45,7 @@ class YoutubeDLGui {
 
 	__New(flagDebug := 0) {
 		guiMenu := TrayMenu.submenus["GUIs"]
-		guiMenu.Add("Open YoutubeDL Gui", this.youtubeDLGui.Bind(this))
+		guiMenu.Add("Open YoutubeDL Gui", (*) => this.youtubeDLGui())
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; establish basic data necessary for handling
 		this.data := { coords: [750, 425], savePath: A_Appdata . "\Autohotkey\YTDL", output:"", outputLastLine: "", outputLastLineCFlag: 0
@@ -311,7 +311,7 @@ class YoutubeDLGui {
 			for i, e in ["ignore-config", "output", "no-overwrites", "no-playlist", "retries", "limit-rate", "format", "ffmpeg-location", "merge-output-format"]
 				this.options[e].selected := true
 			; maybe [,"ignore-config","no-playlist","retries"]
-			return 2
+			return 1
 		}
 		return 0
 	}
