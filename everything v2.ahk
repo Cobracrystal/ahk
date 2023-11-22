@@ -63,7 +63,7 @@ reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
 ; Launch Transparent Taskbar at 50ms frequency
 TransparentTaskbar.TransparentTaskbar(1, 50)
 ; Start keeping track of desktop window changes
-DesktopState.enable()
+DesktopState.enable(60000)
 ; Start Loop to close winrar popups
 SetTimer(closeWinRarNotification, -100, -100000) ; priority -100k so it doesn't interrupt
 ; Initialize Internet Logging Script

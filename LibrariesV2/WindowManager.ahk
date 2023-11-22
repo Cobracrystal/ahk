@@ -287,10 +287,10 @@ class DesktopState {
 		this.timer := this.save.bind(this)
 	}
 
-	static enable() {
+	static enable(period := 60000) {
 		this.prevState := []
 		this.save()
-		SetTimer(this.timer, 60000)
+		SetTimer(this.timer, period)
 	}
 
 	static disable() {
