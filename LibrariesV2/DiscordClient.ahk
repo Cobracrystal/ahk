@@ -1,14 +1,28 @@
 ﻿; https://github.com/cobracrystal/ahk
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\WebSocket.ahk"
 
 class DiscordClient {
 	
 	__New(token) {
 		this.token := token
-		this.BaseURL := "https://discord.com/api/v10"
-		this.waitingTime := 0
+		version := "10"
+		this.BaseURL := "https://discord.com/api/v" version
 		this.me := this.getCurrentUser()
-		this.gw := DiscordClient.Gateway("placeholder")
+		this.wsData := {
+			heartbeatACK: false,
+			heartbeatInterval: 0,
+			url: this.callApi("GET", "/gateway/bot")["url"] . "?v=" version "&encoding=json"
+		}
+		this.ws := Websocket(
+			this.wsData.url,
+			{
+				open: this.ws_OnOpen.bind(this), ; (this)=>void,
+				data: this.ws_OnData.bind(this), ; (this, data, size)=>bool,
+				message: this.ws_OnMessage.bind(this), ; (this, msg)=>bool,
+				close: this.ws_OnClose.bind(this) ; (this, status, reason)=>void
+			}
+		)
 	}
 	
 	createDM(userID) {
@@ -21,7 +35,7 @@ class DiscordClient {
 			channelID := this.createDM(id)["id"]
 		else
 			channelID := id
-		return this.callApi("POST", "/channels/" channelID . "/messages", {content:content})
+		return this.callApi("POST", "/channels/" channelID . "/messages", content)
 	}
 	
 	getMessages(channelID, limit := 100, mType := "", mID := 0) {
@@ -142,8 +156,6 @@ class DiscordClient {
 					throw Error("Failed to load rate limit retry_after")
 				else
 				{
-					this.waitingTime += response["retry_after"] * 1000
-					timedTooltip(response["retry_after"] * 1000)
 					Sleep(response["retry_after"] * 1000 + 5)
 					continue
 				}
@@ -163,11 +175,91 @@ class DiscordClient {
 				return i
 		return 0
 	}
-	
-	class Gateway {
-		__New(placeholder) {
-			return
+
+	ws_SendData(object, ws?) {
+		if (!IsSet(ws))
+			ws := this.ws
+		str := jsongo.Stringify(object)
+		sBuf := Buffer(StrPut(str, "UTF-16"))
+		StrPut(jsongo.Stringify(object), sBuf, "UTF-16")
+		ws.Send(sBuf)
+	}
+
+	ws_SendIdentify(ws?) {
+		obj := {
+			op:2, 
+			d:{
+				token: this.token, 
+				properties: Map(
+					"$os", "windows",
+					"$browser", "DiscordClient.ahk", 
+					"$device", "DiscordClient.ahk", 
+					"$referrer", "", 
+					"$referring_domain", ""),
+				compress:false, ; this requires zlib and much more effort
+				large_threshold: 250
+			}
 		}
+		this.ws_SendData(obj, ws?)
+	}
+
+	ws_OnOpen(ws) {
+		this.ws_SendIdentify(ws?)
+	}
+	
+	ws_OnMessage(ws, msg) {
+		data := jsongo.Parse(msg.data)
+
+		if data["s"]
+			this.wsData.SequenceNum := data["s"]
+		
+		; call opcode function
+		fn := "ws_Op" . data["op"]
+		if (this.HasMethod(fn))
+			return this.%fn%(data)
+		else
+			return false
+	}
+	
+	ws_OnData(ws, data, size) {
+		return 1
+	}
+
+	ws_OnClose(ws, status, reason) {
+		throw Error("Unhandled Discord.ahk WebSocket Close")
+	}
+	
+	; opcode = 10 => Hello Event in response to opening Gateway
+	; https://discord.com/developers/docs/topics/gateway#hello-event
+	ws_OP10(Data) {
+		this.wsData.heartbeatACK := True
+		this.wsData.heartbeatInterval := Data["d"]["heartbeat_interval"]
+		initRand := Integer(-1 * Random(1, this.wsData.heartbeatInterval))
+		SetTimer(this.ws_SendHeartbeat.bind(this), initRand)
+		SetTimer(SetTimer.Bind(this.ws_SendHeartbeat.bind(this), this.wsData.heartbeatInterval), initRand+1)
+	}
+	
+	; opcode = 11 => Heartbeat acknowledged
+	OP11(Data) {
+		this.wsData.HeartbeatACK := True
+	}
+	
+	; opcode = 0 => Event Dispatched
+	OP0(Data) {
+		fn := this["OP0_" Data.t]
+		%fn%(this, Data.d)
+	}
+	
+	ws_SendHeartbeat() {
+		if !this.wsData.HeartbeatACK {
+			throw Error("Heartbeat did not respond")
+			/*
+				https://discord.com/developers/docs/topics/gateway#heartbeat-interval-example-heartbeat-ack
+				this needs to be handled
+			*/
+		}
+		this.wsData.HeartbeatACK := false
+		this.ws_SendData({op: 1, d: this.wsData.SequenceNum})
 	}
 
 }
