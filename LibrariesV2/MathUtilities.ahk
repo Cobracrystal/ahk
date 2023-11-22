@@ -1,12 +1,14 @@
-﻿#Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
+﻿; https://github.com/cobracrystal/ahk
 
-;// MAIN FUNCTION
+#Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
+
+; MAIN FUNCTION
 calculateExpression(mode := "print") {
 	expression := fastCopy()
 	result := createResult(expression)
-;//	if (Instr(expression, "x"))	;// bad for recognizing equations.
-;//		endSymbol := " => x = "
-;//	else 
+;	if (Instr(expression, "x"))	; bad for recognizing equations.
+;		endSymbol := " => x = "
+;	else 
 		endSymbol := " = "
 	if (result = "")
 		return

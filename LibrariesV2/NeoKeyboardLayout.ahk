@@ -1,4 +1,5 @@
-﻿
+﻿; https://github.com/cobracrystal/ahk
+
 class NeoKeyboardLayout {
 	
 	static KeyboardLayoutGUI(mode := "O", *) {

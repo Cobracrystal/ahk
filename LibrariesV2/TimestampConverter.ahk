@@ -1,6 +1,8 @@
-﻿#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
+﻿; https://github.com/cobracrystal/ahk
 
-; NOTE: DOES NOT ACKNOWLEDGE SUMMER/WINTER TIME. INTERPRETS LOCALE TIME, IF AFFECTED BY SUMMER/WINTER TIME, AS ±1 TIMEZONE.
+#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
+
+; note: does not acknowledge summer/winter time. will interpret locale time, if affected by summer/winter time, as ±1 timezone.
 textTimestampConverter() {
 	text := fastCopy()
 	text := Trim(text)

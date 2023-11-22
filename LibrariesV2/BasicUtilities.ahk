@@ -1,4 +1,6 @@
-﻿#Requires Autohotkey 2.0
+﻿; https://github.com/cobracrystal/ahk
+
+#Requires Autohotkey 2.0
 
 class TrayMenu {
 

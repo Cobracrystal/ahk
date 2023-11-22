@@ -1,15 +1,9 @@
-;// made by Cobracrystal
-;------------------------- AUTO EXECUTE SECTION -------------------------
+; https://github.com/cobracrystal/ahk
+; Todo
+; check all included files for hotkeys
+; create search function in main gui
+
 #Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
-
-;// Add two options on top of the normal Tray Menu
-
-
-;------------------------------------------------------------------------
-
-; RIDICULOUSLY COMPLICATED TODO:
-; B) CHECK ALL INCLUDED FILES FOR HOTKEYS
-; C) CREATE SEARCH FUNCTION IN MAIN GUI
 
 class HotkeyManager {
 	; prevent instances from being created.
@@ -83,7 +77,6 @@ class HotkeyManager {
 		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", this.onKeyPress.bind(this))
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords[1], this.data.coords[2]))
 	}
-	; -------- LOADING IN DATA
 
 	static onKeyPress(*) {
 		ctrl := this.gui.FocusedCtrl
@@ -173,7 +166,7 @@ class HotkeyManager {
 		Hotstrings := []
 		Loop Parse, script, "`n", "`r" {
 			if (RegExMatch(A_LoopField,"i)^\s*:([0-9\*\?XBCKOPRSIEZ]*?):(.*?)::(.*)`;?\s*(.*)", &match) || RegexMatch(A_LoopField, "i)^\s*Hotstring\(\`":([0-9\*\?BCKOPRSIEZ]*?):(.*?)\`",\`"(?:(.*)\`"),.*?\)\s*`;?\s*(.*)", &match))	{
-				;// EXPLANATION: start of line : [possible modifiers only once]:[string]:(escape char):(seconds string)[check for spaces][comment] OR ALTERNATIVELY
+				;// start of line : [possible modifiers only once]:[string]:(escape char):(seconds string)[check for spaces][comment] OR ALTERNATIVELY
 				;// HotString(" (<- escaped via "" which turns into ", and that escaped via \ so \"" = ")[modifiers]:[string]","[replacement]", [variable which we don't need])
 				modifiers := match[1]
 				hString := match[2]

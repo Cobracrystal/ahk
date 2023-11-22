@@ -1,35 +1,23 @@
-﻿;// github.com/cobracrystal/ahk
-#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
-#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
-
-
-/*
-^+F10::
-YoutubeDLGui.YoutubeDLGui("T")
-return
-*/
+﻿; https://github.com/cobracrystal/ahk
 
 /*
 todo:
-clean links
+clean links from stuff
 (resolution option?)
 format option (mp3, mp4, wav, etc)
 thumbnail download?
 
 FORMAT -f "bestvideo+bestaudio": twitter, instagram do not have an audio file so bestaudio causes failure.
+^ that is native ytdlp stuff, fix by just using better -f option
 
 only show finished + launch explorer if successful
-
 add option to clean part files
 add option to abort (modify cmdret potentially?)
-
-settings:
-ffmpeg path get from PATH ?
-
-add override for domains -> instagram -> other format etc
-(when multiple links provided, they must all have same domain? otherwise other static settings used.)
-
 */
+
+#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
+#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
+
 class YoutubeDLGui {
 	youtubeDLGui(mode := "O") {
 		mode := SubStr(mode, 1, 1)

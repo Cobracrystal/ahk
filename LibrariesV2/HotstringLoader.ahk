@@ -1,4 +1,6 @@
-﻿#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
+﻿; https://github.com/cobracrystal/ahk
+
+#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
 
 class HotstringLoader {
 		

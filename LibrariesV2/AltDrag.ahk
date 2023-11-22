@@ -1,5 +1,5 @@
-﻿/*
-
+﻿; https://github.com/cobracrystal/ahk
+/*
 ;---'Traditional' Hotkeys:
 ;  Alt + Left Button	: Drag to move a window.
 ;  Alt + Right Button	: Drag to resize a window.
@@ -60,7 +60,7 @@ class AltDrag {
 		CoordMode("Mouse", "Screen")
 		cleanHotkey := RegexReplace(hotkey, "#|!|\^|\+|<|>|\$|~", "")
 		MouseGetPos(&mouseX1, &mouseY1, &winID)
-		;// abort if maximized/minimized or blacklist
+		; abort if maximized/minimized or blacklist
 		if (this.winInBlacklist(winID) || WinGetMinMax(winID) != 0) {
 			this.sendKey(cleanHotkey)
 			return
@@ -90,7 +90,7 @@ class AltDrag {
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
 		cleanHotkey := RegexReplace(hotkey, "#|!|\^|\+|<|>|\$|~", "")
-		;// abort if max/min or on blacklist
+		; abort if max/min or on blacklist
 		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
 		if (this.winInBlacklist(wHandle) || WinGetMinMax(wHandle) != 0) {
 			this.sendKey(cleanHotkey)
@@ -120,7 +120,7 @@ class AltDrag {
 	
 	static scaleWindow(direction := 1, scale_factor := 1.05) {
 		; scale factor NOT exponential, its dependant on monitor size
-		cleanHotkey := "{Middle Up}" ; FIX THIS
+		cleanHotkey := "{Middle Up}"
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
 		wHandle := WinExist("A")
@@ -163,13 +163,13 @@ class AltDrag {
 	; * edgeWidthPixels -> desktop and window size is slightly incorrect, shifting by ~7 pixels / window border is necessary 
 	static calculateSnapping(&x, &y, w, h, mHandle, radius, edgeWidthPixels) {
 		if (abs(x-this.monitors[mHandle].left) < radius)
-			x := this.monitors[mHandle].left-edgeWidthPixels		;// snap to left edge of screen + adjustment of window Client area to actual window
+			x := this.monitors[mHandle].left-edgeWidthPixels		; snap to left edge of screen + adjustment of window Client area to actual window
 		else if (abs(x+w-this.monitors[mHandle].right) < radius)
-			x := this.monitors[mHandle].right-w+edgeWidthPixels 	;// snap to right edge of screen
+			x := this.monitors[mHandle].right-w+edgeWidthPixels 	; snap to right edge of screen
 		if (abs(y-this.monitors[mHandle].top) < radius)
-			y := this.monitors[mHandle].top					;// snap to top edge of screen
+			y := this.monitors[mHandle].top					; snap to top edge of screen
 		else if (abs(y+h-this.monitors[mHandle].bottom) < radius)
-			y := this.monitors[mHandle].bottom-h+edgeWidthPixels	;// snap to bottom edge of screen
+			y := this.monitors[mHandle].bottom-h+edgeWidthPixels	; snap to bottom edge of screen
 	}
 	
 	static winInBlacklist(winID) {
@@ -181,8 +181,7 @@ class AltDrag {
 		
 	static winMinMaxSize(winID) {
 		MINMAXINFO := Buffer(40, 0)
-		SendMessage(0x24, , MINMAXINFO,,"ahk_id " . winID) ;WM_GETMINMAXINFO := 0x24
-	;	TODO: CHECK IF WINDOW THAT SPECIFIES vMINX TO BE SMALLER THAN SYSTEM_MINX CAN ACTUALLY RESIZE SMALLER OR NOT. 
+		SendMessage(0x24, , MINMAXINFO,,"ahk_id " . winID) ;WM_GETMINMAXINFO := 0x24 
 		vMinX := Max(NumGet(MINMAXINFO, 24, "Int"), this.minMaxSystem.minX)
 		vMinY := Max(NumGet(MINMAXINFO, 28, "Int"), this.minMaxSystem.minY)
 		vMaxX := (NumGet(MINMAXINFO, 32, "Int") == 0 ? this.minMaxSystem.MaxX : NumGet(MINMAXINFO, 32, "Int"))

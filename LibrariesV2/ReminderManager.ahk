@@ -1,4 +1,6 @@
-﻿; OPTION TO MAKE REMINDER MESSAGE A TOOLTIP.
+﻿; https://github.com/cobracrystal/ahk
+; todo:
+; OPTION TO MAKE REMINDER MESSAGE A TOOLTIP.
 ; todo: save reminders over multiple restarts in ini file.
 ; then just load those up on starting -> no need to call 1337 reminder everytime. tada
 ; custom functions -> text body of function that you write just gets saved in file, timer is set to run that file

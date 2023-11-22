@@ -1,4 +1,5 @@
-﻿#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
+﻿; https://github.com/cobracrystal/ahk
+#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
 
 class TextEditMenu {
 

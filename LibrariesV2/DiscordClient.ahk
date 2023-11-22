@@ -1,5 +1,6 @@
-﻿#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
-
+﻿; https://github.com/cobracrystal/ahk
+; originally by g33kdude (?)
+#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
 
 class DiscordClient {
 	

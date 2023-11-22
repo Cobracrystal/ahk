@@ -1,4 +1,6 @@
-﻿#Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
+﻿; https://github.com/cobracrystal/ahk
+
+#Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
 colorGradientArr(amount, colors*) {
 	color_R := [], color_G := [], color_B := [], gradient := []
 	if (amount < colors.Length-2)

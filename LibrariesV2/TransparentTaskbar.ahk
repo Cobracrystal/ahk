@@ -1,11 +1,8 @@
-﻿;//original function shamelessly stolen & modified from JNizM, https://github.com/jNizM/AHK_TaskBar_SetAttr/
-;//script functionality from Cobracrystal
-;------------------------- AUTO EXECUTE SECTION -------------------------
+﻿; https://github.com/cobracrystal/ahk
+; taskbar_Setattr by https://github.com/jNizM/AHK_TaskBar_SetAttr/
+
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\ColorUtilities.ahk"
-
-; TODO: CHECK VLC MAX/ MIN MODE
-; REPRODUCE: Start video in fullscreen, have song after it, it automatically resizes to song but mmx stays
 
 class TransparentTaskbar {
 	
@@ -214,7 +211,7 @@ class TransparentTaskbar {
 		}
 	}
 
-	; En-/Disables Windows Setting 'Only show Taskbar when hovering over it with Mouse', 0=Off, 1=On
+	; En-/Disables Windows Setting 'Only show Taskbar when hovering over it with Mouse'. mode = 0 -> Off, 1 -> On
 	static hideShowTaskbar(mode := 0) {
 		static ABM_SETSTATE := 0xA, ABS_AUTOHIDE := 0x1, ABS_ALWAYSONTOP := 0x2
 		APPBARDATA := Buffer(size := 2*A_PtrSize + 2*4 + 16 + A_PtrSize, 0)
