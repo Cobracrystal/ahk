@@ -658,7 +658,6 @@ customExit(ExitReason, ExitCode) {
 :*?:=/=::≠
 :*?:+-::±
 :*?:~=::≈
-:*:\ß::ẞ
 :*:\disap::ಠ_ಠ
 :*:\checkmark::▣
 
