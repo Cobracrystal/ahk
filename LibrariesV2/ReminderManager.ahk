@@ -101,7 +101,7 @@ class ReminderManager {
 	*/
 	setPeriodicTimerOn(time, period, periodUnit := "Days", message := "", function := "") {
 		MSec := A_Msec
-		if (!IsTime(time))
+		if (!IsTime(String(time)))
 			throw Error("Invalid Timestamp: " . time)
 		if (period <= 0)
 			throw Error("Invalid Period: " period)
@@ -170,7 +170,8 @@ class ReminderManager {
 		}
 		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
 		if (nextTimeMS < -4294967295)
-			throw Error("Integer Limit for Timers reached.")
+			return
+;			throw Error("Integer Limit for Timers reached.")
 		if (this.settings.flagDebug)
 			timedTooltip(nextTimeMS "`n" MSec)
 		if !(function is Func) {
