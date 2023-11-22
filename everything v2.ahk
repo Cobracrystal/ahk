@@ -100,7 +100,7 @@ return
 
 #SuspendExempt true
 ^+R:: { ; Reload Script
-	customReload()
+	Reload()
 }
 #SuspendExempt false
 
@@ -734,7 +734,7 @@ trayMenuHandler(itemName, *) {
 				WinActivate("Window Spy")
 			return
 		case "Reload this Script":
-			customReload()
+			Reload()
 		case "Edit in Notepad++":
 			try {
 				Run("Notepad++ " . A_ScriptFullPath)
@@ -767,10 +767,6 @@ trayMenuHandler(itemName, *) {
 		case "Exit":
 			ExitApp()
 	}
-}
-
-customReload() {
-	Reload()
 }
 
 
@@ -1004,7 +1000,7 @@ closeWinRarNotification() {
 
 ;[style]} ______________________________________________________________________________________________
 ;[style]			EVERYTHING HERE WAS ADDED AFTERWARDS OR_ MODIFIED AUTOMATICALLY
-#HotIf "; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE"
+#HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
 
 
 
@@ -1085,6 +1081,7 @@ makeTextAnsiColorful(str) {
 	text := makeTextAnsiColorful(text)
 	fastPrint(text)
 }
+
 
 ^+F12::{
 	static hide := false
