@@ -9,7 +9,7 @@ class HotstringLoader {
 	}
 
 	static load(filePath, name?, addMenu := true, register := true, encoding := "UTF-8") {
-		jsonStr := FileOpen(filePath, "r", encoding).Read()
+		jsonStr := FileRead(filePath, encoding)
 		hotstringObj := JSON.Load(jsonStr)
 		index := name ?? this.hotstrings.Count + 1
 		this.hotstrings[index] := {obj: hotstringObj, status: -1, hasMenu: addMenu} ; -1 = unregistered, 0 = off, 1 = on

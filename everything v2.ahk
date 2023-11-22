@@ -51,8 +51,11 @@ GroupAdd("rarReminders", "ahk_class RarReminder")
 GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
 
 ;// set 1337 reminder
-; 	ReminderManager.initialize(0, 0, FileOpen(A_WorkingDir . "\discordBot\discordBotToken.token", "r", "UTF-8").Read())
-; 	ReminderManager.setSpecificTimer("1337reminder", "", , , 13,36,50)
+token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
+reminders := ReminderManager(0, 0)
+reminders.setPeriodicTimerOn()
+reminders.setTimerOn()
+; ReminderManager.setSpecificTimer("1337reminder", "", , , 13,36,50)
 ;ReminderManager.setSpecificTimer(,"test message", , , 0,42,0)
 ; 	ReminderManager.setSpecificTimer("discordReminder", "GO SLEEP", , , 4,0,0,,,"245189840470147072")
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
