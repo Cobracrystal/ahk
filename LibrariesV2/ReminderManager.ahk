@@ -5,12 +5,6 @@
 ; then just load those up on starting -> no need to call 1337 reminder everytime. tada
 ; for custom functions: add field to add a full function body. This gets added in customReminderFunctions.ahk in appdata folder, and main file gets inclusion.
 
-; OK SO FOR MISSED REMINDERS:
-; WE SAVE THE CURRENT TIME ON EXIT / EVERY X MINUTES
-; WHEN THE SCRIPT STARTS IT READS THAT TIME, IT CALCULATES THE TIMESPAN
-; NOW IF A REMINDER IS SET FOR A DATE THAT LIES IN THAT TIMESPAN AKA IS SET IN THE PAST
-; THEN IT TRIGGERS IMMEDIATELY
-; ONLY FOR [LOADED] REMINDERS THO, WOULD BE BAD ON THE 4 AM OR 1337 REMINDER.
 
 ; if nextTimeMS >= 2**32, do nextTimeMS -= 2**32, custom function that will restart itself until timeMS < 2**32, then launch function.
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
@@ -360,7 +354,7 @@ class ReminderManager {
 		this.createListView()
 	}
 
-	defaultReminder(text) {
+	defaultReminder(text := "") {
 	;	L1033 -> en-US for day name.
 		message := "It is " . FormatTime("L1033 dddd, dd.MM.yyyy, HH:mm:ss") . "`nYou set a reminder for this point in time."
 		message .= (text == "" ? "" : "`nReminder Message: " . text) 
