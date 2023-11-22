@@ -1102,3 +1102,11 @@ HideShowTaskbar(action) {
 ^O::{
 	HotstringLoader.load(A_WorkingDir . "\everything\LatexHotstrings_ahk2.json", "LatexHotstrings")
 }
+
+^j::{
+	t := perfectPowers(150)
+	sortArray(t)
+	for i, e in t
+		str .= e "`n"
+	A_Clipboard := str
+}

@@ -215,6 +215,8 @@ extendFactorials(expression) {
 	return expression
 }
 
+
+
 roundProper(number, precision := 12) {
 	if (IsSpace(number))
 		return number
@@ -222,4 +224,18 @@ roundProper(number, precision := 12) {
 		return Round(number)
 	else
 		return RTrim(Round(number, precision), "0.")
+}
+
+; give back array of all perfect powers up to n
+perfectPowers(n) { 
+	t := Floor(sqrt(n)), i := 2, arr := []
+	while(i <= t) {
+		Loop {
+			if (i**A_Index > n)
+				break
+			arr.push(i**A_Index)
+		}
+		i++
+	}
+	return arr
 }
