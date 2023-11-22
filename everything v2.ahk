@@ -545,7 +545,7 @@ internetConnectionLogger(mode := "T", path := "") {
 		}
 		DetectHiddenWindows(0)
 		fileMenu := TrayMenu.submenus["Files"]
-		fileMenu.Add("Open Internet Log", openFile.Bind(logFile, "notepad++"))
+		fileMenu.Add("Open Internet Log", tryEditTextFile.bind("notepad++", '"' logFile '"'))
 		A_TrayMenu.Add("Files", fileMenu)
 	}
 	else {
@@ -559,14 +559,14 @@ internetConnectionLogger(mode := "T", path := "") {
 	return
 }
 
-^j:: {
-	static init := false
-	if (!init) {
-		SystemCursor("I")
-		init := true
-	}
-	SystemCursor(-1)
-}
+; ^j:: { ; this doesn't work
+; 	static init := false
+; 	if (!init) {
+; 		SystemCursor("I")
+; 		init := true
+; 	}
+; 	SystemCursor(-1)
+; }
 
 ; doesn't work right now
 SystemCursor(mode := 1) {   ;// stolen from https://www.autohotkey.com/boards/viewtopic.php?t=6167
@@ -594,8 +594,8 @@ SystemCursor(mode := 1) {   ;// stolen from https://www.autohotkey.com/boards/vi
 	}
 }
 
-openFile(filePath, program := "notepad", *) {
-	Run(program . ' "' . filePath . '"')
+getSelfIp() {
+	return cmdRet("dig @resolver4.opendns.com myip.opendns.com +short")
 }
 
 ; ###########################################################################
