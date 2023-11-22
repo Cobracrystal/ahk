@@ -1,28 +1,23 @@
-﻿;// TODO: EDIT THE TRAY MENU TO BE SHORTER / HAVE SUBMENUS
-;// TODO: FIX BUG WITH TRANSPARENT TASKBAR TIMER NOT DETECTING SEAMLESS FULLSCREEN
-;  ______________________________________________________________________________________________
-;[style]			INITILIZATION	: MODES
-;[style]{ ______________________________________________________________________________________________
+﻿; ###########################################################################
+; ############################# INITIALIZATION ##############################
+; ###########################################################################
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 KeyHistory(500)
-Persistent()
 #UseHook
-SendMode("Input") ; // Faster
-SetTitleMatchMode(2) ;// Must Match Exact Title (1 = start with specified words, 2 = contains words, 3 = match words exactly)
-; CoordMode,Mouse,Window ;// Coordinates for Click are relativ to upper left corner of active Window (Look TimeClickers hotkey/Timer for usage)
-; CoordMode,ToolTip,Window ;// both this and above are the default anyway, leaving for future reference
-; Thread, NoTimers	;// thread doesn't get interrupted by timers. since i now have two timers, this blocks one of them, making it fail.
-;// this would change the standard editing program for ahk to n++, but i changed the tray menu anyway so it works.
-; RegWrite REG_SZ, HKCR, AutoHotkeyScript\Shell\Edit\Command,, C:\Program Files (x86)\Notepad++\notepad++.exe `%1
-;// unnecessary usually
-; DetectHiddenWindows, On
-;[style]} ______________________________________________________________________________________________
-;[style]							: SUB FILES
-;[style]{ ______________________________________________________________________________________________
-if !InStr(FileExist("script_files\everything"), "D")
+InstallKeybdHook(true, true)
+; Set Correct Working Dir
+if !InStr(FileExist(A_ScriptDir "\script_files\everything"), "D")
 	DirCreate("script_files\everything")
 SetWorkingDir(A_ScriptDir . "\script_files")
+
+OnExit(customExit)
+OnClipboardChange(clipboardTracker, 1)
+Hotstring("EndChars", "-()[]{}:;`'`"/\,.?!" . A_Space . A_Tab)
+
+SCRIPTVAR_WASRELOADED := (InStr(DllCall("GetCommandLine", "str"), "/restart") ? true : false)
+
+; Delete Tray Menu Items before including files that may modify them
 A_TrayMenu.Delete()
 
 #Include "%A_ScriptDir%\LibrariesV2"
@@ -45,60 +40,41 @@ A_TrayMenu.Delete()
 
 #Include "JSON.ahk"
 
-;[style]} ______________________________________________________________________________________________
-;[style]							: VARIABLES
-;[style]{ ______________________________________________________________________________________________
-
-;// for windows in which ctrl+ should replace scrolling cause it sucks
+; for windows in which ctrl+ should replace scrolling
 GroupAdd("zoomableWindows", "ahk_exe Mindustry.exe")
-;// for windows that should be put in the corner when ctrlaltI'd
+; for windows that should be put in the corner when ctrlaltI'd
 GroupAdd("cornerMusicPlayers", "VLC media player ahk_exe vlc.exe", , "Wiedergabeliste")
 GroupAdd("cornerMusicPlayers", "Daum PotPlayer ahk_exe PotPlayerMini64.exe", , "Einstellungen")
 GroupAdd("cornerMusicPlayers", "foobar2000 ahk_exe foobar2000.exe", , "Scratchbox")
+; for windows in winrar class
+GroupAdd("rarReminders", "ahk_class RarReminder")
+GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
 
-;[style]} ______________________________________________________________________________________________
-;[style]							: STARTING FUNCTIONS
-;[style]{ ______________________________________________________________________________________________
-InstallKeybdHook(true, true)
-; Check if script is reloaded
-SCRIPTVAR_WASRELOADED := (DllCall("GetCommandLine", "str") == '"' . A_AhkPath . '" /restart /script "' . A_scriptFullPath . '"' ? true : false)
 ;// set 1337 reminder
 ; 	ReminderManager.initialize(0, 0, FileOpen(A_WorkingDir . "\discordBot\discordBotToken.token", "r", "UTF-8").Read())
 ; 	ReminderManager.setSpecificTimer("1337reminder", "", , , 13,36,50)
 ;ReminderManager.setSpecificTimer(,"test message", , , 0,42,0)
 ; 	ReminderManager.setSpecificTimer("discordReminder", "GO SLEEP", , , 4,0,0,,,"245189840470147072")
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
-/*
-Menu, Timers, Add, 1337 Timer: On, doNothing
-Menu, Timers, Disable, 1337 Timer: On
-Menu, Timers, Check, 1337 Timer: On
-*/
-;// transparent taskbar ini
+
+; Launch Transparent Taskbar at 50ms frequency
 TransparentTaskbar.TransparentTaskbar(1, 50)
-;// start clipboardwatcher
-OnClipboardChange(clipboardTracker, 1)
-;// better icon
-TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think.ico", , true)
-;// Timer because new Thread
-GroupAdd("rarReminders", "ahk_class RarReminder")
-GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
+; Start Loop to close winrar popups
 SetTimer(closeWinRarNotification, -100, -100000) ; priority -100k so it doesn't interrupt
-;// Initialize Internet Logging Script
+; Initialize Internet Logging Script
 internetConnectionLogger("Init", "C:\Users\Simon\Desktop\programs\programming\bat\log.txt")
-;// Synchronize nextDNS IP
+; Load LaTeX Hotstrings
+HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX")
+; replace the tray menu with my own
+customTrayMenu()
+; Synchronize nextDNS IP
 if (!SCRIPTVAR_WASRELOADED)
 	timedTooltip(connectNextDNS(), 4000)
-;// Initialize LaTeX Hotstrings
-HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "Latex")
-Hotstring("EndChars", "-()[]{}:;`'`"/\,.?!" . A_Space . A_Tab)
-;// replace the tray menu with my own
-createBetterTrayMenu()
-OnExit(customExit)
 return
 
-;[style]} ______________________________________________________________________________________________
-;[style]			HOTKEYS	 		: CONTROL
-;[style]{ ______________________________________________________________________________________________
+; ###########################################################################
+; ############################# CONTROL HOTKEYS #############################
+; ###########################################################################
 
 #SuspendExempt true
 ^+R:: { ; Reload Script
@@ -113,13 +89,12 @@ return
 #HotIf
 
 ^U:: {	; Time/Date Converter
-	textTimestampConverter(A_ThisHotkey)
+	textTimestampConverter()
 }
 
 ^I:: {	; Show Hex code as Color
-	hexcodeColorPreview(A_ThisHotkey)
+	hexcodeColorPreview()
 }
-
 
 ^+!NumpadSub:: {	; Record Macro
 	MacroRecorder.createMacro(A_ThisHotkey)
@@ -161,37 +136,40 @@ return
 	toggleNumpadMouseMove()
 }
 
-toggleNumpadMouseMove() {
-	static init := 0
-	if !(init) {
-		Hotkey("Numpad2", moveMousePixel.bind(0, 1))
-		Hotkey("Numpad4", moveMousePixel.bind(-1, 0))
-		Hotkey("Numpad6", moveMousePixel.bind(1, 0))
-		Hotkey("Numpad8", moveMousePixel.bind(0, -1))
-		Hotkey("NumpadEnter", clickMouse.Bind("L", 0))
-		Hotkey("NumpadAdd", clickMouse.Bind("L", 1))
-		init := 1
-		return
-	}
-	Hotkey("Numpad2", "Toggle")
-	Hotkey("Numpad4", "Toggle")
-	Hotkey("Numpad6", "Toggle")
-	Hotkey("Numpad8", "Toggle")
-	Hotkey("NumpadEnter", "Toggle")
-	Hotkey("NumpadAdd", "Toggle")
+~CapsLock:: { ; display capslock state
+	timedTooltip(GetKeyState("CapsLock", "T"))
+	;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
 }
 
-moveMousePixel(x, y, *) {
-	MouseMove(x, y, 0, "R")
+^+!F11:: { ; Block keyboard input until password "password123" is typed
+	if (!A_IsAdmin)	
+		RunAsAdmin()
+	password := "password123"
+	for key in ["CTRL", "SHIFT", "ALT"]
+		KeyWait(key)
+	BlockInput(1)
+	hook := InputHook("C*", , password)
+	hook.Start()
+	hook.Wait()
+	BlockInput(0)
+}
+^!+K::{ ; Tiles Windows Vertically (DOES NOT WORK)
+	shell := ComObject("Shell.Application")
+	if (MsgBox("Tile Windows Vertically?", "ConfirmDialog", 1) == "OK")
+		shell.tileWindowsVertically()
 }
 
-clickMouse(b, press := 0, *) {
-	b := SubStr(b, 1, 1)
-	if (press)
-		st := GetKeyState(b . "Button") ? "U" : "D"
-	MouseClick(b, , , , , st?)
+^!K:: {	; Evaluate Shell Expression in-text
+	calculateExpression("c")
 }
 
+; ###########################################################################
+; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################
+; ###########################################################################
+
+^+!NumpadEnter:: {	; Launch Autoclicker
+	Run("C:\Users\Simon\Desktop\Autoclicker\AutoClickerPos.exe")
+}
 
 ^LWin Up:: { ; Replace Windows Search with EverythingSearch
 	Run("everything.exe -newwindow", "C:\Program Files\Everything")
@@ -222,26 +200,8 @@ clickMouse(b, press := 0, *) {
 }
 #HotIf
 
-~CapsLock:: { ; display capslock state
-	timedTooltip(GetKeyState("CapsLock", "T"))
-	;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
-}
-
-
-;[style]} ______________________________________________________________________________________________
-;[style]					 		: STANDARD / GAMES
-;[style]{ ______________________________________________________________________________________________
-
-^!K:: {	; Evaluate Shell Expression in-text
-	calculateExpression("c")
-}
-
-^+!NumpadEnter:: {	; Launch Autoclicker
-	Run("C:\Users\Simon\Desktop\Autoclicker\AutoClickerPos.exe")
-}
-
 #HotIf WinActive("ahk_group zoomableWindows")
-;[style]{----- Zoomable Windows
+
 ^+:: {	; Zoomable: Zoom in
 	Send("{WheelUp}")
 }
@@ -250,11 +210,10 @@ clickMouse(b, press := 0, *) {
 	Send("{WheelDown}")
 }
 #HotIf
-;[style]}-----
+
 
 /*
 #HotIf WinActive("ahk_exe BTD5-Win.exe")
-;[style]{----- Btd5
 r::w	; BTD5: Send w
 z::e	; BTD5: Send e
 w::r	; BTD5: Send r
@@ -297,45 +256,13 @@ return
 #HotIf
 */
 
-;[style]}-----
 
 #HotIf WinActive("ahk_exe bloonstd6.exe")
-;[style]{----- Btd6
 
 F11:: { 	; BTD6: Rebind Escape
 	Send("{Escape}")
 }
 
-
-; deprecated pause unpause shenanigans
-; ^1::	; BTD6: 203 bomb
-; placeUpgradeTower("e", [0,0,3], [2,0,0])
-; return
-
-; ^f::
-; placeUpgradeTower("f", [0,2,0], [3,0,0])
-; return
-
-; ^0::	; BTD6: sell tower
-; togglepause()
-; selectSellTower()
-; togglepause()
-; return
-/*
-^D::	; BTD6: deposit money left
-	MouseGetPos, ax, ay
-	MouseClick, L, 205, 375
-	Sleep(35)
-	MouseMove, ax, ay, 0
-return
-
-+D::	; BTD6: deposit money right
-	MouseGetPos, ax, ay
-	MouseClick, L, 1425, 370
-	Sleep(35)
-	MouseMove, ax, ay, 0
-return
-*/
 ^,:: {	; BTD6: press comma
 	static toggle := 0
 	if !(presscomma)
@@ -365,78 +292,10 @@ return
 	else
 		SetTimer(pressminus, 0)
 }
-
 #HotIf
 
-;[style]}-----
-/*
-
-#HotIf WinActive("ahk_exe ICBING2k.exe")
-;[style]{----- I can't believe its not gambling 2
-^P::	; ICBING2k: Open Lootboxes
-if (icbingt := !icbingt)
-	SetTimer, icbint, 300
-else
-	SetTimer, icbint, Off
-return
-
-icbint() {
-	MouseMove, 950, 860
-	Sleep(20)
-	ControlClick, X950 Y860, ahk_exe ICBING2k.exe
-}
-#HotIf
-;[style]}-----
-
-#HotIf WinActive("ahk_exe Pixel Puzzles Traditional Jigsaws.exe")
-;[style]{----- Jigsaw Puzzles
-^+P::	; Jigsaw: Fit piece
-findplace_piece(59,304,1868,952)
-return
-#HotIf
-;[style]}-----
-
-#HotIf WinActive("ahk_exe Idling to Rule the Gods.exe")
-;[style]{----- ITRTG
-
-^+!Ä::	; ITRTG: dungeonspam
-if (dungeonspam := !dungeonspam)
-	SetTimer, dungeonspam, 200
-else
-	SetTimer, dungeonspam, Off
-return
-
-^+!Ü::	; ITRTG: campaignspam
-if (campaignspam := !campaignspam) {
-	if !(WinExist("ahk_exe Idling to Rule the Gods.exe")) {
-		campaignspam := 0
-		return
-	}
-	camp := determineCampaign()
-	if (camp = -1) {
-		campaignspam := 0
-		return
-	}
-	WinGet, idlid, ID, ahk_exe Idling to Rule the Gods.exe
-	cspamvar := Func("CampaignSpam").Bind(camp, idlid, 1)
-;	CampaignSpam(camp, idlid, 2)
-	BlockInput, MouseMove
-	SystemCursor("Off")
-	SetTimer, %cspamvar%, 50
-}
-else {
-	SetTimer, %cspamvar%, Off
-	Sleep(125)
-	CampaignSpam(camp, idlid, 3)
-	BlockInput, MouseMoveOff
-	SystemCursor("On")
-}
-return
-#HotIf
-;[style]}-----
-*/
 #HotIf WinActive("ahk_class Photo_Lightweight_Viewer")
-;[style]{----- Fotoanzeige
+; ----- Fotoanzeige
 ^T:: {	; Fotoanzeige: StrgT->ShiftEsc
 	Send("!{Esc}")
 }
@@ -446,10 +305,9 @@ return
 }
 #HotIf
 
-;[style]}
-;[style]} ______________________________________________________________________________________________
-;[style]							: WINDOWS
-;[style]{ ______________________________________________________________________________________________
+; ###########################################################################
+; ######################### DESKTOP-RELATED HOTKEYS #########################
+; ###########################################################################
 
 !LButton:: {	; Drag Window
 	AltDrag.moveWindow(A_ThisHotkey)
@@ -494,7 +352,6 @@ return
 		yPosCircle -= 100
 		WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", "ahk_id " circleWindow)
 		WinSetStyle("-0xC00000", "ahk_id " circleWindow) ; make it alwaysonTop
-		;	MsgBox, %xPosCircle%, %yPosCircle%, ahk_id %circleWindow%
 	}
 	else {
 		WinSetRegion(, "ahk_id " circleWindow)
@@ -509,58 +366,63 @@ return
 	else if WinActive("Discord ahk_exe Discord.exe")
 		WinMove(-1497, 129, 1292, 769)
 	else
-		center_window_on_monitor(WinExist("A"), 0.8)
+		center_window_on_monitor(WinExist("A"))
 }
 
 ^!+H:: { ; Make Active Window Transparent
 	static toggle := false
-	if (toggle := !toggle)
-		WinSetTransparent(120, "A")
-	else
-		WinSetTransparent("Off", "A")
+	WinSetTransparent((toggle := !toggle) ? 120 : "Off", "A")
 }
 
 ^+H:: { ; Make Taskbar invisible
 	TransparentTaskbar.setInvisibility("T", 0)
 }
 
-<^>!M:: {		; Minimizes Active Window
-	static toggle := false, winToggleID
-	if (toggle := !toggle) {
-		winToggleID := WinGetID("A")
-		WinMinimize(winToggleID)
-	}
-	else {
-		mmx := WinGetMinMax(winToggleID)
-		if (WinActive(winToggleID) && mmx != -1) {
-			WinMinimize(winToggleID)
-			toggle := !toggle
-		}
-		else
-			WinRestore(winToggleID)
-	}
+^+F10:: { ; Show/Hide Taskbar
+	static hide := false
+	hideShowTaskbar(hide := !hide)
 }
 
-;[style]} ______________________________________________________________________________________________
-;[style]							: EXPERIMENTAL / TESTING / TEMPORARY
-;[style]{ ______________________________________________________________________________________________
-^+!F11:: { ; Block keyboard input until password "password123" is typed
-	;blockInput(true, "password123")
-	RunAsAdmin()
-	password := "password123"
-	for key in ["CTRL", "SHIFT", "ALT"]
-		KeyWait(key)
-	BlockInput(1)
-	hook := InputHook("C*", , password)
-	hook.Start()
-	hook.Wait()
-	BlockInput(0)
+; ###########################################################################
+; ######################## DESKTOP-RELATED FUNCTIONS ########################
+; ###########################################################################
+
+toggleNumpadMouseMove() {
+	static init := 0
+	if !(init) {
+		Hotkey("Numpad2", moveMousePixel.bind(0, 1))
+		Hotkey("Numpad4", moveMousePixel.bind(-1, 0))
+		Hotkey("Numpad6", moveMousePixel.bind(1, 0))
+		Hotkey("Numpad8", moveMousePixel.bind(0, -1))
+		Hotkey("NumpadEnter", clickMouse.Bind("L", 0))
+		Hotkey("NumpadAdd", clickMouse.Bind("L", 1))
+		init := 1
+		return
+	}
+	Hotkey("Numpad2", "Toggle")
+	Hotkey("Numpad4", "Toggle")
+	Hotkey("Numpad6", "Toggle")
+	Hotkey("Numpad8", "Toggle")
+	Hotkey("NumpadEnter", "Toggle")
+	Hotkey("NumpadAdd", "Toggle")
 }
 
+moveMousePixel(x, y, *) {
+	MouseMove(x, y, 0, "R")
+}
 
-;[style]} ______________________________________________________________________________________________
-;[style]			FUNCTIONS		: GUI / WINDOW CONTROL
-;[style]{ ______________________________________________________________________________________________
+clickMouse(b, press := 0, *) {
+	b := SubStr(b, 1, 1)
+	if (press)
+		st := GetKeyState(b . "Button") ? "U" : "D"
+	MouseClick(b, , , , , st?)
+}
+closeWinRarNotification() {
+	Loop {
+		WinWait("ahk_group rarReminders")
+		WinClose("ahk_group rarReminders")
+	}
+}
 
 showcoords() {
 	CoordMode("Mouse", "Screen")
@@ -613,11 +475,10 @@ center_window_on_monitor(hwnd, size_percentage := 0.714286) {
 		, "ahk_id " hwnd)
 }
 
-;[style]} ______________________________________________________________________________________________
-;[style]							: STANDARD
-;[style]{ ______________________________________________________________________________________________
+; ###########################################################################
+; ########################## OS-RELATED FUNCTIONS ###########################
+; ###########################################################################
 
-;// moved to own scripts
 runAsAdmin() {
 	params := ""
 	for i, e in A_Args  ; For each parameter:
@@ -642,26 +503,6 @@ connectNextDNS() {
 		Msgbox("Could not connect to NextDNS. Error:`n" e.What "`n" e.Extra)
 	}
 	return whr.ResponseText
-}
-
-clipboardTracker(type) {
-	try {
-		if (type == 1) {
-			if (StrLen(A_Clipboard) < 200) {
-				if (RegexMatch(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)")) {
-					A_Clipboard := RegexReplace(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)", "youtube.com/watch?v=$1")
-				}
-				else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*")) {
-					A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
-				}
-				else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?preview\.redd\.it\/(.*)\.([^\s?%]*)[\?|%]?\S*")) {
-					A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?preview\.redd\.it\/(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
-				}
-			}
-		}
-	} catch Error as e {
-		timedTooltip("tried modifying clipboard, but failed")
-	}
 }
 
 internetConnectionLogger(mode := "T", path := "") {
@@ -695,17 +536,44 @@ internetConnectionLogger(mode := "T", path := "") {
 	return
 }
 
+hideShowTaskbar(action) {
+	static ABM_SETSTATE := 0xA, ABS_AUTOHIDE := 0x1, ABS_ALWAYSONTOP := 0x2
+	APPBARDATA := Buffer(size := 2 * A_PtrSize + 2 * 4 + 16 + A_PtrSize, 0)
+	NumPut("Uint", size, APPBARDATA)
+	NumPut("Ptr", WinExist("ahk_class Shell_TrayWnd"), APPBARDATA, A_PtrSize)
+	NumPut("Uint", action ? ABS_AUTOHIDE : ABS_ALWAYSONTOP, APPBARDATA, size - A_PtrSize)
+	DllCall("Shell32\SHAppBarMessage", "UInt", ABM_SETSTATE, "Ptr", APPBARDATA)
+}
+
 openFile(filePath, program := "notepad", *) {
 	Run(program . ' "' . filePath . '"')
 }
 
-;[style]}______________________________________________________________________________________________
-;[style]							: MENU
-;[style]{ ______________________________________________________________________________________________
+; ###########################################################################
+; ############################# META FUNCTIONS ##############################
+; ###########################################################################
 
-;// AHK SCRIPT TRAY MENU
+clipboardTracker(type) {
+	try {
+		if (type == 1) {
+			if (StrLen(A_Clipboard) < 200) {
+				if (RegexMatch(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)")) {
+					A_Clipboard := RegexReplace(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)", "youtube.com/watch?v=$1")
+				}
+				else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*")) {
+					A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
+				}
+				else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?preview\.redd\.it\/(.*)\.([^\s?%]*)[\?|%]?\S*")) {
+					A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?preview\.redd\.it\/(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
+				}
+			}
+		}
+	} catch Error as e {
+		timedTooltip("tried modifying clipboard, but failed")
+	}
+}
 
-createBetterTrayMenu() {
+customTrayMenu() {
 	suspendMenu := Menu()
 	TrayMenu.submenus["SuspendMenu"] := suspendMenu
 	suspendMenu.Add("Suspend Hotkeys", trayMenuHandler)
@@ -722,6 +590,7 @@ createBetterTrayMenu() {
 	A_TrayMenu.Add("Suspend/Stop", suspendMenu)
 	A_TrayMenu.Add("Exit", trayMenuHandler)
 	A_TrayMenu.Default := "Open Recent Lines"
+	TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think.ico", , true)
 }
 
 trayMenuHandler(itemName, *) {
@@ -752,9 +621,9 @@ trayMenuHandler(itemName, *) {
 			suspendMenu.ToggleCheck("Suspend Hotkeys")
 			Suspend(-1)
 			if (A_IsSuspended)
-				TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think Warn.ico", , true)
+				TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think Warn.ico", , true)
 			else
-				TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think.ico", , true)
+				TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think.ico", , true)
 		case "Suspend Reload":
 			suspendMenu.ToggleCheck("Suspend Reload")
 			Hotkey("^+R", "Toggle")
@@ -769,178 +638,31 @@ customExit(ExitReason, ExitCode) {
 }
 
 
-;[style]} ______________________________________________________________________________________________
-;[style]							: GAMES / SIMPLE TIMERS
-;[style]{ ______________________________________________________________________________________________
-
-;	----- BTD6 -----
-;[style]{	----------------
-
-
-;[style]} -----
-
-;	----- NGU  -----
-;[style]{	----------------
-
-;[style]}	-----
-
-;	-- Geometry Arena --
-;[style]{	--------------------
-
-
-;[style]}	-----
-
-;   -- Jigsaw Puzzles --
-;[style]{  --------------------
-/*
-
-
-findplace_piece(x,y,x2,y2) {
-	SendMode Event
-	MouseClickDrag, Left,,,x,y
-	Loop % (x2-x)/78 + 1
-	{
-		xp := A_Index
-		Loop % (y2-y)/78
-		{
-			MouseClickDrag, Left,,,0,78,,R
-			Sleep(10)
-		}
-		MouseClickDrag, Left,,,x+xp*78,y
-		Sleep(10)
-	}
-	SendMode Input
-}
-*/
-;[style]}  -----
-
-;	-- ITRTG --
-;[style]{	-----------
-/*
-
-
-CampaignSpam(campaign, idlid, mode := 0) { ;// mode 0: permanently restart, mode 1: permanently Select -> Auto, mode 2: prepare for mode 0, mode 3: end mode 0
-		Critical
-		sleepTime := 9
-		if (campaign = -1 || !campaign)
-			return
-		y := 209+campaign*76
-		yt := y+50
-		if (mode = 0) {
-			StupiClick(1070, y+50, idlid, sleepTime)
-			Sleep(sleepTime)
-			StupiClick(1270, 820, idlid, sleepTime)
-			Sleep(sleepTime)
-		}
-		if (mode = 1 || mode = 2) {
-			StupiClick(1250, y, idlid, sleepTime)
-			Sleep(sleepTime)
-			StupiClick(1260, 400, idlid, sleepTime)
-			Sleep(sleepTime)
-		}
-		if (mode = 1 || mode = 3) {
-			StupiClick(1260, y+50, idlid, sleepTime)
-			Sleep(sleepTime)
-		}
-		StupiClick(940, 935, idlid, sleepTime)
-}
-
-StupiClick(x, y, id, sleepTime) {
-	;// this function exists for poorly designed interfaces that check coordinates for buttonclicking
-	WinGetPos, xca, yca,,, A
-	WinGetPos, xit, yit,,, ahk_id %id%
-	MouseMove, xit-xca+x, yit-yca+y,0
-	Sleep(25) ; %sleepTime%
-	ControlClick, x%x% y%y%, ahk_id %id%,,,, NA
-}
-
-determineCampaign(y := -1) {
-	if (y = -1)
-		MouseGetPos,,y, win
-	WinGet, t_win, ID, ahk_exe Idling to Rule the Gods.exe
-	if (win != t_win)
-		InputBox, d, Campaign, Enter the Campaign Number:`n1 - Growth`, 2 - Divinity`, 3 - Food`, 4 - Item`n5 - Level`, 6 - Multiplier`, 7 - God Power`nNote: This will make your mouse virtually inaccessible during this hotkey
-	else
-		d := Ceil((y - 247) / 76)
-	if (d < 1) or (d > 7)
-		return -1
-	return d
-}
-
-dungeonspam() {
-	x := 320 + 80*   2	;//newbie: 400, scrapyard: 480, water temple: 560, volcano: 640, mountain: 720, forest: 800
-	MouseClick, Left, 1130, x
-	Sleep(50)
-	MouseClick, Left, 1730, 990
-	Sleep(50)
-	MouseClick, Left, 1300, x
-	Sleep(500)
-	MouseClick, Left, 1715, 280
-}
-*/
-;[style]}----
-
-closeWinRarNotification() {
-	Loop {
-		WinWait("ahk_group rarReminders")
-		WinClose("ahk_group rarReminders")
-	}
-}
-
-;[style]} ______________________________________________________________________________________________
-;[style]			HOTSTRINGS		: HOTKEYS FOR HOTSTRINGS
-;[style]{ ______________________________________________________________________________________________
+; ###########################################################################
+; ############################### HOTSTRINGS ################################
+; ###########################################################################
 
 ^+!F12:: { ; Toggles LaTeX Hotstrings
 	HotstringLoader.switchHotstringState("Latex", "T")
 }
 
-;[style]} ______________________________________________________________________________________________
-;[style]							: ACTUAL HOTSTRINGS
-;[style]{ ______________________________________________________________________________________________
+; LONG STRINGS
+:X*:@potet::fastPrint("<@245189840470147072>")
+:X*:@burny::fastPrint("<@318350925183844355>")
+:X*:@Y::fastPrint("<@354316862735253505>")
+:X*:@zyntha::fastPrint("<@330811222939271170>")
+:X*:@astro::fastPrint("<@193734142704353280>")
+:X*:@rein::fastPrint("<@315661562398638080>")
+:X:from:me::fastPrint("from:245189840470147072 ")
 
-;						: EXPANSION	: COMPLICATED STRINGS
-;[style]{ --------------------------------
-:*:@potet:: {
-	fastPrint("<@245189840470147072>")
-}
-:*:@burny:: {
-	fastPrint("<@318350925183844355>")
-}
-:*:@Y:: {
-	fastPrint("<@354316862735253505>")
-}
-:*:@zyntha:: {
-	fastPrint("<@330811222939271170>")
-}
-:*:@astro:: {
-	fastPrint("<@193734142704353280>")
-}
-:*:@rein:: {
-	fastPrint("<@315661562398638080>")
-}
-::from:me:: {
-	fastPrint("from:245189840470147072 ")
-}
-
-
-;[style]}
-;									: SPECIAL SYMBOLS
-;[style]{ --------------------------------
-
-; // all of these can be toggled via ctrl alt shift F12, remember to add those to the list.
-
-
-; // other stuff, not toggleable
 :*?:=/=::≠
 :*?:+-::±
 :*?:~=::≈
 :*:\ß::ẞ
 :*:\disap::ಠ_ಠ
+:*:\checkmark::▣
 
-;[style]}
-;						: AUTOCORRECT	: ENGLISH
-;[style]{ --------------------------------
+; ENGLISH AUTOCORRECT
 :*:yall::y'all
 :*:dont::don't
 :*:wont::won't
@@ -972,28 +694,14 @@ closeWinRarNotification() {
 :*:cant::can't
 :*:Ive::I've
 :*:weve::we've
-;[style]}
-; 						: OTHER
-;[style]{ --------------------------------
-
 ; :*:!!!!::{!}{!}{!}1{!}111{!}one1{!}{!}eleven{!}{!}
 ; :*b0:**::**{left 2} ; bold in markdown
 ; :*b0:__::__{left 2} ; underlined in markdown
 
-;[style]}
 
-;[style]} ______________________________________________________________________________________________
-;[style]			DEPRECATED : HOTKEYS
-;[style]{ ______________________________________________________________________________________________
-
-
-;[style]} ______________________________________________________________________________________________
-;[style]			DEPRECATED : FUNCTIONS
-;[style]{ ______________________________________________________________________________________________
-
-
-;[style]} ______________________________________________________________________________________________
-;[style]			EVERYTHING HERE WAS ADDED AFTERWARDS OR_ MODIFIED AUTOMATICALLY
+; ###########################################################################
+; ############################ END OF SCRIPT ################################
+; ###########################################################################
 #HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
 
 
@@ -1039,22 +747,22 @@ clickloop(rows, columns, rHeight, cWidth) {
 	return
 }
 
-
-arrToString(array, separator := ",", elementConditionRegex := ".*") {
-	; NEED TO CHECK WHETHER OR NOT a) IS KEYARRAY or b) NESTED ARRAY. FIX b BY RECURSIVELY CALLING arrToString for e (and also regexmatching that), BY CHECKING IF array is just string at start.
-	str := "["
-	for i, e in array
-		if (RegexMatch(e, elementConditionRegex))
-			str .= e . separator
-	return SubStr(str, 1, -1) . "]"
+toString(obj) {
+	if (obj is Array)
+		flag := 0
+	else if (obj is Map)
+		flagMap := 1
+	else if (obj is Object)
+		return "Object"
+	else
+		return obj
+	str := flag ? "Map(" : "["
+	for i, e in obj
+		str .= (flag ? i ": " : "") toString(e) . ","
+	return SubStr(str, 1, -1) . flag ? ")" : "]"
 }
 
-sendRequest(url := "https://icanhazip.com/", method := "GET") {
-	HttpObj := ComObject("WinHttp.WinHttpRequest.5.1")
-	HttpObj.Open(method, url)
-	HttpObj.Send()
-	return Trim(httpobj.ResponseText, "`n`r`t ")
-}
+
 
 makeTextAnsiColorful(str) {
 	tStr := ""
@@ -1074,20 +782,6 @@ makeTextAnsiColorful(str) {
 	fastPrint(text)
 }
 
-
-^+F10:: { ; Show/Hide Taskbar
-	static hide := false
-	HideShowTaskbar(hide := !hide)
-}
-
-HideShowTaskbar(action) {
-	static ABM_SETSTATE := 0xA, ABS_AUTOHIDE := 0x1, ABS_ALWAYSONTOP := 0x2
-	APPBARDATA := Buffer(size := 2 * A_PtrSize + 2 * 4 + 16 + A_PtrSize, 0)
-	NumPut("Uint", size, APPBARDATA)
-	NumPut("Ptr", WinExist("ahk_class Shell_TrayWnd"), APPBARDATA, A_PtrSize)
-	NumPut("Uint", action ? ABS_AUTOHIDE : ABS_ALWAYSONTOP, APPBARDATA, size - A_PtrSize)
-	DllCall("Shell32\SHAppBarMessage", "UInt", ABM_SETSTATE, "Ptr", APPBARDATA)
-}
 
 ^k::{
 	msgbox(selectFolderEx(A_WorkingDir,"Select Your mom",,"lmao"))

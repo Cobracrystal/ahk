@@ -339,6 +339,13 @@ timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 	}
 }
 
+sendRequest(url := "https://icanhazip.com/", method := "GET") {
+	HttpObj := ComObject("WinHttp.WinHttpRequest.5.1")
+	HttpObj.Open(method, url)
+	HttpObj.Send()
+	return Trim(httpobj.ResponseText, "`n`r`t ")
+}
+
 normalizePath(path) {	; ONLY ABSOLUTE PATHS
 	path := StrReplace(path, "/", "\")
 	path := StrReplace(path, "\\", "\")

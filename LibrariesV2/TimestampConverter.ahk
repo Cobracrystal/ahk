@@ -1,7 +1,7 @@
 ﻿#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
 
 ; NOTE: DOES NOT ACKNOWLEDGE SUMMER/WINTER TIME. INTERPRETS LOCALE TIME, IF AFFECTED BY SUMMER/WINTER TIME, AS ±1 TIMEZONE.
-textTimestampConverter(hotkey) {
+textTimestampConverter() {
 	text := fastCopy()
 	text := Trim(text)
 	unixTimestamp := 0

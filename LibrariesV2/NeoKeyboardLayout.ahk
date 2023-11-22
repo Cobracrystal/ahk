@@ -25,7 +25,7 @@ class NeoKeyboardLayout {
 	
 	static __New() {
 		; Tray Menu
-		this.path := "C:\Users\Simon\Desktop\programs\programming\ahk\script_files\NeoKeyboardLayout"
+		this.path := A_WorkingDir "\NeoKeyboardLayout"
 		tObj := this.KeyboardLayoutGUI.Bind(this)
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Keyboard Layout GUI", this.KeyboardLayoutGUI.Bind(this))

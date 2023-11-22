@@ -4,7 +4,7 @@ NeoKeyboardLayout.initialize()
 class NeoKeyboardLayout {
 
 	static controls
-	static path := "C:\Users\Simon\Desktop\programs\programming\ahk\script_files\NeoKeyboardLayout\"
+	static path := A_WorkingDir "\NeoKeyboardLayout\"
 	; ------------------------ MAIN FUNCTION
 	
 	KeyboardLayoutGUI(mode := "O") {

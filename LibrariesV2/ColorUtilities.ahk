@@ -79,7 +79,7 @@ changeColorFormat(clr, reverse := true, alph := "") {
 		return format("0x{4}{1:02X}{2:02X}{3:02X}", rb, gg, br, al)
 }
 ; 0xFF0029
-hexcodeColorPreview(hotkey) {
+hexcodeColorPreview() {
 	text := fastCopy()
 	if !IsXDigit(text)
 		return
