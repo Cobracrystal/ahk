@@ -15,13 +15,13 @@ class WindowManager {
 	; ------------------------ MAIN FUNCTION
 	static windowManager(mode := "O", *) {
 		mode := SubStr(mode, 1, 1)
-		if (WinExist("ahk_id " . this.controls.guiMain.handle)) {
+		if (WinExist(this.gui.obj.hwnd)) {
 			if (mode == "O") ; if gui exists and mode = open, activate window
-				WinActivate, % "ahk_id " . this.controls.guiMain.handle
+				WinActivate(this.gui.obj.hwnd)
 			else {	; if gui exists and mode = close/toggle, close
-				this.controls.guiMain.coords := windowGetCoordinates(this.controls.guiMain.handle)
-				Gui, WindowManager:Destroy
-				this.controls.guiMain.handle  := ""
+				this.gui.coords := windowGetCoordinates(this.gui.obj.hwnd)
+				this.gui.destroy()
+				this.gui.obj := -1
 			}
 		}
 		else if (mode != "C") ; if gui doesn't exist and mode = open/toggle, create
@@ -54,41 +54,38 @@ class WindowManager {
 		; init class variables
 		; this format is necessary to establish objects.
 		this.windowID := 0
-		this.controls := { 	guiMain: {text: "WindowList", coords: [200, 200], handle:""}
-							, checkboxShowHiddenWindows: {text: "Detect Hidden Windows?", handle:""}
-							, checkboxShowExcludedWindows: {text: "Show Excluded Windows?", handle:""}
-							, listviewWindows: {text: "handle|ahk_title|Process|mmx|xpos|ypos|width|height|ahk_class|Process Path", handle:""}
-							, transparencySubGUI: {text: "Transparency Menu", slider:{content:0, handle:""}}}
+		this.gui := {coords: [200, 200], object: -1, text: "Window Manager"}
+		this.controls := { transparencySubGUI: {text: "Transparency Menu", slider:{content:0, handle:""}}}
 		this.settings := { showExcludedWindows : 0
 							, DetectHiddenWindows : 0}
 	}
 
 	static guiCreate() {
-		Gui, WindowManager:New, % "+Border +HwndguiHandle +Label" . this.__Class . ".__on"
-		gHandle := this.settingCheckboxHandler.Bind(this)
-		Gui, WindowManager:Add, Checkbox, Section HwndcHandle, % this.controls.checkboxShowHiddenWindows.text
-			this.controls.checkboxShowHiddenWindows.handle := cHandle
-			GuiControl, +g, % cHandle, % gHandle
-		Gui, WindowManager:Add, Checkbox, ys HwndcHandle, % this.controls.checkboxShowExcludedWindows.text
-			this.controls.checkboxShowExcludedWindows.handle := cHandle
-			GuiControl, +g, % cHandle, % gHandle
-		Gui, WindowManager:Submit, NoHide
-		Gui, WindowManager:Add, ListView, xs HwndcHandle AltSubmit R20 w1000 -Multi, % this.controls.listviewWindows.text
-			this.controls.listviewWindows.handle := cHandle
-			gHandle := this.guiEventHandler.Bind(this)
-			GuiControl, +g, % cHandle, % gHandle
-			GuiControl, Focus, % cHandle
-		this.guiListviewCreate(0)
-		Gui, WindowManager:Show, % Format("x{1}y{2} Autosize", this.controls.guiMain.coords[1], this.controls.guiMain.coords[2]), % this.controls.guiMain.text
-		this.insertWindowInfo(guiHandle, 1) ;// inserts the first row to be about the windowManager itself
-		Gui, WindowManager:Add, Button, HwndcHandle Default Hidden, Ok
-			gHandle := this.guiButtonOk.Bind(this)
-			GuiControl, +g, % cHandle, % gHandle
-		this.controls.guiMain.handle := guiHandle
+		winManager := Gui("+Border +OwnDialogs", this.gui.text)
+		winManager.OnEvent("Close", this.guiClose.bind(this))
+		winManager.OnEvent("Escape", this.guiClose.bind(this))
+		winManager.OnEvent("ContextMenu", this.onContextMenu.bind(this))
+		
+		winManager.AddCheckbox("Section vCheckboxHiddenWindows", "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
+		winManager.AddCheckbox("ys vCheckboxExcludedWindows", "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
+		winManager.Submit(0) ; 0 = nohide
+		this.gui.lv := winManager.AddListView("xs R20 w1000 -Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "Process Path", "Command Line"])
+		this.gui.lv.OnNotify()
+		this.gui.lv.OnEvent()
+		this.gui.lv.OnEvent()
+		AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+		; TODO: ADD EVENTS FOR CLICK, DOUBLECLICK ETC (CHECK DOCS). ALSO CONTEXTMENU. OnNotify needs -155, offset 24 (test.ahk), blabla. split the functions
+		this.guiListviewCreate()
+		winManager.Show(Format("x{1}y{2} Autosize", this.gui.coords[1], this.gui.coords[2]))
+		this.gui.lv.Focus()
+		this.insertWindowInfo(winManager.Hwnd, 1) ;// inserts the first row to be about the windowManager itself
+		
+		winManager.AddButton("Default Hidden vButtonDefault", "A").OnEvent("Click", (*) => (this.gui.lv.Focused ? WinActivate(this.windowID) : false))
+		this.gui.obj := winManager
 	}
 
-	static guiListviewCreate(exists := 0) {
-		DetectHiddenWindows, % this.settings.DetectHiddenWindows
+	static guiListviewCreate() {
+		DetectHiddenWindows(this.settings.DetectHiddenWindows)
 		if (!this.settings.showExcludedWindows)
 			excludeWindowRegex := "(ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|^$)"
 		for Index, Element in this.getAllWindowInfo(excludeWindowRegex)
@@ -102,26 +99,25 @@ class WindowManager {
 		else if (LV_GetCount() >= 20)
 			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, % "h" . (45+(LV_GetCount()+!ex)*17)
 		else
-			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, h368
-		if (exists)
-			Gui, WindowManager:Show, Autosize
+			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, h368	
 	}
 
 	static refreshGuiListview() {
 		Gui, WindowManager:Default
 		Gui, Listview, % this.controls.listviewWindows.handle
 		LV_Delete()
-		this.guiListviewCreate(1)
+		this.guiListviewCreate()
+		Gui, WindowManager:Show, Autosize
 	}
 
 	static insertWindowInfo(this_id, row) {
-		WinGetPos, x, y, width, height, % "ahk_id " . this_id
-		WinGetTitle, this_title, % "ahk_id " . this_id
-		WinGetClass, this_class, % "ahk_id " . this_id
-		WinGet, mmx, MinMax, % "ahk_id " . this_id
-		WinGet, this_process, ProcessName, % "ahk_id " . this_id
-		WinGet, this_process_path, ProcessPath, % "ahk_id " . this_id
-		LV_Insert(row,"", this_id, this_title, this_process, mmx, x, y, width, height, this_class, this_process_path)
+		WinGetPos(&x,&y,&w,&h,this_id)
+		title := WinGetTitle(this_id)
+		tclass := WinGetClass(this_id)
+		mmx := WinGetMinMax(this_id)
+		process := WinGetProcessName(this_id)
+		processPath := WinGetProcessPath(this_id)
+		LV_Insert(row,"", this_id, title, this_process, mmx, x, y, w, h, tclass, this_process_path)
 		Gui, WindowManager:Submit, NoHide
 	}
 
@@ -129,8 +125,7 @@ class WindowManager {
 		windows := {}
 		SetTitleMatchMode, RegEx
 		WinGet, id, List,,, %excludedWindowsRegex%
-		Loop, %id%
-		{
+		Loop(id) {
 			this_id := id%A_Index%
 			WinGetPos, xpos, ypos, width, height, % "ahk_id " . this_id
 			WinGetTitle, this_title, % "ahk_id " . this_id
@@ -145,30 +140,25 @@ class WindowManager {
 		return windows
 	}
 
-	static __onEscape() { 
-		; this custom label set receives its first parameter onto 'this', not the function itself
-		; then, we cannot call this.windowManager as 'this' doesn't refer to the class. 
-		; We'd need to bind this to the associated func object, but that isn't possible.
-		WindowManager.windowManager("Close")
-	}
-
-	static __onClose() {
+	static guiClose(guiObj) {
 		WindowManager.windowManager("Close")
 	}
 	
-	static __onContextMenu(ctrlHwnd := 0, eventinfo := 0, isRightclick := 0, x := 0, y := 0) {
+	static onContextMenu(guiObj, ctrlHwnd, eventinfo, isRightclick, x, y) {
 		Gui, ListView, % WindowManager.controls.listviewWindows.handle
 		LV_GetText(wHandle, eventinfo, 1)
-		WindowManager.windowID := wHandle
-		WindowManager.listviewWindows.selectedRowN := LV_GetNext()
-		WinGet, tStyle, ExStyle, % "ahk_id " . wHandle
-		Menu, windowListSelectMenu, % (tStyle & 0x8 ? "Check" : "Uncheck"), Toggle Lock Status
-		Menu, windowListSelectMenu, Show
+		this.windowID := wHandle
+		this.listviewWindows.selectedRowN := LV_GetNext()
+		if (WinGetExStyle(wHandle) & 0x8)
+			this.menu.Check("Toggle Lock Status")
+		else
+			this.menu.Uncheck("Toggle Lock Status")
+		this.menu.show()
 	}
 
 	static guiEventHandler(ctrlHwnd:=0, guiEvent:=0, eventInfo:=0, errLvl:=0) {
 		Gui, ListView, % this.controls.listviewWindows.handle
-		DetectHiddenWindows, % this.settings.DetectHiddenWindows
+		DetectHiddenWindows(this.settings.DetectHiddenWindows)
 	;	Tooltip % ctrlHwnd ", " guiEvent ", " eventInfo
 		if (guiEvent != "K" && guiEvent != "ColClick" && guiEvent != "S" && eventInfo != 0) {
 			this.controls.listviewWindows.selectedRowN := eventInfo
@@ -176,15 +166,15 @@ class WindowManager {
 			this.windowID := wHandle
 		}
 		if (guiEvent == "DoubleClick")
-			WinActivate, % "ahk_id " . this.windowID
+			WinActivate(this.windowID)
 		else if (guiEvent == "K") {
 			this.controls.listviewWindows.selectedRowN := LV_GetNext()
 			LV_GetText(wHandle, this.controls.listviewWindows.selectedRowN, 1)
 			this.windowID := wHandle
 			switch eventInfo {
 				case "46": 	;// Del/Entf Key -> Close that window
-					WinClose, % "ahk_id " . this.windowID	;// winkill possibly overkill. add setting?
-					WinWaitClose, % "ahk_id " . this.windowID, , 0.5
+					WinClose(this.windowID) ;// winkill possibly overkill. add setting?
+					WinWaitClose(this.windowID, , 0.5)
 					if !ErrorLevel
 						LV_Delete(this.controls.listviewWindows.selectedRowN)
 				case "67":
@@ -197,69 +187,62 @@ class WindowManager {
 		}
 	}
 
-	static settingCheckboxHandler(controlhandle := 0, b := 0, c := 0) {
-		Gui, WindowManager:Submit, NoHide
-		controlhandle := Format("0x{:x}",controlhandle)
-		if (controlhandle == this.controls.checkboxShowHiddenWindows.handle)
-			this.settings.DetectHiddenWindows := !this.settings.DetectHiddenWindows
-		else if (controlhandle == this.controls.checkboxShowExcludedWindows.handle)
-			this.settings.showExcludedWindows := !this.settings.showExcludedWindows
+	static settingCheckboxHandler(guiCtrlObj, *) {
+		switch guiCtrlObj.Name {
+			case "CheckboxHiddenWindows":
+				this.settings.DetectHiddenWindows := !this.settings.DetectHiddenWindows
+			case "checkboxExcludedWindows":
+				this.settings.showExcludedWindows := !this.settings.showExcludedWindows
+		}
 		this.refreshGuiListview()
 	}
 
 
 	static guiButtonOk() {
-		DetectHiddenWindows, % this.settings.DetectHiddenWindows
-		GuiControlGet, focused_control, Focus
-		GuiControlGet, listviewHwnd, Hwnd, % this.controls.listviewWindows.handle
-		if (listviewHwnd != this.controls.listviewWindows.handle)
-			return
-		WinActivate, % "ahk_id " . this.windowID
-	}
+		if (this.gui.lv.Focused)
+			WinActivate(this.windowID)
+	; }
 	; ------------------------- MENU FUNCTIONS -------------------------
 		
 	static windowListSelectMenuHandler(itemName) {
-		DetectHiddenWindows, % this.settings.DetectHiddenWindows
+		DetectHiddenWindows(this.settings.DetectHiddenWindows)
 		switch itemName {
 			case "Activate Window":
-				WinActivate, % "ahk_id " . this.windowID
+				WinActivate(this.windowID)
 			case "Reset Window Position":
-				WinGetPos,,, width_temp, height_temp, % "ahk_id " . this.windowID
-				WinMove, % "ahk_id " . this.windowID,, A_ScreenWidth/2 - width_temp/2, A_ScreenHeight/2-height_temp/2
-				WinActivate, % "ahk_id " . this.windowID
+				WinGetPos(,,&w,&h,this.windowID)
+				WinMove(this.windowID,, A_ScreenWidth/2 - w/2, A_ScreenHeight/2-h/2)
+				WinActivate(this.windowID)
 			case "Minimize Window":
-				WinMinimize, % "ahk_id " . this.windowID
+				WinMinimize(this.windowID)
 			case "Maximize Window":
-				WinMaximize, % "ahk_id " . this.windowID
+				WinMaximize(this.windowID)
 			case "Restore Window":
-				WinRestore, % "ahk_id " . this.windowID
+				WinRestore(this.windowID)
 			case "Close Window":
-				WinClose, % "ahk_id " . this.windowID	;// needs a check via WinExist & question whether winkill or not.
-				WinWaitClose, % "ahk_id " . this.windowID, , 0.5
-				if !ErrorLevel
+				WinClose(this.windowID) ;// needs a check via WinExist & question whether winkill or not.
+				if WinWaitClose(this.windowID, , 0.5)
 					LV_Delete(this.controls.listviewWindows.selectedRowN)
 			case "Toggle Lock Status":
-				WinGet, tStyle, ExStyle, % "ahk_id " . this.windowID
-				WinSet, AlwaysOnTop, % (tStyle & 0x8 ? "Off" : "On" ) , % "ahk_id " . this.windowID ; 0x8 is WS_EX_TOPMOST, & bitwise AND
+				tStyle := WinGetExStyle(this.windowID)
+				WinSetAlwaysOnTop(tStyle & 0x8 ? 1 : 0, this.windowID) ; 0x8 is WS_EX_TOPMOST, & bitwise AND
 				Menu, windowListSelectMenu, % (tStyle & 0x8 ? "Uncheck" : "Check" ) , Toggle Lock Status
 			case "Change Window Transparency":
 				this.transparencySubGUIcreate()
 			case "Copy Window Title":
-				WinGetTitle, clipboard, % "ahk_id " . this.windowID
+				A_Clipboard := WinGetTitle(this.windowID)
 			case "View Properties":
-				WinGet, process_path, ProcessPath, % "ahk_id " . this.windowID
-				Run, properties %process_path%
+				Run('properties"' WinGetProcessPath(this.windowID) '"')
 			case "View Program Folder":
-				WinGet, process_path, ProcessPath, % "ahk_id " . this.windowID
-				run, % "explorer.exe /select,""" . process_path . """"
+				run('explorer.exe /select,"' . WinGetProcessPath(this.windowID) . '"')
 			default:
 				return
 		}
 	}
 	
 	static transparencySubGUIcreate() {
-		DetectHiddenWindows % this.settings.DetectHiddenWindows
-		WinGet, transparency, Transparent, % "ahk_id " . this.windowID
+		DetectHiddenWindows(this.settings.DetectHiddenWindows)
+		transparency := WinGetTransparent(this.windowID)
 		if (transparency == "")
 			transparency := 255
 		this.controls.transparencySubGUI.slider.content := transparency
@@ -286,8 +269,8 @@ class WindowManager {
 	static transparencySubGUIhandler() {
 		GuiControlGet, transparency,, % this.controls.transparencySubGUI.slider.handle
 		this.controls.transparencySubGUI.slider.content := transparency
-		DetectHiddenWindows, % this.settings.DetectHiddenWindows
-		WinSet, Transparent, % (transparency == 255 ? "Off" : transparency), % "ahk_id " . this.windowID
+		DetectHiddenWindows(this.settings.DetectHiddenWindows)
+		WinSetTransparent(transparency == 255 ? "Off" : transparency,this.windowID)
 	}
 		
 	; ------ SUBSECTION - GUI FUNCTIONS OF TRANSPARENCY GUI

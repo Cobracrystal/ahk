@@ -20,7 +20,6 @@ SetTitleMatchMode(2) ;// Must Match Exact Title (1 = start with specified words,
 ;[style]} ______________________________________________________________________________________________
 ;[style]							: SUB FILES
 ;[style]{ ______________________________________________________________________________________________
-
 if !InStr(FileExist("script_files\everything"), "D")
 	DirCreate("script_files\everything")
 SetWorkingDir(A_ScriptDir . "\script_files")
@@ -1083,7 +1082,7 @@ makeTextAnsiColorful(str) {
 }
 
 
-^+F11::{
+^+F10::{
 	static hide := false
 	HideShowTaskbar(hide := !hide)
 }

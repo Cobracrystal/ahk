@@ -239,9 +239,9 @@ execShell(command) {
 
 windowGetCoordinates(windowHWND, detectHidden := false) {
 	DetectHiddenWindows(detectHidden)
-	minimize_status := WinGetMinMax("ahk_id " . windowHWND)
+	minimize_status := WinGetMinMax(windowHWND)
 	if (minimize_status != -1) 
-		WinGetPos(&x, &y,,, "ahk_id " . windowHWND)
+		WinGetPos(&x, &y,,, windowHWND)
 	else {
 		NumPut("Uint", 44, pos := Buffer(44, 0))
 		DllCall("GetWindowPlacement", "uint", windowHWND, "uint", pos)
