@@ -185,6 +185,12 @@ StrSplitUTF8(str, delim := "", omit := "") {
 	return arr
 }
 
+BoundFnName(Obj) {
+    Address := ObjPtr(Obj)
+    n := NumGet(Address, 5 * A_PtrSize + 16, "Ptr")
+    Obj := ObjFromPtrAddRef(n)
+    return Obj.Name
+}
 
 replaceCharacters(text, alphMap) {
 	if !(alphMap is Map)

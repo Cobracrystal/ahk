@@ -52,13 +52,14 @@ GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
 
 ;// set 1337 reminder
 token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
-reminders := ReminderManager(1, 0)
-; ITS ONE SECOND OFF????
-reminders.setPeriodicTimerOn(parseTime(,,,13,36,50), 1, "Days", , reminders.reminder1337.bind(""))
+reminders := ReminderManager(,1)
+; reminders2 := ReminderManager()
+; reminders.setPeriodicTimerOn(parseTime(,,,,,20), 30, "Seconds", , (*) => MsgBox(A_Now))
+; reminders.setPeriodicTimerOn(DateAdd(A_Now, 1, "S"), 5, "S", , (*) => SoundPlay("*48"))
+reminders.setPeriodicTimerOn(parseTime(,11,21,8,0,0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
+reminders.setPeriodicTimerOn(parseTime(,,,13,36,50), 1, "Days", , reminders.reminder1337)
 ; reminders.setPeriodicTimerOn(parseTime(,,,4,21,59), 20, "S", , (*) => MsgBox(A_Now))
-; ReminderManager.setSpecificTimer("1337reminder", "", , , 13,36,50)
-reminders.setPeriodicTimerOn(parseTime(,,,4,0,0), 1, "D",, reminders.discordReminder.bind("", token, "245189840470147072", "GO SLEEP"))
-; 	ReminderManager.setSpecificTimer("discordReminder", "GO SLEEP", , , 4,0,0,,,"245189840470147072")
+reminders.setPeriodicTimerOn(parseTime(,,,4,0,0), 1, "Days", "GO SLEEP", reminders.discordReminder.bind(0, token, "245189840470147072"))
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
 
 ; Launch Transparent Taskbar at 50ms frequency
