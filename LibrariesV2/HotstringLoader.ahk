@@ -5,6 +5,7 @@ class HotstringLoader {
 	static __New() {
 		this.onOffStatus := 0
 		this.hotstrings := Map()
+		this.hotstrings.CaseSense := false
 		this.defaultMenutext := "Enable Hotstring Group: {}"
 	}
 
@@ -31,7 +32,7 @@ class HotstringLoader {
 
 	static switchHotstringState(index, newStatus := "T") {
 		if (!this.hotstrings.Has(index))
-			return 0
+			throw Error("Invalid Hotstring Group Index given: " index)
 		if (this.hotstrings[index].status == -1)
 			this.registerHotstrings(index)
 		if (SubStr(newStatus, 1, 1) == "T")
