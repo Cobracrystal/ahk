@@ -10,6 +10,7 @@
 !/script_files/
 !/Libraries/
 !/LibrariesV2/
+!/Demo_Scripts/
 script_files/*
 !script_files/NeoKeyboardLayout/
 !script_files/minesweeperSolver/
