@@ -231,11 +231,16 @@ perfectPowers(n) {
 	t := Floor(sqrt(n)), i := 2, arr := []
 	while(i <= t) {
 		Loop {
-			if (i**A_Index > n)
+			if (i**(A_Index+1) > n)
 				break
-			arr.push(i**A_Index)
+			str .= i**(A_Index+1) ","
 		}
 		i++
+	}
+	str := Sort(str, "N D,")
+	Loop Parse, str, "," {
+		if (IsDigit(A_LoopField))
+			arr.push(A_LoopField)
 	}
 	return arr
 }

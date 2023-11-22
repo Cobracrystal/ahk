@@ -110,7 +110,7 @@ reverseArray(array) { ; linear array, gives weird stuff with assoc
 }	
 
 sortArray(arr, mode := "") {
-	arr2 := {}
+	arr2 := []
 	for i, e in arr
 		str .= e . "`n"
 	Sort(str, mode)

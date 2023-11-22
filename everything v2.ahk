@@ -1105,7 +1105,6 @@ HideShowTaskbar(action) {
 
 ^j::{
 	t := perfectPowers(150)
-	sortArray(t)
 	for i, e in t
 		str .= e "`n"
 	A_Clipboard := str
