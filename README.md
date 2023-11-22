@@ -1,2 +1,3 @@
 # ahk-functionalities
-A bunch of small 'libraries' written in ahk to include in scripts to make my life easier
+Scripts and libraries i use to simplify computer actions. 
+Some Libraries by other people, documented inside them.
