@@ -172,6 +172,8 @@ class WindowManager {
 						A_Clipboard := WinGetTitle(wHandle)
 					else {
 						info := this.getWindowInfo(wHandle)
+						if !(this.settings.getCommandLine)
+							info.DeleteProp("commandLine")
 						A_Clipboard := JSON.Dump(info)
 						; Loop(this.LV.GetCount("Col"))
 						; 	str .= this.LV.GetText(rowN, A_Index) "`t"
