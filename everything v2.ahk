@@ -632,10 +632,14 @@ runAsAdmin() {
 }
 
 connectNextDNS() {
-	whr := ComObject("WinHttp.WinHttpRequest.5.1")
-	whr.Open("GET", "https://link-ip.nextdns.io/8b77eb/e2c727ac3ea569ce", true)
-	whr.Send()
-	whr.WaitForResponse()
+	try {
+		whr := ComObject("WinHttp.WinHttpRequest.5.1")
+		whr.Open("GET", "https://link-ip.nextdns.io/8b77eb/e2c727ac3ea569ce", true)
+		whr.Send()
+		whr.WaitForResponse()
+	} catch as e {
+		Msgbox("Could not connect to NextDNS. Error:`n" e.What "`n" e.Extra)
+	}
 	return whr.ResponseText
 }
 

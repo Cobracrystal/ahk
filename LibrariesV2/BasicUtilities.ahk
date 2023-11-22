@@ -343,11 +343,11 @@ class BiMap extends Map {
 	static Call(params*) {
 		tMap := Map(params*)
 		this.map := Map()
-		this.inverseMap := BiMap()
-		for i, e in tMap
-			this.inverseMap[e] := i
-		for i, e in this.inverseMap
-			this.map[e] := i
+	;	this.inverseMap := BiMap()
+		; for i, e in tMap
+		; 	this.inverseMap[e] := i
+		; for i, e in this.inverseMap
+		; 	this.map[e] := i
 		return this.map
 
 ;		inverseMap := { map: this.inverseMap, inverseMap: this }
@@ -378,7 +378,7 @@ class BiMap extends Map {
 	}
 
 	static Count {
-		get => this.count
+
 	}
 
 	static Capacity {
@@ -393,26 +393,26 @@ class BiMap extends Map {
 
 	}
 
-	static __Item[key] {
-		get {
-			return this.map[key]
-		}
+	; static __Item[key] {
+	; 	get {
+	; 		return this.map[key]
+	; 	}
 
-		set {
-			if (this.inverseMap.Has(value))
-				this.map.Delete(this.inverseMap[value])
-			if (this.map.Has(key))
-				this.inverseMap.Delete(this.map[key])
-			this.map[key] := value
-			this.inverseMap[value] := key
-		}
-	}
+	; 	set {
+	; 		if (this.inverseMap.Has(value))
+	; 			this.map.Delete(this.inverseMap[value])
+	; 		if (this.map.Has(key))
+	; 			this.inverseMap.Delete(this.map[key])
+	; 		this.map[key] := value
+	; 		this.inverseMap[value] := key
+	; 	}
+	; }
 
-	static inverse() {
-		invMap := BiMap()
-		for i, e in this.map
-			invMap[e] := i
-		return invMap
-	}
+	; static inverse() {
+	; 	invMap := BiMap()
+	; 	for i, e in this.map
+	; 		invMap[e] := i
+	; 	return invMap
+	; }
 
 }
