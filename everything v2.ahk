@@ -35,7 +35,7 @@ A_TrayMenu.Delete()
 #Include "TextEditMenu.ahk"
 #Include "MacroRecorder.ahk"
 #Include "TimestampConverter.ahk"
-; #Include "DiscordClient.ahk"
+#Include "DiscordClient.ahk"
 #Include "DiscordBotCommands.ahk"
 #Include "AltDrag.ahk"
 #Include "MathUtilities.ahk"
@@ -43,7 +43,7 @@ A_TrayMenu.Delete()
 #Include "BasicUtilities.ahk"
 #Include "HotstringLoader.ahk"
 
-; #Include "JSON.ahk"
+#Include "JSON.ahk"
 
 ;[style]} ______________________________________________________________________________________________
 ;[style]							: VARIABLES

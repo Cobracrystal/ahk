@@ -327,8 +327,9 @@ class JSON
 				
 				static rx_escapable := A_AhkVersion<"2" ? "O)[^\x20-\x7e]" : "[^\x20-\x7e]"
 				if (escape_unicode) {
-					while RegExMatch(string, rx_escapable, m)
+					while RegExMatch(string, rx_escapable, m) {
 						string := StrReplace(string, m.Value, Format("\u{1:04x}", Ord(m.Value)))
+					}
 				}
 			}
 

@@ -55,7 +55,7 @@ class DiscordClient {
 		return this.callAPI("GET", "/guilds/" . serverID . "/roles")
 	}
 	
-	CallAPI(method, endPoint, content := "") {
+	callApi(method, endPoint, content := "") {
 		http := ComObject("WinHTTP.WinHTTPRequest.5.1")
 		Loop(2) {
 			http.Open(method, this.BaseURL . endpoint)
@@ -89,5 +89,4 @@ class DiscordClient {
 			return
 		}
 	}
-	
 }

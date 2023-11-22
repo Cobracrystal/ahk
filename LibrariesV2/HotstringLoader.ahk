@@ -1,4 +1,4 @@
-﻿; #Include %A_ScriptDir%\LibrariesV2\JSON.ahk
+﻿#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
 
 
 
@@ -8,12 +8,6 @@
 
 
 ; ADD ALL THE MATH FONTS (AT BOTTOM OF LATEXHOTSTRINGS JSON) TO TEXTEDITMENU, ITS WAY BETTER THAT WAY
-
-
-
-
-
-
 
 
 class HotstringLoader {

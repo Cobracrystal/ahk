@@ -1,4 +1,5 @@
 /************************************************************************
+ * @link https://github.com/cocobelgica/AutoHotkey-JSON/blob/v2/JSON.ahk
  * @description: JSON格式字符串序列化和反序列化, 修改自[HotKeyIt/Yaml](https://github.com/HotKeyIt/Yaml)
  * 增加了对true/false/null类型的支持, 保留了数值的类型
  * @author thqby, HotKeyIt
@@ -15,7 +16,7 @@ class JSON {
 	 * @param keepbooltype convert true/false/null to JSON.true / JSON.false / JSON.null where it's true, otherwise 1 / 0 / ''
 	 * @param as_map object literals are converted to map, otherwise to object
 	 */
-	static parse(text, keepbooltype := false, as_map := true) {
+	static Load(text, keepbooltype := false, as_map := true) {
 		keepbooltype ? (_true := JSON.true, _false := JSON.false, _null := JSON.null) : (_true := true, _false := false, _null := "")
 		as_map ? (map_set := (maptype := Map).Prototype.Set) : (map_set := (obj, key, val) => obj.%key% := val, maptype := Object)
 		NQ := "", LF := "", LP := 0, P := "", R := ""
@@ -96,7 +97,7 @@ class JSON {
 	 * @param expandlevel The level of JSON string need to expand, by default expand all.
 	 * @param space Adds indentation, white space, and line break characters to the return-value JSON text to make it easier to read.
 	 */
-	static stringify(obj, expandlevel := unset, space := "  ") {
+	static Dump(obj, expandlevel := unset, space := "  ") {
 		expandlevel := IsSet(expandlevel) ? Abs(expandlevel) : 10000000
 		return Trim(CO(obj, expandlevel))
 		CO(O, J := 0, R := 0, Q := 0) {
