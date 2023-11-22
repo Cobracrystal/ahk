@@ -809,7 +809,7 @@ loadfile(dataPath) {
 				val := m.Value(2)
 				o[key] := val
 				if !(arrayContains(keyArray, key)) { ;// this stores the keys
-					pos := getKeyPos(keyArray, prevkey)
+					pos := arrayContains(keyArray, prevkey)
 					keyArray.InsertAt(pos+1, key) ;// this sorts the columns correctly.
 				}
 				prevkey := key
@@ -986,20 +986,10 @@ deleteExcessBackups(appDataPath, pathFileNameGeneric, allowedBackupsCount) {
 
 ;// generic functions
 
-getKeyPos(arr, key) {
-	for i, e in arr
-		if (key == e)
+arrayContains(array, key) {
+	for i, e in array
+		if(e == key)
 			return i
-	return 0
-}
-
-arrayContains(array, searchfor) {
-	for i, Element in array {
-		if(Element == searchfor) {
-			return 1
-			break
-		}
-	}
 	return 0
 }
 
