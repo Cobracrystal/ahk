@@ -62,7 +62,7 @@ TransparentTaskbar.TransparentTaskbar(1, 50)
 ; Start Loop to close winrar popups
 SetTimer(closeWinRarNotification, -100, -100000) ; priority -100k so it doesn't interrupt
 ; Initialize Internet Logging Script
-internetConnectionLogger("Init", "C:\Users\Simon\Desktop\programs\programming\bat\log.txt")
+internetConnectionLogger("Init", A_Desktop "\programs\programming\bat\log.txt")
 ; Load LaTeX Hotstrings
 HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX")
 ; replace the tray menu with my own
@@ -168,7 +168,7 @@ return
 ; ###########################################################################
 
 ^+!NumpadEnter:: {	; Launch Autoclicker
-	Run("C:\Users\Simon\Desktop\Autoclicker\AutoClickerPos.exe")
+	Run(A_Desktop "\Autoclicker\AutoClickerPos.exe")
 }
 
 ^LWin Up:: { ; Replace Windows Search with EverythingSearch
@@ -516,7 +516,7 @@ internetConnectionLogger(mode := "T", path := "") {
 		if (WinExist("INTERNET_LOGGER"))
 			internetConsolePID := WinGetPID("INTERNET_LOGGER")
 		else {
-			Run(A_ComSpec . ' /c "title INTERNET_LOGGER && mode con: cols=65 lines=10 && powershell C:\Users\Simon\Desktop\programs\programming\bat\internetLogger.ps1 -path "' . logFile . '""', , "Hide", &internetConsolePID)
+			Run(A_ComSpec . ' /c "title INTERNET_LOGGER && mode con: cols=65 lines=10 && powershell ' A_Desktop '\programs\programming\bat\internetLogger.ps1 -path "' . logFile . '""', , "Hide", &internetConsolePID)
 			WinWait("INTERNET_LOGGER")
 			WinSetAlwaysOnTop(1, "INTERNET_LOGGER")
 		}

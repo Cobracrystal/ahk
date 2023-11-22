@@ -78,9 +78,9 @@ class YoutubeDLGui {
 			, "useAliases" : 0
 			, "openExplorer" : 1
 			, "defaultConfigSelection": [0,1,7,8,10,11,13,14,24,28] ; this should get loaded in some form or another. This is temporary.
-			, "outputPath":"C:\Users\Simon\Music\Musik\ConvertMusic"
-			, "ffmpegPath":"C:\Users\Simon\Desktop\programs\other\ffmpeg.exe"
-			, "ytdlPath":"C:\Users\Simon\Music\Musik\ytdl\yt-dlp.exe"
+			, "outputPath": A_MyDocuments "\..\Music\Musik\ConvertMusic"
+			, "ffmpegPath": A_Desktop "\programs\other\ffmpeg.exe"
+			, "ytdlPath": A_MyDocuments "\..\Music\Musik\ytdl\yt-dlp.exe"
 			, "debug":0 }
 		this.ytdlOptions := []
 		this.ytdlOptions[0] := {name:this.settings.ytdlPath} 
