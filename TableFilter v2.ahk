@@ -9,6 +9,11 @@
 ; settings usedefaultrunic -> needs runic translator function.
 ; queue for deletion instead of instantly deleting, then next filteredlist operation should do that
 ; listview headers
+; option to change backcolor, font color
+; font size??? adjust the controls accordingly?? (maybe with ctrl +?)
+; do above ^, check in docs > gui > setfont > note at the end dialog box to pick font/color/icon
+; add setting to reset to default setting
+
 #SingleInstance Force
 ; temporary
 tableInstance := TableFilter(1)
@@ -301,6 +306,7 @@ class TableFilter {
 			if (ctrl is Gui.Button || ctrl is Gui.ListView) {
 				; todo: listview headers dark -> https://www.autohotkey.com/boards/viewtopic.php?t=115952
 				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
+				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
 				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
 			}
 			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
