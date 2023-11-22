@@ -8,6 +8,7 @@
 ; limit autohdr for columns to fixed max width (eg autohdr if < 200, else 200)
 ; settings usedefaultrunic -> needs runic translator function.
 ; instead of tooltip and disabled gui, use actual progress window (like magicbox example) to display duplicate progress (also makes escape as interruption clearer)
+; queue for deletion instead of instantly deleting, then next filteredlist operation should do that
 #SingleInstance Force
 ; temporary
 tableInstance := TableFilter(1)
