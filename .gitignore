@@ -7,3 +7,9 @@
 !/*.md
 !/.gitignore
 !/script_files/
+!/Libraries/
+!/LibrariesV2/
+script_files/*
+!script_files/NeoKeyboardLayout/
+!script_files/minesweeperSolver/
+not_mine_or_examples/
