@@ -87,6 +87,7 @@ objContainsValue(obj, value) {
 	for i, e in obj
 		if (e = value)
 			return i
+	return false
 }
 
 objRemoveValues(obj, removeAll := 1, values*) {
