@@ -1,8 +1,8 @@
 ﻿;// made by Cobracrystal
 ;// TODO: Refreshing with F5 should a) be available with a GUI button, c) should be toggleable to update automatically
 ;// TODO 3: Add Settings file for excluded windows, automatically form that into regex
-#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
-
+#Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\JSON.ahk"
 ;------------------------- AUTO EXECUTE SECTION -------------------------
 ;// Add an options to launch the GUI on top of the normal Tray Menu
 ;// creates the menu for clicking inside the window manager GUI
@@ -167,8 +167,16 @@ class WindowManager {
 				if ((rowN := this.LV.GetNext()) == 0)
 					return
 				wHandle := Integer(this.LV.GetText(rowN, 1))
-				if (GetKeyState("Ctrl"))
-					A_Clipboard := WinGetTitle(wHandle)
+				if (GetKeyState("Ctrl")) {
+					if !GetKeyState("Shift")
+						A_Clipboard := WinGetTitle(wHandle)
+					else {
+						info := this.getWindowInfo(wHandle)
+						A_Clipboard := JSON.Dump(info)
+						; Loop(this.LV.GetCount("Col"))
+						; 	str .= this.LV.GetText(rowN, A_Index) "`t"
+					}
+				}
 			case "116":	;// F5 Key -> Reload
 				this.guiListviewCreate()
 			default: 
