@@ -56,6 +56,10 @@ class DiscordClient {
 	getRoles(serverID) {
 		return this.callAPI("GET", "/guilds/" . serverID . "/roles")
 	}
+
+	modifyGuildRole(serverID, roleID, content) {
+		return this.callApi("PATCH", "/guilds/" serverID "/roles/" roleID, content)
+	}
 	
 	callApi(method, endPoint, content := "") {
 		http := ComObject("WinHTTP.WinHTTPRequest.5.1")
@@ -65,7 +69,7 @@ class DiscordClient {
 			http.SetRequestHeader("User-Agent", "DiscordBot ($https://discordapp.com, $1337)")
 			http.SetRequestHeader("Content-Type", "application/json")
 			if (content)
-				http.Send(jsongo.Stringify(content))
+				http.Send(asd := jsongo.Stringify(content))
 			else 
 				http.Send()
 			if (http.status == 429) { ; rate limit
@@ -82,7 +86,7 @@ class DiscordClient {
 			break ; only loop if rate limit, else directly continue
 		}
 		if (http.status != 200 && http.status != 204)
-			throw Error("Request failed`n" . "Status: " http.status "`nResponse: " http.responseText "`nendPoint: " . endPoint . "`nContent: `n" . jsongo.Stringify(content))
+			throw Error("Request failed`n" . "Status: " http.status "`nResponse: " jsongo.Stringify(jsongo.parse(http.responseText),,"`t") "`nendPoint: " . endPoint . "`nContent: `n" . jsongo.Stringify(content))
 		str := http.ResponseText
 		A_Clipboard := str
 		return jsongo.Parse(str)
