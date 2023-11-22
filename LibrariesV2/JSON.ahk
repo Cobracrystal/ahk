@@ -1,364 +1,157 @@
-/**
- * Lib: JSON.ahk
- *     JSON lib for AutoHotkey.
- * Version:
- *     v2.1.3 [updated 04/18/2016 (MM/DD/YYYY)]
- * License:
- *     WTFPL [http://wtfpl.net/]
- * Requirements:
- *     Latest version of AutoHotkey (v1.1+ or v2.0-a+)
- * Installation:
- *     Use #Include JSON.ahk or copy into a function library folder and then
- *     use #Include <JSON>
- * Links:
- *     GitHub:     - https://github.com/cocobelgica/AutoHotkey-JSON
- *     Forum Topic - http://goo.gl/r0zI8t
- *     Email:      - cocobelgica <at> gmail <dot> com
- */
+/************************************************************************
+ * @description: JSON格式字符串序列化和反序列化, 修改自[HotKeyIt/Yaml](https://github.com/HotKeyIt/Yaml)
+ * 增加了对true/false/null类型的支持, 保留了数值的类型
+ * @author thqby, HotKeyIt
+ * @date 2023/05/12
+ * @version 1.0.5
+ ***********************************************************************/
 
+class JSON {
+	static null := ComValue(1, 0), true := ComValue(0xB, 1), false := ComValue(0xB, 0)
 
-/**
- * Class: JSON
- *     The JSON object contains methods for parsing JSON and converting values
- *     to JSON. Callable - NO; Instantiable - YES; Subclassable - YES;
- *     Nestable(via #Include) - NO.
- * Methods:
- *     Load() - see relevant documentation before method definition header
- *     Dump() - see relevant documentation before method definition header
- */
-class JSON
-{
-	/*
-	 * Method: Load
-	 *     Parses a JSON string into an AHK value
-	 * Syntax:
-	 *     value := JSON.Load( text [, reviver ] )
-	 * Parameter(s):
-	 *     value      [retval] - parsed value
-	 *     text    [in, ByRef] - JSON formatted string
-	 *     reviver   [in, opt] - function object, similar to JavaScript's
-	 *                           JSON.parse() 'reviver' parameter
+	/**
+	 * Converts a AutoHotkey Object Notation JSON string into an object.
+	 * @param text A valid JSON string.
+	 * @param keepbooltype convert true/false/null to JSON.true / JSON.false / JSON.null where it's true, otherwise 1 / 0 / ''
+	 * @param as_map object literals are converted to map, otherwise to object
 	 */
-	class Load extends JSON.Functor	{
-		static Call(&text, reviver:="")	{
-			this.rev := IsObject(reviver) ? reviver : false
-			; Object keys(and array indices) are temporarily stored in arrays so that
-			; we can enumerate them in the order they appear in the document/text instead
-			; of alphabetically. Skip if no reviver function is specified.
-			this.keys := this.rev ? Map() : false
-
-			static quot := Chr(34), json_value := quot . "{[01234567890-tfn"
-			     , json_value_or_array_closing := quot . "{[]01234567890-tfn"
-			     , object_key_or_object_closing := quot . "}"
-
-			key := ""
-			is_key := false
-			root := Map()
-			stack := [root]
-			next := json_value
-			pos := 0
-
-			while ((ch := SubStr(text, ++pos, 1)) != "") {
-				if InStr(" `t`r`n", ch)
+	static parse(text, keepbooltype := false, as_map := true) {
+		keepbooltype ? (_true := JSON.true, _false := JSON.false, _null := JSON.null) : (_true := true, _false := false, _null := "")
+		as_map ? (map_set := (maptype := Map).Prototype.Set) : (map_set := (obj, key, val) => obj.%key% := val, maptype := Object)
+		NQ := "", LF := "", LP := 0, P := "", R := ""
+		D := [C := (A := InStr(text := LTrim(text, " `t`r`n"), "[") = 1) ? [] : maptype()], text := LTrim(SubStr(text, 2), " `t`r`n"), L := 1, N := 0, V := K := "", J := C, !(Q := InStr(text, '"') != 1) ? text := LTrim(text, '"') : ""
+		Loop Parse text, '"' {
+			Q := NQ ? 1 : !Q
+			NQ := Q && (SubStr(A_LoopField, -3) = "\\\" || (SubStr(A_LoopField, -1) = "\" && SubStr(A_LoopField, -2) != "\\"))
+			if !Q {
+				if (t := Trim(A_LoopField, " `t`r`n")) = "," || (t = ":" && V := 1)
 					continue
-				if !InStr(next, ch, 1)
-					this.ParseError(next, &text, pos)
-
-				holder := stack[1]
-				is_array := holder is Array
-
-				if InStr(",:", ch) {
-					next := (is_key := !is_array && ch == ",") ? quot : json_value
-
-				} else if InStr("}]", ch) {
-					stack.RemoveAt(1)
-					next := stack[1]==root ? "" : stack[1].IsArray ? ",]" : ",}"
-
-				} else {
-					if InStr("{[", ch) {
-					; Check if Array() is overridden and if its return value has
-					; the 'IsArray' property. If so, Array() will be called normally,
-					; otherwise, use a custom base object for arrays
-						static json_array := Map("IsArray", true)
-					
-					; sacrifice readability for minor(actually negligible) performance gain
-						(ch == "{")
-							? ( is_key := true
-							  , value := Map()
-							  , next := object_key_or_object_closing )
-						; ch == "["
-							: ( value := json_array ? json_array : []
-							  , next := json_value_or_array_closing )
-						
-						stack.InsertAt(1,value)
-
-						if (this.keys)
-							this.keys[value] := []
-					
-					} else {
-						if (ch == quot) {
-							i := pos
-							while (i := InStr(text, quot,, i+1)) {
-								value := StrReplace(SubStr(text, pos+1, i-pos-1), "\\", "\u005c")
-
-								if (SubStr(value, -1) != "\")
-									break
+				else if t && (InStr("{[]},:", SubStr(t, 1, 1)) || RegExMatch(t, "^-?\d*(\.\d*)?\s*[,\]\}]")) {
+					Loop Parse t {
+						if N && N--
+							continue
+						if InStr("`n`r `t", A_LoopField)
+							continue
+						else if InStr("{[", A_LoopField) {
+							if !A && !V
+								throw Error("Malformed JSON - missing key.", 0, t)
+							C := A_LoopField = "[" ? [] : maptype(), A ? D[L].Push(C) : map_set(D[L], K, C), D.Has(++L) ? D[L] := C : D.Push(C), V := "", A := Type(C) = "Array"
+							continue
+						} else if InStr("]}", A_LoopField) {
+							if !A && V
+								throw Error("Malformed JSON - missing value.", 0, t)
+							else if L = 0
+								throw Error("Malformed JSON - to many closing brackets.", 0, t)
+							else C := --L = 0 ? "" : D[L], A := Type(C) = "Array"
+						} else if !(InStr(" `t`r,", A_LoopField) || (A_LoopField = ":" && V := 1)) {
+							if RegExMatch(SubStr(t, A_Index), "m)^(null|false|true|-?\d+\.?\d*)\s*[,}\]\r\n]", &R) && (N := R.Len(0) - 2, R := R.1, 1) {
+								if A
+									C.Push(R = "null" ? _null : R = "true" ? _true : R = "false" ? _false : IsNumber(R) ? R + 0 : R)
+								else if V
+									map_set(C, K, R = "null" ? _null : R = "true" ? _true : R = "false" ? _false : IsNumber(R) ? R + 0 : R), K := V := ""
+								else throw Error("Malformed JSON - missing key.", 0, t)
+							} else {
+								; Added support for comments without '"'
+								if A_LoopField == '/' {
+									nt := SubStr(t, A_Index + 1, 1), N := 0
+									if nt == '/' {
+										if nt := InStr(t, '`n', , A_Index + 2)
+											N := nt - A_Index - 1
+									} else if nt == '*' {
+										if nt := InStr(t, '*/', , A_Index + 2)
+											N := nt + 1 - A_Index
+									} else nt := 0
+									if N
+										continue
+								}
+								throw Error("Malformed JSON - unrecognized character-", 0, A_LoopField " in " t)
 							}
-
-							if (!i)
-								this.ParseError("'", &text, pos)
-
-							  value := StrReplace(value,  "\/",  "/")
-							, value := StrReplace(value,  '\"', "`"")
-							, value := StrReplace(value,  "\b", "`b")
-							, value := StrReplace(value,  "\f", "`f")
-							, value := StrReplace(value,  "\n", "`n")
-							, value := StrReplace(value,  "\r", "`r")
-							, value := StrReplace(value,  "\t", "`t")
-
-							pos := i ; update pos
-							
-							i := 0
-							while (i := InStr(value, "\",, i+1)) {
-								if !(SubStr(value, i+1, 1) == "u")
-									this.ParseError("\", &text, pos - StrLen(SubStr(value, i+1)))
-
-								uffff := Abs("0x" . SubStr(value, i+2, 4))
-								if (uffff < 0x100)
-									value := SubStr(value, 1, i-1) . Chr(uffff) . SubStr(value, i+6)
-							}
-
-							if (is_key) {
-								key := value, next := ":"
-								continue
-							}
-						
-						} else {
-							value := SubStr(text, pos, i := RegExMatch(text, "[\]\},\s]|$",, pos)-pos)
-
-							if IsNumber(value)
-							{
-								if IsInteger(value)
-									value += 0
-							}
-							else if (value == "true" || value == "false")
-								value := %value% + 0
-							else if (value == "null")
-								value := ""
-							else
-							; we can do more here to pinpoint the actual culprit
-							; but that's just too much extra work.
-								this.ParseError(next, &text, pos, i)
-
-							pos += i-1
 						}
-
-						next := holder==root ? "" : is_array ? ",]" : ",}"
-					} ; If InStr("{[", ch) { ... } else
-
-					is_array ? key := holder.push(value) : holder[key] := value
-
-					if (this.keys && this.keys.HasKey(holder))
-						this.keys[holder].Push(key)
-				}
-			
-			} ; while ( ... )
-
-			return this.rev ? this.Walk(root, "") : root[""]
+					}
+				} else if InStr(t, ':') > 1
+					throw Error("Malformed JSON - unrecognized character-", 0, SubStr(t, 1, 1) " in " t)
+			} else if NQ && (P .= A_LoopField '"', 1)
+				continue
+			else if A
+				LF := P A_LoopField, C.Push(InStr(LF, "\") ? UC(LF) : LF), P := ""
+			else if V
+				LF := P A_LoopField, map_set(C, K, InStr(LF, "\") ? UC(LF) : LF), K := V := P := ""
+			else
+				LF := P A_LoopField, K := InStr(LF, "\") ? UC(LF) : LF, P := ""
 		}
-
-		static ParseError(expect, &text, pos, len:=1)
-		{
-			line := StrSplit(SubStr(text, 1, pos), "`n", "`r").Length
-			col := pos - InStr(text, "`n",, -(StrLen(text)-pos+1))
-			msg := Format("{1}`n`nLine:`t{2}`nCol:`t{3}`nChar:`t{4}"
-			,     (expect == "")     ? "Extra data"
-			    : (expect == "'")    ? "Unterminated string starting at"
-			    : (expect == "\")    ? "Invalid \escape"
-			    : (expect == ":")    ? "Expecting ':' delimiter"
-			    : (expect == """")   ? "Expecting object key enclosed in double quotes"
-			    : (expect == """}")  ? "Expecting object key enclosed in double quotes or object closing '}'"
-			    : (expect == ",}")   ? "Expecting ',' delimiter or object closing '}'"
-			    : (expect == ",]")   ? "Expecting ',' delimiter or array closing ']'"
-			    : InStr(expect, "]") ? "Expecting JSON value or array closing ']'"
-			    :                      "Expecting JSON value(string, number, true, false, null, object or array)"
-			, line, col, pos)
-
-			throw Error(msg, -4, SubStr(text, pos, len))
-		}
-
-		static Walk(holder, key)
-		{
-			value := holder[key]
-			if IsObject(value) {
-				for i, k in this.keys[value] {
-					; check if ObjHasKey(value, k) ??
-					v := this.Walk(value, k)
-					if (v != JSON.Undefined)
-						value[k] := v
-					else
-						value.delete(k)
-				}
-			}
-			
-			return this.rev.Call(holder, key, value)
+		return J
+		UC(S, e := 1) {
+			static m := Map(Ord('"'), '"', Ord("a"), "`a", Ord("b"), "`b", Ord("t"), "`t", Ord("n"), "`n", Ord("v"), "`v", Ord("f"), "`f", Ord("r"), "`r")
+			local v := ""
+			Loop Parse S, "\"
+				if !((e := !e) && A_LoopField = "" ? v .= "\" : !e ? (v .= A_LoopField, 1) : 0)
+					v .= (t := InStr("ux", SubStr(A_LoopField, 1, 1)) ? SubStr(A_LoopField, 1, RegExMatch(A_LoopField, "i)^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K") - 1) : "") && RegexMatch(t, "i)^[ux][\da-f]+$") ? Chr(Abs("0x" SubStr(t, 2))) SubStr(A_LoopField, RegExMatch(A_LoopField, "i)^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K")) : m.has(Ord(A_LoopField)) ? m[Ord(A_LoopField)] SubStr(A_LoopField, 2) : "\" A_LoopField, e := A_LoopField = "" ? e : !e
+			return v
 		}
 	}
 
 	/**
-	 * Method: Dump
-	 *     Converts an AHK value into a JSON string
-	 * Syntax:
-	 *     str := JSON.Dump( value [, replacer, space ] )
-	 * Parameter(s):
-	 *     str        [retval] - JSON representation of an AHK value
-	 *     value          [in] - any value(object, string, number)
-	 *     replacer  [in, opt] - function object, similar to JavaScript's
-	 *                           JSON.stringify() 'replacer' parameter
-	 *     space     [in, opt] - similar to JavaScript's JSON.stringify()
-	 *                           'space' parameter
+	 * Converts a AutoHotkey Array/Map/Object to a Object Notation JSON string.
+	 * @param obj A AutoHotkey value, usually an object or array or map, to be converted.
+	 * @param expandlevel The level of JSON string need to expand, by default expand all.
+	 * @param space Adds indentation, white space, and line break characters to the return-value JSON text to make it easier to read.
 	 */
-	class Dump extends JSON.Functor
-	{
-		static Call(value, replacer:="", space:="", escape_unicode:=true)
-		{
-			this.rep := IsObject(replacer) ? replacer : ""
-
-			this.gap := ""
-			if (space) {
-				if IsInteger(space)
-					Loop((n := Abs(space))>10 ? 10 : n)
-						this.gap .= " "
-				else
-					this.gap := SubStr(space, 1, 10)
-
-				this.indent := "`n"
-			}
-
-			return this.Str(Map("", value), "", escape_unicode)
-		}
-
-		static Str(holder, key, escape_unicode:=true)
-		{
-			value := holder[key]
-
-			if (this.rep)
-				value := this.rep.Call(holder, key, holder.HasKey(key) ? value : JSON.Undefined)
-
-			if IsObject(value) {
-			; Check object type, skip serialization for other object types such as
-			; ComObject, Func, BoundFunc, FileObject, RegExMatchObject, Property, etc.
-				static type := Type
-				if (type ? type.Call(value) == "Object" : ObjGetCapacity(value) != "") {
-					if (this.gap) {
-						stepback := this.indent
-						this.indent .= this.gap
-					}
-
-					is_array := value.IsArray
-				; Array() is not overridden, rollback to old method of
-				; identifying array-like objects. Due to the use of a for-loop
-				; sparse arrays such as '[1,,3]' are detected as objects({}). 
-					if (!is_array) {
-						for i in value
-							is_array := i == A_Index
-						until !is_array
-					}
-
-					str := ""
-					if (is_array) {
-						Loop(value.Length()){
-							if (this.gap)
-								str .= this.indent
-							
-							v := this.Str(value, A_Index, escape_unicode)
-							str .= (v != "") ? v . "," : "null,"
-						}
-					} else {
-						colon := this.gap ? ": " : ":"
-						for k in value {
-							v := this.Str(value, k, escape_unicode)
-							if (v != "") {
-								if (this.gap)
-									str .= this.indent
-
-								str .= this.Quote(k, escape_unicode) . colon . v . ","
-							}
-						}
-					}
-
-					if (str != "") {
-						str := RTrim(str, ",")
-						if (this.gap)
-							str .= stepback
-					}
-
-					if (this.gap)
-						this.indent := stepback
-
-					return is_array ? "[" . str . "]" : "{" . str . "}"
+	static stringify(obj, expandlevel := unset, space := "  ") {
+		expandlevel := IsSet(expandlevel) ? Abs(expandlevel) : 10000000
+		return Trim(CO(obj, expandlevel))
+		CO(O, J := 0, R := 0, Q := 0) {
+			static M1 := "{", M2 := "}", S1 := "[", S2 := "]", N := "`n", C := ",", S := "- ", E := "", K := ":"
+			if (OT := Type(O)) = "Array" {
+				D := !R ? S1 : ""
+				for key, value in O {
+					F := (VT := Type(value)) = "Array" ? "S" : InStr("Map,Object", VT) ? "M" : E
+					Z := VT = "Array" && value.Length = 0 ? "[]" : ((VT = "Map" && value.count = 0) || (VT = "Object" && ObjOwnPropCount(value) = 0)) ? "{}" : ""
+					D .= (J > R ? "`n" CL(R + 2) : "") (F ? (%F%1 (Z ? "" : CO(value, J, R + 1, F)) %F%2) : ES(value)) (OT = "Array" && O.Length = A_Index ? E : C)
 				}
-			
-			} else ; is_number ? value : "value"
-				return [value].GetCapacity(1)=="" ? value : this.Quote(value, escape_unicode)
-		}
-
-		static Quote(string, escape_unicode:=true)
-		{
-			if (string != "") {
-				  string := StrReplace(string,  "\",  "\\")
-				; , string := StrReplace(string,  "/",  "\/") ; optional in ECMAScript
-				, string := StrReplace(string, "`"",  '\"')
-				, string := StrReplace(string, "`b",  "\b")
-				, string := StrReplace(string, "`f",  "\f")
-				, string := StrReplace(string, "`n",  "\n")
-				, string := StrReplace(string, "`r",  "\r")
-				, string := StrReplace(string, "`t",  "\t")
-				
-				if (escape_unicode) {
-					while RegExMatch(string, "[^\x20-\x7e]", &m)
-						string := StrReplace(string, m[0], Format("\u{1:04x}", Ord(m[0])))
+			} else {
+				D := !R ? M1 : ""
+				for key, value in (OT := Type(O)) = "Map" ? (Y := 1, O) : (Y := 0, O.OwnProps()) {
+					F := (VT := Type(value)) = "Array" ? "S" : InStr("Map,Object", VT) ? "M" : E
+					Z := VT = "Array" && value.Length = 0 ? "[]" : ((VT = "Map" && value.count = 0) || (VT = "Object" && ObjOwnPropCount(value) = 0)) ? "{}" : ""
+					D .= (J > R ? "`n" CL(R + 2) : "") (Q = "S" && A_Index = 1 ? M1 : E) ES(key) K (F ? (%F%1 (Z ? "" : CO(value, J, R + 1, F)) %F%2) : ES(value)) (Q = "S" && A_Index = (Y ? O.count : ObjOwnPropCount(O)) ? M2 : E) (J != 0 || R ? (A_Index = (Y ? O.count : ObjOwnPropCount(O)) ? E : C) : E)
+					if J = 0 && !R
+						D .= (A_Index < (Y ? O.count : ObjOwnPropCount(O)) ? C : E)
 				}
 			}
-
-			return '"' . string . '"'
+			if J > R
+				D .= "`n" CL(R + 1)
+			if R = 0
+				D := RegExReplace(D, "^\R+") (OT = "Array" ? S2 : M2)
+			return D
 		}
-	}
-
-	/**
-	 * Property: Undefined
-	 *     Proxy for 'undefined' type
-	 * Syntax:
-	 *     undefined := JSON.Undefined
-	 * Remarks:
-	 *     For use with reviver and replacer functions since AutoHotkey does not
-	 *     have an 'undefined' type. Returning blank("") or 0 won't work since these
-	 *     can't be distnguished from actual JSON values. This leaves us with objects.
-	 *     Replacer() - the caller may return a non-serializable AHK objects such as
-	 *     ComObject, Func, BoundFunc, FileObject, RegExMatchObject, and Property to
-	 *     mimic the behavior of returning 'undefined' in JavaScript but for the sake
-	 *     of code readability and convenience, it's better to do 'return JSON.Undefined'.
-	 *     Internally, the property returns a ComObject with the variant type of VT_EMPTY.
-	 */
-	static Undefined
-	{
-		get {
-			static empty := Map(), vt_empty := ComObject(0)
-			return vt_empty
+		ES(S) {
+			switch Type(S) {
+				case "Float":
+					if (v := '', d := InStr(S, 'e'))
+						v := SubStr(S, d), S := SubStr(S, 1, d - 1)
+					if ((StrLen(S) > 17) && (d := RegExMatch(S, "(99999+|00000+)\d{0,3}$")))
+						S := Round(S, Max(1, d - InStr(S, ".") - 1))
+					return S v
+				case "Integer":
+					return S
+				case "String":
+					S := StrReplace(S, "\", "\\")
+					S := StrReplace(S, "`t", "\t")
+					S := StrReplace(S, "`r", "\r")
+					S := StrReplace(S, "`n", "\n")
+					S := StrReplace(S, "`b", "\b")
+					S := StrReplace(S, "`f", "\f")
+					S := StrReplace(S, "`v", "\v")
+					S := StrReplace(S, '"', '\"')
+					return '"' S '"'
+				default:
+					return S == JSON.true ? "true" : S == JSON.false ? "false" : "null"
+			}
 		}
-	}
-
-	class Functor
-	{
-		__Call(method, &arg, args*)
-		{
-		; When casting to Call(), use a new instance of the "function object"
-		; so as to avoid directly storing the properties(used across sub-methods)
-		; into the "function object" itself.
-			if IsObject(method)
-				return this.Call(method, arg, args*)
-			else if (method == "")
-				return this.Call(arg, args*)
+		CL(i) {
+			Loop (s := "", space ? i - 1 : 0)
+				s .= space
+			return s
 		}
 	}
 }
