@@ -227,6 +227,7 @@ class KeyLogger {
 ~*^+!ß:: KeyLogger.keyEvent("ẞ")
 ~*^!q:: KeyLogger.keyEvent("@")
 ~*^!m:: KeyLogger.keyEvent("µ")
+~*^!e:: KeyLogger.keyEvent("€")
 ~*^!<:: KeyLogger.keyEvent("|")
 ~*^!+:: KeyLogger.keyEvent("~")
 ~*^!2:: KeyLogger.keyEvent("²")
