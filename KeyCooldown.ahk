@@ -1,17 +1,15 @@
-﻿#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
-SendMode Input
-SetWorkingDir %A_ScriptDir%
-#MaxHotkeysPerInterval 50000
-Critical On
+﻿A_MaxHotkeysPerInterval := 50000
+Critical(1)
 scriptenabled := 1
-Gui, New, +Border -MaximizeBox
-Gui, Add, Checkbox, section Checked1 gScriptToggle, Enable Script
-Gui, Add, Button, gReloadScript ys-3, Reload Script
-Gui, Add, ListView,vThisList R7 w310 xs, KEY|TYPE|COMMENT
-for i, e in Hotkeys(Hotkeys)
-    LV_Add("",e.Hotkey, e.Type, e.Comment)
-LV_ModifyCol()
-Gui, Show, x200y200 NoActivate Autosize,:PauseChamp:
+keygui := Gui("+Border -MaximizeBox", "Hotkey Script")
+keygui.OnEvent("Close", (*) => ExitApp())
+checkbox := keygui.AddCheckbox("Section Checked1", "Enable Script").OnEvent("Click", (*) => scriptToggle())
+keygui.AddButton("ys-3", "Reload Script").OnEvent("Click", (*) => Reload())
+lv := keygui.AddListView("R7 w310 xs", ["Key", "Type", "Comment"])
+for i, e in getHotkeys()
+    lv.Add("",e.Hotkey, e.Type, e.Comment)
+lv.ModifyCol()
+keygui.Show("x200 y200 NoActivate")
 return
 
 ; ";" means comment, so if you want a hotkey do deactivate for now just add ; in front of it
@@ -43,51 +41,46 @@ return
 *$Left::KeyHoldingCooldown("Left",2000,2000)
 
 
-^+R:: ; Reloads Script
-ReloadScript() {
-	Reload
-}
+^+R::Reload() ; Reloads Script
 
-^+K:: ; Closes Script
-GuiClose:
-ExitApp
+^+K::ExitApp() ; Closes Script
 
 ^+!F:: ; pauses script
-ScriptToggle(ctrlhwnd := 0, guievent := 0, eventinfo := 0) {
-	if (ctrlhwnd == 0) {
-		GuiControlGet, tvar,, Enable Script
-		GuiControl,, Enable Script, !tvar
+ScriptToggle(ctrlObj := 0, info := 0) {
+	if (ctrlObj == 0) {
+		global checkbox
+		checkbox.Value := !checkbox.Value
 	}
-	Suspend, Toggle
+	Suspend(-1)
 	return
 }
 
 Cooldown(keys,cd)
 {
-	static t:=[]
-	if !(t[keys])
+	static t:=Map()
+	if !(t.Has(keys))
 		t[keys] := 0
 	if (A_TickCount - t[keys] > cd)
 	{
-		SendInput {%keys% down}
-		KeyWait, %keys%, U 
-		SendInput {%keys% up}
+		SendInput("{" keys " Down}")
+		KeyWait(keys, "U") 
+		SendInput("{" keys " Up}")
         t[keys] := A_TickCount
     }
 }
 
-KeyHoldingCooldown(keys,n,cd1,cd2)
+KeyHoldingCooldown(keys,cd1,cd2)
 {
 	
-	static t:=[]
-	if !(t[keys])
+	static t:=Map()
+	if !(t.Has(keys))
 		t[keys] := 0
 	if (A_TickCount - t[keys] > cd1)
 	{
 		cd2 := cd2/1000
-		SendInput {%keys% Down}
-		KeyWait, %keys%, U ; T%cd2%
-		SendInput {%keys% Up}
+		SendInput("{" keys " Down}")
+		KeyWait(keys, "U") 
+		SendInput("{" keys " Up}")
 		t[keys] := A_TickCount
     }
 }
@@ -97,44 +90,87 @@ MouseCooldown(keys,n,cd)
 	static t:=[A_TickCount,A_TickCount]
     if (A_TickCount - t[n] > cd)
 	{
-		SendInput %keys%
+		SendInput(keys)
         t[n] := A_TickCount
     }
 }
 
-Hotkeys(ByRef Hotkeys)
-{
-    FileRead, Script, %A_ScriptFullPath%
-    Script :=  RegExReplace(Script, "ms`a)^\s*/\*.*?^\s*\*/\s*|^\s*\(.*?^\s*\)\s*")
-    Hotkeys := {}
-    Loop, Parse, Script, `n, `r
-        if RegExMatch(A_LoopField,"(?!;)^\s*(.*):`:",Match) ; OLD VERSION
-        {
-			RegExMatch(A_LoopField,"(?!;)^\s*(.*):`:.*`;\s?(.*)",Comment)
-			if (Comment = "")
-				Comment2 = None
-			if RegExMatch(A_LoopField,"(?!;)^\s*(.*):`:Cooldown(.*)")
-				Type := "Key Cooldown"
-			else if RegExMatch(A_LoopField,"(?!;)^\s*(.*):`:KeyHoldingCooldown(.*)")
-				Type := "Holding Key CD"
-			else if RegExMatch(A_LoopField,"(?!;)^\s*(.*):`:MouseCooldown(.*)")
-				Type := "Mouse Cooldown"
+; # Imported
+getHotkeys()	{
+    script := getFullScript()
+	hotkeys := []
+	hotkeyModifiers := [  {mod:"+", replacement:"Shift"}, {mod:"<^>!", replacement:"AltGr"}
+						, {mod:"^", replacement:"Ctrl"}	, {mod:"!", replacement:"Alt"}
+						, {mod:"#", replacement:"Win"}  , {mod:"<", replacement:"Left"}
+						, {mod:">",	replacement:"Right"}]
+	Loop Parse, script, "`n", "`r" { ; loop parse > strsplit for memory
+		if !(InStr(SubStr(A_Loopfield, 1, RegexMatch(A_Loopfield, "\s;")), "::")) ; skip non-hotkeys
+			continue
+		StrReplace(SubStr(A_Loopfield, 1, InStr(A_Loopfield, "::")), "`"",,, &count)
+		if (count > 1) ; skip strings containing two quotes before ::
+			continue
+		; matches duo keys, modifier keys, modifie*d* leys, numeric value hotkeys, virtual key code hkeys and gets comment after
+		if RegExMatch(A_LoopField,"^((?!(?:;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`").*`".*::)).*)::\s*{?(?:.*;)?\s*(.*)", &match)	{
+			comment := match[2]
+			hkey := LTrim(match[1])
+			if RegExMatch(A_LoopField,"^.*::Cooldown.*")
+				hType := "Key Cooldown"
+			else if RegExMatch(A_LoopField,"^.*::KeyHoldingCooldown.*")
+				hType := "Holding Key CD"
+			else if RegExMatch(A_LoopField,"^.*::MouseCooldown.*")
+				hType := "Mouse Cooldown"
 			else 
-				Type := "Hotkey"
-            if !RegExMatch(Match1,"(Shift|Alt|Ctrl|Win)")
-            {
-				Match1 := StrReplace(Match1, "+", "Shift+", limit:=1)
-				Match1 := StrReplace(Match1, "<^>!", "AltGr+", limit:=1)
-				Match1 := StrReplace(Match1, "<", "Left", limit:=-1)
-				Match1 := StrReplace(Match1, ">", "Right", limit:=-1)
-				Match1 := StrReplace(Match1, "!", "Alt+", limit:=1)
-				Match1 := StrReplace(Match1, "^", "Ctrl+", limit:=1)
-				Match1 := StrReplace(Match1, "#", "Win+", limit:=1)
-				Match1 := StrReplace(Match1, "*","", limit:=1)
-				Match1 := StrReplace(Match1, "$","", limit:=1)
-            }
-            Hotkeys.Push({"Hotkey":Match1, "Type":Type, "Comment":Comment2})
-        }
-    return Hotkeys
+				hType := "Hotkey"
+			if (InStr(hkey, " & ")) { ; if duo hotkey, modifiers are impossible so push
+				hotkeys.push({line:A_Index, hotkey:hkey, type:hType, comment:comment})
+				continue
+			}
+			if (StrLen(hkey) == 1) { ; single key can't be a modifier ~> symbol is hotkey
+				hotkeys.push({line:A_Index, hotkey:hkey, type:hType, comment:comment})
+				continue
+			}
+			if (hkey == "<^>!") { ; altgr = leftCtrl + RightAlt, but on its own LeftCtrl + excl mark
+				hotkeys.push({line:A_Index, hotkey:"Left Ctrl + !", type:hType, comment:comment})
+				continue
+			}
+			hk := SubStr(hkey, 1, -1)
+			for j, f in hotkeyModifiers ; order in array important, shift must be first to ensure no "+" replacements
+				hk := StrReplace(hk, f.mod, f.replacement . (f.mod != "<" && f.mod != ">" ? " + " : " "))
+			hotkeys.Push({line:A_Index, hotkey:hk . SubStr(hkey, -1), type:hType, comment:comment})
+		}
+	}
+	return hotkeys
 }
 
+getFullScript() {
+	fileObj := FileOpen(A_ScriptFullPath, "r", "UTF-8")
+	script := fileObj.Read()
+	fileObj.Close()
+	flagCom := false
+	flagMult := false
+	cleanScript := ""
+	Loop Parse, script, "`n", "`r"
+	{
+		if (flagCom) {
+			if (RegExMatch(A_Loopfield, "^\s*\*\/"))
+				flagCom := false
+			cleanScript .= "`n"
+		}
+		else if (RegExMatch(A_Loopfield, "^\s*\/\*")) {
+			flagCom := true
+			cleanScript .= "`n"
+		}
+		else if (flagMult) {
+			if (RegExMatch(A_Loopfield, "^\s*\)"))
+				flagMult := false
+			cleanScript .= "`n"
+		}
+		else if (RegExMatch(A_Loopfield, "^\s*\(")) {
+			flagMult := true
+			cleanScript .= "`n"
+		}
+		else
+			cleanScript .= A_LoopField . "`n"
+	}
+	return cleanScript
+}
