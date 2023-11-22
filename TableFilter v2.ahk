@@ -210,7 +210,7 @@ class TableFilter {
 						if (this.settings.useDefaultRunic)
 							row[e] := "" ; todo
 					case "Tema'i": ; Tema'i
-						row[e] := this.data.defaultValues[0]
+						row[e] := this.data.defaultValues[e]
 				}
 			}
 			if (i == 1)
