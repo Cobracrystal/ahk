@@ -128,36 +128,34 @@ class HotkeyManager {
 
 	static getHotkeys(script)	{
 		hotkeys := []
-		hotkeyModifiers := [  {mod:"+", 	replacement:"Shift"}
-							, {mod:"<^>!",	replacement:"AltGr"}
-							, {mod:"^", 	replacement:"Ctrl"}
-							, {mod:"!", 	replacement:"Alt"}
-							, {mod:"#", 	replacement:"Win"}
-							, {mod:"<", 	replacement:"Left"}
-							, {mod:">",		replacement:"Right"}]
-		Loop Parse, script, "`n", "`r" {
-			if !(InStr(A_LoopField, "::"))
+		hotkeyModifiers := [  {mod:"+", replacement:"Shift"}, {mod:"<^>!", replacement:"AltGr"}
+							, {mod:"^", replacement:"Ctrl"}	, {mod:"!", replacement:"Alt"}
+							, {mod:"#", replacement:"Win"}  , {mod:"<", replacement:"Left"}
+							, {mod:">",	replacement:"Right"}]
+		Loop Parse, script, "`n", "`r" { ; loop parse > strsplit for memory
+			if !(InStr(A_LoopField, "::")) ; skip non-hotkeys
 				continue
 			StrReplace(SubStr(A_Loopfield, 1, InStr(A_Loopfield, "::")), "`"",,, &count)
-			if (count > 1)
+			if (count > 1) ; skip strings containing two quotes before ::
 				continue
-			if RegExMatch(A_LoopField,"^((?!(?:;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`").*`".*::)).*)::{?(?:.*;)?\s*(.*)", &match)	{  ;//matches hotkey text and recognizes ";", hotstrings, quotes and Gui as negative lookaheads
+			; matches duo keys, modifier keys, modifie*d* leys, numeric value hotkeys, virtual key code hkeys and gets comment after
+			if RegExMatch(A_LoopField,"^((?!(?:;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`").*`".*::)).*)::{?(?:.*;)?\s*(.*)", &match)	{
 				comment := match[2]
 				hkey := LTrim(match[1])
-				if (InStr(hkey, " & ")) {
+				if (InStr(hkey, " & ")) { ; if duo hotkey, modifiers are impossible so push
 					hotkeys.push({line:A_Index, hotkey:hkey, comment:comment})
 					continue
 				}
-				if (StrLen(hkey) == 1) {
+				if (StrLen(hkey) == 1) { ; single key can't be a modifier ~> symbol is hotkey
 					hotkeys.push({line:A_Index, hotkey:hkey, comment:comment})
 					continue
 				}
-				if (hkey == "<^>!") {
+				if (hkey == "<^>!") { ; altgr = leftCtrl + RightAlt, but on its own LeftCtrl + excl mark
 					hotkeys.push({line:A_Index, hotkey:"Left Ctrl + !", comment:comment})
 					continue
 				}
 				hk := SubStr(hkey, 1, -1)
-				for i, e in hotkeyModifiers
+				for i, e in hotkeyModifiers ; order in array important, shift must be first to ensure no "+" replacements
 					hk := StrReplace(hk, e.mod, e.replacement . (e.mod != "<" && e.mod != ">" ? " + " : " "))
 				hotkeys.Push({line:A_Index, hotkey:hk . SubStr(hkey, -1), comment:comment})
 			}
