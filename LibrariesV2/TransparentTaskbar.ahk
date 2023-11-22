@@ -151,7 +151,7 @@ class TransparentTaskbar {
 
 	static TaskBar_SetAttr(accent_state := 0, monitor := -1, gradient_RGB := 0xFF8000, gradient_alpha := 0x80) {
 		; 0 = off, 1 = gradient (+color), 2 = transparent (+color), 3 = blur; color -> ABGR (alpha | blue | green | red) all hex: 0xffd7a78f
-		static pad := A_PtrSize = 8 ? 4 : 0, WCA_ACCENT_POLICY := 19
+		static pad := A_PtrSize == 8 ? 4 : 0, WCA_ACCENT_POLICY := 19
 		if (accent_state < 0) || (accent_state > 3)
 			throw Error("Bad state value passed in.`nValue must be 0-3.")
 		if (!this.trayHandles.Has(monitor))
