@@ -7,8 +7,8 @@
 ; figure out how to use icon for settings
 ; limit autohdr for columns to fixed max width (eg autohdr if < 200, else 200)
 ; settings usedefaultrunic -> needs runic translator function.
-; instead of tooltip and disabled gui, use actual progress window (like magicbox example) to display duplicate progress (also makes escape as interruption clearer)
 ; queue for deletion instead of instantly deleting, then next filteredlist operation should do that
+; listview headers
 #SingleInstance Force
 ; temporary
 tableInstance := TableFilter(1)
@@ -28,7 +28,7 @@ class TableFilter {
 	}
 
 	__New(debug := 0) {
-		this.data := { 
+		this.data := {
 			savePath: A_AppData "\Autohotkey\Tablefilter", 
 			openFile: "", 
 			data: [], 
@@ -46,7 +46,9 @@ class TableFilter {
 		this.settings.debug := debug
 		tableFilterMenu := TrayMenu.submenus["tablefilter"]
 		tableFilterMenu.Add("Open GUI: ", (*) => this.guiCreate())
-		tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => (menuObj.ToggleCheck("Use Darkmode"), this.settingsHandler("Darkmode", -1)))
+		tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => this.settingsHandler("Darkmode", -1, true, menuObj, iName))
+		if (this.settings.darkMode)
+			tableFilterMenu.Check("Use Dark Mode")
 		tableFilterMenu.Add("Open Backup Folder", (*) => Run('explorer.exe "' this.data.savepath '"'))
 		if (this.settings.darkMode)
 			tableFilterMenu.Check("Use Dark Mode")
@@ -67,6 +69,7 @@ class TableFilter {
 		newGui.OnEvent("Close", this.guiClose.bind(this))
 		newGui.OnEvent("Escape", this.guiClose.bind(this))
 		newGui.OnEvent("DropFiles", this.dropFiles.bind(this))
+		newGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 		GroupAdd("TableFilterGUIs", "ahk_id " newGui.hwnd)
 		if (this.data.openFile) {
 			SplitPath(this.data.openFile, &name)
@@ -103,7 +106,7 @@ class TableFilter {
 			showString := "Center w500 h400"
 		}
 		if (this.settings.darkMode)
-			this.settingsHandler("darkmode", -1)
+			this.toggleGuiDarkMode(newGui, 1)
 		this.guis.push(newGui)
 		newGui.Show(showString)
 	}
@@ -245,18 +248,18 @@ class TableFilter {
 	}
 	
 	validValueChecker(ctrlObj, *) {
-		newFont := (this.settings.darkMode ? "c0xFFFFFF" : "cDefault Norm")
-		switch Integer(SubStr(ctrlObj.Name, -1)) {
-			case 1: ; 1 -> Wortart
+		newFont := (this.settings.darkMode ? "c0xFFFFFF Norm" : "cDefault Norm")
+		switch this.data.keys[Integer(SubStr(ctrlObj.Name, -1))] {
+			case "Wortart":
 				if (!RegexMatch(ctrlObj.Value, "i)^[?nvaspg]?$"))
 					newFont := "cRed Bold"
-			case 3: ; 3 -> Kayoogis
+			case "Kayoogis":
 				if (RegexMatch(ctrlObj.Value, "i)[cjqwx]"))
 					newFont := "cBlue Bold"
-			case 4: ; Runen
+			case "Runen":
 				if (RegexMatch(ctrlObj.Value, "i)[a-z]"))
 					newFont := "cRed Bold"
-			case 7: ; Tema'i
+			case "Tema'i":
 				if (!RegexMatch(ctrlObj.Value, "i)^[01]?$"))
 					newFont := "cRed Bold"
 			default:
@@ -265,19 +268,57 @@ class TableFilter {
 		ctrlObj.SetFont(newFont)
 	}
 
-	toggleDarkMode() {
-		; this should combine toggleguidarkmode, updateguicolors and togglesettingdarkmode (unless settingshandler does that)
+	toggleDarkMode(newValue, menuObj, iName) {
+		if (newValue)
+			menuObj.Check(iName)
+		else
+			menuObj.Uncheck(iName)
+		for _, g in this.guis {
+			this.toggleGuiDarkMode(g, newValue)
+		}
+		; todo: if editline or settings gui exists, those also need to be darkmoded
+	}
+		
+	toggleGuiDarkMode(_gui, dark) {
+		static WM_THEMECHANGED := 0x031A
+		;// title bar dark
+		if (VerCompare(A_OSVersion, "10.0.17763")) {
+			attr := 19
+			if (VerCompare(A_OSVersion, "10.0.18985")) {
+				attr := 20
+			}
+			if (dark)
+				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", true, "int", 4)
+			else
+				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", false, "int", 4)
+		}
+		_gui.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
+		font := (dark ? "c0xFFFFFF" : "cDefault")
+		_gui.SetFont(font)
+		for cHandle, ctrl in _gui {
+			ctrl.Opt(dark ? "+Background" this.settings.darkThemeColor : "-Background")
+			ctrl.SetFont(font)
+			if (ctrl is Gui.Button || ctrl is Gui.ListView) {
+				; todo: listview headers dark -> https://www.autohotkey.com/boards/viewtopic.php?t=115952
+				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
+				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
+			}
+			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
+				this.validValueChecker(ctrl)
+			}
+		}
+		; todo: setting to make this look like this ? 
+		; DllCall("uxtheme\SetWindowTheme", "ptr", _gui.LV.hwnd, "str", "Explorer", "ptr", 0)
 	}
 
-
-	LV_Event(eventType, guiCtrl, lParam, item?) {
+	LV_Event(eventType, guiCtrl, lParam, *) {
 		local gui := guiCtrl.Gui
 		switch eventType, 0 {
 			case "Key":
 				vKey := NumGet(lParam, 24, "ushort")
 				switch vKey {
 					case 46: ; DEL key
-						return ; todo
+						this.removeSelectedRows()
 					case 67: ; C key
 						if ((rowN := gui.LV.GetNext()) == 0)
 							return
@@ -474,11 +515,11 @@ class TableFilter {
 
 	}
 
-	settingsHandler(setting := "", value := "", save := true) {
+	settingsHandler(setting := "", value := "", save := true, extra*) {
 		switch setting, 0 {
 			case "darkmode":
 				this.settings.darkMode := (value == -1 ? !this.settings.darkMode : value)
-				; todo: toggle darkmode
+				this.toggleDarkMode(this.settings.darkMode, extra*)
 			case "lastUsedFile":
 				this.settings.lastUsedFile := value
 			case "isSaved":
@@ -551,7 +592,7 @@ class TableFilter {
 		settings := {
 			debug: false,
 			darkMode: true,
-			darkThemeColor: 0x36393F,
+			darkThemeColor: "0x1E1E1E",
 			simpleSaving: true,
 			autoSaving: true,
 			useBackups: true,
