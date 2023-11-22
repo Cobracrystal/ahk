@@ -24,6 +24,7 @@ server.SetFavicon(A_WorkingDir . "\meta\favicon.ico")
 server.SetPaths(paths)
 server.Serve(80)
 CURRENT_PUBLIC_IP := sendRequest("https://icanhazip.com") ; SEE NOTES AT BOTTOM OF SCRIPT
+; CURRENT_PUBLIC_IP := getIP()
 return
 
 
@@ -216,7 +217,9 @@ registerFunctions(array) {
 	return arr2
 }
 
-
+getIp() {
+	return cmdRet("dig @resolver4.opendns.com myip.opendns.com +short")
+}
 sendRequest(url := "https://icanhazip.com/", method := "GET") {
 	HttpObj := ComObjCreate("WinHttp.WinHttpRequest.5.1")
 	HttpObj.Open(method, url)
