@@ -134,8 +134,10 @@ class TransparentTaskbar {
 		id := WinGetList(,,this.blacklist)
 		maximizedMonitors := [0, 0]
 		for i, e in id
-			if (WinExist("ahk_id " . e) && WinGetMinMax("ahk_id " . e) == 1)
+			try	{
+				if (WinExist("ahk_id " . e) && WinGetMinMax("ahk_id " . e) == 1)
 				maximizedMonitors[this.get_window_monitor_number(e)] := 1
+			}
 		return maximizedMonitors
 	}
 

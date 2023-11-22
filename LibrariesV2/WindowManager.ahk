@@ -15,13 +15,13 @@ class WindowManager {
 	; ------------------------ MAIN FUNCTION
 	static windowManager(mode := "O", *) {
 		mode := SubStr(mode, 1, 1)
-		if (WinExist(this.gui.obj.hwnd)) {
+		if (WinExist(this.gui)) {
 			if (mode == "O") ; if gui exists and mode = open, activate window
-				WinActivate(this.gui.obj.hwnd)
+				WinActivate(this.gui.hwnd)
 			else {	; if gui exists and mode = close/toggle, close
-				this.gui.coords := windowGetCoordinates(this.gui.obj.hwnd)
+				this.settings.coords := windowGetCoordinates(this.gui.hwnd)
 				this.gui.destroy()
-				this.gui.obj := -1
+				this.gui := -1
 			}
 		}
 		else if (mode != "C") ; if gui doesn't exist and mode = open/toggle, create
@@ -36,119 +36,107 @@ class WindowManager {
 		guiMenu.Add("Open Window Manager", this.windowManager.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; window menu
-		windowListSelectMenu := Menu()
-		windowListSelectMenu.Add("Activate Window", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add("Reset Window Position", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add("Minimize Window", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add("Maximize Window", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add("Restore Window", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add("Close Window", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add("Toggle Lock Status", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add()
-		windowListSelectMenu.Add("Change Window Transparency", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add("Copy Window Title", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add("View Properties", this.windowListSelectMenuHandler.Bind(this))
-		windowListSelectMenu.Add("View Program Folder", this.windowListSelectMenuHandler.Bind(this))
-		this.menu := windowListSelectMenu
-		A_TrayMenu.Add("WindowList", windowListSelectMenu)
+		winMenu := Menu()
+		winMenu.Add("Activate Window", this.menuHandler.Bind(this))
+		winMenu.Add("Reset Window Position", this.menuHandler.Bind(this))
+		winMenu.Add("Minimize Window", this.menuHandler.Bind(this))
+		winMenu.Add("Maximize Window", this.menuHandler.Bind(this))
+		winMenu.Add("Restore Window", this.menuHandler.Bind(this))
+		winMenu.Add("Close Window", this.menuHandler.Bind(this))
+		winMenu.Add("Toggle Lock Status", this.menuHandler.Bind(this))
+		winMenu.Add()
+		winMenu.Add("Change Window Transparency", this.menuHandler.Bind(this))
+		winMenu.Add("Copy Window Title", this.menuHandler.Bind(this))
+		winMenu.Add("View Properties", this.menuHandler.Bind(this))
+		winMenu.Add("View Program Folder", this.menuHandler.Bind(this))
+		this.menu := winMenu
 		; init class variables
 		; this format is necessary to establish objects.
-		this.windowID := 0
-		this.gui := {coords: [200, 200], object: -1, text: "Window Manager"}
-		this.controls := { transparencySubGUI: {text: "Transparency Menu", slider:{content:0, handle:""}}}
-		this.settings := { showExcludedWindows : 0
-							, DetectHiddenWindows : 0}
+		this.gui := -1
+		this.settings := { coords: [300, 200], showExcludedWindows: 0, detectHiddenWindows: 0
+			, excludeWindowsRegex:"(ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|^$)"}
 	}
 
 	static guiCreate() {
-		winManager := Gui("+Border +OwnDialogs", this.gui.text)
-		winManager.OnEvent("Close", this.guiClose.bind(this))
-		winManager.OnEvent("Escape", this.guiClose.bind(this))
-		winManager.OnEvent("ContextMenu", this.onContextMenu.bind(this))
-		
-		winManager.AddCheckbox("Section vCheckboxHiddenWindows", "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
-		winManager.AddCheckbox("ys vCheckboxExcludedWindows", "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
-		winManager.Submit(0) ; 0 = nohide
-		this.gui.lv := winManager.AddListView("xs R20 w1000 -Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "Process Path", "Command Line"])
-		this.gui.lv.OnNotify()
-		this.gui.lv.OnEvent()
-		this.gui.lv.OnEvent()
-		AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-		; TODO: ADD EVENTS FOR CLICK, DOUBLECLICK ETC (CHECK DOCS). ALSO CONTEXTMENU. OnNotify needs -155, offset 24 (test.ahk), blabla. split the functions
-		this.guiListviewCreate()
-		winManager.Show(Format("x{1}y{2} Autosize", this.gui.coords[1], this.gui.coords[2]))
-		this.gui.lv.Focus()
-		this.insertWindowInfo(winManager.Hwnd, 1) ;// inserts the first row to be about the windowManager itself
-		
-		winManager.AddButton("Default Hidden vButtonDefault", "A").OnEvent("Click", (*) => (this.gui.lv.Focused ? WinActivate(this.windowID) : false))
-		this.gui.obj := winManager
+		this.gui := Gui("+OwnDialogs", "Window Manager")
+		this.gui.OnEvent("Close", (*) => this.windowManager("Close"))
+		this.gui.OnEvent("Escape", (*) => this.windowManager("Close"))
+		this.gui.AddCheckbox("Section vCheckboxHiddenWindows Checked" . this.settings.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
+		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . this.settings.showExcludedWindows, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
+		this.gui.AddText("ys xs+900 w100 vWindowCount", "Window Count: 0")
+		this.LV := this.gui.AddListView("xs R20 w1000 -Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "Process Path", "Command Line"])
+		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
+		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
+		this.LV.OnEvent("DoubleClick", (obj, rowN) => rowN == 0 ? 0 : WinActivate(Integer(this.LV.GetText(rowN, 1))))
+		this.gui.AddButton("Default Hidden vButtonDefault", "A").OnEvent("Click", (*) => (this.LV.Focused && (rowN := this.LV.GetNext()) != 0 ? WinActivate(Integer(this.LV.GetText(rowN, 1))) : 0))
+		;	this.LV.OnEvent("ColClick", this.onColClick.bind(this)) ; store sorting state for refresh? 
+		this.guiListviewCreate(false)
+		this.gui.Show(Format("x{1}y{2} Autosize", this.settings.coords[1], this.settings.coords[2]))
+		this.insertWindowInfo(this.gui.Hwnd, 1) ;// inserts the first row to be about the windowManager itself
+		this.LV.Focus()
 	}
 
-	static guiListviewCreate() {
-		DetectHiddenWindows(this.settings.DetectHiddenWindows)
-		if (!this.settings.showExcludedWindows)
-			excludeWindowRegex := "(ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|^$)"
-		for Index, Element in this.getAllWindowInfo(excludeWindowRegex)
-			LV_Add("",Element.ahk_id, Element.ahk_title, Element.process, Element.win_state, Element.xpos, Element.ypos, Element.width, Element.height, Element.ahk_class, Element.process_path)
-		Loop, 10
-			LV_ModifyCol(A_Index, "AutoHdr")
-		Loop, 5
-			LV_ModifyCol(A_Index+3, "Integer")
-		if (LV_GetCount() > 40)
-			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, h640
-		else if (LV_GetCount() >= 20)
-			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, % "h" . (45+(LV_GetCount()+!ex)*17)
+	static guiListviewCreate(redraw := true) {
+		this.LV.Delete()
+		for i, e in this.getAllWindowInfo()
+			this.LV.Add(,e.hwnd, e.title, e.process, e.state, e.xpos, e.ypos, e.width, e.height, e.class, e.processPath)
+		Loop(10)
+			this.LV.ModifyCol(A_Index, "AutoHdr")
+		Loop(5)
+			this.LV.ModifyCol(A_Index+3, "+Integer")
+		if ((c := this.LV.GetCount() + !redraw + 1) > 40) ; redraw -> adjust for insertWindowInfo on first; +1 for empty space
+			this.LV.Move(,,,640)
+		else if (c >= 20)
+			this.LV.Move(,,,45+c*17)
 		else
-			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, h368	
+			this.LV.Move(,,,368)
+		this.gui["WindowCount"].Value := Format("Window Count: {:5}", c-1)
+		if (redraw)
+			this.gui.Show("Autosize")
 	}
 
-	static refreshGuiListview() {
-		Gui, WindowManager:Default
-		Gui, Listview, % this.controls.listviewWindows.handle
-		LV_Delete()
-		this.guiListviewCreate()
-		Gui, WindowManager:Show, Autosize
+	static insertWindowInfo(wHandle, rowN) {
+		WinGetPos(&x,&y,&w,&h,wHandle)
+		title := WinGetTitle(wHandle)
+		tclass := WinGetClass(wHandle)
+		mmx := WinGetMinMax(wHandle)
+		process := WinGetProcessName(wHandle)
+		processPath := WinGetProcessPath(wHandle)
+		t := this.getWindowInfo(wHandle)
+		this.LV.Insert(rowN,,t.hwnd, t.title, t.process, t.state, t.xpos, t.ypos, t.width, t.height, t.class, t.processPath)
 	}
 
-	static insertWindowInfo(this_id, row) {
-		WinGetPos(&x,&y,&w,&h,this_id)
-		title := WinGetTitle(this_id)
-		tclass := WinGetClass(this_id)
-		mmx := WinGetMinMax(this_id)
-		process := WinGetProcessName(this_id)
-		processPath := WinGetProcessPath(this_id)
-		LV_Insert(row,"", this_id, title, this_process, mmx, x, y, w, h, tclass, this_process_path)
-		Gui, WindowManager:Submit, NoHide
-	}
-
-	static getAllWindowInfo(excludedWindowsRegex) {
-		windows := {}
-		SetTitleMatchMode, RegEx
-		WinGet, id, List,,, %excludedWindowsRegex%
-		Loop(id) {
-			this_id := id%A_Index%
-			WinGetPos, xpos, ypos, width, height, % "ahk_id " . this_id
-			WinGetTitle, this_title, % "ahk_id " . this_id
-			WinGetClass, this_class, % "ahk_id " . this_id
-			WinGet, mmx, MinMax, % "ahk_id " . this_id
-			WinGet, this_process, ProcessName, % "ahk_id " . this_id
-			WinGet, this_process_path, ProcessPath, % "ahk_id " . this_id
-			windows.push({"ahk_id":this_id, "ahk_title":this_title, "process":this_process,"win_state":mmx
-						, "xpos":xpos, "ypos":ypos, "width":width, "height":height, "ahk_class":this_class
-						,  "process_path":this_process_path})
-		}
+	static getAllWindowInfo() {
+		windows := []
+		SetTitleMatchMode("RegEx")
+		DetectHiddenWindows(this.settings.detectHiddenWindows)
+		if (this.settings.showExcludedWindows)
+			wHandles := WinGetList()
+		else
+			wHandles := WinGetList(,,this.settings.excludeWindowsRegex)
+		for i, wHandle in wHandles
+			windows.push(this.getWindowInfo(wHandle))
 		return windows
 	}
 
-	static guiClose(guiObj) {
-		WindowManager.windowManager("Close")
+	static getWindowInfo(wHandle) {
+		x:="",y:="",w:="",h:="",winTItle:="",winClass:="",mmx:="",processName:="",processPath:=""
+		try {
+			WinGetPos(&x, &y, &w, &h, wHandle)
+			winTitle := WinGetTitle(wHandle)
+			winClass := WinGetClass(wHandle)
+			mmx := WinGetMinMax(wHandle)
+			processName := WinGetProcessName(wHandle)
+			processPath := WinGetProcessPath(wHandle)
+		}
+		return {hwnd:wHandle, title:winTitle, process:processName, class:winClass, processPath:processPath
+		, state:mmx, xpos:x, ypos:y, width:w, height:h}
 	}
-	
-	static onContextMenu(guiObj, ctrlHwnd, eventinfo, isRightclick, x, y) {
-		Gui, ListView, % WindowManager.controls.listviewWindows.handle
-		LV_GetText(wHandle, eventinfo, 1)
-		this.windowID := wHandle
-		this.listviewWindows.selectedRowN := LV_GetNext()
+
+	static onContextMenu(ctrlObj, rowN, isRightclick, x, y) {
+		if (rowN == 0)
+			return
+		wHandle := Integer(ctrlObj.GetText(rowN, 1))
 		if (WinGetExStyle(wHandle) & 0x8)
 			this.menu.Check("Toggle Lock Status")
 		else
@@ -156,130 +144,104 @@ class WindowManager {
 		this.menu.show()
 	}
 
-	static guiEventHandler(ctrlHwnd:=0, guiEvent:=0, eventInfo:=0, errLvl:=0) {
-		Gui, ListView, % this.controls.listviewWindows.handle
-		DetectHiddenWindows(this.settings.DetectHiddenWindows)
-	;	Tooltip % ctrlHwnd ", " guiEvent ", " eventInfo
-		if (guiEvent != "K" && guiEvent != "ColClick" && guiEvent != "S" && eventInfo != 0) {
-			this.controls.listviewWindows.selectedRowN := eventInfo
-			LV_GetText(wHandle, eventInfo, 1)
-			this.windowID := wHandle
-		}
-		if (guiEvent == "DoubleClick")
-			WinActivate(this.windowID)
-		else if (guiEvent == "K") {
-			this.controls.listviewWindows.selectedRowN := LV_GetNext()
-			LV_GetText(wHandle, this.controls.listviewWindows.selectedRowN, 1)
-			this.windowID := wHandle
-			switch eventInfo {
-				case "46": 	;// Del/Entf Key -> Close that window
-					WinClose(this.windowID) ;// winkill possibly overkill. add setting?
-					WinWaitClose(this.windowID, , 0.5)
-					if !ErrorLevel
-						LV_Delete(this.controls.listviewWindows.selectedRowN)
-				case "67":
-					if (GetKeyState("Ctrl"))
-						WinGetTitle, clipboard, % "ahk_id " . this.windowID
-				case "116":	;// F5 Key -> Reload
-					this.refreshGuiListview()
-				default: return
-			}
+	static onKeyPress(ctrlObj, lParam) {
+		vKey := NumGet(lParam, 24, "ushort")
+		switch vKey {
+			case "46": 	;// Del/Entf Key -> Close that window
+				if ((rowN := this.LV.GetNext()) == 0)
+					return
+				wHandle := Integer(this.LV.GetText(rowN, 1))
+				WinClose(wHandle) ;// winkill possibly overkill. add setting?
+				if(WinWaitClose(wHandle, , 0.5))
+					this.LV.delete(rowN)
+			case "67": ; ctrl C
+				if ((rowN := this.LV.GetNext()) == 0)
+					return
+				wHandle := Integer(this.LV.GetText(rowN, 1))
+				if (GetKeyState("Ctrl"))
+					A_Clipboard := WinGetTitle(wHandle)
+			case "116":	;// F5 Key -> Reload
+				this.guiListviewCreate()
+			default: 
+				return
 		}
 	}
+
 
 	static settingCheckboxHandler(guiCtrlObj, *) {
 		switch guiCtrlObj.Name {
 			case "CheckboxHiddenWindows":
-				this.settings.DetectHiddenWindows := !this.settings.DetectHiddenWindows
-			case "checkboxExcludedWindows":
+				this.settings.detectHiddenWindows := !this.settings.detectHiddenWindows
+			case "CheckboxExcludedWindows":
 				this.settings.showExcludedWindows := !this.settings.showExcludedWindows
 		}
-		this.refreshGuiListview()
+		this.guiListviewCreate()
 	}
 
-
-	static guiButtonOk() {
-		if (this.gui.lv.Focused)
-			WinActivate(this.windowID)
-	; }
 	; ------------------------- MENU FUNCTIONS -------------------------
 		
-	static windowListSelectMenuHandler(itemName) {
-		DetectHiddenWindows(this.settings.DetectHiddenWindows)
+	static menuHandler(itemName, itemPos, menuObj) {
+		rowN := this.LV.GetNext()
+		wHandle := Integer(this.LV.GetText(rowN, 1))
 		switch itemName {
 			case "Activate Window":
-				WinActivate(this.windowID)
+				WinActivate(wHandle)
 			case "Reset Window Position":
-				WinGetPos(,,&w,&h,this.windowID)
-				WinMove(this.windowID,, A_ScreenWidth/2 - w/2, A_ScreenHeight/2-h/2)
-				WinActivate(this.windowID)
+				mmx := WinGetMinMax(wHandle)
+				WinGetPos(,,&w,&h,wHandle)
+				if (mmx != 0)
+					WinRestore(wHandle)
+				WinMove(A_ScreenWidth/2 - w/2, A_ScreenHeight/2-h/2,,,wHandle)
+				WinActivate(wHandle)
 			case "Minimize Window":
-				WinMinimize(this.windowID)
+				WinMinimize(wHandle)
 			case "Maximize Window":
-				WinMaximize(this.windowID)
+				WinMaximize(wHandle)
 			case "Restore Window":
-				WinRestore(this.windowID)
+				WinRestore(wHandle)
 			case "Close Window":
-				WinClose(this.windowID) ;// needs a check via WinExist & question whether winkill or not.
-				if WinWaitClose(this.windowID, , 0.5)
-					LV_Delete(this.controls.listviewWindows.selectedRowN)
+				WinClose(wHandle) ;// needs a check via WinExist & question whether winkill or not.
+				if WinWaitClose(wHandle, , 0.5)
+					this.LV.Delete(rowN)
 			case "Toggle Lock Status":
-				tStyle := WinGetExStyle(this.windowID)
-				WinSetAlwaysOnTop(tStyle & 0x8 ? 1 : 0, this.windowID) ; 0x8 is WS_EX_TOPMOST, & bitwise AND
-				Menu, windowListSelectMenu, % (tStyle & 0x8 ? "Uncheck" : "Check" ) , Toggle Lock Status
+				tStyle := WinGetExStyle(wHandle)
+				WinSetAlwaysOnTop(tStyle & 0x8 ? 0 : 1, wHandle) ; 0x8 is WS_EX_TOPMOST
 			case "Change Window Transparency":
-				this.transparencySubGUIcreate()
+				this.transparencyGUI(wHandle)
 			case "Copy Window Title":
-				A_Clipboard := WinGetTitle(this.windowID)
+				A_Clipboard := WinGetTitle(wHandle)
 			case "View Properties":
-				Run('properties"' WinGetProcessPath(this.windowID) '"')
+				Run('properties "' WinGetProcessPath(wHandle) '"')
 			case "View Program Folder":
-				run('explorer.exe /select,"' . WinGetProcessPath(this.windowID) . '"')
+				run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"')
 			default:
 				return
 		}
 	}
 	
-	static transparencySubGUIcreate() {
-		DetectHiddenWindows(this.settings.DetectHiddenWindows)
-		transparency := WinGetTransparent(this.windowID)
-		if (transparency == "")
-			transparency := 255
-		this.controls.transparencySubGUI.slider.content := transparency
-		Gui, windowTransparencyManager:New, % "+OwnerWindowManager +Border -SysMenu +Label" . this.__Class . ".__transparencySubGUIon"
-		Gui, windowTransparencyManager:Add, Text, x32, Change Visibility
-		
-		Gui, windowTransparencyManager:Add, Slider, x10 yp+20 HwndcHandle AltSubmit Range0-255 ToolTip NoTicks, % this.controls.transparencySubGUI.slider.content
-			this.controls.transparencySubGUI.slider.handle := cHandle
-			gHandle := this.transparencySubGUIhandler.bind(this)
-			GuiControl, +g, % cHandle, % gHandle
-		Gui, windowTransparencyManager:Add, Button, w80 yp+30 xp+20 HwndcHandle Default, OK
-			gHandle := this.transparencySubGUIClose.Bind(this)
-			GuiControl, +g, % cHandle, % gHandle
-		Gui, windowTransparencyManager:Show,, % this.controls.transparencySubGUI.text
-		Gui, WindowManager:+Disabled +AlwaysOnTop
+	static transparencyGUI(wHandle) {
+		tp := WinGetTransparent(wHandle)
+		tp := (tp == "" ? 255 : tp)
+		transparencyGUI := Gui("Border -SysMenu +Owner" this.gui.hwnd, "Transparency Menu")
+	;	this.controls.transparencySubGUI.slider.content := transparency
+		transparencyGUI.AddText("x32", "Change Transparency")
+		transparencyGUI.AddSlider("x10 yp+20 AltSubmit Range0-255 NoTicks Page16 ToolTip", tp).OnEvent("Change", (obj, *) => WinSetTransparent(obj.Value == 255 ? "Off" : obj.Value, Integer(this.LV.GetText(this.LV.GetNext(), 1))))
+		transparencyGUI.AddButton("w80 yp+30 xp+20 Default", "OK").OnEvent("Click", this.transparencyGUIClose.bind(this))
+		transparencyGUI.OnEvent("Escape", this.transparencyGUIClose.bind(this))
+		transparencyGUI.OnEvent("Close", this.transparencyGUIClose.bind(this))
+		transparencyGUI.Show()
+		this.gui.Opt("+Disabled +AlwaysOnTop")
 	}
 	
-	static transparencySubGUIClose() {
-		Gui, windowTransparencyManager:Destroy
-		Gui, WindowManager:-Disabled
-		Gui, WindowManager:-AlwaysOnTop
+	static transparencyGUIClose(obj, info := "") {
+		if (HasProp(obj, "Gui"))
+			obj := obj.gui
+		obj.Destroy()
+		this.gui.Opt("-Disabled -AlwaysOnTop")
 	}
 	
-	static transparencySubGUIhandler() {
-		GuiControlGet, transparency,, % this.controls.transparencySubGUI.slider.handle
-		this.controls.transparencySubGUI.slider.content := transparency
-		DetectHiddenWindows(this.settings.DetectHiddenWindows)
-		WinSetTransparent(transparency == 255 ? "Off" : transparency,this.windowID)
-	}
-		
-	; ------ SUBSECTION - GUI FUNCTIONS OF TRANSPARENCY GUI
-
-	static __transparencySubGUIonEscape() {
-		WindowManager.transparencySubGUIClose()
-	}
-
-	static __transparencySubGUIonClose() {
-		WindowManager.transparencySubGUIClose()
-	}
+	; static transparencyGUIonChange(ctrlObj, info) {
+	; 	tp := ctrlObj.Value
+	; 	WinSetTransparent(tp == 255 ? "Off" : tp, Integer(this.LV.GetText(this.LV.GetNext(), 1)))
+	; }
 }

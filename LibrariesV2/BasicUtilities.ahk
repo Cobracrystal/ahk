@@ -237,14 +237,13 @@ execShell(command) {
     return exec.StdOut.ReadAll()
 }
 
-windowGetCoordinates(windowHWND, detectHidden := false) {
-	DetectHiddenWindows(detectHidden)
-	minimize_status := WinGetMinMax(windowHWND)
+windowGetCoordinates(wHandle) {
+	minimize_status := WinGetMinMax(wHandle)
 	if (minimize_status != -1) 
-		WinGetPos(&x, &y,,, windowHWND)
+		WinGetPos(&x, &y,,, wHandle)
 	else {
 		NumPut("Uint", 44, pos := Buffer(44, 0))
-		DllCall("GetWindowPlacement", "uint", windowHWND, "uint", pos)
+		DllCall("GetWindowPlacement", "uint", wHandle, "uint", pos)
 		x := NumGet(pos, 28, "int")
 		y := NumGet(pos, 32, "int")
 	}

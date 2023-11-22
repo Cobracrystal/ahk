@@ -14,7 +14,7 @@ class NeoKeyboardLayout {
 				this.gui.hidden := false
 			}
 			else {	; if gui exists and mode = close/toggle, close
-				this.gui.coords := windowGetCoordinates(this.gui.obj.hwnd, 1)
+				this.gui.coords := windowGetCoordinates(this.gui.obj.hwnd)
 				this.gui.obj.Hide()
 				this.gui.hidden := true
 			}

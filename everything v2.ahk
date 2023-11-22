@@ -26,7 +26,7 @@ SetWorkingDir(A_ScriptDir . "\script_files")
 A_TrayMenu.Delete()
 #Include "%A_ScriptDir%\LibrariesV2\TransparentTaskbar.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\HotkeyManager.ahk"
-; #Include "%A_ScriptDir%\LibrariesV2\WindowManager.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\WindowManager.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\ReminderManager.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\NeoKeyboardLayout.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\YoutubeDLGui.ahk"
@@ -126,9 +126,9 @@ return
 ; 	HotkeyManager("T")
 ; }
 
-; ^F11::{ ; Shows a list of all Windows
-; 	WindowManager.windowManager("T")
-; }
+^F11::{ ; Shows a list of all Windows
+	WindowManager.windowManager("T")
+}
 
 ^F10::{	; Neokeyboard Layout
 	NeoKeyboardLayout.KeyboardLayoutGUI("T")
@@ -1101,25 +1101,4 @@ HideShowTaskbar(action) {
 
 ^O::{
 	HotstringLoader.load(A_WorkingDir . "\everything\LatexHotstrings_ahk2.json", "LatexHotstrings")
-}
-
-^j::{
-	t := perfectPowers(300)
-	for i, e in t
-		str .= e "`n"
-	A_Clipboard := str
-}	
-
-
-^h::{
-	i := 2
-	while(i <= 5000) {
-		r := i**3 - 2
-		if (primetest(r)) {
-			tooltip(i ", " r)
-			str .= i ", " r "`n"
-		}
-		i++
-	}
-	A_Clipboard := str
 }

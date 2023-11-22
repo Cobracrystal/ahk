@@ -60,6 +60,7 @@ class WindowManager {
 							, "checkboxShowHiddenWindows": {"text": "Detect Hidden Windows?", "handle":""}
 							, "checkboxShowExcludedWindows": {"text": "Show Excluded Windows?", "handle":""}
 							, "listviewWindows": {"text": "handle|ahk_title|Process|mmx|xpos|ypos|width|height|ahk_class|Process Path", "handle":""}
+							, "textWindowCount": {"text": "Window Count: 1", "handle":""}
 							, "transparencySubGUI": {"text": "Transparency Menu", "slider":{"content":0, "handle":""}}}
 		this.settings := { "showExcludedWindows" : 0
 							, "DetectHiddenWindows" : 0}
@@ -74,6 +75,8 @@ class WindowManager {
 		Gui, WindowManager:Add, Checkbox, ys HwndcHandle, % this.controls.checkboxShowExcludedWindows.text
 			this.controls.checkboxShowExcludedWindows.handle := cHandle
 			GuiControl, +g, % cHandle, % gHandle
+		Gui, WindowManager:Add, Text, ys xs+900 w100 HwndcHandle, % this.controls.textWindowCount.text
+			this.controls.textWindowCount.handle := cHandle
 		Gui, WindowManager:Submit, NoHide
 		Gui, WindowManager:Add, ListView, xs HwndcHandle AltSubmit R20 w1000 -Multi, % this.controls.listviewWindows.text
 			this.controls.listviewWindows.handle := cHandle
@@ -102,9 +105,11 @@ class WindowManager {
 		if (LV_GetCount() > 40)
 			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, h640
 		else if (LV_GetCount() >= 20)
-			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, % "h" . (45+(LV_GetCount()+!ex)*17)
+			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, % "h" . (45+(LV_GetCount()+!exists)*17)
 		else
 			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, h368
+		GuiControl, WindowManager:, % this.controls.textWindowCount.handle, % Format("Window Count: {:5}", "" . LV_GetCount() + !exists)
+		
 		if (exists)
 			Gui, WindowManager:Show, Autosize
 	}
