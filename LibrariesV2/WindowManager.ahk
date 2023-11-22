@@ -52,7 +52,7 @@ class WindowManager {
 		this.menu := winMenu
 		; init class variables
 		this.gui := -1
-		this.settings := { coords: [300, 200], showExcludedWindows: 0, detectHiddenWindows: 0
+		this.settings := { coords: [300, 200], showExcludedWindows: 0, detectHiddenWindows: 0, getCommandLine: 0
 			, excludeWindowsRegex:"i)(?:ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|Program Manager|^$)"}
 	}
 
@@ -62,8 +62,9 @@ class WindowManager {
 		this.gui.OnEvent("Escape", (*) => this.windowManager("Close"))
 		this.gui.AddCheckbox("Section vCheckboxHiddenWindows Checked" . this.settings.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . this.settings.showExcludedWindows, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
+		this.gui.AddCheckbox("ys vCheckboxGetCommandLine Checked" . this.settings.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddText("ys xs+900 w100 vWindowCount", "Window Count: 0")
-		this.LV := this.gui.AddListView("xs R20 w1000 -Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "Process Path", "Command Line"])
+		this.LV := this.gui.AddListView("xs R20 w1000 -Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "PID", "Process Path", "Command Line"])
 		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
 		this.LV.OnEvent("DoubleClick", (obj, rowN) => rowN == 0 ? 0 : WinActivate(Integer(this.LV.GetText(rowN, 1))))
@@ -78,12 +79,15 @@ class WindowManager {
 	static guiListviewCreate(redraw := true) {
 		this.LV.Delete()
 		for i, e in this.getAllWindowInfo()
-			this.LV.Add(,e.hwnd, e.title, e.process, e.state, e.xpos, e.ypos, e.width, e.height, e.class, e.processPath)
-		Loop(10)
+			this.LV.Add(,e.hwnd, e.title, e.process, e.state, e.xpos, e.ypos, e.width, e.height, e.class, e.pid, e.processPath, e.commandLine)
+		Loop(12)
 			this.LV.ModifyCol(A_Index, "+AutoHdr")
 		Loop(5)
 			this.LV.ModifyCol(A_Index+3, "+Integer")
 		this.LV.ModifyCol(1, "+Integer")
+		this.LV.ModifyCol(10, "+Integer")
+		if (!this.settings.getCommandLine)
+			this.LV.ModifyCol(12, "0")
 		if ((c := this.LV.GetCount() + !redraw + 1) > 40) ; redraw -> adjust for insertWindowInfo on first; +1 for empty space
 			this.LV.Move(,,,640)
 		else if (c >= 20)
@@ -96,14 +100,8 @@ class WindowManager {
 	}
 
 	static insertWindowInfo(wHandle, rowN) {
-		WinGetPos(&x,&y,&w,&h,wHandle)
-		title := WinGetTitle(wHandle)
-		tclass := WinGetClass(wHandle)
-		mmx := WinGetMinMax(wHandle)
-		process := WinGetProcessName(wHandle)
-		processPath := WinGetProcessPath(wHandle)
 		t := this.getWindowInfo(wHandle)
-		this.LV.Insert(rowN,,t.hwnd, t.title, t.process, t.state, t.xpos, t.ypos, t.width, t.height, t.class, t.processPath)
+		this.LV.Insert(rowN,,t.hwnd, t.title, t.process, t.state, t.xpos, t.ypos, t.width, t.height, t.class, t.pid, t.processPath, t.commandLine)
 	}
 
 	static getAllWindowInfo() {
@@ -120,7 +118,7 @@ class WindowManager {
 	}
 
 	static getWindowInfo(wHandle) {
-		x:="",y:="",w:="",h:="",winTItle:="",winClass:="",mmx:="",processName:="",processPath:=""
+		x:="",y:="",w:="",h:="",winTItle:="",winClass:="",mmx:="",processName:="",processPath:="",pid:="",cmdLine := ""
 		try {
 			WinGetPos(&x, &y, &w, &h, wHandle)
 			winTitle := WinGetTitle(wHandle)
@@ -128,9 +126,20 @@ class WindowManager {
 			mmx := WinGetMinMax(wHandle)
 			processName := WinGetProcessName(wHandle)
 			processPath := WinGetProcessPath(wHandle)
+			pid := WinGetPID(wHandle)
+			if (this.settings.getCommandLine)
+				cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
+			; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = 23944" in powershell btw
 		}
 		return {hwnd:wHandle, title:winTitle, process:processName, class:winClass, processPath:processPath
-		, state:mmx, xpos:x, ypos:y, width:w, height:h}
+		, state:mmx, xpos:x, ypos:y, width:w, height:h, pid:pid, commandLine:cmdLine}
+	}
+
+	static winmgmt(v, w, d := "Win32_Process", m := "winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2") {
+		local i, s := []
+		for i in ComObjGet(m).ExecQuery("Select " . (IsSet(v) ? v : "*") . " from " . d . (IsSet(w) ? " " . w : ""))
+			s.push(i.%v%)
+		return (s.length > 0 ? s : [""])
 	}
 
 	static onContextMenu(ctrlObj, rowN, isRightclick, x, y) {
@@ -174,6 +183,12 @@ class WindowManager {
 				this.settings.detectHiddenWindows := !this.settings.detectHiddenWindows
 			case "CheckboxExcludedWindows":
 				this.settings.showExcludedWindows := !this.settings.showExcludedWindows
+			case "CheckboxGetCommandLine":
+				this.settings.getCommandLine := !this.settings.getCommandLine
+				if (this.settings.getCommandLine)
+					this.LV.ModifyCol(12, "0")
+			default:
+				return
 		}
 		this.guiListviewCreate()
 	}
@@ -241,9 +256,4 @@ class WindowManager {
 		this.gui.Opt("-Disabled -AlwaysOnTop")
 		WinActivate(this.gui)
 	}
-	
-	; static transparencyGUIonChange(ctrlObj, info) {
-	; 	tp := ctrlObj.Value
-	; 	WinSetTransparent(tp == 255 ? "Off" : tp, Integer(this.LV.GetText(this.LV.GetNext(), 1)))
-	; }
 }
