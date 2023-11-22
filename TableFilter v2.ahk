@@ -4,7 +4,7 @@
 #SingleInstance Force
 ; temporary
 tableInstance := TableFilter()
-
+tableInstance.guiCreate()
 #Include "LibrariesV2\BasicUtilities.ahk"
 #Include "LibrariesV2\JSON.ahk"
 
@@ -13,17 +13,17 @@ tableInstance := TableFilter()
 ; guiInstance is one gui instance
 ; tab control for multiple files in one window?
 class TableFilter {
-	
+
 	static __New() {
 
 	}
 
 	__New() {
-		this.data := {savePath: A_AppData "\Autohotkey\Tablefilter", openFile:"", data: {}, keys:[]}
+		this.data := { savePath: A_AppData "\Autohotkey\Tablefilter", openFile: "", filename: "", ext: "", data: {}, keys: [], isSaved: true }
 		this.guis := []
 		this.menu := this.createMenu()
 
-		this.settings := this.settingsManager("Load")
+		this.settingsManager("Load")
 		tableFilterMenu := TrayMenu.submenus["tablefilter"]
 		tableFilterMenu.Add("Open GUI: ", (*) => this.guiCreate())
 		tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => (menuObj.ToggleCheck("Use Darkmode"), this.settingHandler("Darkmode", -1)))
@@ -32,40 +32,43 @@ class TableFilter {
 			tableFilterMenu.Check("Use Dark Mode")
 		A_TrayMenu.Add("Tablefilter", tableFilterMenu)
 		HotIfWinactive("ahk_group TableFilterGUIs")
-		Hotkey(this.settings.saveHotkey, (*) => this.directSave())
+		;	Hotkey(this.settings.saveHotkey, (*) => this.directSave())
 		HotIfWinactive()
-		Hotkey(this.settings.guiHotkey, (*) => this.createMainGUI())
+		Hotkey(this.settings.guiHotkey, (*) => this.guiCreate())
 		OnExit(this.exit, 1)
 	}
 
 	guiCreate() {
-		if (!this.data.openFile) {
-			if (this.guis.Length > 1)
-				throw Error("placeholder 0x89234")
+		if (!this.data.openFile && this.guis.Length == 1) {
 			WinActivate(this.guis[1].hwnd)
 			return 0
 		}
-		obj := Gui("+Border", SubStr(this.data.openFile, RegexMatch(this.data.openFile, "\\[^\\]*\.[^\\]+$")+1))
+		obj := Gui("+Border", this.base.__Class . SubStr(this.data.openFile, RegexMatch(this.data.openFile, "\\[^\\]*\.[^\\]+$") + 1))
 		obj.OnEvent("Close", this.guiClose.bind(this))
 		obj.OnEvent("Escape", this.guiClose.bind(this))
 		obj.OnEvent("DropFiles", this.dropFiles.bind(this))
 		GroupAdd("TableFilterGUIs", "ahk_id " obj.hwnd)
-		s := "DATAINDEX"
-		this.createSearchBoxesinGUI(this.data.keys)
-		LV := obj.AddListView("xs R35 w950", this.data.keys) ; LVEvent, Altsubmit
-		this.createAddLineBoxesinGUI(this.data.keys)
-		obj.AddButton("yp-1 xp+37 r1 w100", "Add Row to List").OnEvent("Click", (*) => this.addLineToData())
-		this.createFileButtonsinGUI()
-		this.createFilteredList()
-		; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
-		if !(this.settings.debug)
-			LV.ModifyCol(LV.GetCount("Col"), 0)
-		Loop(LV.GetCount("Col") - 1)
-			LV.ModifyCol(A_Index, "AutoHdr")
+		if (this.data.openFile) {
+			;	this.createSearchBoxesinGUI(this.data.keys)
+			LV := obj.AddListView("xs R35 w950", this.data.keys) ; LVEvent, Altsubmit
+			;	this.createAddLineBoxesinGUI(this.data.keys)
+			obj.AddButton("yp-1 xp+37 r1 w100", "Add Row to List").OnEvent("Click", (*) => this.addLineToData())
+			;	this.createFileButtonsinGUI()
+			this.createFilteredList()
+			; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
+			if !(this.settings.debug)
+				LV.ModifyCol(LV.GetCount("Col"), 0)
+			Loop (LV.GetCount("Col") - 1)
+				LV.ModifyCol(A_Index, "AutoHdr")
+			showString := "Center AutoSize"
+		} else {
+			obj.AddButton("x200 y190 r1 w100", "Load File").OnEvent("Click", this.loadData.bind(this, ""))
+			showString := "Center w500 h400"
+		}
 		if (this.settings.darkMode)
 			this.settingsHandler("darkmode", -1)
-		this.guis.push({gui:obj, lv:LV})
-		obj.Show("Center Autosize")
+		this.guis.push(obj)
+		obj.Show(showString)
 	}
 
 	createSearchBoxesInGUI() {
@@ -83,6 +86,79 @@ class TableFilter {
 	createFilteredList() {
 
 	}
+
+	searchDuplicates() {
+
+	}
+
+	filterTableRow() {
+
+	}
+
+	addRow() {
+
+	}
+
+	addLineToData() {
+
+	}
+
+	trimRowValues() {
+
+	}
+
+	editRow() {
+
+	}
+
+	editRowFromMenu() {
+
+	}
+
+	removeSelectedRow() {
+
+	}
+
+	databaseitemremove() {
+
+	}
+
+	databaseiteminsert() {
+
+	}
+
+	editSelectedRow() {
+
+	}
+
+	exportToFileGUI() {
+
+	}
+
+	updateGUIs() {
+
+	}
+
+	updateGUISettings() {
+
+	}
+
+	updateGUIColors() {
+
+	}
+
+	toggleDarkMode() {
+
+	}
+
+	addLineBoxChecker() {
+
+	}
+
+	lvEvent() {
+
+	}
+
 
 	createMenu() {
 		aMenu := Menu()
@@ -124,27 +200,86 @@ class TableFilter {
 		return tMenu
 	}
 
+
 	cMenuHandler(itemName, itemPos, menuObj) {
 
 	}
 
-	guiClose() {
-
+	guiClose(obj) {
+		objRemoveValues(this.guis, , obj)
+		obj.Destroy()
 	}
 
-	dropFiles() {
-		; 
+	dropFiles(gui, ctrlObj, fileArr, x, y) {
+		if (fileArr.Length > 1)
+			return
+		if (!this.data.isSaved)
+			if (MsgBox("You have unsaved Changes. Load " fileArr[1] " anyway?") != "Ok")
+				return
+		this.loadData(fileArr[1], gui)
 	}
 
 	directSave() {
+		; use merged save function, this is stupid
+	}
+
+	loadData(file := "", guiObj := {}, *) {
+		if (guiObj.HasOwnProp("Gui"))
+			guiObj := guiObj.gui
+		if (!this.data.isSaved) && (MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes before loading " (file ? file : "a new File") "?", "Tablefilter", "0x3 Owner" guiObj.hwnd) != "OK")
+			return
+		if (file == "") {
+			path := this.settings.lastUsedFile ? this.settings.lastUsedFile : A_ScriptDir
+			for i, e in this.guis
+				e.Opt("+Disabled")
+			file := FileSelect("3", path, "Load File", "Data (*.xml, *.json)")
+			for i, e in this.guis
+				e.Opt("-Disabled")
+			if (!file)
+				return
+		}
+		this.settingsHandler("lastUsedFile", path)
+		this.loadFile(path)
+		; add option for tab controls here (aka supporting multiple files)
+	}
+
+	loadFile(path) {
+		SplitPath(path, , , &ext, &fileName)
+		this.data.fileName := fileName
+		this.data.ext := ext
+		this.data.openFile := path
 
 	}
 
-	settingHandler(setting, mode := -1) {
+	exportFile() {
+
+	}
+
+
+	backupIterator() {
+		; instead of a timer or something, this should save the current time once and on every change this gets called, and if enough time has passed -> backup is made
+	}
+
+	deleteExtraBackups() {
+
+	}
+
+	debugShowDatabaseEntry() {
+
+	}
+
+
+	settingsHandler(setting := "", value := "", save := true) {
 		switch setting, 0 {
 			case "darkmode":
-				return
+				this.settings.darkMode := (value == -1 ? !this.settings.darkMode : value)
+			case "lastUsedFile":
+				this.settings.lastUsedFile := value
+			default:
+				throw Error("uhhh setting: " . setting)
 		}
+		if (save)
+			this.settingsManager("Save")
 	}
 
 	settingsManager(mode := "Save") {
@@ -182,19 +317,21 @@ class TableFilter {
 	}
 
 	static getDefaultSettings() {
-		settings := { debug: false
-			, darkMode: true
-			, darkThemeColor: 0x36393F
-			, simpleSaving: true
-			, autoSaving: true
-			, useBackups: true
-			, backupAmount: 4 ; amount of files to be kept
-			, backupInterval: 15 ; in minutes
-			, useDefaultValues: true
-			, duplicateColumn: "Deutsch"
-			, ytdlPath: ""
-			, saveHotkey: "^s" ; IS THIS NECESSARY THO?????
-			, guiHotkey: "^p"}
+		settings := {
+			debug: false,
+			darkMode: true,
+			darkThemeColor: 0x36393F,
+			simpleSaving: true,
+			autoSaving: true,
+			useBackups: true,
+			backupAmount: 4, ; amount of files to be kept
+			backupInterval: 15, ; in minutes
+			useDefaultValues: true,
+			duplicateColumn: "Deutsch",
+			saveHotkey: "^s", ; IS THIS NECESSARY THO?????
+			guiHotkey: "^p",
+			lastUsedFile: ""
+		}
 		return settings
 	}
 }
