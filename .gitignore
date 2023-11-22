@@ -1,12 +1,5 @@
 /*
 !/*.ahk
-/wallpaper_scene_extractor.ahk
-!/*.md
-/wallpaper_scene_extractor.ahk
-/discordSendBot.ahk
-/httpserver.ahk
-/everything.ahk
-!/*.md
 !/.gitignore
 !/script_files/
 !/Libraries/
@@ -14,3 +7,4 @@ script_files/*
 !script_files/NeoKeyboardLayout/
 !script_files/minesweeperSolver/
 not_mine_or_examples/
+*.txt
