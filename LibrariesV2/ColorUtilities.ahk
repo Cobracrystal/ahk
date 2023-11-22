@@ -1,18 +1,15 @@
 ﻿; https://github.com/cobracrystal/ahk
 
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
+
 colorGradientArr(amount, colors*) {
-	color_R := [], color_G := [], color_B := [], gradient := []
+	sColors := [], gradient := []
 	if (amount < colors.Length-2)
 		return 0
 	else if (amount == colors.Length-2)
 		return colors
 	for index, color in colors
-	{	; just bitshift to get single RGB vals
-		color_R.Push((color & 0xFF0000) >> 16)
-		color_G.Push((color & 0xFF00) >> 8)
-		color_B.Push(color & 0xFF)
-	}
+		sColors.push({r:(color & 0xFF0000) >> 16, g: (color & 0xFF00) >> 8, b:color & 0xFF})
 	; first color given, format with 6 padded 0s in case of black
 	gradient.push(format("0x{:06X}", colors[1]))
 	; amount of color gradients to perform
@@ -23,11 +20,10 @@ colorGradientArr(amount, colors*) {
 		; percentage progress in the current gradient segment as decimal
 		segProgress := ((A_Index/(amount+1)*segments)-segment+1)
 		; RGB obtained via percentage * (end of gradient - start of gradient), then adding current RGB value again.
-		r := round((segProgress * (color_R[segment+1]-color_R[segment]))+color_R[segment])
-		g := round((segProgress * (color_G[segment+1]-color_G[segment]))+color_G[segment])
-		b := round((segProgress * (color_B[segment+1]-color_B[segment]))+color_B[segment])
-		hex:=format("0x{1:02X}{2:02X}{3:02X}", r, g, b)
-		gradient.Push(hex)
+		r := round((segProgress * (sColors[segment+1].r-sColors[segment].r))+sColors[segment].r)
+		g := round((segProgress * (sColors[segment+1].g-sColors[segment].g))+sColors[segment].g)
+		b := round((segProgress * (sColors[segment+1].b-sColors[segment].b))+sColors[segment].b)
+		gradient.Push(format("0x{1:02X}{2:02X}{3:02X}", r, g, b))
 	}
 	; last color given, same as first
 	gradient.Push(format("0x{:06X}", colors[colors.Length]))
