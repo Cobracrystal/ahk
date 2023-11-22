@@ -52,12 +52,11 @@ GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
 
 ;// set 1337 reminder
 token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
-reminders := ReminderManager(,1)
+reminders := ReminderManager()
 youtubeDL := YoutubeDLGui()
-; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", "UwU", reminders.discordReminder.bind(0, token, "245189840470147072"))
+; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
 reminders.setPeriodicTimerOn(parseTime(,11,21,8,0,0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
 reminders.setPeriodicTimerOn(parseTime(,,,13,36,50), 1, "Days", , reminders.reminder1337)
-; reminders.setPeriodicTimerOn(parseTime(,,,4,21,59), 20, "S", , (*) => MsgBox(A_Now))
 reminders.setPeriodicTimerOn(parseTime(,,,3,30,0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
 
@@ -100,7 +99,7 @@ return
 	hexcodeColorPreview()
 }
 
-^+!NumpadSub:: {	; Record Macro
+^!+NumpadSub:: {	; Record Macro
 	MacroRecorder.createMacro(A_ThisHotkey)
 }
 
@@ -140,12 +139,7 @@ return
 	toggleNumpadMouseMove()
 }
 
-~CapsLock:: { ; display capslock state
-	timedTooltip(GetKeyState("CapsLock", "T"))
-	;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
-}
-
-^+!F11:: { ; Block keyboard input until password "password123" is typed
+^!+F11:: { ; Block keyboard input until password "password123" is typed
 	if (!A_IsAdmin)	
 		RunAsAdmin()
 	password := "password123"
@@ -157,11 +151,6 @@ return
 	hook.Wait()
 	BlockInput(0)
 }
-^!+K::{ ; Tiles Windows Vertically (DOES NOT WORK)
-	shell := ComObject("Shell.Application")
-	if (MsgBox("Tile Windows Vertically?", "ConfirmDialog", 1) == "OK")
-		shell.tileWindowsVertically()
-}
 
 ^!K:: {	; Evaluate Shell Expression in-text
 	calculateExpression("c")
@@ -171,7 +160,7 @@ return
 ; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################
 ; ###########################################################################
 
-^+!NumpadEnter:: {	; Launch Autoclicker
+^!+NumpadEnter:: {	; Launch Autoclicker
 	Run(A_Desktop "\Autoclicker\AutoClickerPos.exe")
 }
 
@@ -348,13 +337,14 @@ F11:: { 	; BTD6: Rebind Escape
 	}
 }
 
-^!H:: {	; Make Window Circle Visible
+^!H:: {	; Change Window Shape
 	static toggle := false, circleWindow
 	if (toggle := !toggle) {
 		MouseGetPos(&xPosCircle, &yPosCircle, &circleWindow)
 		xPosCircle -= 100
 		yPosCircle -= 100
-		WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", "ahk_id " circleWindow)
+	;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", "ahk_id " circleWindow)
+		WinSetRegion("100-100 350-250 175-250 350-400 100-400 Wind", "ahk_id " circleWindow)
 		WinSetStyle("-0xC00000", "ahk_id " circleWindow) ; make it alwaysonTop
 	}
 	else {
@@ -363,6 +353,23 @@ F11:: { 	; BTD6: Rebind Escape
 	}
 }
 
+^!+K::{ ; Tiles Windows Vertically
+	static windowInfo, tileState := false
+	if(tileState := !tileState) {
+		windowInfo := WindowManager.getAllWindowInfo(0, 0)
+		shell := ComObject("Shell.Application")
+		if (MsgBox("Tile Windows Vertically", "Confirm Dialog", 0x1) == "OK")
+			shell.TileVertically()
+	}
+	else {
+		for i, e in windowInfo {
+			if (e.state != -1)
+				WinMove(e.xpos, e.ypos, e.width, e.height, e.hwnd)
+			if (e.state == 1)
+				WinMaximize(e.hwnd)
+		}
+	}
+}
 
 ^!+I:: { ; Center & Adjust Active Window
 	if WinActive("ahk_group cornerMusicPlayers")
@@ -637,7 +644,7 @@ customExit(ExitReason, ExitCode) {
 ; ############################### HOTSTRINGS ################################
 ; ###########################################################################
 
-^+!F12:: { ; Toggles LaTeX Hotstrings
+^!+F12:: { ; Toggles LaTeX Hotstrings
 	HotstringLoader.switchHotstringState("Latex", "T")
 }
 
@@ -699,8 +706,6 @@ customExit(ExitReason, ExitCode) {
 #HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
 
 
-
-
 getAllPermutations(str1, str2) {
 	if (StrLen(str1) != StrLen(str2))
 		return
@@ -733,23 +738,6 @@ clickloop(rows, columns, rHeight, cWidth) {
 	return
 }
 
-toString(obj) {
-	if (obj is Array)
-		flag := 0
-	else if (obj is Map)
-		flagMap := 1
-	else if (obj is Object)
-		return "Object"
-	else
-		return obj
-	str := flag ? "Map(" : "["
-	for i, e in obj
-		str .= (flag ? i ": " : "") toString(e) . ","
-	return SubStr(str, 1, -1) . flag ? ")" : "]"
-}
-
-
-
 makeTextAnsiColorful(str) {
 	tStr := ""
 	Loop Parse, str
@@ -762,7 +750,7 @@ makeTextAnsiColorful(str) {
 	return tStr
 }
 
-^+!Ä:: {	; Reload other script
+^!+Ä:: {	; Reload other script
 	PostMessage(0x111, 65303, , "ahk_id " 0x408f2)
 }
 
@@ -775,4 +763,8 @@ makeTextAnsiColorful(str) {
 ; 	text := makeTextAnsiColorful(text)
 ; 	fastPrint(text)
 ; }
-; CHECK IF THE objrelease ARE NECESSARY, ASK IN DISCORD POTENTIALLY!
+
+~CapsLock:: { ; display capslock state
+	timedTooltip(GetKeyState("CapsLock", "T"))
+	;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
+}
