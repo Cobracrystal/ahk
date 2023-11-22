@@ -4,6 +4,7 @@
 /discordSendBot.ahk
 /httpserver.ahk
 /everything.ahk
+/test.ahk
 !/*.md
 !/.gitignore
 !/script_files/
