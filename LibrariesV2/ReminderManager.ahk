@@ -19,14 +19,14 @@ class ReminderManager {
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Reminder Manager", this.reminderManagerGUI.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
-		this.data := {coords: [565, 300]}
-		this.guiVars := {1: ["rem1Message", "rem1S", "rem1M", "rem1H", "rem1D"], 2: ["rem2Message", "rem2S", "rem2M", "rem2H", "rem2D", "rem2Mo"]}
+		this.data := { coords: [565, 300] }
+		this.guiVars := { 1: ["rem1Message", "rem1S", "rem1M", "rem1H", "rem1D"], 2: ["rem2Message", "rem2S", "rem2M", "rem2H", "rem2D", "rem2Mo"] }
 		this.gui := -1
 		this.LV := -1
-		this.settings := {initialized: 1, flagDebug: flagDebug, flagLoad: flagLoad}
+		this.settings := { initialized: 1, flagDebug: flagDebug, flagLoad: flagLoad }
 		this.timerList := Map()
 		this.timerCount := 0
-		if (flagLoad)  {
+		if (flagLoad) {
 			; load reminders from file in appdata or smth.
 			msgbox("not implemented yet")
 		}
@@ -36,7 +36,7 @@ class ReminderManager {
 	/*
 	* sets a reminder in the given time
 	* @param times* days, hours, minutes, seconds; after which the reminder will be called
-	* @param function A optional function object that will be called when the reminder finishes. 
+	* @param function A optional function object that will be called when the reminder finishes.
 	* @param message An optional message to display when the reminder finishes. If both function and message are given, the function object must accept at least one parameter.
 	* If neither a message or function object are specified, a simple message box will open
 	*/
@@ -49,7 +49,7 @@ class ReminderManager {
 		time := DateAdd(time, seconds, "Seconds")
 		return this.setTimerOn(time, message, function)
 	}
-	
+
 	/*
 	* sets a reminder in the given time
 	* @param time YYYYMMDDHHMISS timestamp on which the reminder will be called
@@ -85,7 +85,7 @@ class ReminderManager {
 				function := function.bind(message)
 		}
 		timerObj := this.handleTimer.bind(this, 0, function, ++this.timerCount)
-		this.timerList[this.timerCount] := {nextTime:time, multi:0, message:message, function:name, timer: timerObj}
+		this.timerList[this.timerCount] := { nextTime: time, multi: 0, message: message, function: name, timer: timerObj }
 		SetTimer(timerObj, nextTimeMS)
 		return 1
 	}
@@ -95,7 +95,7 @@ class ReminderManager {
 	* @param time year, month, day, hour, minute, second. If omitted, defaults to next instance of largest set units.
 	* @param period Integer period in which the timer will repeat
 	* @param periodUnit Time Unit can be one of the strings (or their first letter): Years, Weeks, Days, Hours, Minutes, Seconds
-	* @param message An optional message to display when the reminder finishes. 
+	* @param message An optional message to display when the reminder finishes.
 	* @param function A optional function object that will be called when the reminder finishes. If both function and message are given, the function object must accept at least one parameter.
 	* If neither a message or function object are specified, a simple message box will open.
 	*/
@@ -130,7 +130,7 @@ class ReminderManager {
 					secs := DateDiff(DateAdd("1998", period, periodUnit), "1998", "Seconds")
 					timeDiff := Mod(timeDiff, secs) + secs
 				case "Weeks":
-					secs := DateDiff(DateAdd("1998", period*7, "D"), "1998", "Seconds")
+					secs := DateDiff(DateAdd("1998", period * 7, "D"), "1998", "Seconds")
 					timeDiff := Mod(timeDiff, secs) + secs
 				case "Months":
 					monthDiff := Mod((SubStr(time, 1, 4) - A_YYYY) * 12 + (SubStr(time, 5, 2) - A_MM), period)
@@ -139,7 +139,7 @@ class ReminderManager {
 						if (!IsTime(guessTime)) { ; if it is current month, but invalid date
 							nextMonth := Format("{:02}", Mod(A_MM, 12) + 1) ; cannot result in december->january, since dec has 31 days
 							rolledOverDays := Format("{:02}", SubStr(time, 7, 2) - DateDiff(A_YYYY . nextMonth, A_YYYY . A_MM, "D"))
-							guessTime := A_YYYY . nextMonth . rolledOverDays . SubStr(time, 9) 
+							guessTime := A_YYYY . nextMonth . rolledOverDays . SubStr(time, 9)
 							; since all invalid dates are at the end of a month, rolling over a month means we are definitely in the future.
 							if (!IsTime(guessTime))
 								throw Error("0xD37824 - This should never happen " . guessTime)
@@ -191,7 +191,7 @@ class ReminderManager {
 				function := function.bind(message)
 		}
 		timerObj := this.handleTimer.bind(this, 1, function, ++this.timerCount, period, periodUnit)
-		this.timerList[this.timerCount] := {nextTime:DateAdd(Now, timeDiff, "S"), multi:1, period:period, periodUnit:periodUnit, message:message, function:name, timer: timerObj}
+		this.timerList[this.timerCount] := { nextTime: DateAdd(Now, timeDiff, "S"), multi: 1, period: period, periodUnit: periodUnit, message: message, function: name, timer: timerObj }
 		SetTimer(timerObj, nextTimeMS)
 	}
 
@@ -217,33 +217,33 @@ class ReminderManager {
 		this.gui.OnEvent("Escape", (*) => this.reminderManagerGUI("Close"))
 		this.gui.OnEvent("Close", (*) => this.reminderManagerGUI("Close"))
 		this.gui.AddGroupBox("Section w400 h90", "Add Reminder in")
-			this.gui.SetFont("s9")
-			this.gui.AddText("Center ys+22 xs+10", "Remind me in ")
-			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[5]
-			this.gui.AddText("Center ys+22 x+5", "d")
-			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[4]
-			this.gui.AddText("Center ys+22 x+5", "h")
-			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[3]
-			this.gui.AddText("Center ys+22 x+5", "m ")
-			this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), 0).Name := this.guiVars.1[2]
-			this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), "s")
-			this.gui.AddText("Center ys+22 x+5", "with the message:")
-			this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.1[1]
+		this.gui.SetFont("s9")
+		this.gui.AddText("Center ys+22 xs+10", "Remind me in ")
+		this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[5]
+		this.gui.AddText("Center ys+22 x+5", "d")
+		this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[4]
+		this.gui.AddText("Center ys+22 x+5", "h")
+		this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[3]
+		this.gui.AddText("Center ys+22 x+5", "m ")
+		this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), 0).Name := this.guiVars.1[2]
+		this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), "s")
+		this.gui.AddText("Center ys+22 x+5", "with the message:")
+		this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.1[1]
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderInFromGUI.bind(this))
 		this.gui.AddGroupBox("xs Section w400 h90", "Add Reminder on")
-			this.gui.SetFont("s9")
-			this.gui.AddText("Center ys+22 xs+10", "Remind me on")
-			this.gui.AddEdit("ys+20 x+5 r1 w30", A_DD).Name := this.guiVars.2[5]
-			this.gui.AddText("Center ys+22 x+5", ".")
-			this.gui.AddEdit("ys+20 x+5 r1 w30", A_MM).Name := this.guiVars.2[6]
-			this.gui.AddText("Center ys+22 x+5", ", at")
-			this.gui.AddEdit("ys+20 x+5 r1 w30", A_Hour).Name := this.guiVars.2[4]
-			this.gui.AddText("Center ys+22 x+5", ":")
-			this.gui.AddEdit("ys+20 x+5 r1 w30", A_Min).Name := this.guiVars.2[3]
-			this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), ":")
-			this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), A_Sec).Name := this.guiVars.2[2]
-			this.gui.AddText("Center ys+22 x+5", "with the message:")
-			this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.2[1]
+		this.gui.SetFont("s9")
+		this.gui.AddText("Center ys+22 xs+10", "Remind me on")
+		this.gui.AddEdit("ys+20 x+5 r1 w30", A_DD).Name := this.guiVars.2[5]
+		this.gui.AddText("Center ys+22 x+5", ".")
+		this.gui.AddEdit("ys+20 x+5 r1 w30", A_MM).Name := this.guiVars.2[6]
+		this.gui.AddText("Center ys+22 x+5", ", at")
+		this.gui.AddEdit("ys+20 x+5 r1 w30", A_Hour).Name := this.guiVars.2[4]
+		this.gui.AddText("Center ys+22 x+5", ":")
+		this.gui.AddEdit("ys+20 x+5 r1 w30", A_Min).Name := this.guiVars.2[3]
+		this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), ":")
+		this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), A_Sec).Name := this.guiVars.2[2]
+		this.gui.AddText("Center ys+22 x+5", "with the message:")
+		this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.2[1]
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderOnFromGUI.bind(this))
 		this.LV := this.gui.AddListView("xs R10 w500 -Multi Sort", ["Next Occurence", "Period", "Function/Message", "Index"])
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
@@ -251,7 +251,7 @@ class ReminderManager {
 		this.createListView()
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords[1], this.data.coords[2]))
 	}
-	
+
 	reminderManagerGUI(mode := "O", *) {
 		mode := SubStr(mode, 1, 1)
 		if (WinExist(this.gui)) {
@@ -264,17 +264,18 @@ class ReminderManager {
 			}
 		}
 		else if (mode != "C")
-			this.guiCreate() 
+			this.guiCreate()
 	}
-	
+
 	createListView() {
 		this.LV.Delete()
 		this.LV.ModifyCol(4, 0)
 		for i, e in this.timerList
-			this.LV.Add(, FormatTime(e.nextTime, "yyyy-MM-dd, HH:mm:ss")
-				, HasProp(e, "period") ? e.period " " (e.period == 1 ? SubStr(e.periodUnit, 1, -1) : e.periodUnit) : "/"
-				, e.function (e.message != "" ? ', "' e.message '"': ""), i)
-		Loop(3)
+			this.LV.Add(, FormatTime(e.nextTime, "yyyy-MM-dd, HH:mm:ss"),
+				HasProp(e, "period") ? e.period " " (e.period == 1 ? SubStr(e.periodUnit, 1, -1) : e.periodUnit) : "/",
+				e.function (e.message != "" ? ', "' e.message '"' : ""), i
+			)
+		Loop (3)
 			this.LV.ModifyCol(A_Index, "+AutoHdr")
 	}
 
@@ -282,7 +283,7 @@ class ReminderManager {
 	refreshListViewRow(index, operation, column := 1, refresh := 0, values*) {
 		if !(WinExist(this.gui))
 			return
-		Loop(this.LV.GetCount()) {
+		Loop (this.LV.GetCount()) {
 			if (this.LV.GetText(A_Index, 4) == index) {
 				if (operation == 0)
 					this.LV.delete(A_Index)
@@ -311,7 +312,7 @@ class ReminderManager {
 				this.LV.delete(rowN)
 			case "116":	;// F5 Key -> Reload
 				this.createListView()
-			default: 
+			default:
 				return
 		}
 	}
@@ -333,7 +334,7 @@ class ReminderManager {
 			this.gui[e].Value := ""
 		this.createListView()
 	}
-	
+
 	reminderOnFromGUI(*) {
 		guiContent := this.gui.Submit(false)
 		t := []
@@ -342,7 +343,7 @@ class ReminderManager {
 		if !(t[1]) && (MsgBox("You have not set a reminder message. Proceed?", "Reminder", 0x1) == "Cancel")
 			return
 		try
-			time := parseTime(,t[6]?t[6]:unset, t[5]?t[5]:unset, t[4]?t[4]:unset, t[3]?t[3]:unset, t[2]?t[2]:unset)
+			time := parseTime(, t[6] ? t[6] : unset, t[5] ? t[5] : unset, t[4] ? t[4] : unset, t[3] ? t[3] : unset, t[2] ? t[2] : unset)
 		catch Error {
 			msgbox("Invalid Time specified.")
 			return 0
@@ -361,9 +362,9 @@ class ReminderManager {
 	}
 
 	defaultReminder(text := "") {
-	;	L1033 -> en-US for day name.
+		;	L1033 -> en-US for day name.
 		message := "It is " . FormatTime("L1033 dddd, dd.MM.yyyy, HH:mm:ss") . "`nYou set a reminder for this point in time."
-		message .= (text == "" ? "" : "`nReminder Message: " . text) 
+		message .= (text == "" ? "" : "`nReminder Message: " . text)
 		SoundPlay("*48")
 		MsgBox(message, "Reminder")
 		return
@@ -377,7 +378,7 @@ class ReminderManager {
 		if (WinExist("ahk_exe discord.exe"))
 			WinActivate("ahk_exe discord.exe")
 	}
-	
+
 	discordReminder(token, id, text) {
 		discordBot := DiscordClient(token)
 		time := FormatTime("L1033 dddd, dd.MM.yyyy, HH:mm:ss") ; L1033 -> en-US for day name.

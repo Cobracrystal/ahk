@@ -127,10 +127,15 @@ class HotkeyManager {
 
 	static getHotkeys(&script)	{
 		hotkeys := []
-		hotkeyModifiers := [  {mod:"+", replacement:"Shift"}, {mod:"<^>!", replacement:"AltGr"}
-							, {mod:"^", replacement:"Ctrl"}	, {mod:"!", replacement:"Alt"}
-							, {mod:"#", replacement:"Win"}  , {mod:"<", replacement:"Left"}
-							, {mod:">",	replacement:"Right"}]
+		hotkeyModifiers := [
+			{mod:"+", replacement:"Shift"}, 
+			{mod:"<^>!", replacement:"AltGr"},
+			{mod:"^", replacement:"Ctrl"},
+			{mod:"!", replacement:"Alt"},
+			{mod:"#", replacement:"Win"}, 
+			{mod:"<", replacement:"Left"},
+			{mod:">",	replacement:"Right"}
+		]
 		Loop Parse, script, "`n", "`r" { ; loop parse > strsplit for memory
 			if !(InStr(SubStr(A_Loopfield, 1, RegexMatch(A_Loopfield, "\s;")), "::")) ; skip non-hotkeys
 				continue

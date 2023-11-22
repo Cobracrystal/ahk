@@ -20,7 +20,7 @@ class WindowManager {
 			}
 		}
 		else if (mode != "C")
-			this.guiCreate() 
+			this.guiCreate()
 	}
 
 	;------------------------------------------------------------------------
@@ -47,8 +47,13 @@ class WindowManager {
 		this.menu := winMenu
 		; init class variables
 		this.gui := -1
-		this.settings := { coords: [300, 200], showExcludedWindows: 0, detectHiddenWindows: 0, getCommandLine: 0
-			, excludeWindowsRegex:"i)(?:ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|Program Manager|^$)"}
+		this.settings := {
+			coords: [300, 200],
+			showExcludedWindows: 0,
+			detectHiddenWindows: 0,
+			getCommandLine: 0,
+			excludeWindowsRegex: "i)(?:ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|Program Manager|^$)"
+		}
 	}
 
 	static guiCreate() {
@@ -64,7 +69,7 @@ class WindowManager {
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
 		this.LV.OnEvent("DoubleClick", (obj, rowN) => rowN == 0 ? 0 : WinActivate(Integer(obj.GetText(rowN, 1))))
 		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", (*) => (this.LV.Focused && (rowN := this.LV.GetNext()) != 0 ? WinActivate(Integer(this.LV.GetText(rowN, 1))) : 0))
-		;	this.LV.OnEvent("ColClick", this.onColClick.bind(this)) ; store sorting state for refresh? 
+		;	this.LV.OnEvent("ColClick", this.onColClick.bind(this)) ; store sorting state for refresh?
 		this.guiListviewCreate(false)
 		this.gui.Show(Format("x{1}y{2} Autosize", this.settings.coords[1], this.settings.coords[2]))
 		this.insertWindowInfo(this.gui.Hwnd, 1) ;// inserts the first row to be about the windowManager itself
@@ -74,29 +79,29 @@ class WindowManager {
 	static guiListviewCreate(redraw := true) {
 		this.LV.Delete()
 		for i, e in this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.showExcludedWindows)
-			this.LV.Add(,e.hwnd, e.title, e.process, e.state, e.xpos, e.ypos, e.width, e.height, e.class, e.pid, e.processPath, e.commandLine)
-		Loop(this.LV.GetCount("Col"))
+			this.LV.Add(, e.hwnd, e.title, e.process, e.state, e.xpos, e.ypos, e.width, e.height, e.class, e.pid, e.processPath, e.commandLine)
+		Loop (this.LV.GetCount("Col"))
 			this.LV.ModifyCol(A_Index, "+AutoHdr")
-		Loop(5)
-			this.LV.ModifyCol(A_Index+3, "+Integer")
+		Loop (5)
+			this.LV.ModifyCol(A_Index + 3, "+Integer")
 		this.LV.ModifyCol(1, "+Integer")
 		this.LV.ModifyCol(10, "+Integer")
 		if (!this.settings.getCommandLine)
 			this.LV.ModifyCol(12, "0")
 		if ((c := this.LV.GetCount() + !redraw + 1) > 40) ; redraw -> adjust for insertWindowInfo on first; +1 for empty space
-			this.LV.Move(,,,640)
+			this.LV.Move(, , , 640)
 		else if (c >= 20)
-			this.LV.Move(,,,45+c*17)
+			this.LV.Move(, , , 45 + c * 17)
 		else
-			this.LV.Move(,,,368)
-		this.gui["WindowCount"].Value := Format("Window Count: {:5}", c-1)
+			this.LV.Move(, , , 368)
+		this.gui["WindowCount"].Value := Format("Window Count: {:5}", c - 1)
 		if (redraw)
 			this.gui.Show("Autosize")
 	}
 
 	static insertWindowInfo(wHandle, rowN) {
 		t := this.getWindowInfo(wHandle)
-		this.LV.Insert(rowN,,t.hwnd, t.title, t.process, t.state, t.xpos, t.ypos, t.width, t.height, t.class, t.pid, t.processPath, t.commandLine)
+		this.LV.Insert(rowN, , t.hwnd, t.title, t.process, t.state, t.xpos, t.ypos, t.width, t.height, t.class, t.pid, t.processPath, t.commandLine)
 	}
 
 	static getAllWindowInfo(hidden := false, notExclude := false) {
@@ -106,14 +111,14 @@ class WindowManager {
 		if (notExclude)
 			wHandles := WinGetList()
 		else
-			wHandles := WinGetList(,,this.settings.excludeWindowsRegex)
+			wHandles := WinGetList(, , this.settings.excludeWindowsRegex)
 		for i, wHandle in wHandles
 			windows.push(this.getWindowInfo(wHandle))
 		return windows
 	}
 
 	static getWindowInfo(wHandle) {
-		x:="",y:="",w:="",h:="",winTItle:="",winClass:="",mmx:="",processName:="",processPath:="",pid:="",cmdLine := ""
+		x := "", y := "", w := "", h := "", winTItle := "", winClass := "", mmx := "", processName := "", processPath := "", pid := "", cmdLine := ""
 		try {
 			WinGetPos(&x, &y, &w, &h, wHandle)
 			winTitle := WinGetTitle(wHandle)
@@ -126,8 +131,20 @@ class WindowManager {
 				cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
 			; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = 23944" in powershell btw
 		}
-		return {hwnd:wHandle, title:winTitle, process:processName, class:winClass, processPath:processPath
-		, state:mmx, xpos:x, ypos:y, width:w, height:h, pid:pid, commandLine:cmdLine}
+		return {
+			hwnd: wHandle,
+			title: winTitle,
+			process: processName,
+			class: winClass,
+			processPath: processPath,
+			state: mmx,
+			xpos: x,
+			ypos: y,
+			width: w,
+			height: h,
+			pid: pid,
+			commandLine: cmdLine
+		}
 	}
 
 	static winmgmt(v, w, d := "Win32_Process", m := "winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2") {
@@ -156,7 +173,7 @@ class WindowManager {
 					return
 				wHandle := Integer(this.LV.GetText(rowN, 1))
 				WinClose(wHandle) ;// winkill possibly overkill. add setting?
-				if(WinWaitClose(wHandle, , 0.5))
+				if (WinWaitClose(wHandle, , 0.5))
 					this.LV.delete(rowN)
 			case "67": ; ctrl C
 				if ((rowN := this.LV.GetNext()) == 0)
@@ -176,7 +193,7 @@ class WindowManager {
 				}
 			case "116":	;// F5 Key -> Reload
 				this.guiListviewCreate()
-			default: 
+			default:
 				return
 		}
 	}
@@ -199,7 +216,7 @@ class WindowManager {
 	}
 
 	; ------------------------- MENU FUNCTIONS -------------------------
-		
+
 	static menuHandler(itemName, itemPos, menuObj) {
 		rowN := this.LV.GetNext()
 		wHandle := Integer(this.LV.GetText(rowN, 1))
@@ -208,10 +225,10 @@ class WindowManager {
 				WinActivate(wHandle)
 			case "Reset Window Position":
 				mmx := WinGetMinMax(wHandle)
-				WinGetPos(,,&w,&h,wHandle)
+				WinGetPos(, , &w, &h, wHandle)
 				if (mmx != 0)
 					WinRestore(wHandle)
-				WinMove(A_ScreenWidth/2 - w/2, A_ScreenHeight/2-h/2,,,wHandle)
+				WinMove(A_ScreenWidth / 2 - w / 2, A_ScreenHeight / 2 - h / 2, , , wHandle)
 				WinActivate(wHandle)
 			case "Minimize Window":
 				WinMinimize(wHandle)
@@ -238,7 +255,7 @@ class WindowManager {
 				return
 		}
 	}
-	
+
 	static transparencyGUI(wHandle) {
 		tp := WinGetTransparent(wHandle)
 		tp := (tp == "" ? 255 : tp)
@@ -251,7 +268,7 @@ class WindowManager {
 		transparencyGUI.Show()
 		this.gui.Opt("+Disabled +AlwaysOnTop")
 	}
-	
+
 	static transparencyGUIClose(obj, info := "") {
 		if (HasProp(obj, "Gui"))
 			obj := obj.gui

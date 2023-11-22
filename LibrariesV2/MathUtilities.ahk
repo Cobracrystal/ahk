@@ -181,11 +181,13 @@ quadratic_equation_solver(m) {
 */
 
 clean_expression(expression) {
-	list := [{key:"\pi",val:"3.141592653589793"}
-			, {key:"\phi",val:"((1+sqrt(5))/2)"}
-			, {key:"\e",val:"2.718281828459045"}]
-	for index, element in list 
-		expression := StrReplace(expression, element.key, element.val)
+	list := [
+		{key:"\pi",val:"3.141592653589793"},
+		{key:"\phi",val:"((1+sqrt(5))/2)"},
+		{key:"\e",val:"2.718281828459045"}
+	]
+	for i, e in list 
+		expression := StrReplace(expression, e.key, e.val)
 	expression := Trim(expression, "`n`r`t ")
 	return expression
 }

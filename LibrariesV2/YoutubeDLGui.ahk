@@ -48,9 +48,15 @@ class YoutubeDLGui {
 		guiMenu.Add("Open YoutubeDL Gui", (*) => this.youtubeDLGui())
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; establish basic data necessary for handling
-		this.data := { coords: [750, 425], savePath: A_Appdata . "\Autohotkey\YTDL", output:"", outputLastLine: "", outputLastLineCFlag: 0
-			, separator: "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
-			, separatorSmall: "══════════════════════════════════════════════════════════════════════════════" }
+		this.data := {
+			coords: [750, 425],
+			savePath: A_Appdata . "\Autohotkey\YTDL",
+			output: "",
+			outputLastLine: "",
+			outputLastLineCFlag: 0,
+			separator: "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
+			separatorSmall: "══════════════════════════════════════════════════════════════════════════════",
+		}
 		this.settingsManager("Load")
 		this.settings.flagDebug := flagDebug
 		this.controls := {}
@@ -161,7 +167,7 @@ class YoutubeDLGui {
 			case "CheckboxTrySelectFile":
 				this.settings.trySelectFile := !this.settings.trySelectFile
 			case "ButtonOutputPath":
-				folderP := SelectFolderEx(this.settings.outputPath, "Please select a folder")
+				folderP := FileSelect("D3", this.settings.outputPath, "Please select a folder")
 				if (folderP != "") {
 					this.settings.outputPath := RegexReplace(folderP, "\\$")
 					this.controls.editOutputPath.value := folderP
@@ -209,7 +215,7 @@ class YoutubeDLGui {
 			fileNames := []
 			for i, e in responseArr
 			{
-				lineArr := StrSplit(RTrim(e,"`n"), "`n")
+				lineArr := StrSplit(RTrim(e, "`n"), "`n")
 				regexM := StrReplace(this.settings.outputPath, "\", "\\") . "\\([[:ascii:]]*?\." . (this.options["extract-audio"].selected ? "mp3" : "mp4") . ")"
 				for i, e in reverseArray(lineArr)
 					if !(Instr(e, "Deleting")) && (RegexMatch(e, regexM, &o))
@@ -318,16 +324,18 @@ class YoutubeDLGui {
 
 	; these functions exist to get the first-time default values.
 	static getDefaultSettings() {
-		settings := { resetConverttoAudio: 1
-			, useAliases: 0
-			, openExplorer: 1
-			, trySelectFile: 0
-			, outputPath: A_ScriptDir
-			, outputPattern: A_ScriptDir . "\%(title)s.%(ext)s"
-			, ffmpegPath: ""
-			, ytdlPath: ""
-			, debug: 0
-			, options: {} } ; options as object since json saves and loads them as object anyway
+		settings := {
+			resetConverttoAudio: 1,
+			useAliases: 0,
+			openExplorer: 1,
+			trySelectFile: 0,
+			outputPath: A_ScriptDir,
+			outputPattern: A_ScriptDir . "\%(title)s.%(ext)s",
+			ffmpegPath: "",
+			ytdlPath: "",
+			debug: 0,
+			options: {} ; options as object since json saves and loads them as object anyway
+		}
 		return settings
 	}
 
