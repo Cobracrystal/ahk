@@ -1,14 +1,13 @@
 ﻿#Usehook ; preventing loops for hotkeys that send their own keystrokes
 
-s::
-checkPrevent(A_ThisHotkey, A_PriorHotkey, A_TimeSincePriorHotkey)
-return
+s::checkPrevent(A_ThisHotkey, A_PriorHotkey, A_TimeSincePriorHotkey)
+
 
 checkPrevent(hkey, phkey, tSphkey, mode := 1) {
 	static preventB := false
 	if (tSphkey > 400 && mode == 1) {
 		preventB := false
-		SendInput s
+		Send("s")
 		return
 	}
     if (preventB)
@@ -18,9 +17,8 @@ checkPrevent(hkey, phkey, tSphkey, mode := 1) {
 		preventB := true
 		return
 	}
-	SendInput % hkey
+	Send(hkey)
 }
 
-^F10:: ; Alt+F10 turns off the s disabling
-Hotkey, s, Toggle
-return
+; Alt+F10 turns off the s disabling
+^F10::Hotkey("s", "Toggle")
