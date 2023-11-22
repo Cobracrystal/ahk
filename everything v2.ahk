@@ -32,7 +32,7 @@ A_TrayMenu.Delete()
 #Include "%A_ScriptDir%\LibrariesV2\NeoKeyboardLayout.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\YoutubeDLGui.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\TextEditMenu.ahk"
-; #Include "%A_ScriptDir%\LibrariesV2\MacroRecorder.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\MacroRecorder.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\TimestampConverter.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\DiscordClient.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\DiscordBotCommands.ahk"
@@ -119,9 +119,9 @@ return
 }
 
 
-; ^+!NumpadSub::{	; Record Macro
-; 	createMacro(A_ThisHotkey)
-; }
+^+!NumpadSub::{	; Record Macro
+	MacroRecorder.createMacro(A_ThisHotkey)
+}
 
 ; ^F12::{ ; Toggle Hotkey Manager
 ; 	HotkeyManager("T")
