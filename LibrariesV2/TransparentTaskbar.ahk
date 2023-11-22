@@ -204,9 +204,8 @@ class TransparentTaskbar {
 		}
 	}
 
-	; En-/Disables Windows Setting 'Only show Taskbar when hovering over it with Mouse'
-	static HideShowTaskbar(mode := 0) {
-		; mode = 0 (turn off), 1 (turn on)
+	; En-/Disables Windows Setting 'Only show Taskbar when hovering over it with Mouse', 0=Off, 1=On
+	static hideShowTaskbar(mode := 0) {
 		static ABM_SETSTATE := 0xA, ABS_AUTOHIDE := 0x1, ABS_ALWAYSONTOP := 0x2
 		APPBARDATA := Buffer(size := 2*A_PtrSize + 2*4 + 16 + A_PtrSize, 0)
 		NumPut("UInt", size, APPBARDATA)
