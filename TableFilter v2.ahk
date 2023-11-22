@@ -235,15 +235,65 @@ class TableFilter {
 			path := this.settings.lastUsedFile ? this.settings.lastUsedFile : A_ScriptDir
 			for i, e in this.guis
 				e.Opt("+Disabled")
-			file := FileSelect("3", path, "Load File", "Data (*.xml, *.json)")
+			file := FileSelect("3", path, "Load File", "Data (*.xml; *.json)")
 			for i, e in this.guis
 				e.Opt("-Disabled")
 			if (!file)
 				return
 		}
-		this.settingsHandler("lastUsedFile", path)
+		this.settingsHandler("lastUsedFile", file)
 		this.loadFile(path)
 		; add option for tab controls here (aka supporting multiple files)
+
+		; now, update gui or all guis with the new data. ????
+		xmlString := data.Pop()
+		metaData := data.Pop()
+		keyArrLenOld := keyArray.Count()
+		keyArray := data.Pop()
+		guiName := SubStr(loadedFilePath, RegexMatch(loadedFilePath, "\\[^\\\n]*\.xml$")+1) . " - " . metaData.RowName
+		if (flagUseBackups) {
+			updateGUIsettings(,,false)
+			SetTimer, backupIterator, Off
+			backupIterator(1)
+			SetTimer, backupIterator, % settingBackupInterval * 60000
+			updateGUIsettings(,,true)
+		}
+		if (flagSimpleSaving)
+			updateGUIsettings(loadedFilePath, false)
+		else
+			updateGUIsettings("",false)
+		if (flagLoaded) && (keyArrLenOld == keyArray.Count()) {	;// true only if we have GUI windows and a database already + new & old have same key lengths.
+			tHwnd := A_Gui
+			if (filterGuiArray.Count() > 3) {
+				Msgbox, 4, % "Open File", % "You have " . filterGuiArray.Count() . "GUI Windows Open. Loading a new file now will take some time to update. Close windows?"
+				IfMsgBox No
+				{
+					updateGUIs(filterGuiArray)
+					WinActivate, ahk_id %tHwnd%
+				}
+				else {
+					while (filterGuiArray.Count() > 0) { ;// no for-loop here because the index shifts with every iteration. backwards for loop would be possible, but eh.
+						guiHwnd := filterGuiArray.Pop()
+						if (guiHwnd != tHwnd)
+							GuiClose(guiHwnd)
+					}
+					Gui, %tHwnd%:Default
+					GuiControl,,CheckboxDuplicates, 0
+					createFilteredList()
+				}
+			}
+			else {
+				updateGUIs(filterGuiArray)
+				WinActivate, ahk_id %tHwnd%
+			}
+		}
+		else {
+			while (filterGuiArray.Count() > 0)	;// no for-loop here because the index shifts with every iteration. backwards for loop would be possible, but eh.
+				GuiClose(filterGuiArray.Pop())
+			flagLoaded := true
+			createMainGUI()
+		}
+		}
 	}
 
 	loadFile(path) {
@@ -251,7 +301,72 @@ class TableFilter {
 		this.data.fileName := fileName
 		this.data.ext := ext
 		this.data.openFile := path
-
+		fileAsStr := FileRead(path, "UTF-8")
+		if (ext = "json") {
+			this.data.data := JSON.Load(fileAsStr)
+			keys := []
+			for i, e in this.data.data {
+				for j, f in e {
+					if !(objContainsValue(keys, j)) {
+						keys.InsertAt(objContainsValue(keys, lastSeenKey) + 1, j)
+					}
+					lastSeenKey := j
+				}
+			}
+			this.data.keys := keys
+		} 
+		else if (ext = "xml") {
+			xmlString := ""
+			Loop Parse, fileAsStr, "`n", "`r" {
+				if(RegexMatch(A_LoopField, "^\s*<(.*?)>\s*$", &m)) {
+					rowName := m[1]
+					break
+				}
+			}
+			data := []
+			keys := []
+			count := 1
+			fileAsStr := StrReplace(fileAsStr, "<" rowName ">", "¶")
+			Loop Parse, fileAsStr, "¶" {
+				o := Map()
+				flag := 0
+				Loop Parse, A_LoopField, "`n", "`r" {
+					if RegexMatch(A_LoopField, "O)<(.*?)>([\s\S]*?)<\/\1>", &m) {
+						key := m[1]
+						o[key] := m[2]
+						if !(objContainsValue(keys, key)) {
+							keys.InsertAt(objContainsValue(keys, lastSeenKey)+1, key)
+						}
+						lastSeenKey := key
+					}
+				}
+				if (o.Count > 0)
+					data.Push(o)
+			}
+			cleanData := []
+			cleanData.Length := data.Length
+			encode := Map("&apos", "'", "&amp", "&", "&quot", '"', "&gt", ">", "&lt", "<", "_x0027_", "'")
+			for i, e in data {
+				t := Map()
+				for j, f in e {
+					s1 := j
+					s2 := f
+					for k, g in encode {
+						s1 := StrReplace(s1, k, g)
+						s2 := StrReplace(s2, k, g)
+					}
+					t[s1] := s2
+				}
+				cleanData[i] := t
+			}
+			for i, e in keys {
+				for j, k in encode {
+					keys[i] := StrReplace(keys[i], j, k)
+				}
+			}
+			this.data.data := cleanData
+			this.data.keys := keys
+		}
 	}
 
 	exportFile() {
