@@ -107,19 +107,19 @@ class ReminderManager {
 		if (period <= 0)
 			throw Error("Invalid Period: " period)
 		switch periodUnit, 0 {
-			case "S", "Seconds":
+			case "S", "Seconds", "Second":
 				periodUnit := "Seconds"
-			case "M", "Minutes":
+			case "M", "Minutes", "Minute":
 				periodUnit := "Minutes"
-			case "H", "Hours":
+			case "H", "Hours", "Hour":
 				periodUnit := "Hours"
-			case "D", "Days":
+			case "D", "Days", "Day":
 				periodUnit := "Days"
-			case "W", "Weeks":
+			case "W", "Weeks", "Week":
 				periodUnit := "Weeks"
-			case "Mo", "Months":
+			case "Mo", "Months", "Month":
 				periodUnit := "Months"
-			case "Y", "Years":
+			case "Y", "Years", "Year":
 				periodUnit := "Years"
 			default:
 				throw Error("Invalid Period Unit: " . periodUnit)
@@ -215,8 +215,8 @@ class ReminderManager {
 
 	guiCreate() {
 		this.gui := Gui("+Border", "Reminder Manager")
-		this.gui.OnEvent("Escape", this.reminderManagerGUI.bind(this,"Close"))
-		this.gui.OnEvent("Close", this.reminderManagerGUI.bind(this,"Close"))
+		this.gui.OnEvent("Escape", (*) => this.reminderManagerGUI("Close"))
+		this.gui.OnEvent("Close", (*) => this.reminderManagerGUI("Close"))
 		this.gui.AddGroupBox("Section w400 h90", "Add Reminder in")
 			this.gui.SetFont("s9")
 			this.gui.AddText("Center ys+22 xs+10", "Remind me in ")
@@ -273,7 +273,7 @@ class ReminderManager {
 		this.LV.ModifyCol(4, 0)
 		for i, e in this.timerList
 			this.LV.Add(, FormatTime(e.nextTime, "yyyy-MM-dd, HH:mm:ss")
-				, HasProp(e, "period") ? e.period " " (e.period == 1 ? SubStr(e.periodUnit, 1) : e.periodUnit) : "/"
+				, HasProp(e, "period") ? e.period " " (e.period == 1 ? SubStr(e.periodUnit, 1, -1) : e.periodUnit) : "/"
 				, e.function (e.message != "" ? ', "' e.message '"': ""), i)
 		Loop(3)
 			this.LV.ModifyCol(A_Index, "+AutoHdr")

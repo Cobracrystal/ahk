@@ -116,7 +116,7 @@ arrayRemove(&array, t, removeAll := 1) {
 reverseArray(array) { ; linear array, gives weird stuff with assoc
 	arr := []
 	for i, e in array
-		arr[array.Count() - i + 1] := e
+		arr.InsertAt(1, e)
 	return arr
 }
 
@@ -369,40 +369,35 @@ ExecScript(expression, Wait := true) {
 		return exec.StdOut.ReadAll()
 }
 
-cmdRet(sCmd, callBackFuncObj := "", encoding := "CP0") {
+cmdRet(sCmd, callBackFuncObj := "", encoding := '') {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
-	static HANDLE_FLAG_INHERIT := 0x00000001, flags := HANDLE_FLAG_INHERIT
-		, STARTF_USESTDHANDLES := 0x100, CREATE_NO_WINDOW := 0x08000000
-	hPipeRead := unset, hPipeWrite := unset
-	DllCall("CreatePipe", "PtrP", hPipeRead, "PtrP", hPipeWrite, "Ptr", 0, "UInt", 0)
-	DllCall("SetHandleInformation", "Ptr", hPipeWrite, "UInt", flags, "UInt", HANDLE_FLAG_INHERIT)
+	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100
+    if (encoding == '')
+		encoding := "CP" . DllCall('GetOEMCP', 'UInt')
+	DllCall("CreatePipe", "PtrP", &hPipeRead := 0, "PtrP", &hPipeWrite := 0, "Ptr", 0, "UInt", 0)
+	DllCall("SetHandleInformation", "Ptr", hPipeWrite, "UInt", HANDLE_FLAG_INHERIT, "UInt", HANDLE_FLAG_INHERIT)
 
-	STARTUPINFO := Buffer(siSize := A_PtrSize * 4 + 4 * 8 + A_PtrSize * 5, 0)
-	NumPut("Uint", siSize, STARTUPINFO)
-	NumPut(STARTF_USESTDHANDLES, STARTUPINFO, A_PtrSize * 4 + 4 * 7)
-	NumPut(hPipeWrite, STARTUPINFO, A_PtrSize * 4 + 4 * 8 + A_PtrSize * 3)
-	NumPut(hPipeWrite, STARTUPINFO, A_PtrSize * 4 + 4 * 8 + A_PtrSize * 4)
+	STARTUPINFO := Buffer(size := A_PtrSize * 4 + 4 * 8 + A_PtrSize * 5, 0)
+	NumPut("UInt", size, STARTUPINFO)
+	NumPut("UInt", STARTF_USESTDHANDLES, STARTUPINFO, A_PtrSize * 4 + 4 * 7)
+	NumPut("Ptr", hPipeWrite, "Ptr", hPipeWrite, STARTUPINFO, A_PtrSize * 4 + 4 * 8 + A_PtrSize * 3)
 
 	PROCESS_INFORMATION := Buffer(A_PtrSize * 2 + 4 * 2, 0)
-
 	if !DllCall("CreateProcess", "Ptr", 0, "Str", sCmd, "Ptr", 0, "Ptr", 0, "UInt", true, "UInt", CREATE_NO_WINDOW
-		, "Ptr", 0, "Ptr", 0, "Ptr", &STARTUPINFO, "Ptr", &PROCESS_INFORMATION) {
-			DllCall("CloseHandle", "Ptr", hPipeRead)
-			DllCall("CloseHandle", "Ptr", hPipeWrite)
-			throw Error("CreateProcess has failed")
+		, "Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
+		DllCall("CloseHandle", "Ptr", hPipeRead)
+		DllCall("CloseHandle", "Ptr", hPipeWrite)
+		throw OSError("CreateProcess has failed")
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
-	sTemp := buffer(4096)
-	nSize := 0
-	while DllCall("ReadFile", "Ptr", hPipeRead, "Ptr", sTemp, "UInt", 4096, "UIntP", nSize, "UInt", 0) {
-		; add potential fallback! (via static variable check or something like that.)
-		stdOut := StrGet(sTemp, nSize, encoding)
-		sOutput .= stdOut
+	sTemp := Buffer(4096)
+	while DllCall("ReadFile", "Ptr", hPipeRead, "Ptr", sTemp, "UInt", 4096, "UIntP", &nSize := 0, "UInt", 0) {
+		sOutput .= stdOut := StrGet(sTemp, nSize, encoding)
 		if (callBackFuncObj)
-			callBackFuncObj.call(stdOut)
+			callBackFuncObj(stdOut)
 	}
-	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, 0, "Uint"))
-	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, A_PtrSize, "Uint"))
+	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, "Ptr"))
+	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, A_PtrSize, "Ptr"))
 	DllCall("CloseHandle", "Ptr", hPipeRead)
 	return sOutput
 }
@@ -466,6 +461,7 @@ menu_RemoveSpace(menuHandle, applyToSubMenus := true) {
 }
 
 windowGetCoordinates(wHandle) {
+	DetectHiddenWindows(1)
 	minimize_status := WinGetMinMax(wHandle)
 	if (minimize_status != -1)
 		WinGetPos(&x, &y, , , wHandle)

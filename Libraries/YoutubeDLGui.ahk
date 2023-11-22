@@ -184,18 +184,19 @@ class YoutubeDLGui {
 		cmdLine := Rtrim(cmdLine, "`n")
 		lineArray := StrSplit(cmdLine, "`n")
 		for i, newLine in lineArray {
-			if (Instr(newLine, "https://") || Instr(newLine, "http://")) && !(Instr(this.controls.editOutput.lastLine, "[redirect]") || Instr(newLine, "[redirect]")) && (this.controls.editOutput.lastLine != "")
-				this.updateGuiOutput(this.controls.editOutput.separatorSmall)
+			if (Instr(newLine, "https://") || Instr(newLine, "http://")) && !(Instr(this.controls.editOutput.lastLine, "[redirect]") || Instr(newLine, "[redirect]")) && (this.controls.editOutput.lastLine != "") {
+				this.controls.editOutput.lastLine := this.controls.editOutput.separatorSmall . "`n"
+				this.controls.editOutput.lastLineCarriageReturn := 0
+			}
 			StrReplace(newLine, "`r","`r", carriageCount)
 			if (carriageCount) {
-				flagC := true
 				tArr := StrSplit(newLine, "`r")
 				newLine := tArr[tArr.Count()]
 			}
-			if !(flagC && this.controls.editOutput.lastLineCarriageReturn)
+			if !(carriageCount && this.controls.editOutput.lastLineCarriageReturn)
 				this.controls.editOutput.text .= this.controls.editOutput.lastLine
 			this.controls.editOutput.lastLine := newLine . "`n"
-			this.controls.editOutput.lastLineCarriageReturn := ( flagC ? 1 : 0 )
+			this.controls.editOutput.lastLineCarriageReturn := carriageCount
 			GuiControl,, % this.controls.editOutput.handle, % this.controls.editOutput.text . this.controls.editOutput.lastLine
 		;	if !(flagC && this.controls.editOutput.lastLineCarriageReturn && WinActive("ahk_id " . this.controls.guiMain.handle)) {
 		;		ControlFocus,, % "ahk_id " . this.controls.editOutput.handle,

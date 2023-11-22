@@ -26,7 +26,7 @@ A_TrayMenu.Delete()
 #Include "WindowManager.ahk"
 #Include "ReminderManager.ahk"
 #Include "NeoKeyboardLayout.ahk"
-; #Include "YoutubeDLGui.ahk"
+#Include "YoutubeDLGui.ahk"
 #Include "TextEditMenu.ahk"
 #Include "MacroRecorder.ahk"
 #Include "TimestampConverter.ahk"
@@ -53,11 +53,12 @@ GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
 ;// set 1337 reminder
 token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
 reminders := ReminderManager()
+youtubeDL := YoutubeDLGui()
 ; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", "UwU", reminders.discordReminder.bind(0, token, "245189840470147072"))
 reminders.setPeriodicTimerOn(parseTime(,11,21,8,0,0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
 reminders.setPeriodicTimerOn(parseTime(,,,13,36,50), 1, "Days", , reminders.reminder1337)
 ; reminders.setPeriodicTimerOn(parseTime(,,,4,21,59), 20, "S", , (*) => MsgBox(A_Now))
-reminders.setPeriodicTimerOn(parseTime(,,,3,30,0), 1, "Days", "Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
+reminders.setPeriodicTimerOn(parseTime(,,,3,30,0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
 
 ; Launch Transparent Taskbar at 50ms frequency
@@ -131,9 +132,9 @@ return
 	ListLines()
 }
 
-; ^+F10::{	; YTDL GUI
-; 	YoutubeDLGui.YoutubeDLGui("T")
-; }
+^+F10::{	; YTDL GUI
+	youtubeDL.YoutubeDLGui("T")
+}
 
 ^!Numpad0:: {	; Toggle NumpadKeys to Move Cursor
 	toggleNumpadMouseMove()
@@ -381,7 +382,7 @@ F11:: { 	; BTD6: Rebind Escape
 	TransparentTaskbar.setInvisibility("T", 0)
 }
 
-^+F10:: { ; Show/Hide Taskbar
+^+F12:: { ; Show/Hide Taskbar
 	static hide := false
 	TransparentTaskbar.hideShowTaskbar(hide := !hide)
 }
