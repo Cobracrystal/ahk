@@ -12,6 +12,7 @@
 ; THEN IT TRIGGERS IMMEDIATELY
 ; ONLY FOR [LOADED] REMINDERS THO, WOULD BE BAD ON THE 4 AM OR 1337 REMINDER.
 
+; if nextTimeMS >= 2**32, do nextTimeMS -= 2**32, custom function that will restart itself until timeMS < 2**32, then launch function.
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\DiscordClient.ahk"
 
@@ -70,7 +71,7 @@ class ReminderManager {
 		timeDiff := DateDiff(time, A_Now, "Seconds")
 		if (timeDiff < 0)
 			throw Error("Cannot create Reminder in the Past: " time " is " timeDiff * -1 "seconds in the past.")
-		nextTimeMS := (timeDiff == 0 ? -1 : timeDiff * -1000 + MSec)
+		nextTimeMS := (timeDiff == 0 ? -1 : timeDiff * -1000 + MSec - 10)
 		if (nextTimeMS < -4294967295)
 			throw Error("Integer Limit for Timers reached.")
 		if !(function is Func) {
@@ -84,13 +85,15 @@ class ReminderManager {
 				name := function.Name
 				if (Instr(name, "."))
 					function := function.bind("this")
+				else if (name == "")
+					name := "/ (Lambda)"
 			}
 			if (message != "")
 				function := function.bind(message)
 		}
-		this.timerList[++this.timerCount] := {nextTime:time, multi:0, message:message, function:name}
-		SetTimer(this.handleTimer.bind(this, 0, function, this.timerCount), nextTimeMS)
-		A_Clipboard := nextTimeMS
+		timerObj := this.handleTimer.bind(this, 0, function, ++this.timerCount)
+		this.timerList[this.timerCount] := {nextTime:time, multi:0, message:message, function:name, timer: timerObj}
+		SetTimer(timerObj, nextTimeMS)
 		return 1
 	}
 
@@ -172,7 +175,7 @@ class ReminderManager {
 					timeDiff := DateDiff(guessTime, Now, "Seconds")
 			}
 		}
-		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec)
+		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
 		if (nextTimeMS < -4294967295)
 			throw Error("Integer Limit for Timers reached.")
 		if (this.settings.flagDebug)
@@ -187,29 +190,33 @@ class ReminderManager {
 			else {
 				name := StrReplace(function.Name, ".Prototype")
 				if (Instr(name, ".")) ; bind fake @this parameter for classes.
-					function := function.bind(0) 
+					function := function.bind(0)
+				else if (name == "")
+					name := "/ (Lambda)"
 			}
 			if (message != "")
 				function := function.bind(message)
 		}
-		this.timerList[++this.timerCount] := {nextTime:DateAdd(Now, timeDiff, "S"), multi:1, period:period, periodUnit:periodUnit, message:message, function:name}
-		SetTimer(this.handleTimer.bind(this, 1, function, this.timerCount, period, periodUnit), nextTimeMS)
+		timerObj := this.handleTimer.bind(this, 1, function, ++this.timerCount, period, periodUnit)
+		this.timerList[this.timerCount] := {nextTime:DateAdd(Now, timeDiff, "S"), multi:1, period:period, periodUnit:periodUnit, message:message, function:name, timer: timerObj}
+		SetTimer(timerObj, nextTimeMS)
 	}
 
 	handleTimer(isMulti, function, index, period?, periodUnit?) {
 		MSec := A_MSec
-		if (!isMulti)
+		if (!isMulti) {
 			this.timerList.Delete(index)
+			this.refreshListViewRow(index, 0)
+		}
 		else {
 			nextOccurence := DateAddW(A_Now, period, periodUnit)
-			nextTimeMS := 1000 * DateDiff(A_Now, nextOccurence, "Seconds") + MSec
-			; previous timer is automatically deleted, now create new one with nextTime. Can't use periodic timer since monthly isn't a thing
-			SetTimer(this.handleTimer.bind(this, 1, function, index, period, periodUnit), nextTimeMS)
+			nextTimeMS := 1000 * DateDiff(A_Now, nextOccurence, "Seconds") + MSec - 10 ; -10 -> correction against cases of .999
+			if (nextTimeMS > -4294967296)
+				SetTimer(this.timerList[index].timer, nextTimeMS)
 			this.timerList[index].nextTime := nextOccurence
+			this.refreshListViewRow(index, 1, 1, 0, FormatTime(nextOccurence, "yyyy-MM-dd, HH:mm:ss"))
 		}
 		function()
-		if (WinExist(this.gui))
-			this.createListView()
 	}
 
 	guiCreate() {
@@ -245,12 +252,10 @@ class ReminderManager {
 			this.gui.AddText("Center ys+22 x+5", "with the message:")
 			this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.2[1]
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderOnFromGUI.bind(this))
-		
-		this.LV := this.gui.AddListView("xs R10 w500 -Multi", ["Index", "Next Occurence", "Period", "Function/Message"])
+		this.LV := this.gui.AddListView("xs R10 w500 -Multi Sort", ["Next Occurence", "Period", "Function/Message", "Index"])
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
 		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
 		this.createListView()
-		
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords[1], this.data.coords[2]))
 	}
 	
@@ -271,17 +276,30 @@ class ReminderManager {
 	
 	createListView() {
 		this.LV.Delete()
-		this.LV.ModifyCol(1, "0")
-		this.LV.ModifyCol(2, "110")
-		this.LV.ModifyCol(3, "AutoHdr")
-		this.LV.ModifyCol(4, "AutoHdr")
+		this.LV.ModifyCol(4, 0)
 		for i, e in this.timerList
-			this.LV.Add(,i
-				, FormatTime(e.nextTime, "dd.MM.yyyy HH:mm:ss")
+			this.LV.Add(, FormatTime(e.nextTime, "yyyy-MM-dd, HH:mm:ss")
 				, HasProp(e, "period") ? e.period " " (e.period == 1 ? SubStr(e.periodUnit, 1) : e.periodUnit) : "/"
-				, e.function (e.message != "" ? ', "' e.message '"': ""))
-		Loop(this.LV.GetCount("Col") - 1)
-			this.LV.ModifyCol(A_Index + 1, "+AutoHdr")
+				, e.function (e.message != "" ? ', "' e.message '"': ""), i)
+		Loop(3)
+			this.LV.ModifyCol(A_Index, "+AutoHdr")
+	}
+
+	; operation values: 0 = Delete, 1 = Modify Column Content
+	refreshListViewRow(index, operation, column := 1, refresh := 0, values*) {
+		if !(WinExist(this.gui))
+			return
+		Loop(this.LV.GetCount()) {
+			if (this.LV.GetText(A_Index, 4) == index) {
+				if (operation == 0)
+					this.LV.delete(A_Index)
+				else if (operation == 1) {
+					this.LV.Modify(A_Index, "Col" column, values*)
+					this.LV.ModifyCol(column, "AutoHdr Sort")
+				}
+				break
+			}
+		}
 	}
 
 	onContextMenu(ctrlObj, rowN, isRightclick, x, y) {
@@ -294,9 +312,10 @@ class ReminderManager {
 			case "46": 	;// Del/Entf Key -> Delete Reminder
 				if ((rowN := this.LV.GetNext()) == 0)
 					return
-				index := Integer(this.LV.GetText(rowN, 1))
-				if ("action successful?")
-					this.LV.delete(rowN)
+				index := Integer(this.LV.GetText(rowN, 4))
+				try SetTimer(this.timerList[index].timer, 0)
+				this.timerList.delete(index)
+				this.LV.delete(rowN)
 			case "116":	;// F5 Key -> Reload
 				this.createListView()
 			default: 
