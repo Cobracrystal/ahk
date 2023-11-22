@@ -480,7 +480,9 @@ winSlowMove(hwnd, endX := "", endY := "", endW := "", endH := "", speed := 1) {
 		Loop (iter)
 		{
 			sT := (1 - cos(A_Index / iter * 3.1415926)) / 2
-			WinMove(iniX + tX * sT, iniY + tY * sT, iniW + tW * sT, iniH + tH * sT, "ahk_id " hwnd)
+			try WinMove(iniX + tX * sT, iniY + tY * sT, iniW + tW * sT, iniH + tH * sT, "ahk_id " hwnd)
+			catch 
+				break
 		}
 	}
 	SetWinDelay(WinDelay)
