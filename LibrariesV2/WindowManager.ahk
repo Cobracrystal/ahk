@@ -3,28 +3,23 @@
 ;// TODO 3: Add Settings file for excluded windows, automatically form that into regex
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\JSON.ahk"
-;------------------------- AUTO EXECUTE SECTION -------------------------
-;// Add an options to launch the GUI on top of the normal Tray Menu
-;// creates the menu for clicking inside the window manager GUI
 
-
-; WindowManager.windowManager("T")
-; settingcheckboxhandler switches both checkboxes when clicking any
+; Usage:
+; ^+F11::WindowManager.windowManager("T")
 
 class WindowManager {
-	; ------------------------ MAIN FUNCTION
 	static windowManager(mode := "O", *) {
 		mode := SubStr(mode, 1, 1)
 		if (WinExist(this.gui)) {
-			if (mode == "O") ; if gui exists and mode = open, activate window
+			if (mode == "O")
 				WinActivate(this.gui.hwnd)
-			else {	; if gui exists and mode = close/toggle, close
+			else {
 				this.settings.coords := windowGetCoordinates(this.gui.hwnd)
 				this.gui.destroy()
 				this.gui := -1
 			}
 		}
-		else if (mode != "C") ; if gui doesn't exist and mode = open/toggle, create
+		else if (mode != "C")
 			this.guiCreate() 
 	}
 
@@ -78,7 +73,7 @@ class WindowManager {
 
 	static guiListviewCreate(redraw := true) {
 		this.LV.Delete()
-		for i, e in this.getAllWindowInfo()
+		for i, e in this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.showExcludedWindows)
 			this.LV.Add(,e.hwnd, e.title, e.process, e.state, e.xpos, e.ypos, e.width, e.height, e.class, e.pid, e.processPath, e.commandLine)
 		Loop(this.LV.GetCount("Col"))
 			this.LV.ModifyCol(A_Index, "+AutoHdr")
@@ -104,11 +99,11 @@ class WindowManager {
 		this.LV.Insert(rowN,,t.hwnd, t.title, t.process, t.state, t.xpos, t.ypos, t.width, t.height, t.class, t.pid, t.processPath, t.commandLine)
 	}
 
-	static getAllWindowInfo() {
+	static getAllWindowInfo(hidden := false, notExclude := false) {
 		windows := []
 		SetTitleMatchMode("RegEx")
-		DetectHiddenWindows(this.settings.detectHiddenWindows)
-		if (this.settings.showExcludedWindows)
+		DetectHiddenWindows(hidden)
+		if (notExclude)
 			wHandles := WinGetList()
 		else
 			wHandles := WinGetList(,,this.settings.excludeWindowsRegex)

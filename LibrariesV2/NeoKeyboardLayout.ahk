@@ -1,7 +1,5 @@
 ﻿
 class NeoKeyboardLayout {
-
-	; ------------------------ MAIN FUNCTION
 	
 	static KeyboardLayoutGUI(mode := "O", *) {
 		mode := SubStr(mode, 1, 1)
@@ -9,28 +7,26 @@ class NeoKeyboardLayout {
 			mode := this.gui.hidden ? "O" : "C" 
 		DetectHiddenWindows(1)
 		if (WinExist(this.gui.obj)) {
-			if (mode == "O") { ; if gui exists and mode = open, activate window
+			if (mode == "O") {
 				this.gui.obj.Show()
 				this.gui.hidden := false
 			}
-			else {	; if gui exists and mode = close/toggle, close
+			else {
 				this.gui.coords := windowGetCoordinates(this.gui.obj.hwnd)
 				this.gui.obj.Hide()
 				this.gui.hidden := true
 			}
 		}
-		else if (mode != "C") ; if gui doesn't exist and mode = open/toggle, create
+		else if (mode != "C")
 			this.guiCreateActiveX() 
 	}
 	
 	static __New() {
-		; Tray Menu
 		this.path := A_WorkingDir "\NeoKeyboardLayout"
 		tObj := this.KeyboardLayoutGUI.Bind(this)
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Keyboard Layout GUI", this.KeyboardLayoutGUI.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
-		; this format is necessary to establish objects properly
 		this.gui := {text: "Current Layout", coords: [50, 50], obj: -1, hidden: true}
 	}
 	
