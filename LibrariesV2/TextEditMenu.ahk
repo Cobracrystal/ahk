@@ -41,7 +41,6 @@ class TextEditMenu {
 		caseMenu.Add("Proper Capitals", (*) => modifySelectedText((t) => Format("{:T}", t)))
 		fontMenu := Menu()
 		fontMenu.Add("Superscript", (*) => modifySelectedText(this.replaceCharacters.bind(this), "superscript"))
-		fontMenu.Add("Subscript", (*) => modifySelectedText(this.replaceCharacters.bind(this), "subscript"))
 		fontMenu.Add("Small Capitals", (*) => modifySelectedText(this.replaceCharacters.bind(this), "smallcapitals"))
 		fontMenu.Add("Italics", (*) => modifySelectedText(this.replaceCharacters.bind(this), "italic"))
 		fontMenu.Add("Italics", (*) => modifySelectedText(this.replaceCharacters.bind(this), "bold"))

@@ -63,7 +63,7 @@ InstallKeybdHook(true, true)
 ; Check if script is reloaded
 SCRIPTVAR_WASRELOADED := (DllCall("GetCommandLine", "str") == '"' . A_AhkPath . '" /restart /script "' . A_scriptFullPath . '"' ? true : false)
 ;// set 1337 reminder
-; 	ReminderManager.initialize(0, 0, readFileIntoVar(A_WorkingDir . "\discordBot\discordBotToken.token"))
+; 	ReminderManager.initialize(0, 0, FileOpen(A_WorkingDir . "\discordBot\discordBotToken.token", "r", "UTF-8").Read())
 ; 	ReminderManager.setSpecificTimer("1337reminder", "", , , 13,36,50)
 ;ReminderManager.setSpecificTimer(,"test message", , , 0,42,0)
 ; 	ReminderManager.setSpecificTimer("discordReminder", "GO SLEEP", , , 4,0,0,,,"245189840470147072")
@@ -89,7 +89,8 @@ internetConnectionLogger("Init", "C:\Users\Simon\Desktop\programs\programming\ba
 if (!SCRIPTVAR_WASRELOADED)
 	timedTooltip(connectNextDNS(), 4000)
 ;// Initialize LaTeX Hotstrings
-LatexHotstrings(1)
+HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "Latex")
+Hotstring("EndChars", "-()[]{}:;`'`"/\,.?!" . A_Space . A_Tab)
 ;// replace the tray menu with my own
 createBetterTrayMenu()
 OnExit(customExit)
@@ -891,7 +892,7 @@ closeWinRarNotification() {
 ;[style]{ ______________________________________________________________________________________________
 
 ^+!F12:: { ; Toggles LaTeX Hotstrings
-	LatexHotstrings()
+	HotstringLoader.switchHotstringState("Latex", "T")
 }
 
 ;[style]} ______________________________________________________________________________________________
@@ -924,7 +925,7 @@ closeWinRarNotification() {
 
 
 ;[style]}
-;									: SPECIAL SYMBOLS / LaTeX
+;									: SPECIAL SYMBOLS
 ;[style]{ --------------------------------
 
 ; // all of these can be toggled via ctrl alt shift F12, remember to add those to the list.
@@ -1086,19 +1087,6 @@ HideShowTaskbar(action) {
 	NumPut("Ptr", WinExist("ahk_class Shell_TrayWnd"), APPBARDATA, A_PtrSize)
 	NumPut("Uint", action ? ABS_AUTOHIDE : ABS_ALWAYSONTOP, APPBARDATA, size - A_PtrSize)
 	DllCall("Shell32\SHAppBarMessage", "UInt", ABM_SETSTATE, "Ptr", APPBARDATA)
-}
-
-^k::{
-	a := JSON.load('{ "str": "\u1d573" }')
-	A_Clipboard := a["str"]
-	msgbox("wait")
-	str := JSON.dump(a)
-	A_Clipboard := str
-}
-
-/*
-^O:: { ; Load Latex Hotstrings
-	HotstringLoader.load(A_WorkingDir . "\everything\LatexHotstrings_ahk2.json", "LatexHotstrings")
 }
 
 ^k::{

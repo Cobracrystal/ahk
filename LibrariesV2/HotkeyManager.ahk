@@ -95,7 +95,9 @@ class HotkeyManager {
 	}
 
 	static getFullScript() {
-		script := FileOpen(A_ScriptFullPath, "r", "UTF-8").Read()
+		fileObj := FileOpen(A_ScriptFullPath, "r", "UTF-8")
+		script := fileObj.Read()
+		fileObj.Close()
 		flagCom := false
 		flagMult := false
 		cleanScript := ""

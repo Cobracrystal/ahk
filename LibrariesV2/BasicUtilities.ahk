@@ -265,10 +265,6 @@ execShell(command) {
 	return exec.StdOut.ReadAll()
 }
 
-readFileIntoVar(path, encoding := "UTF-8") {
-	return FileOpen(path, "r", encoding).Read()
-}
-
 selectFolderEx(startingFolder := "", Prompt := "", OwnerHwnd := 0, OkBtnLabel := "") {
 	static osVersion := DllCall("GetVersion", "UChar")
 	static IID_IShellItem := Buffer(16, 0)
@@ -307,29 +303,7 @@ selectFolderEx(startingFolder := "", Prompt := "", OwnerHwnd := 0, OkBtnLabel :=
 	return selectedFolder
 }
 
-menu_GetMenuByName(menuName) {
-	; Based on MI.ahk by Lexikos -> http://www.autohotkey.com/board/topic/20253-menu-icons-v2/
-	static menuHandle := 0, men
-	if !(menuHandle) {
-		men := MenuBar()
-		men.Add()
-		men.Delete()
-		tGui := Gui()
-		tGui.MenuBar := men
-		menuHandle := DllCall("User32.dll\GetMenu", "Ptr", tGui.Hwnd, "UPtr")
-		tGui.MenuBar := ""
-		tGui.Destroy()
-	}
-	if !(menuHandle)
-		return 0
-	men.Add(menuName)
-	submenuHandle := DllCall("User32.dll\GetSubMenu", "Ptr", menuHandle, "Int", 0, "UPtr")
-	men.Delete(menuName)
-	return submenuHandle
-}
-
-
-menu_RemoveSpace(menuHandle, applyToSubMenus := True) {
+menu_RemoveSpace(menuHandle, applyToSubMenus := true) {
 	; http://msdn.microsoft.com/en-us/library/ff468864(v=vs.85).aspx
 	static MIsize := (4 * 4) + (A_PtrSize * 3)
 	MI := Buffer(MIsize, 0)
