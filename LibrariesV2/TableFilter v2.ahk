@@ -19,8 +19,8 @@
 tableInstance := TableFilter(1)
 ; tableInstance.guiCreate()
 tableInstance.loadData()
-#Include "LibrariesV2\BasicUtilities.ahk"
-#Include "LibrariesV2\JSON.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 
 ; idea -> tablefilter handles all the actual file stuff for a database
@@ -439,7 +439,7 @@ class TableFilter {
 		fileAsStr := FileRead(path, "UTF-8")
 		lastSeenKey := ""
 		if (ext = "json") {
-			data := JSON.Load(fileAsStr)
+			data := jsongo.Parse(fileAsStr)
 			keys := []
 			for i, e in data {
 				for j, f in e { ; todo: this messes up the order of the keys btw in case of json. custom parse??
