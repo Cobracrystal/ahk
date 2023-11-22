@@ -167,16 +167,17 @@ class WindowManager {
 
 	static onKeyPress(ctrlObj, lParam) {
 		vKey := NumGet(lParam, 24, "ushort")
+		rowN := this.LV.GetNext()
 		switch vKey {
 			case "46": 	;// Del/Entf Key -> Close that window
-				if ((rowN := this.LV.GetNext()) == 0)
+				if (!rowN)
 					return
 				wHandle := Integer(this.LV.GetText(rowN, 1))
 				WinClose(wHandle) ;// winkill possibly overkill. add setting?
 				if (WinWaitClose(wHandle, , 0.5))
 					this.LV.delete(rowN)
 			case "67": ; ctrl C
-				if ((rowN := this.LV.GetNext()) == 0)
+				if (!rowN)
 					return
 				wHandle := Integer(this.LV.GetText(rowN, 1))
 				if (GetKeyState("Ctrl")) {
