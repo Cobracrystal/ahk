@@ -163,23 +163,24 @@ return
 	Run(A_Desktop "\Autoclicker\AutoClickerPos.exe")
 }
 
-^LWin Up:: { ; Replace Windows Search with EverythingSearch
+*^LWin Up:: { ; Open Everything Search Window
+	state := GetKeyState("Shift")
+	move := true
+	if (WinExist("ahk_exe C:\Program Files\Everything\Everything.exe"))
+		ret := false
 	Run("everything.exe -newwindow", "C:\Program Files\Everything")
-	WinWaitActive("ahk_exe C:\Program Files\Everything\Everything.exe")
-	hwnd := WinGetID()
+	hwnd := WinWaitActive("ahk_exe C:\Program Files\Everything\Everything.exe")
+	WinMoveTop(hwnd)
 	mmx := WinGetMinMax()
 	if (mmx == 1 || mmx == -1)
 		WinRestore()
-	winSlowMove(hwnd, 40, 400, 784, 648, 8)
+	if (move)
+		winSlowMove(hwnd, 40, 400, 784, 648, 8)
+	if (state)
+		return
 	WinWaitNotActive("ahk_id " hwnd)
 	try WinClose("ahk_id" hwnd)
 }
-
-#HotIf WinActive("ahk_exe C:\Program Files\Everything\everything.exe")
-^LWin Up:: { ; Close EverythingSearch if its active
-	WinClose("ahk_exe C:\Program Files\Everything\Everything.exe")
-}
-#HotIf
 
 #HotIf WinActive("ahk_exe vlc.exe")
 ^D:: {		; VLC: Open/Close Media Playlist
