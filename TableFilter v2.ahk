@@ -8,7 +8,6 @@
 ; limit autohdr for columns to fixed max width (eg autohdr if < 200, else 200)
 ; settings usedefaultrunic -> needs runic translator function.
 ; instead of tooltip and disabled gui, use actual progress window (like magicbox example) to display duplicate progress (also makes escape as interruption clearer)
-; while checkbox duplicates is checked, normal searching should still take that into account
 #SingleInstance Force
 ; temporary
 tableInstance := TableFilter(1)
@@ -46,7 +45,7 @@ class TableFilter {
 		this.settings.debug := debug
 		tableFilterMenu := TrayMenu.submenus["tablefilter"]
 		tableFilterMenu.Add("Open GUI: ", (*) => this.guiCreate())
-		tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => (menuObj.ToggleCheck("Use Darkmode"), this.settingHandler("Darkmode", -1)))
+		tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => (menuObj.ToggleCheck("Use Darkmode"), this.settingsHandler("Darkmode", -1)))
 		tableFilterMenu.Add("Open Backup Folder", (*) => Run('explorer.exe "' this.data.savepath '"'))
 		if (this.settings.darkMode)
 			tableFilterMenu.Check("Use Dark Mode")
@@ -55,7 +54,7 @@ class TableFilter {
 		;	Hotkey(this.settings.saveHotkey, (*) => this.directSave())
 		HotIfWinactive()
 		Hotkey(this.settings.guiHotkey, (*) => this.guiCreate())
-		OnExit(this.exit, 1)
+		OnExit(this.exit.bind(this), 1)
 	}
 
 	guiCreate() {
@@ -63,22 +62,28 @@ class TableFilter {
 			WinActivate(this.guis[1].hwnd)
 			return 0
 		}
-		newGui := Gui("+Border", this.base.__Class . " - " . (this.data.openFile ? SubStr(this.data.openFile, RegexMatch(this.data.openFile, "\\[^\\]*\.[^\\]+$") + 1) : "Select file"))
+		newGui := Gui("+Border")
 		newGui.OnEvent("Close", this.guiClose.bind(this))
 		newGui.OnEvent("Escape", this.guiClose.bind(this))
 		newGui.OnEvent("DropFiles", this.dropFiles.bind(this))
 		GroupAdd("TableFilterGUIs", "ahk_id " newGui.hwnd)
 		if (this.data.openFile) {
+			SplitPath(this.data.openFile, &name)
+			newGui.Title := (this.data.isSaved ? "" : "*") this.base.__Class " - " name 
 			newGui.AddGroupBox("Section w745 h42", "Search")
 			for i, e in this.data.keys {
 				t := newGui.AddText("ys+16 xp+" (i==1?10:55), e)
 				t.GetPos(,, &w)
 				newGui.AddEdit("ys+13 xp+" w+10 " r1 w45 vEditSearchCol" i).OnEvent("Change", this.createFilteredList.bind(this))
 			}
-			newGui.AddCheckbox("ys+13", "Find Duplicates").OnEvent("Click", this.searchDuplicates.bind(this))
+			newGui.CBDuplicates := newGui.AddCheckbox("ys+13", "Find Duplicates")
+			newGui.CBDuplicates.OnEvent("Click", this.searchDuplicates.bind(this))
 			rowKeys := this.data.keys.Clone()
 			rowKeys.push("DataIndex")
 			newGui.LV := newGui.AddListView("xs R35 w950", rowKeys) ; LVEvent, Altsubmit
+			newGui.LV.OnNotify(-155, this.LV_Event.bind(this, "Key"))
+			newGui.LV.OnEvent("ContextMenu", this.LV_Event.bind(this, "ContextMenu"))
+			newGui.LV.OnEvent("DoubleClick", this.LV_Event.bind(this, "DoubleClick"))
 				this.createFilteredList(newGui, false)
 				; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
 				if !(this.settings.debug)
@@ -88,10 +93,11 @@ class TableFilter {
 				Loop (newGui.LV.GetCount("Col") - 1)
 					newGui.LV.ModifyCol(A_Index, "AutoHdr")
 			this.createAddLineBoxesinGUI(newGui)
-			newGui.AddButton("ys+9 xp+160 w100", "Load json/xml File").OnEvent("Click", (*) => this.loadData())
-			newGui.AddButton("w100", "Export to File").OnEvent("Click", (*) => this.exportFile())
+			newGui.AddButton("ys+9 xs+850 w100", "Load json/xml File").OnEvent("Click", this.loadData.bind(this, ""))
+			newGui.AddButton("w100", "Export to File").OnEvent("Click", this.saveFile.bind(this))
 			showString := "Center Autosize"
 		} else {
+			newGui.Title := this.base.__Class " - No File Selected" 
 			newGui.AddButton("x200 y190 r1 w100", "Load File").OnEvent("Click", this.loadData.bind(this, ""))
 			showString := "Center w500 h400"
 		}
@@ -113,6 +119,10 @@ class TableFilter {
 	createFilteredList(gui, *) {
 		if (gui.HasProp("Gui"))
 			gui := gui.Gui
+		if (gui.CBDuplicates.Value) {
+			this.searchDuplicates(gui.CBDuplicates)
+			return
+		}
 		gui.Opt("+Disabled")
 		gui.LV.Opt("-Redraw")
 		gui.LV.Delete()
@@ -129,27 +139,26 @@ class TableFilter {
 	searchDuplicates(ctrlObj, *) {
 		local gui := ctrlObj.Gui
 		if !(ctrlObj.Value) {
-			this.createFilteredList(ctrlObj.Gui)
+			this.createFilteredList(gui)
 			return
 		}
+		gui.Opt("+Disabled")
 		gui.LV.Opt("-Redraw")
 		gui.LV.Delete()
-		duplArr := []
 		filterKey := this.settings.duplicateColumn
-		total := (this.data.data.Length * (this.data.data.Length-1))/2
-		gui.Opt("+Disabled")
+		default := (this.data.defaultValues.Has(filterKey) ? this.data.defaultValues[filterKey] : "")
 		duplicateMap := Map()
 		duplicateMap.CaseSense := this.settings.filterCaseSense
 		for i, row in this.data.data {
 			v := row[filterKey]
 			if (duplicateMap.has(v))
 				duplicateMap[v].push([row, i])
-			else 
+			else
 				duplicateMap[v] := [[row, i]]
 		}
 		for i, row in this.data.data {
 			v := row[filterKey]
-			if (v == "" || v == this.data.defaultValues[filterKey])
+			if (v == "" || v == default)
 				continue
 			if (duplicateMap[v].Length > 1) {
 				for _, arr in duplicateMap[v] {
@@ -159,8 +168,10 @@ class TableFilter {
 				duplicateMap[v] := []
 			}
 		}
-		gui.Opt("-Disabled")
+		if (gui.LV.GetCount() == 0)
+			gui.LV.Add("", "/", "Nothing Found.")
 		gui.LV.Opt("+Redraw")
+		gui.Opt("-Disabled")
 	}
 
 	rowIncludeFromSearch(gui, row) {
@@ -198,6 +209,19 @@ class TableFilter {
 		aGui.LV.Modify(aGui.LV.GetCount(), "Select Focus Vis")
 	}
 
+	editRow() {
+		; this should combine editRowFromMenu AND editSelectedRow ANd editRow (if it exists)
+	}
+
+	removeSelectedRows() {
+		; note the plural
+
+	}
+
+	databaseitemremove() {
+
+	}
+
 	cleanRowData(row) { ; row is a map and this operates onto the object
 		for i, e in this.data.keys {
 			if (this.settings.useDefaultValues && (!row.Has(e) || row[e] == "")) {
@@ -218,47 +242,7 @@ class TableFilter {
 			row[e] := Trim(row[e])
 		}
 	}
-
-	editRow() {
-
-	}
-
-	editRowFromMenu() {
-
-	}
-
-	removeSelectedRow() {
-
-	}
-
-	databaseitemremove() {
-
-	}
-
-	editSelectedRow() {
-
-	}
-
-	exportToFileGUI() {
-
-	}
-
-	updateGUIs() {
-
-	}
-
-	updateGUISettings() {
-
-	}
-
-	updateGUIColors() {
-
-	}
-
-	toggleDarkMode() {
-
-	}
-
+	
 	validValueChecker(ctrlObj, *) {
 		newFont := (this.settings.darkMode ? "c0xFFFFFF" : "cDefault Norm")
 		switch Integer(SubStr(ctrlObj.Name, -1)) {
@@ -280,8 +264,34 @@ class TableFilter {
 		ctrlObj.SetFont(newFont)
 	}
 
-	lvEvent() {
+	toggleDarkMode() {
+		; this should combine toggleguidarkmode, updateguicolors and togglesettingdarkmode (unless settingshandler does that)
+	}
 
+
+	LV_Event(eventType, guiCtrl, lParam, item?) {
+		local gui := guiCtrl.Gui
+		switch eventType, 0 {
+			case "Key":
+				vKey := NumGet(lParam, 24, "ushort")
+				switch vKey {
+					case 46: ; DEL key
+						return ; todo
+					case 67: ; C key
+						if ((rowN := gui.LV.GetNext()) == 0)
+							return
+						if (GetKeyState("Ctrl")) {
+							col := objContainsValue(this.data.keys, this.settings.copyColumn)
+							A_Clipboard := (col ? gui.LV.GetText(rowN, col) : gui.LV.GetText(0))
+						}
+					case 116: ; F5 key
+						this.createFilteredList(gui)
+				}
+			case "ContextMenu":
+				this.menu.Show()
+			case "DoubleClick":
+				return ; todo
+		}
 	}
 
 
@@ -327,7 +337,7 @@ class TableFilter {
 
 
 	cMenuHandler(itemName, itemPos, menuObj) {
-
+		; this should handle both menus
 	}
 
 	guiClose(guiObj) {
@@ -341,15 +351,16 @@ class TableFilter {
 		this.loadData(fileArr[1], gui)
 	}
 
-	directSave() {
-		; use merged save function, this is stupid
-	}
-
 	loadData(file := "", guiObj := {}, *) {
 		if (guiObj.HasOwnProp("Gui"))
 			guiObj := guiObj.gui
-		if (!this.data.isSaved) && (MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes before loading " (file ? file : "a new File") "?", "Tablefilter", "0x3 Owner" guiObj.hwnd) != "OK")
-			return
+		if (!this.data.isSaved) {
+			res := MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes before loading " (file ? file : "a new File") "?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
+			if (res == "Cancel")
+				return
+			else if (res == "Yes")
+				this.saveFile()
+		}
 		if (file == "") {
 			path := this.settings.lastUsedFile ? this.settings.lastUsedFile : A_ScriptDir
 			for i, e in this.guis
@@ -360,19 +371,18 @@ class TableFilter {
 			if (!file)
 				return
 		}
-		this.settingsHandler("lastUsedFile", file)
 		this.loadFile(file)
 		; add option for tab controls here (aka supporting multiple files)
 
+		while(this.guis.Length > 0)
+			this.guiClose(this.guis.pop())
 		; now, update gui or all guis with the new data. ????
 		if (this.settings.useBackups) {
 			; update backup function
 		}
-		for i, e in this.guis
-			e.Destroy()
-		while(this.guis.Length > 0)
-			this.guiClose(this.guis.pop())
 		this.guiCreate()
+		this.settingsHandler("lastUsedFile", file)
+		this.settingsHandler("isSaved", true, false)
 	}
 
 	loadFile(path) {
@@ -447,10 +457,9 @@ class TableFilter {
 		this.data.data := data
 	}
 
-	exportFile() {
-
+	saveFile(*) {
+		; THIS SHOULD COMBINE directsave AND exportFile AND exportToFileGUI
 	}
-
 
 	backupIterator() {
 		; instead of a timer or something, this should save the current time once and on every change this gets called, and if enough time has passed -> backup is made
@@ -464,16 +473,21 @@ class TableFilter {
 
 	}
 
-
-
 	settingsHandler(setting := "", value := "", save := true) {
 		switch setting, 0 {
 			case "darkmode":
 				this.settings.darkMode := (value == -1 ? !this.settings.darkMode : value)
+				; todo: toggle darkmode
 			case "lastUsedFile":
 				this.settings.lastUsedFile := value
 			case "isSaved":
 				this.data.isSaved := (value == -1 ? !this.data.isSaved : value)
+				for _, g in this.guis {
+					if (this.data.isSaved && SubStr(g.Title, 1, 1) == "*")
+						g.Title := SubStr(g.Title, 2)
+					else if (!this.data.isSaved && SubStr(g.Title, 1, 1) != "*")
+						g.Title := "*" . g.Title
+				}
 			case "isInBackup":
 				this.data.isInBackup := (value == -1 ? !this.data.isInBackup : value)
 			default:
@@ -508,13 +522,28 @@ class TableFilter {
 		return 0
 	}
 
-	exit(*) {
+	;// GUI functions
 
+	editRowGuiEscape() {
+		; todo
+		; Gui, %editLineGUIOwnerHwnd%:-Disabled
+		; Gui, %GuiHwnd%:Destroy
+		; return
 	}
 
-
-	class guiInstance {
-
+	exit(exitReason, exitCode, *) {
+		if (exitReason == "Logoff" || exitReason == "Shutdown") {
+			if (!this.data.isSaved) {
+				res := MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes before loading " (file ? file : "a new File") "?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
+				if (res == "Cancel")
+					return 1
+				else if (res == "No")
+					return 0
+				else if (res == "Yes") {
+					this.saveFile()
+				}
+			}
+		}
 	}
 
 	static getDefaultSettings() {
@@ -529,7 +558,8 @@ class TableFilter {
 			backupInterval: 15, ; in minutes
 			useDefaultValues: true,
 			useDefaultRunic: true,
-			duplicateColumn: "Deutsch", ; maybe use index instead? as in, 2/3/4
+			duplicateColumn: "Deutsch",
+			copyColumn: "Runen",
 			filterCaseSense: false,
 			saveHotkey: "^s", ; IS THIS NECESSARY THO?????
 			guiHotkey: "^p",
