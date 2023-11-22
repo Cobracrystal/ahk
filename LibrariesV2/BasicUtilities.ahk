@@ -242,110 +242,116 @@ DateAddW(dateTime, value, timeUnit) {
 			throw Error("Invalid Time Unit: " timeUnit)
 	}
 }
-
-setPeriodicTimerOn(time, period, periodUnit := "Seconds", message := "", function := "") {
-	if (!IsTime(time))
-		throw Error("Invalid Timestamp: " . time)
-	if (period <= 0)
-		throw Error("Invalid Period: " period)
-	timeDiff := DateDiff(time, Now := A_Now, "Seconds")
-	if (timeDiff < 0) {
-		switch periodUnit, 0 {
-			case "Seconds", "S", "Minutes", "M", "Hours", "H", "Days", "D":
-				secs := DateDiff(DateAdd("1998", period, periodUnit), "1998", "Seconds")
-				timeDiff := Mod(timeDiff, secs) + secs
-			case "Weeks", "W":
-				secs := DateDiff(DateAdd("1998", period*7, "D"), "1998", "Seconds")
-				timeDiff := Mod(timeDiff, secs) + secs
-			case "Months", "Mo":
-				monthDiff := Mod((SubStr(time, 1, 4) - A_YYYY) * 12 + (SubStr(time, 5, 2) - A_MM), period)
-				if (monthDiff == 0) {
-					guessTime := A_YYYY . A_MM . SubStr(time, 7)
-					if (!IsTime(guessTime)) {
-						nextMonth := Format("{:02}", Mod(A_MM, 12) + 1)
-						nextYear := A_YYYY + A_MM//12 ; technically unnecessary since when the fuck do we have an invalid december date
-						rolledOverDays := Format("{:02}", SubStr(time, 7, 2) - DateDiff(nextYear . nextMonth, A_YYYY . A_MM, "D"))
-						guessTime := nextYear . nextMonth . rolledOverDays . SubStr(time, 9)
-						if (!IsTime(guessTime))
-							throw Error("Calculating a date just went wrong. Date calculated: " . guessTime)
-					}
-					else if (DateDiff(guessTime, Now, "Seconds") < 0) {
-						monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
-						guessTime := DateAddW(time, monthDiffFull + monthDiff + period, "Months")
-					}
-				}
-				else {
-					monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
-					guessTime := DateAddW(time, monthDiffFull + monthDiff + period, "Months")
-				}
-				timeDiff := DateDiff(guessTime, Now, "Seconds")
-			case "Years", "Y":
-				yearDiff := Mod(SubStr(time, 1, 4) - A_YYYY, period)
-				if (yearDiff == 0) {
-					guessTime := A_YYYY . SubStr(time, 5)
-					if (!IsTime(guessTime)) ; if leap year
-						guessTime := A_YYYY . SubStr(DateAdd(time, 1, "D"), 5)
-					if (DateDiff(guessTime, Now, "Seconds") < 0)
-						guessTime := DateAddW(time, A_YYYY - SubStr(time, 1, 4) + period, "Years")
-				}
-				else
-					guessTime := DateAddW(time, A_YYYY - SubStr(time, 1, 4) + yearDiff + period, "Years")
-				timeDiff := DateDiff(guessTime, Now, "Seconds")
-			default:
-				return
-		}
-	}
-	timeDNext := DateAdd(Now, timeDiff, "S")
-	msgbox(timeDiff)
-}
-
 /*
-* Given a set of time parts, returns a YYYYMMDDHH24MISS timestamp of the next time when all given parts match
-* 
+* Given a set of time parts, returns a YYYYMMDDHH24MISS timestamp of the earlist possible time in the future when all given parts match
+* If given time units with a gap, it will assume default values for units between (given month = 10, hours = 16, it will find the next instance of YEAR-10-01-16-00-00).
+* Breaks if given >30 days or a leap date
 */
 parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
-	return A_Now
-}
-
-setSpecificTimer(hours := -1, minutes := -1, seconds := -1, day := -1, month := -1, target := "") {
-	largestSetUnit := "Minute"
-	if (month == -1) {
-		month := A_MM
-		if (day == -1) {
-			day := A_DD
-			if (hours == -1) {
-				hours := A_Hour
-				if (minutes == -1)
-					return 0
+	Now := A_Now
+	data := gap(years?, months?, days?, hours?, minutes?, seconds?)
+	switch data[1] {
+		case 0:
+			return Now
+		case 1:
+			if (years == A_YYYY && data[2])
+				return parseTime(, months?, days?, hours?, minutes?, seconds?)
+			tStamp := (years ?? A_YYYY) tf(months ?? 1) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
+			if (!IsTime(tStamp)) {
+				if (!IsSet(years) && IsSet(months) && months == 2 && IsSet(days) && days == 29) ; correct leap year
+					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
+				else if (!IsSet(months) && days > 29) ; correct possible month error. no need for mod, since dec has 31 days
+					tStamp := SubStr(tStamp 1, 4) . tf(A_MM+1) . SubStr(tStamp, 7)
+				if (!IsTime(tStamp))
+					throw Error("Invalid date specified.")
 			}
-			else
-				largestSetUnit := "Hour"
-		}
-		else {
-			hours := (hours == -1 ? 7 : hours) ; if month is not set but day, put it as 7:00:00
-			largestSetUnit := "Day"
-		}
+			if (DateDiff(tStamp, Now, "S") > 0)
+				return tStamp
+			return 0 ; a year in the past will never occur again
+		case 2:
+			if (months == A_MM && data[2])
+				return parseTime(,,days?,hours?, minutes?, seconds?)
+			tStamp := A_YYYY tf(months) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
+			if (!IsTime(tStamp)) {
+				if (months == 2 && IsSet(days) && days == 29) ; leap year
+					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
+				if (!IsTime(tStamp))
+					throw Error("Invalid date specified.")
+			}
+			if (DateDiff(tStamp, Now, "S") >= 0)
+				return tStamp
+			return DateAddW(tStamp, 1, "Y")
+		case 3:
+			if (days == A_DD && data[2])
+				return parseTime(,,,hours?, minutes?, seconds?)
+			tStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
+			if (!IsTime(tStamp)) {
+				if (A_MM == 02 && days == 29) ; leap year
+					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
+				else if (days > 29) ; correct possible month error. no need for mod, since dec has 31 days
+					tStamp := SubStr(tStamp 1, 4) . tf(A_MM+1) . SubStr(tStamp, 7)
+				if (!IsTime(tStamp))
+					throw Error("Invalid date specified.")
+			}
+			if (DateDiff(tStamp, Now, "S") >= 0)
+				return tStamp
+			return DateAddW(tStamp, 1, "Mo")
+		case 4:
+			if (hours == A_Hour && data[2])
+				return parseTime(,,,,,seconds?)
+			tStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? 0) tf(seconds ?? 0)
+			if (DateDiff(tStamp, Now, "S") >= 0)
+				return tStamp
+			return DateAddW(tStamp, 1, "D")
+		case 5:
+			if (minutes == A_Min && !IsSet(seconds))
+				return Now
+			tStamp := SubStr(Now, 1, 10) . tf(minutes) . tf(seconds ?? 0)
+			if (DateDiff(tStamp, Now, "S") >= 0)
+				return tStamp
+			return DateAddW(tStamp, 1, "H")
+		case 6:
+			tStamp := SubStr(Now, 1, 12) . tf(seconds)
+			if (DateDiff(tStamp, Now, "S") >= 0)
+				return SubStr(Now, 1, 12) . tf(seconds)
+			return DateAddW(SubStr(Now, 1, 12) . tf(seconds), 1, "M")
 	}
-	else {
-		largestSetUnit := "Month"
-		day := (day == -1 ? 1 : day) ; day ?? 1, use unset instead of -1
-		hours := (hours == -1 ? 0 : hours) ; if month is set, alarm at 1.[month] at 00:00:00
+	tf(n) => Format("{:02}", n)
+
+	gap(y?, mo?, d?, h?, m?, s?) {
+		mapA := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?),	first := 0
+		for i, e in mapA {
+			if (A_Index == 1)
+				first := i
+			if (first+A_Index-1 != i)
+				return [first, true]
+		}
+		return [first, false]
 	}
-	minutes := (minutes == -1 ? 0 : minutes)
-	seconds := (seconds == -1 ? 0 : seconds)
-	
-	month := Format("{:02}", month)
-	day := Format("{:02}", day)
-	hours := Format("{:02}", hours)
-	minutes := Format("{:02}", minutes)
-	seconds := Format("{:02}", seconds)
-	; validate timestamp:
-	tS := A_YYYY . month . day . hours . minutes . seconds
-	if (!IsTime(tS))
-		throw Error()
-	
 }
 
+enumerateDay(day) {
+	d := Substr(day,1,2)
+	switch d {
+		case "mo":
+			day := 2
+		case "di","tu":
+			day := 3
+		case "mi","we":
+			day := 4
+		case "do","th":
+			day := 5
+		case "fr":
+			day := 6
+		case "sa":
+			day := 7
+		case "so","su":
+			day := 1
+		default:
+			return -1
+	}
+	return A_DD - A_WDAY + day
+}
 
 ExecScript(expression, Wait := true) {
 	input := '#Warn All, Off`nFileAppend(' . expression . ', "*")'

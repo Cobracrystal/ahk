@@ -16,7 +16,7 @@ class DiscordClient {
 	
 	sendMessage(content, id, dm := 0) {
 		if (dm)
-			channelID := this.createDM(id).id
+			channelID := this.createDM(id)["id"]
 		else
 			channelID := id
 		return this.callApi("POST", "/channels/" . channelID . "/messages", {content:content})
