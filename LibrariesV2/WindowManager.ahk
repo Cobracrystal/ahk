@@ -51,10 +51,9 @@ class WindowManager {
 		winMenu.Add("View Program Folder", this.menuHandler.Bind(this))
 		this.menu := winMenu
 		; init class variables
-		; this format is necessary to establish objects.
 		this.gui := -1
 		this.settings := { coords: [300, 200], showExcludedWindows: 0, detectHiddenWindows: 0
-			, excludeWindowsRegex:"(ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|^$)"}
+			, excludeWindowsRegex:"i)(?:ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|Program Manager|^$)"}
 	}
 
 	static guiCreate() {
@@ -81,9 +80,10 @@ class WindowManager {
 		for i, e in this.getAllWindowInfo()
 			this.LV.Add(,e.hwnd, e.title, e.process, e.state, e.xpos, e.ypos, e.width, e.height, e.class, e.processPath)
 		Loop(10)
-			this.LV.ModifyCol(A_Index, "AutoHdr")
+			this.LV.ModifyCol(A_Index, "+AutoHdr")
 		Loop(5)
 			this.LV.ModifyCol(A_Index+3, "+Integer")
+		this.LV.ModifyCol(1, "+Integer")
 		if ((c := this.LV.GetCount() + !redraw + 1) > 40) ; redraw -> adjust for insertWindowInfo on first; +1 for empty space
 			this.LV.Move(,,,640)
 		else if (c >= 20)
@@ -223,9 +223,8 @@ class WindowManager {
 		tp := WinGetTransparent(wHandle)
 		tp := (tp == "" ? 255 : tp)
 		transparencyGUI := Gui("Border -SysMenu +Owner" this.gui.hwnd, "Transparency Menu")
-	;	this.controls.transparencySubGUI.slider.content := transparency
 		transparencyGUI.AddText("x32", "Change Transparency")
-		transparencyGUI.AddSlider("x10 yp+20 AltSubmit Range0-255 NoTicks Page16 ToolTip", tp).OnEvent("Change", (obj, *) => WinSetTransparent(obj.Value == 255 ? "Off" : obj.Value, Integer(this.LV.GetText(this.LV.GetNext(), 1))))
+		transparencyGUI.AddSlider("x10 yp+20 AltSubmit Range0-255 NoTicks Page16 ToolTip", tp).OnEvent("Change", (obj, *) => WinSetTransparent(obj.Value, Integer(this.LV.GetText(this.LV.GetNext(), 1))))
 		transparencyGUI.AddButton("w80 yp+30 xp+20 Default", "OK").OnEvent("Click", this.transparencyGUIClose.bind(this))
 		transparencyGUI.OnEvent("Escape", this.transparencyGUIClose.bind(this))
 		transparencyGUI.OnEvent("Close", this.transparencyGUIClose.bind(this))
@@ -236,8 +235,11 @@ class WindowManager {
 	static transparencyGUIClose(obj, info := "") {
 		if (HasProp(obj, "Gui"))
 			obj := obj.gui
+		if (WinGetTransparent(wHandle := Integer(this.LV.GetText(this.LV.GetNext(), 1))) == 255)
+			WinSetTransparent("Off", wHandle)
 		obj.Destroy()
 		this.gui.Opt("-Disabled -AlwaysOnTop")
+		WinActivate(this.gui)
 	}
 	
 	; static transparencyGUIonChange(ctrlObj, info) {

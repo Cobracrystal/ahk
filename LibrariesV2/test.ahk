@@ -1,9 +1,8 @@
 #SingleInstance Force
-try {
-	t := WinGetProcessName(0x1038A)
-} catch OSError as e {
-	msgbox(e.What ", " e.Message ", " e.Extra)
-} 
+SetTitleMatchMode("RegEx")
+GroupAdd("asodhasuidfh", "i)Unbenannt")
+msgbox(winGetTitle("ahk_group asodhasuidfh"))
+; Msgbox(WinGetTitle("i)nvidia geforce overlay ahk_class i)cef-osc-widget|unbenannt)"))
 
 class test {
 
