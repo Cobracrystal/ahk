@@ -338,21 +338,23 @@ F11:: { 	; BTD6: Rebind Escape
 }
 
 ^!H:: {	; Change Window Shape
-	static toggle := false, circleWindow
+	static toggle := false, shapedWindow
 	if (toggle := !toggle) {
-		MouseGetPos(&xPosCircle, &yPosCircle, &circleWindow)
-		xPosCircle -= 100
-		yPosCircle -= 100
+		MouseGetPos(&xPosCircle, &yPosCircle, &shapedWindow)
+		WinGetPos(&x, &y, &w, &h, shapedWindow)
+		; xPosCircle -= 100
+		; yPosCircle -= 100
 		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", "ahk_id " circleWindow)
-		duoRect := "200-200 1500-200 1500-900 200-900 200-550 850-200 1500-550 850-900 200-550"
-		str := sierpinskiCoords(800, 150, 800, 5)
-	;	msgbox(str)
-		WinSetRegion(str, "ahk_id " circleWindow)
-		WinSetStyle("-0xC00000", "ahk_id " circleWindow) ; make it alwaysonTop
+		;	duoRect := "200-200 1500-200 1500-900 200-900 200-550 850-200 1500-550 850-900 200-550"
+		str := sierpinskiCoords(w//2, 50, w-50, h-60, 4)
+		WinSetStyle("-0xC00000", shapedWindow)
+		WinSetAlwaysOnTop(1, shapedWindow)
+		WinSetRegion(str, shapedWindow)
 	}
 	else {
-		WinSetRegion(, "ahk_id " circleWindow)
-		WinSetStyle("+0xC00000", "ahk_id " circleWindow)
+		WinSetRegion(, shapedWindow)
+		WinSetStyle("+0xC00000", shapedWindow)
+		WinSetAlwaysOnTop(0, shapedWindow)
 	}
 }
 
@@ -410,7 +412,7 @@ F11:: { 	; BTD6: Rebind Escape
 	TransparentTaskbar.setInvisibility("T", 0)
 }
 
-^+F12:: { ; Show/Hide Taskbar
+^+F9:: { ; Show/Hide Taskbar
 	static hide := false
 	TransparentTaskbar.hideShowTaskbar(hide := !hide)
 }
@@ -775,13 +777,13 @@ customExit(ExitReason, ExitCode) {
 ; ###########################################################################
 #HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
 
-sierpinskiCoords(x, y, size, depth) {
-	height := Integer(Round(sqrt(3)/2 * size))
+sierpinskiCoords(x, y, width, height, depth) {
+	; height := Integer(Round(sqrt(3)/2 * width))
 	if (depth == 0)
-		return Format("{}-{} {}-{} {}-{} {}-{} ", x, y, x+size//2, y+height, x-size//2, y+height, x, y)
-	str := sierpinskiCoords(x, y, size//2, depth-1) . x "-" y " "
-	str .= sierpinskiCoords(x+size//4, y+height//2, size//2, depth-1) . x "-" y " "
-	str .= sierpinskiCoords(x-size//4, y+height//2, size//2, depth-1) . x "-" y " "
+		return Format("{}-{} {}-{} {}-{} {}-{} ", x, y, x+width//2, y+height, x-width//2, y+height, x, y)
+	str := sierpinskiCoords(x, y, width//2, height//2, depth-1) . x "-" y " "
+	str .= sierpinskiCoords(x+width//4, y+height//2, width//2, height//2, depth-1) . x "-" y " "
+	str .= sierpinskiCoords(x-width//4, y+height//2, width//2, height//2, depth-1) . x "-" y " "
 	return str
 }
 
