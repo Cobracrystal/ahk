@@ -1,6 +1,6 @@
 ﻿;// made by Cobracrystal
 #Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
-/* JERE IS DOCUMENTATION 
+/* HERE IS DOCUMENTATION 
 
 PATHS can be found in settings at line 71, where they are set from line 73-76
 The convertToAudio setting (same area) is the default on launch, but can be changed within the GUI.

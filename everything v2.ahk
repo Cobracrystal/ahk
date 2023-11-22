@@ -14,7 +14,7 @@ SetTitleMatchMode(2) ;// Must Match Exact Title (1 = start with specified words,
 ; CoordMode,ToolTip,Window ;// both this and above are the default anyway, leaving for future reference
 ; Thread, NoTimers	;// thread doesn't get interrupted by timers. since i now have two timers, this blocks one of them, making it fail.
 ;// this would change the standard editing program for ahk to n++, but i changed the tray menu anyway so it works.
-; RegWrite REG_SZ, HKCR, AutoHotkeyScript\Shell\Edit\Command,, C:\Program Files (x86)\Notepad++\notepad++.exe `%1 
+; RegWrite REG_SZ, HKCR, AutoHotkeyScript\Shell\Edit\Command,, C:\Program Files (x86)\Notepad++\notepad++.exe `%1
 ;// unnecessary usually
 ; DetectHiddenWindows, On
 ;[style]} ______________________________________________________________________________________________
@@ -52,9 +52,9 @@ A_TrayMenu.Delete()
 ;// for windows in which ctrl+ should replace scrolling cause it sucks
 GroupAdd("zoomableWindows", "ahk_exe Mindustry.exe")
 ;// for windows that should be put in the corner when ctrlaltI'd
-GroupAdd("cornerMusicPlayers", "VLC media player ahk_exe vlc.exe",, "Wiedergabeliste")
-GroupAdd("cornerMusicPlayers", "Daum PotPlayer ahk_exe PotPlayerMini64.exe",, "Einstellungen")
-GroupAdd("cornerMusicPlayers", "foobar2000 ahk_exe foobar2000.exe",, "Scratchbox")
+GroupAdd("cornerMusicPlayers", "VLC media player ahk_exe vlc.exe", , "Wiedergabeliste")
+GroupAdd("cornerMusicPlayers", "Daum PotPlayer ahk_exe PotPlayerMini64.exe", , "Einstellungen")
+GroupAdd("cornerMusicPlayers", "foobar2000 ahk_exe foobar2000.exe", , "Scratchbox")
 
 ;[style]} ______________________________________________________________________________________________
 ;[style]							: STARTING FUNCTIONS
@@ -74,11 +74,11 @@ Menu, Timers, Disable, 1337 Timer: On
 Menu, Timers, Check, 1337 Timer: On
 */
 ;// transparent taskbar ini
-TransparentTaskbar.TransparentTaskbar(1,50)
+TransparentTaskbar.TransparentTaskbar(1, 50)
 ;// start clipboardwatcher
 OnClipboardChange(clipboardTracker, 1)
 ;// better icon
-TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think.ico",,true)
+TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think.ico", , true)
 ;// Timer because new Thread
 GroupAdd("rarReminders", "ahk_class RarReminder")
 GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
@@ -87,14 +87,14 @@ SetTimer(closeWinRarNotification, -100, -100000) ; priority -100k so it doesn't 
 internetConnectionLogger("Init", "C:\Users\Simon\Desktop\programs\programming\bat\log.txt")
 ;// Synchronize nextDNS IP
 if (!SCRIPTVAR_WASRELOADED)
-	timedTooltip(connectNextDNS(),4000)
+	timedTooltip(connectNextDNS(), 4000)
 ;// Initialize LaTeX Hotstrings
 LatexHotstrings(1)
 ;// replace the tray menu with my own
 createBetterTrayMenu()
 OnExit(customExit)
 return
-	
+
 ;[style]} ______________________________________________________________________________________________
 ;[style]			HOTKEYS	 		: CONTROL
 ;[style]{ ______________________________________________________________________________________________
@@ -106,37 +106,37 @@ return
 #SuspendExempt false
 
 #HotIf !WinActive("ahk_exe csgo.exe")
-^+LButton::{	; Text Modification Menu
-	textModifyMenu.Show()
+^+LButton:: {	; Text Modification Menu
+	TextEditMenu.ShowMenu()
 }
 #HotIf
 
-^U::{	; Time/Date Converter
+^U:: {	; Time/Date Converter
 	textTimestampConverter(A_ThisHotkey)
 }
 
-^I::{	; Show Hex code as Color
+^I:: {	; Show Hex code as Color
 	hexcodeColorPreview(A_ThisHotkey)
 }
 
 
-^+!NumpadSub::{	; Record Macro
+^+!NumpadSub:: {	; Record Macro
 	MacroRecorder.createMacro(A_ThisHotkey)
 }
 
-^F12::{ ; Toggle Hotkey Manager
+^F12:: { ; Toggle Hotkey Manager
 	HotkeyManager.hotkeyManager("T")
 }
 
-^F11::{ ; Shows a list of all Windows
+^F11:: { ; Shows a list of all Windows
 	WindowManager.windowManager("T")
 }
 
-^F10::{	; Neokeyboard Layout
+^F10:: {	; Neokeyboard Layout
 	NeoKeyboardLayout.KeyboardLayoutGUI("T")
 }
 
-^F9::{	; Shows Internet Connection
+^F9:: {	; Shows Internet Connection
 	internetConnectionLogger("T")
 }
 
@@ -144,11 +144,11 @@ return
 ; 	ReminderManager.ReminderManagerGUI("T")
 ; }
 
-^+K::{ ; Toggle Taskbar Transparency
+^+K:: { ; Toggle Taskbar Transparency
 	TransparentTaskbar.transparentTaskbar("T")
 }
 
-^+F11::{ ; Gives Key History
+^+F11:: { ; Gives Key History
 	ListLines()
 }
 
@@ -156,7 +156,7 @@ return
 ; 	YoutubeDLGui.YoutubeDLGui("T")
 ; }
 
-^!Numpad0::{	; Toggle NumpadKeys to Move Cursor
+^!Numpad0:: {	; Toggle NumpadKeys to Move Cursor
 	toggleNumpadMouseMove()
 }
 
@@ -164,10 +164,10 @@ toggleNumpadMouseMove() {
 	static init := 0
 	if !(init) {
 		Hotkey("Numpad2", moveMousePixel.bind(0, 1))
-		Hotkey("Numpad4", moveMousePixel.bind(-1,0))
+		Hotkey("Numpad4", moveMousePixel.bind(-1, 0))
 		Hotkey("Numpad6", moveMousePixel.bind(1, 0))
-		Hotkey("Numpad8", moveMousePixel.bind(0,-1))
-		Hotkey("NumpadEnter", clickMouse.Bind("L",0))
+		Hotkey("Numpad8", moveMousePixel.bind(0, -1))
+		Hotkey("NumpadEnter", clickMouse.Bind("L", 0))
 		Hotkey("NumpadAdd", clickMouse.Bind("L", 1))
 		init := 1
 		return
@@ -180,50 +180,50 @@ toggleNumpadMouseMove() {
 	Hotkey("NumpadAdd", "Toggle")
 }
 
-moveMousePixel(x,y, *) {
-	MouseMove(x,y,0,"R")
+moveMousePixel(x, y, *) {
+	MouseMove(x, y, 0, "R")
 }
 
 clickMouse(b, press := 0, *) {
 	b := SubStr(b, 1, 1)
 	if (press)
 		st := GetKeyState(b . "Button") ? "U" : "D"
-	MouseClick(b,,,,,st?)
+	MouseClick(b, , , , , st?)
 }
 
 
-^LWin Up::{ ; Replace Windows Search with EverythingSearch
+^LWin Up:: { ; Replace Windows Search with EverythingSearch
 	Run("everything.exe -newwindow", "C:\Program Files\Everything")
 	WinWaitActive("ahk_exe C:\Program Files\Everything\Everything.exe")
 	hwnd := WinGetID()
 	mmx := WinGetMinMax()
 	if (mmx == 1 || mmx == -1)
 		WinRestore()
-	winSlowMove(hwnd,40,400,784,648,8)
+	winSlowMove(hwnd, 40, 400, 784, 648, 8)
 	WinWaitNotActive("ahk_id " hwnd)
 	try WinClose("ahk_id" hwnd)
 }
 
 #HotIf WinActive("ahk_exe C:\Program Files\Everything\everything.exe")
-	^LWin Up::{ ; Close EverythingSearch if its active
-		WinClose("ahk_exe C:\Program Files\Everything\Everything.exe")
-	}
+^LWin Up:: { ; Close EverythingSearch if its active
+	WinClose("ahk_exe C:\Program Files\Everything\Everything.exe")
+}
 #HotIf
 
 #HotIf WinActive("ahk_exe vlc.exe")
-	^D::{		; VLC: Open/Close Media Playlist
-		SetControlDelay(-1) 
-		vlcid := WinGetID("VLC media player ahk_exe vlc.exe",,"Wiedergabeliste")
-		WinGetClientPos(,,,&vlcH,"ahk_id " . vlcid)
-		controlY := vlcH - 40
-		ControlSend("{Esc}",, "ahk_id " vlcid)
-		ControlClick("X212 Y" controlY, "ahk_id " vlcid,,,, "Pos NA")
-	}
+^D:: {		; VLC: Open/Close Media Playlist
+	SetControlDelay(-1)
+	vlcid := WinGetID("VLC media player ahk_exe vlc.exe", , "Wiedergabeliste")
+	WinGetClientPos(, , , &vlcH, "ahk_id " . vlcid)
+	controlY := vlcH - 40
+	ControlSend("{Esc}", , "ahk_id " vlcid)
+	ControlClick("X212 Y" controlY, "ahk_id " vlcid, , , , "Pos NA")
+}
 #HotIf
 
-~CapsLock::{ ; display capslock state
+~CapsLock:: { ; display capslock state
 	timedTooltip(GetKeyState("CapsLock", "T"))
-;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
+	;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
 }
 
 
@@ -231,21 +231,21 @@ clickMouse(b, press := 0, *) {
 ;[style]					 		: STANDARD / GAMES
 ;[style]{ ______________________________________________________________________________________________
 
-^!K::{	; Evaluate Shell Expression in-text
+^!K:: {	; Evaluate Shell Expression in-text
 	calculateExpression("c")
 }
 
-^+!NumpadEnter::{	; Launch Autoclicker
+^+!NumpadEnter:: {	; Launch Autoclicker
 	Run("C:\Users\Simon\Desktop\Autoclicker\AutoClickerPos.exe")
 }
 
 #HotIf WinActive("ahk_group zoomableWindows")
 ;[style]{----- Zoomable Windows
-^+::{	; Zoomable: Zoom in
+^+:: {	; Zoomable: Zoom in
 	Send("{WheelUp}")
 }
 
-^-::{	; Zoomable: Zoom out
+^-:: {	; Zoomable: Zoom out
 	Send("{WheelDown}")
 }
 #HotIf
@@ -301,7 +301,7 @@ return
 #HotIf WinActive("ahk_exe bloonstd6.exe")
 ;[style]{----- Btd6
 
-F11::{ 	; BTD6: Rebind Escape
+F11:: { 	; BTD6: Rebind Escape
 	Send("{Escape}")
 }
 
@@ -335,7 +335,7 @@ return
 	MouseMove, ax, ay, 0
 return
 */
-^,::{	; BTD6: press comma
+^,:: {	; BTD6: press comma
 	static toggle := 0
 	if !(presscomma)
 		presscomma := Send.Bind(",")
@@ -345,7 +345,7 @@ return
 		SetTimer(presscomma, 0)
 }
 
-^.::{	; BTD6: press dot
+^.:: {	; BTD6: press dot
 	static toggle := 0
 	if !(pressdot)
 		pressdot := Send.Bind(".")
@@ -355,7 +355,7 @@ return
 		SetTimer(pressdot, 0)
 }
 
-^-::{	; BTD6: press minus
+^-:: {	; BTD6: press minus
 	static toggle := 0
 	if !(pressminus)
 		pressminus := Send.Bind("-")
@@ -436,41 +436,41 @@ return
 */
 #HotIf WinActive("ahk_class Photo_Lightweight_Viewer")
 ;[style]{----- Fotoanzeige
-^T::{	; Fotoanzeige: StrgT->ShiftEsc
+^T:: {	; Fotoanzeige: StrgT->ShiftEsc
 	Send("!{Esc}")
 }
 
-^W::{	; Fotoanzeige: StrgW->AltF4
+^W:: {	; Fotoanzeige: StrgW->AltF4
 	Send("!{F4}")
 }
 #HotIf
 
 ;[style]}
 ;[style]} ______________________________________________________________________________________________
-;[style]							: WINDOWS 
+;[style]							: WINDOWS
 ;[style]{ ______________________________________________________________________________________________
 
-!LButton::{	; Drag Window 
+!LButton:: {	; Drag Window
 	AltDrag.moveWindow(A_ThisHotkey)
 }
 
-!RButton::{	; Resize Window 
+!RButton:: {	; Resize Window
 	AltDrag.resizeWindow(A_ThisHotkey)
 }
 
-!MButton::{	; Toggle Max/Restore of clicked window
+!MButton:: {	; Toggle Max/Restore of clicked window
 	AltDrag.toggleMaxRestore()
 }
 
-!WheelDown::{	; Scale Window Down
+!WheelDown:: {	; Scale Window Down
 	AltDrag.scaleWindow(-1)
 }
 
-!WheelUp::{	; Scale Window Up
+!WheelUp:: {	; Scale Window Up
 	AltDrag.scaleWindow(1)
 }
 
-^NumpadMult::{	; Show Mouse Coordinates
+^NumpadMult:: {	; Show Mouse Coordinates
 	static toggle := false
 	if (toggle := !toggle)
 		SetTimer(showcoords, 50)
@@ -480,7 +480,7 @@ return
 	}
 }
 
-^!H::{	; Make Window Circle Visible
+^!H:: {	; Make Window Circle Visible
 	static toggle := false, circleWindow
 	if (toggle := !toggle) {
 		MouseGetPos(&xPosCircle, &yPosCircle, &circleWindow)
@@ -491,13 +491,13 @@ return
 		;	MsgBox, %xPosCircle%, %yPosCircle%, ahk_id %circleWindow%
 	}
 	else {
-		WinSetRegion(,"ahk_id " circleWindow)
+		WinSetRegion(, "ahk_id " circleWindow)
 		WinSetStyle("+0xC00000", "ahk_id " circleWindow)
 	}
 }
 
 
-^!+I::{ ; Center & Adjust Active Window
+^!+I:: { ; Center & Adjust Active Window
 	if WinActive("ahk_group cornerMusicPlayers")
 		WinMove(-600, 550, 515, 550)
 	else if WinActive("Discord ahk_exe Discord.exe")
@@ -506,19 +506,19 @@ return
 		center_window_on_monitor(WinExist("A"), 0.8)
 }
 
-^!+H::{ ; Make Active Window Transparent
+^!+H:: { ; Make Active Window Transparent
 	static toggle := false
-	if (toggle:= !toggle)
-		WinSetTransparent(120, "A") 
+	if (toggle := !toggle)
+		WinSetTransparent(120, "A")
 	else
 		WinSetTransparent("Off", "A")
 }
 
-^+H::{ ; Make Taskbar invisible 
+^+H:: { ; Make Taskbar invisible
 	TransparentTaskbar.setInvisibility("T", 0)
 }
 
-<^>!M::{		; Minimizes Active Window
+<^>!M:: {		; Minimizes Active Window
 	static toggle := false, winToggleID
 	if (toggle := !toggle) {
 		winToggleID := WinGetID("A")
@@ -538,14 +538,14 @@ return
 ;[style]} ______________________________________________________________________________________________
 ;[style]							: EXPERIMENTAL / TESTING / TEMPORARY
 ;[style]{ ______________________________________________________________________________________________
-^+!F11::{ ; Block keyboard input until password "password123" is typed
+^+!F11:: { ; Block keyboard input until password "password123" is typed
 	;blockInput(true, "password123")
 	RunAsAdmin()
-	password := "password123" 
-	for key in ["CTRL","SHIFT","ALT"]
+	password := "password123"
+	for key in ["CTRL", "SHIFT", "ALT"]
 		KeyWait(key)
 	BlockInput(1)
-	hook := InputHook("C*",,password)
+	hook := InputHook("C*", , password)
 	hook.Start()
 	hook.Wait()
 	BlockInput(0)
@@ -565,7 +565,7 @@ showcoords() {
 }
 
 winSlowMove(hwnd, endX := "", endY := "", endW := "", endH := "", speed := 1) {
-	WinDelay:=A_WinDelay
+	WinDelay := A_WinDelay
 	SetWinDelay(-1)
 	mmx := WinGetMinMax("ahk_id " hwnd)
 	if (mmx == 1 || mmx == -1)
@@ -576,15 +576,15 @@ winSlowMove(hwnd, endX := "", endY := "", endW := "", endH := "", speed := 1) {
 	if (speed == 0) {
 		WinMove(endX, endY, endW, endH, "ahk_id " hwnd)
 	} else {
-		iter := Ceil(((endX != "" ? Abs(iniX-endX) : 0)+(endY != "" ? Abs(iniY-endY) : 0)+(endW != "" ? Abs(iniW-endW) : 0)+(endH != "" ? Abs(iniH-endH) : 0))/(speed))
-		tX := (endX != "" ? (endX-iniX) : 0)
-		tY := (endY != "" ? (endY-iniY) : 0)
-		tW := (endW != "" ? (endW-iniW) : 0)
-		tH := (endH != "" ? (endH-iniH) : 0)
-		Loop(iter)
+		iter := Ceil(((endX != "" ? Abs(iniX - endX) : 0) + (endY != "" ? Abs(iniY - endY) : 0) + (endW != "" ? Abs(iniW - endW) : 0) + (endH != "" ? Abs(iniH - endH) : 0)) / (speed))
+		tX := (endX != "" ? (endX - iniX) : 0)
+		tY := (endY != "" ? (endY - iniY) : 0)
+		tW := (endW != "" ? (endW - iniW) : 0)
+		tH := (endH != "" ? (endH - iniH) : 0)
+		Loop (iter)
 		{
-			sT := (1-cos(A_Index/iter*3.1415926))/2
-			WinMove(iniX+tX*sT, iniY+tY*sT, iniW+tW*sT, iniH+tH*sT, "ahk_id " hwnd)
+			sT := (1 - cos(A_Index / iter * 3.1415926)) / 2
+			WinMove(iniX + tX * sT, iniY + tY * sT, iniW + tW * sT, iniH + tH * sT, "ahk_id " hwnd)
 		}
 	}
 	SetWinDelay(WinDelay)
@@ -594,17 +594,17 @@ center_window_on_monitor(hwnd, size_percentage := 0.714286) {
 	NumPut("Uint", 40, monitorInfo := Buffer(40))
 	monitorHandle := DllCall("MonitorFromWindow", "Ptr", hwnd, "UInt", 0x2, "Ptr")
 	DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
-	
-	workLeft      := NumGet(monitorInfo, 20, "Int") ; Left
-	workTop       := NumGet(monitorInfo, 24, "Int") ; Top
-	workRight     := NumGet(monitorInfo, 28, "Int") ; Right
-	workBottom    := NumGet(monitorInfo, 32, "Int") ; Bottom
+
+	workLeft := NumGet(monitorInfo, 20, "Int") ; Left
+	workTop := NumGet(monitorInfo, 24, "Int") ; Top
+	workRight := NumGet(monitorInfo, 28, "Int") ; Right
+	workBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
 	WinRestore("ahk_id " hwnd)
 	WinMove(workLeft + (workRight - workLeft) * (1 - size_percentage) / 2 ; // left edge of screen + half the width of it - half the width of the window, to center it.
-				 , workTop + (workBottom - workTop) * (1 - size_percentage) / 2  ; // same as above but with top bottom
-				 , (workRight - workLeft) * size_percentage	; // width
-				 , (workBottom - workTop) * size_percentage	; // height
-				 , "ahk_id " hwnd)
+		, workTop + (workBottom - workTop) * (1 - size_percentage) / 2  ; // same as above but with top bottom
+		, (workRight - workLeft) * size_percentage	; // width
+		, (workBottom - workTop) * size_percentage	; // height
+		, "ahk_id " hwnd)
 }
 
 ;[style]} ______________________________________________________________________________________________
@@ -619,13 +619,13 @@ runAsAdmin() {
 	if !A_IsAdmin
 	{
 		if A_IsCompiled
-			DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_ScriptFullPath, "str", params , "str", A_WorkingDir, "int", 1)
+			DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_ScriptFullPath, "str", params, "str", A_WorkingDir, "int", 1)
 		else
 			DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_AhkPath, "str", '"' . A_ScriptFullPath . '"' . A_Space . params, "str", A_WorkingDir, "int", 1)
 		ExitApp()
 	}
 }
-	
+
 connectNextDNS() {
 	whr := ComObject("WinHttp.WinHttpRequest.5.1")
 	whr.Open("GET", "https://link-ip.nextdns.io/8b77eb/e2c727ac3ea569ce", true)
@@ -665,7 +665,7 @@ internetConnectionLogger(mode := "T", path := "") {
 		if (WinExist("INTERNET_LOGGER"))
 			internetConsolePID := WinGetPID("INTERNET_LOGGER")
 		else {
-			Run(A_ComSpec .  ' /c "title INTERNET_LOGGER && mode con: cols=65 lines=10 && powershell C:\Users\Simon\Desktop\programs\programming\bat\internetLogger.ps1 -path "' . logFile . '""',,"Hide", &internetConsolePID)
+			Run(A_ComSpec . ' /c "title INTERNET_LOGGER && mode con: cols=65 lines=10 && powershell C:\Users\Simon\Desktop\programs\programming\bat\internetLogger.ps1 -path "' . logFile . '""', , "Hide", &internetConsolePID)
 			WinWait("INTERNET_LOGGER")
 			WinSetAlwaysOnTop(1, "INTERNET_LOGGER")
 		}
@@ -742,9 +742,9 @@ trayMenuHandler(itemName, *) {
 			suspendMenu.ToggleCheck("Suspend Hotkeys")
 			Suspend(-1)
 			if (A_IsSuspended)
-				TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think Warn.ico",, true)
+				TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think Warn.ico", , true)
 			else
-				TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think.ico",, true)
+				TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think.ico", , true)
 		case "Suspend Reload":
 			suspendMenu.ToggleCheck("Suspend Reload")
 			Hotkey("^+R", "Toggle")
@@ -772,7 +772,7 @@ customExit(ExitReason, ExitCode) {
 ;	----- NGU  -----
 ;[style]{	----------------
 
-;[style]}	----- 
+;[style]}	-----
 
 ;	-- Geometry Arena --
 ;[style]{	--------------------
@@ -798,7 +798,7 @@ findplace_piece(x,y,x2,y2) {
 		}
 		MouseClickDrag, Left,,,x+xp*78,y
 		Sleep(10)
-	} 
+	}
 	SendMode Input
 }
 */
@@ -850,7 +850,7 @@ determineCampaign(y := -1) {
 	WinGet, t_win, ID, ahk_exe Idling to Rule the Gods.exe
 	if (win != t_win)
 		InputBox, d, Campaign, Enter the Campaign Number:`n1 - Growth`, 2 - Divinity`, 3 - Food`, 4 - Item`n5 - Level`, 6 - Multiplier`, 7 - God Power`nNote: This will make your mouse virtually inaccessible during this hotkey
-	else 
+	else
 		d := Ceil((y - 247) / 76)
 	if (d < 1) or (d > 7)
 		return -1
@@ -881,7 +881,7 @@ closeWinRarNotification() {
 ;[style]			HOTSTRINGS		: HOTKEYS FOR HOTSTRINGS
 ;[style]{ ______________________________________________________________________________________________
 
-^+!F12::{ ; Toggles LaTeX Hotstrings
+^+!F12:: { ; Toggles LaTeX Hotstrings
 	LatexHotstrings()
 }
 
@@ -891,30 +891,30 @@ closeWinRarNotification() {
 
 ;						: EXPANSION	: COMPLICATED STRINGS
 ;[style]{ --------------------------------
-:*:@potet::{
+:*:@potet:: {
 	fastPrint("<@245189840470147072>")
 }
-:*:@burny::{
+:*:@burny:: {
 	fastPrint("<@318350925183844355>")
 }
-:*:@Y::{
+:*:@Y:: {
 	fastPrint("<@354316862735253505>")
 }
-:*:@zyntha::{
+:*:@zyntha:: {
 	fastPrint("<@330811222939271170>")
 }
-:*:@astro::{
+:*:@astro:: {
 	fastPrint("<@193734142704353280>")
 }
-:*:@rein::{
+:*:@rein:: {
 	fastPrint("<@315661562398638080>")
 }
-::from:me::{
+::from:me:: {
 	fastPrint("from:245189840470147072 ")
 }
 
 
-;[style]} 
+;[style]}
 ;									: SPECIAL SYMBOLS / LaTeX
 ;[style]{ --------------------------------
 
@@ -926,7 +926,7 @@ closeWinRarNotification() {
 :*?:+-::±
 :*?:~=::≈
 :*:\ß::ẞ
-:*:\disap::ಠ_ಠ 
+:*:\disap::ಠ_ಠ
 
 ;[style]}
 ;						: AUTOCORRECT	: ENGLISH
@@ -934,26 +934,26 @@ closeWinRarNotification() {
 :*:yall::y'all
 :*:dont::don't
 :*:wont::won't
-:*:didnt::didn't 
+:*:didnt::didn't
 :*:itll::it'll
-:*:theres::there's 
-:*:thats::that's 
+:*:theres::there's
+:*:thats::that's
 :*:isnt::isn't
-:*:everyones::everyone's 
-:*:aint::ain't 
-:*:mustve::must've 
-:*:thatll::that'll 
-:*:theyd::they'd 
-:*:youve::you've 
-:*:youd::you'd 
-:*:theyll::they'll 
+:*:everyones::everyone's
+:*:aint::ain't
+:*:mustve::must've
+:*:thatll::that'll
+:*:theyd::they'd
+:*:youve::you've
+:*:youd::you'd
+:*:theyll::they'll
 :*:youll::you'll
-:*:theyre::they're 
-:*:youre::you're 
-:*:doesnt::doesn't 
+:*:theyre::they're
+:*:youre::you're
+:*:doesnt::doesn't
 :*:shouldve::should've
-:*:couldnt::couldn't 
-:*:shouldnt::shouldn't 
+:*:couldnt::couldn't
+:*:shouldnt::shouldn't
 :*:couldnt::couldn't
 :*:wouldve::would've
 :*:couldve::could've
@@ -979,7 +979,7 @@ closeWinRarNotification() {
 
 ;[style]} ______________________________________________________________________________________________
 ;[style]			DEPRECATED : FUNCTIONS
-;[style]{ ______________________________________________________________________________________________ 
+;[style]{ ______________________________________________________________________________________________
 
 
 ;[style]} ______________________________________________________________________________________________
@@ -987,14 +987,12 @@ closeWinRarNotification() {
 #HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
 
 
-
-^+!Ä::{	; Reload other script
-	PostMessage(0x111, 65303,,"ahk_id " 0x408f2)
+^+!Ä:: {	; Reload other script
+	PostMessage(0x111, 65303, , "ahk_id " 0x408f2)
 }
 
 
-
-^m::{ ; Get Permutations
+^m:: { ; Get Permutations
 	A_Clipboard := getAllPermutations("12345", "abcde")
 }
 
@@ -1005,12 +1003,12 @@ getAllPermutations(str1, str2) {
 	n := StrLen(str1)
 	str2Arr := StrSplit(str2)
 	arr := [str1]
-	Loop(n)
+	Loop (n)
 	{
 		i := A_Index
 		arr2 := []
 		for j, e in arr
-			arr2.push(SubStr(str1, 1, -1 * i) . str2Arr[n-i+1] . SubStr(e, n-i+2))
+			arr2.push(SubStr(str1, 1, -1 * i) . str2Arr[n - i + 1] . SubStr(e, n - i + 2))
 		arr.push(arr2*)
 	}
 	for i, e in arr
@@ -1020,11 +1018,11 @@ getAllPermutations(str1, str2) {
 
 clickloop(rows, columns, rHeight, cWidth) {
 	MouseGetPos(&initialX, &initialY)
-	Loop(rows) {
+	Loop (rows) {
 		i := A_Index - 1
-		Loop(columns) {
+		Loop (columns) {
 			j := A_Index - 1
-			MouseClick("L", initialX+j*cWidth, initialY+i*rHeight)
+			MouseClick("L", initialX + j * cWidth, initialY + i * rHeight)
 			Sleep(10)
 		}
 	}
@@ -1054,37 +1052,39 @@ makeTextAnsiColorful(str) {
 	{
 		if (A_Loopfield != " ")
 			tStr .= "`[" . Random(30, 38) . "m" . A_Loopfield
-		else 
+		else
 			tStr .= A_Loopfield
 	}
 	return tStr
 }
 
-^l::{ ; Make colorful Text
+^l:: { ; Make colorful Text
 	text := fastCopy()
 	text := makeTextAnsiColorful(text)
 	fastPrint(text)
 }
 
 
-^+F10::{ ; Show/Hide Taskbar
+^+F10:: { ; Show/Hide Taskbar
 	static hide := false
 	HideShowTaskbar(hide := !hide)
 }
 
 HideShowTaskbar(action) {
-   static ABM_SETSTATE := 0xA, ABS_AUTOHIDE := 0x1, ABS_ALWAYSONTOP := 0x2
-   APPBARDATA := Buffer(size := 2*A_PtrSize + 2*4 + 16 + A_PtrSize, 0)
-   NumPut("Uint", size, APPBARDATA)
-   NumPut("Ptr", WinExist("ahk_class Shell_TrayWnd"), APPBARDATA, A_PtrSize)
-   NumPut("Uint", action ? ABS_AUTOHIDE : ABS_ALWAYSONTOP, APPBARDATA, size - A_PtrSize)
-   DllCall("Shell32\SHAppBarMessage", "UInt", ABM_SETSTATE, "Ptr", APPBARDATA)
+	static ABM_SETSTATE := 0xA, ABS_AUTOHIDE := 0x1, ABS_ALWAYSONTOP := 0x2
+	APPBARDATA := Buffer(size := 2 * A_PtrSize + 2 * 4 + 16 + A_PtrSize, 0)
+	NumPut("Uint", size, APPBARDATA)
+	NumPut("Ptr", WinExist("ahk_class Shell_TrayWnd"), APPBARDATA, A_PtrSize)
+	NumPut("Uint", action ? ABS_AUTOHIDE : ABS_ALWAYSONTOP, APPBARDATA, size - A_PtrSize)
+	DllCall("Shell32\SHAppBarMessage", "UInt", ABM_SETSTATE, "Ptr", APPBARDATA)
 }
 
 
-
-
-^O::{ ; Load Latex Hotstrings
+^O:: { ; Load Latex Hotstrings
 	HotstringLoader.load(A_WorkingDir . "\everything\LatexHotstrings_ahk2.json", "LatexHotstrings")
 }
 
+^k::{
+	msgbox(selectFolderEx(A_WorkingDir,"Select Your mom",,"lmao"))
+}
+; CHECK IF THE objrelease ARE NECESSARY, ASK IN DISCORD POTENTIALLY!

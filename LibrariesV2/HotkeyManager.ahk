@@ -139,7 +139,7 @@ class HotkeyManager {
 			if (count > 1) ; skip strings containing two quotes before ::
 				continue
 			; matches duo keys, modifier keys, modifie*d* leys, numeric value hotkeys, virtual key code hkeys and gets comment after
-			if RegExMatch(A_LoopField,"^((?!(?:;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`").*`".*::)).*)::{?(?:.*;)?\s*(.*)", &match)	{
+			if RegExMatch(A_LoopField,"^((?!(?:;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`").*`".*::)).*)::\s*{?(?:.*;)?\s*(.*)", &match)	{
 				comment := match[2]
 				hkey := LTrim(match[1])
 				if (InStr(hkey, " & ")) { ; if duo hotkey, modifiers are impossible so push

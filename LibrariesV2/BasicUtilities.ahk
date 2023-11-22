@@ -16,11 +16,6 @@ class TrayMenu {
 			return this.menus[menuName]
 		}
 	}
-
-	static hasSubmenu(Menu, subMenu) {
-		h := Menu.Handle
-
-	}
 }
 
 class BetterMenu extends Menu {
@@ -69,7 +64,7 @@ fastPrint(text) {
 
 arrayContains(array, t) {
 	for index, element in array
-		if(element = t)
+		if (element = t)
 			return index
 	return 0
 }
@@ -78,13 +73,13 @@ mapContains(array, key, value) {
 	for i, e in array
 		if (e[key] == value)
 			return i
-	return 0		
+	return 0
 }
 
 arrayRemove(&array, t, removeAll := 1) {
 	for i, e in array
 		if (i != A_Index)
-			throw TypeError("This function does not handle key-pair object.")
+			throw TypeError("This function does not handle objects/Maps.")
 	toRemove := []
 	for index, element in array
 	{
@@ -107,7 +102,7 @@ reverseArray(array) { ; linear array, gives weird stuff with assoc
 	for i, e in array
 		arr[array.Count() - i + 1] := e
 	return arr
-}	
+}
 
 sortArray(arr, mode := "") {
 	arr2 := []
@@ -142,14 +137,14 @@ sortMap(map, key, mode := "") {
 
 reverseString(str) {
 	result := ""
-	Loop Parse, str 
+	Loop Parse, str
 		result := A_LoopField . result
 	return result
 }
 
-rotateStr(str, offset:=0) {
-	offset := Mod(offset,StrLen(str))
-	return SubStr(str, -1*offset+1) . SubStr(str, 1, -1*offset)
+rotateStr(str, offset := 0) {
+	offset := Mod(offset, StrLen(str))
+	return SubStr(str, -1 * offset + 1) . SubStr(str, 1, -1 * offset)
 }
 
 ReplaceChars(Text, Chars, ReplaceChars) {
@@ -161,7 +156,7 @@ ReplaceChars(Text, Chars, ReplaceChars) {
 		Loop Parse, Chars
 		{
 			if (A_LoopField = Char) {
-				ReplacedText := SubStr(ReplacedText, 1, Index-1) . SubStr(ReplaceChars, A_Index, 1) . SubStr(ReplacedText, Index+1)
+				ReplacedText := SubStr(ReplacedText, 1, Index - 1) . SubStr(ReplaceChars, A_Index, 1) . SubStr(ReplacedText, Index + 1)
 				break
 			}
 		}
@@ -179,37 +174,37 @@ recursiveReplaceMap(string, &from, to, index := 1) { ; why not map/keyarray? bec
 	return replacedString
 }
 
-ExecScript(expression, Wait:=true) {
+ExecScript(expression, Wait := true) {
 	input := '#Warn All, Off`nFileAppend(' . expression . ', "*")'
-    shell := ComObject("WScript.Shell")
-    exec := shell.Exec("AutoHotkey.exe /ErrorStdOut *")
-    exec.StdIn.Write(input)
-    exec.StdIn.Close()
-    if Wait
-        return exec.StdOut.ReadAll()
+	shell := ComObject("WScript.Shell")
+	exec := shell.Exec("AutoHotkey.exe /ErrorStdOut *")
+	exec.StdIn.Write(input)
+	exec.StdIn.Close()
+	if Wait
+		return exec.StdOut.ReadAll()
 }
 
 cmdRet(sCmd, callBackFuncObj := "", encoding := "CP0") {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
 	static HANDLE_FLAG_INHERIT := 0x00000001, flags := HANDLE_FLAG_INHERIT
 		, STARTF_USESTDHANDLES := 0x100, CREATE_NO_WINDOW := 0x08000000
-	hPipeRead := unset,	hPipeWrite := unset
+	hPipeRead := unset, hPipeWrite := unset
 	DllCall("CreatePipe", "PtrP", hPipeRead, "PtrP", hPipeWrite, "Ptr", 0, "UInt", 0)
 	DllCall("SetHandleInformation", "Ptr", hPipeWrite, "UInt", flags, "UInt", HANDLE_FLAG_INHERIT)
 
-	STARTUPINFO := Buffer(siSize := A_PtrSize*4 + 4*8 + A_PtrSize*5, 0)
+	STARTUPINFO := Buffer(siSize := A_PtrSize * 4 + 4 * 8 + A_PtrSize * 5, 0)
 	NumPut("Uint", siSize, STARTUPINFO)
-	NumPut(STARTF_USESTDHANDLES, STARTUPINFO, A_PtrSize*4 + 4*7)
-	NumPut(hPipeWrite          , STARTUPINFO, A_PtrSize*4 + 4*8 + A_PtrSize*3)
-	NumPut(hPipeWrite          , STARTUPINFO, A_PtrSize*4 + 4*8 + A_PtrSize*4)
+	NumPut(STARTF_USESTDHANDLES, STARTUPINFO, A_PtrSize * 4 + 4 * 7)
+	NumPut(hPipeWrite, STARTUPINFO, A_PtrSize * 4 + 4 * 8 + A_PtrSize * 3)
+	NumPut(hPipeWrite, STARTUPINFO, A_PtrSize * 4 + 4 * 8 + A_PtrSize * 4)
 
-	PROCESS_INFORMATION := Buffer(A_PtrSize*2 + 4*2, 0)
+	PROCESS_INFORMATION := Buffer(A_PtrSize * 2 + 4 * 2, 0)
 
 	if !DllCall("CreateProcess", "Ptr", 0, "Str", sCmd, "Ptr", 0, "Ptr", 0, "UInt", true, "UInt", CREATE_NO_WINDOW
-		, "Ptr", 0, "Ptr", 0, "Ptr", &STARTUPINFO, "Ptr", &PROCESS_INFORMATION)	{
-		DllCall("CloseHandle", "Ptr", hPipeRead)
-		DllCall("CloseHandle", "Ptr", hPipeWrite)
-		throw Error("CreateProcess has failed")
+		, "Ptr", 0, "Ptr", 0, "Ptr", &STARTUPINFO, "Ptr", &PROCESS_INFORMATION) {
+			DllCall("CloseHandle", "Ptr", hPipeRead)
+			DllCall("CloseHandle", "Ptr", hPipeWrite)
+			throw Error("CreateProcess has failed")
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := buffer(4096)
@@ -221,29 +216,71 @@ cmdRet(sCmd, callBackFuncObj := "", encoding := "CP0") {
 		if (callBackFuncObj)
 			callBackFuncObj.call(stdOut)
 	}
-	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION,0, "Uint"))
+	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, 0, "Uint"))
 	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, A_PtrSize, "Uint"))
 	DllCall("CloseHandle", "Ptr", hPipeRead)
 	return sOutput
 }
 
 execShell(command) {
-    shell := ComObject("WScript.Shell")
-    exec := shell.Exec(A_Comspec " /C " command)
-    return exec.StdOut.ReadAll()
+	shell := ComObject("WScript.Shell")
+	exec := shell.Exec(A_Comspec " /C " command)
+	return exec.StdOut.ReadAll()
+}
+
+readFileIntoVar(path, encoding := "UTF-8") {
+	return FileOpen(path, "r", encoding).Read()
+}
+
+selectFolderEx(startingFolder := "", Prompt := "", OwnerHwnd := 0, OkBtnLabel := "") {
+	static osVersion := DllCall("GetVersion", "UChar")
+	static IID_IShellItem := Buffer(16, 0)
+		, Show := A_PtrSize * 3
+		, SetOptions := A_PtrSize * 9
+		, SetFolder := A_PtrSize * 12
+		, SetTitle := A_PtrSize * 17
+		, SetOkButtonLabel := A_PtrSize * 18
+		, GetResult := A_PtrSize * 20
+	DllCall("Ole32.dll\IIDFromString", "WStr", "{43826d1e-e718-42ee-bc55-a1e261c37bfe}", "Ptr", IID_IShellItem)
+	selectedFolder := "", folderItem := 0, shellItem := 0, StrPtrVar := 0
+	OwnerHwnd := DllCall("IsWindow", "Ptr", OwnerHwnd, "UInt") ? OwnerHwnd : 0
+	if !(FileDialog := ComObject("{DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7}", "{42f85136-db7e-439c-85f1-e4075d135fc8}"))
+		Return ""
+	VTBL := NumGet(FileDialog.ptr, "UPtr")
+	; FOS_CREATEPROMPT | FOS_NOCHANGEDIR | FOS_PICKFOLDERS
+	DllCall(NumGet(VTBL + SetOptions, "UPtr"), "Ptr", FileDialog, "UInt", 0x00002028, "UInt")
+	if (startingFolder != "")
+		if !DllCall("Shell32.dll\SHCreateItemFromParsingName", "WStr", startingFolder, "Ptr", 0, "Ptr", IID_IShellItem, "PtrP", &folderItem)
+			DllCall(NumGet(VTBL + SetFolder, "UPtr"), "Ptr", FileDialog, "Ptr", folderItem, "UInt")
+	if (Prompt != "")
+		DllCall(NumGet(VTBL + SetTitle, "UPtr"), "Ptr", FileDialog, "WStr", Prompt, "UInt")
+	if (OkBtnLabel != "")
+		DllCall(NumGet(VTBL + SetOkButtonLabel, "UPtr"), "Ptr", FileDialog, "WStr", OkBtnLabel, "UInt")
+	if !DllCall(NumGet(VTBL + Show, "UPtr"), "Ptr", FileDialog, "Ptr", OwnerHwnd, "UInt") {
+		if !DllCall(NumGet(VTBL + GetResult, "UPtr"), "Ptr", FileDialog, "PtrP", &ShellItem, "UInt") {
+			GetDisplayName := NumGet(NumGet(ShellItem + 0, "UPtr"), A_PtrSize * 5, "UPtr")
+			if !DllCall(GetDisplayName, "Ptr", ShellItem, "UInt", 0x80028000, "PtrP", &StrPtrVar) ; SIGDN_DESKTOPABSOLUTEPARSING
+				selectedFolder := StrGet(StrPtrVar, "UTF-16"), DllCall("Ole32.dll\CoTaskMemFree", "Ptr", StrPtrVar)
+		;	ObjRelease(shellItem)
+		}
+	}
+;	if (folderItem)
+;	   ObjRelease(folderItem)
+;	ObjRelease(FileDialog.Ptr)
+	return selectedFolder
 }
 
 windowGetCoordinates(wHandle) {
 	minimize_status := WinGetMinMax(wHandle)
-	if (minimize_status != -1) 
-		WinGetPos(&x, &y,,, wHandle)
+	if (minimize_status != -1)
+		WinGetPos(&x, &y, , , wHandle)
 	else {
 		NumPut("Uint", 44, pos := Buffer(44, 0))
 		DllCall("GetWindowPlacement", "uint", wHandle, "uint", pos)
 		x := NumGet(pos, 28, "int")
 		y := NumGet(pos, 32, "int")
 	}
-	return [x,y]
+	return [x, y]
 }
 
 timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
@@ -251,7 +288,7 @@ timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 	SetTimer(stopTooltip, -1 * durationMS)
 
 	stopTooltip() {
-		ToolTip(,,,whichTooltip?)
+		ToolTip(, , , whichTooltip?)
 	}
 }
 
