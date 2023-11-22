@@ -3,7 +3,7 @@
 ; TODO 3: Add Settings file for excluded windows, automatically form that into regex
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent)
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\JSON.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\jsongo.ahk"
 
 ; Usage:
 ; ^+F11::WindowManager.windowManager("T")
@@ -188,7 +188,7 @@ class WindowManager {
 						info := this.getWindowInfo(wHandle)
 						if !(this.settings.getCommandLine)
 							info.DeleteProp("commandLine")
-						A_Clipboard := JSON.Dump(info)
+						A_Clipboard := jsongo.Stringify(info)
 						; Loop(this.LV.GetCount("Col"))
 						; 	str .= this.LV.GetText(rowN, A_Index) "`t"
 					}

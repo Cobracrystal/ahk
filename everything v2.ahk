@@ -37,7 +37,7 @@ A_TrayMenu.Delete()
 #Include "BasicUtilities.ahk"
 #Include "HotstringLoader.ahk"
 
-#Include "JSON.ahk"
+; #Include "jsongo.ahk"
 
 ; for windows in which ctrl+ should replace scrolling
 GroupAdd("zoomableWindows", "ahk_exe Mindustry.exe")

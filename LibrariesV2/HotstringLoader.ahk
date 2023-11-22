@@ -1,6 +1,6 @@
 ﻿; https://github.com/cobracrystal/ahk
 ; .json for hotkeys requires format [{ "options": "o?", "string": "youre", "replacement": "you're"}, ...]
-#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
+#Include %A_ScriptDir%\LibrariesV2\jsongo.ahk
 
 class HotstringLoader {
 		
@@ -13,7 +13,7 @@ class HotstringLoader {
 
 	static load(filePath, name?, addMenu := true, register := true, encoding := "UTF-8") {
 		jsonStr := FileRead(filePath, encoding)
-		hotstringObj := JSON.Load(jsonStr)
+		hotstringObj := jsongo.Parse(jsonStr)
 		index := name ?? this.hotstrings.Count + 1
 		this.hotstrings[index] := {obj: hotstringObj, status: -1, hasMenu: addMenu} ; -1 = unregistered, 0 = off, 1 = on
 		if (register) {

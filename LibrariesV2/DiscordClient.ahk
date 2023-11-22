@@ -1,6 +1,6 @@
 ﻿; https://github.com/cobracrystal/ahk
 ; originally by g33kdude (?)
-#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
+#Include %A_ScriptDir%\LibrariesV2\jsongo.ahk
 
 class DiscordClient {
 	
@@ -65,11 +65,11 @@ class DiscordClient {
 			http.SetRequestHeader("User-Agent", "DiscordBot ($https://discordapp.com, $1337)")
 			http.SetRequestHeader("Content-Type", "application/json")
 			if (content)
-				http.Send(JSON.Dump(content))
+				http.Send(jsongo.Stringify(content))
 			else 
 				http.Send()
 			if (http.status == 429) { ; rate limit
-				response := JSON.Load(http.responseText)
+				response := jsongo.Parse(http.responseText)
 				if (response.retry_after == "")
 					throw Error("Failed to load rate limit retry_after")
 				else
@@ -82,10 +82,10 @@ class DiscordClient {
 			break ; only loop if rate limit, else directly continue
 		}
 		if (http.status != 200 && http.status != 204)
-			throw Error("Request failed`n" . "Status: " http.status "`nResponse: " http.responseText "`nendPoint: " . endPoint . "`nContent: `n" . JSON.Dump(content))
+			throw Error("Request failed`n" . "Status: " http.status "`nResponse: " http.responseText "`nendPoint: " . endPoint . "`nContent: `n" . jsongo.Stringify(content))
 		str := http.ResponseText
 		A_Clipboard := str
-		return JSON.Load(str)
+		return jsongo.Parse(str)
 	}
 	
 	class Gateway {

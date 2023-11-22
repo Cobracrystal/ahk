@@ -15,7 +15,7 @@ add option to abort (modify cmdret potentially?)
 */
 
 #Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
-#Include %A_ScriptDir%\LibrariesV2\JSON.ahk
+#Include %A_ScriptDir%\LibrariesV2\jsongo.ahk
 
 class YoutubeDLGui {
 	youtubeDLGui(mode := "O") {
@@ -311,7 +311,7 @@ class YoutubeDLGui {
 			DirCreate(this.data.savePath)
 		if (mode == "S") {
 			f := FileOpen(this.data.savePath . "\ahk_settings.json", "w", "UTF-8")
-			f.Write(JSON.Dump(this.settings))
+			f.Write(jsongo.Stringify(this.settings))
 			f.Close()
 			return 1
 		}
@@ -319,7 +319,7 @@ class YoutubeDLGui {
 			this.settings := {}
 			if (FileExist(this.data.savePath "\ahk_settings.json")) {
 				s := FileRead(this.data.savePath "\ahk_settings.json", "UTF-8")
-				try this.settings := JSON.Load(s, , false)
+				try this.settings := jsongo.Parse(s, , false)
 			}
 			for i, e in YoutubeDLGui.getDefaultSettings().OwnProps() {
 				if !(this.settings.HasOwnProp(i))
