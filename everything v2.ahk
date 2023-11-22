@@ -224,6 +224,10 @@ return
 }
 #HotIf
 
+#HotIf WinActive("Minecraft ahk_exe javaw.exe")
+^z::y 
+^y::z
+#HotIf
 
 /*
 #HotIf WinActive("ahk_exe BTD5-Win.exe")
