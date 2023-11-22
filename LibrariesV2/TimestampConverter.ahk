@@ -4,41 +4,35 @@
 textTimestampConverter() {
 	text := fastCopy()
 	text := Trim(text)
-	unixTimestamp := 0
+	unix := 0
 	if (IsSpace(text)) {
-		validatedTimestamp := A_Now
-		unixTimestamp := GetUnixTimeStamp(A_NowUTC)
+		valid := A_Now
+		unix := DateDiff(A_NowUTC, "19700101000000", "S")
 		flag := 25
 	}
 	else {
 		arr := parseToTimeFormat(text)
 		timestamp := arr[1]
 		flag := arr[2]
-		validatedTimestamp := FormatTime(timestamp, "yyyyMMddHHmmss")
+		valid := FormatTime(timestamp, "yyyyMMddHHmmss")
 		try 
-			unixTimestamp := GetUnixTimeStamp(validatedTimestamp, true)
+			unix := DateDiff(valid, "19700101000000", "S")
 		catch error
 			flag := 6
 	}
-	createTimeStampMenu(flag, unixTimestamp, validatedTimestamp)
+	createTimeStampMenu(flag, unix, valid)
 }
 
-createTimeStampMenu(flag, unixTimestamp, validatedTimestamp) {
-	l := 	FormatTime(validatedTimestamp, "dd.MM.yyyy, HH:mm")
-	d := 	FormatTime(validatedTimestamp, "dd/MM/yyyy")
-	bigD := FormatTime(validatedTimestamp, "MMMM dd, yyyy")
-	t := 	FormatTime(validatedTimestamp, "HH:mm")
-	bigT := FormatTime(validatedTimestamp, "HH:mm:ss")
-	f := 	FormatTime(validatedTimestamp, "MMMM dd, yyyy HH:mm")
-	bigF := FormatTime(validatedTimestamp, "dddd, MMMM dd, yyyy HH:mm")
-	nice := FormatTime(validatedTimestamp, "HHmm")
+createTimeStampMenu(flag, unix, valid) {
+	l := 	FormatTime(valid, "dd.MM.yyyy, HH:mm")
+	d := 	FormatTime(valid, "dd/MM/yyyy")
+	bigD := FormatTime(valid, "MMMM dd, yyyy")
+	t := 	FormatTime(valid, "HH:mm")
+	bigT := FormatTime(valid, "HH:mm:ss")
+	f := 	FormatTime(valid, "MMMM dd, yyyy HH:mm")
+	bigF := FormatTime(valid, "dddd, MMMM dd, yyyy HH:mm")
 	timestampMenu := Menu()
-;	timestampMenu.Add("Flags: " . flag, doNothing)
-	if (nice = 1337) {
-		timestampMenu.Add("Nice", doNothing)
-		timestampMenu.Default := "Nice"
-		timestampMenu.Disable("Nice")
-	}
+	; timestampMenu.Add("Flags: " . flag, doNothing)
 	SetTitleMatchMode("RegEx")
 ;// Flags: 1 = no year, 2 = no date, 3 = no seconds, 4 = only hours, 5 = no time, 6 = invalid date
 	if (flag == 6) {
@@ -46,38 +40,38 @@ createTimeStampMenu(flag, unixTimestamp, validatedTimestamp) {
 		timestampMenu.Disable("Invalid Date")
 	}
 	else {
-		tshO := timestampHandler
+		o := timestampHandler
 		if (WinActive("Discord ahk_exe Discord.*\.exe")) {
 			if (flag = 23)
-				timestampMenu.Add("Paste short time (" t ")", tshO.Bind("<t:" unixTimestamp ":t>"))
+				timestampMenu.Add("Paste short time (" t ")", o.Bind("<t:" unix ":t>"))
 			else {
 				if (flag = 5 || flag = 15 || flag = 25)
-					timestampMenu.Add("Paste short date (" d ")", tshO.Bind("<t:" unixTimestamp ":d>"))
+					timestampMenu.Add("Paste short date (" d ")", o.Bind("<t:" unix ":d>"))
 				if (flag = 5 || flag = 15)
-					timestampMenu.Add("Paste long date (" bigD ")", tshO.Bind("<t:" unixTimestamp ":D>"))
+					timestampMenu.Add("Paste long date (" bigD ")", o.Bind("<t:" unix ":D>"))
 				if (flag = 2 || flag = 25)
-					timestampMenu.Add("Paste long time (" bigT ")", tshO.Bind("<t:" unixTimestamp ":tT>"))
+					timestampMenu.Add("Paste long time (" bigT ")", o.Bind("<t:" unix ":tT>"))
 				if (flag = 1 || flag = 4 || flag = 3 || flag = 13 || flag = 14 || flag = 25 || flag = "") {
-					timestampMenu.Add("Paste full date (" f ")", tshO.Bind("<t:" unixTimestamp ":f>"))
-					timestampMenu.Add("Paste long full date (" bigF ")", tshO.Bind("<t:" unixTimestamp ":F>"))
+					timestampMenu.Add("Paste full date (" f ")", o.Bind("<t:" unix ":f>"))
+					timestampMenu.Add("Paste long full date (" bigF ")", o.Bind("<t:" unix ":F>"))
 				}
 			}
 			if (flag == 25)
-				timestampMenu.Add("Paste formatted current date (" l ")", tshO.Bind(l))
+				timestampMenu.Add("Paste formatted current date (" l ")", o.Bind(l))
 			else
-				timestampMenu.Add("Paste 'related' format (<t:" unixTimestamp ":R>)", tshO.Bind("<t:" unixTimestamp ":R>"))
-			timestampMenu.Add("Paste numeric Timestamp (" unixTimestamp ")", tshO.Bind(unixTimestamp))
+				timestampMenu.Add("Paste 'related' format (<t:" unix ":R>)", o.Bind("<t:" unix ":R>"))
+			timestampMenu.Add("Paste numeric Timestamp (" unix ")", o.Bind(unix))
 		}
 		else if (flag == 25) {
-			timestampMenu.Add("Paste numeric Timestamp (" unixTimestamp ")", tshO.Bind(unixTimestamp))
-			timestampMenu.Add("Paste current date (" d ")", tshO.Bind(d))
-			timestampMenu.Add("Paste current date (" l ")", tshO.Bind(l))
-			timestampMenu.Add("Paste current date (" bigF ")", tshO.Bind(bigF))
-			timestampMenu.Add("Paste current time (" bigT ")", tshO.Bind(bigT))
+			timestampMenu.Add("Paste numeric Timestamp (" unix ")", o.Bind(unix))
+			timestampMenu.Add("Paste current date (" d ")", o.Bind(d))
+			timestampMenu.Add("Paste current date (" l ")", o.Bind(l))
+			timestampMenu.Add("Paste current date (" bigF ")", o.Bind(bigF))
+			timestampMenu.Add("Paste current time (" bigT ")", o.Bind(bigT))
 		}
 		else {
-			timestampMenu.Add("Paste numeric Timestamp (" unixTimestamp ")", tshO.Bind(unixTimestamp))
-			timeStampMenu.Add("Paste long date (" bigF ")", tshO.Bind(bigF))
+			timestampMenu.Add("Paste numeric Timestamp (" unix ")", o.Bind(unix))
+			timeStampMenu.Add("Paste long date (" bigF ")", o.Bind(bigF))
 		}
 	}
 	timestampMenu.Show()
@@ -85,7 +79,6 @@ createTimeStampMenu(flag, unixTimestamp, validatedTimestamp) {
 }
 
 timestampHandler(str, *) {
-	Sleep(50)
 	fastPrint(str)
 }
 
@@ -142,27 +135,7 @@ parseToTimeFormat(text) {
 				}
 			}
 		}
-			
 	}
 	return [yyyymmdd . hhmiss, flag]
-}
-
-GetUnixTimeStamp(timeYMDHMS, use_locale := false)	{
-	if (StrLen(timeYMDHMS) != 14) || (!IsInteger(timeYMDHMS))
-		throw Error("Invalid YYYYMMDDHHMISS Timestamp given to UnixTimestamp(): " . timeYMDHMS)
-	yyyy := SubStr(timeYMDHMS, 1, 4)
-	mm := SubStr(timeYMDHMS, 5, 2)
-	dd := SubStr(timeYMDHMS, 7, 2)
-	hh := SubStr(timeYMDHMS, 9, 2)
-	mi := SubStr(timeYMDHMS, 11, 2)
-	ss := SubStr(timeYMDHMS, 13, 2)
-	unix_month := ((mm > 2 ? 28 : 0) + floor(mm>8?(mm+1)/2:mm/2)*31 + floor(mm>8 ? (mm-4)/2 : (mm>3 ? (mm-3)/2 : 0))*30)*86400
-	unix_leap := Floor((yyyy - 1968)/4) * 86400
-	if (mod(yyyy,4) == 0 && mm <= 2)
-		unix_leap -= 86400
-	unix_full := 31536000*(yyyy - 1970) + unix_month + (dd - 1)*86400 + unix_leap + hh*3600 + mi*60 + ss
-	if (use_locale)
-		unix_full += GetUnixTimeStamp(A_NowUTC) - GetUnixTimeStamp(A_Now)
-	return unix_full
 }
 
