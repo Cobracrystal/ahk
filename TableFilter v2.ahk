@@ -5,14 +5,13 @@
 ; temporary
 tableInstance := TableFilter()
 
-; Ordering:
-
 #Include "LibrariesV2\BasicUtilities.ahk"
 #Include "LibrariesV2\JSON.ahk"
 
 
 ; idea -> tablefilter handles all the actual file stuff for a database
 ; guiInstance is one gui instance
+; tab control for multiple files in one window?
 class TableFilter {
 	
 	static __New() {
