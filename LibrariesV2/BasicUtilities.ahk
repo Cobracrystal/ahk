@@ -74,7 +74,7 @@ arrayContains(array, t) {
 	return 0
 }
 
-keyArrayContains(array, key, value) {
+mapContains(array, key, value) {
 	for i, e in array
 		if (e[key] == value)
 			return i
@@ -122,22 +122,20 @@ sortArray(arr, mode := "") {
 	return arr2
 }
 
-sortKeyArray(keyArr, key, mode := "") {
-	arr2 := {}
-	arr3 := {}
-	l := keyArr.Count()
-	for i, el in keyArr
+sortMap(map, key, mode := "") {
+	arr2 := Map()
+	arr3 := []
+	l := map.Count()
+	for i, e in map
 	{
-		arr2[el[key] . ""] := i ; IF el[key] OCCURS TWICE, IT OVERWRITES A VALUE (EG count = 1231 for two usernames -> only last one gets taken)
-		str .= el[key] . "`n"
+		arr2[e[key]] := i ; IF el[key] OCCURS TWICE, IT OVERWRITES A VALUE (EG count = 1231 for two usernames -> only last one gets taken)
+		str .= e[key] . "`n"
 	}
 	newStr := Sort(str, mode)
 	strArr := StrSplit(newStr, "`n")
 	strArr.Pop()
 	for i, e in strArr
-	{
-		arr3.push(keyArr[arr2[e . ""]])
-	}
+		arr3.push(map[arr2[e]])
 	return arr3
 }
 

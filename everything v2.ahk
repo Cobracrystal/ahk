@@ -1087,3 +1087,4 @@ HideShowTaskbar(action) {
 ^O::{ ; Load Latex Hotstrings
 	HotstringLoader.load(A_WorkingDir . "\everything\LatexHotstrings_ahk2.json", "LatexHotstrings")
 }
+

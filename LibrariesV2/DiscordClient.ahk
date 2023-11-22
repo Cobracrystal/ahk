@@ -7,7 +7,7 @@ class DiscordClient {
 		this.token := token
 		this.BaseURL := "https://discord.com/api/v10"
 		this.waitingTime := 0
-		this.gw := this.Gateway("ahk_class")
+		this.gw := DiscordClient.Gateway("placeholder")
 	}
 	
 	createDM(userID) {
@@ -85,7 +85,7 @@ class DiscordClient {
 	}
 	
 	class Gateway {
-		__New() {
+		__New(placeholder) {
 			return
 		}
 	}
