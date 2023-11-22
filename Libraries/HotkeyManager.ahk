@@ -46,21 +46,19 @@ Hotkeys(ByRef Hotkeys)	{
 	; no comments like /* this */ or ( this )
     Hotkeys := {}
 	Loop, Parse, cleanScript, `n, `r
-	if RegExMatch(A_LoopField,"O)^((?!\s*(;|:.*:.*:`:|.*=.*:`:|.*"".*:`:|Gui)).*)::(?:.*;)?\s*(.*)",match)	{  ;//matches hotkey text and recognizes ";", hotstrings, quotes and Gui as negative lookaheads
-		comment := (match[3] == "" ? "None" : match[3])
+	if RegExMatch(A_LoopField,"O)^((?!(?:;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`").*`".*::)).*)::{?(?:.*;)?\s*(.*)",match)	{  ;//matches hotkey text and recognizes ";", hotstrings, quotes and Gui as negative lookaheads
+		comment := (match[2] == "" ? "None" : match[2])
 		hkey := match[1]
-	;	if !(RegExMatch(hkey,"(Shift|Alt|Ctrl|Win)"))	{
-			hkey := (InStr(hkey, "+") == StrLen(hkey) ? hkey : StrReplace(hkey, "+", "Shift+", limit:=1))
-			hkey := StrReplace(hkey, "<^>!", "AltGr+", limit:=1)
-			hkey := StrReplace(hkey, "<", "Left", limit:=-1)
-			hkey := StrReplace(hkey, ">", "Right", limit:=-1)
-			hkey := StrReplace(hkey, "!", "Alt+", limit:=1)
-			hkey := StrReplace(hkey, "^", "Ctrl+", limit:=1)
-			hkey := StrReplace(hkey, "#", "Win+", limit:=1)
-			hkey := StrReplace(hkey, "*","", limit:=1)
-			hkey := StrReplace(hkey, "$","", limit:=1)
-			hkey := StrReplace(hkey, "~","", limit:=1)
-	;	}
+		hkey := (InStr(hkey, "+") == StrLen(hkey) ? hkey : StrReplace(hkey, "+", "Shift+",, limit:=1))
+		hkey := StrReplace(hkey, "<^>!", "AltGr+",, 1)
+		hkey := StrReplace(hkey, "<", "Left",, -1)
+		hkey := StrReplace(hkey, ">", "Right",, -1)
+		hkey := StrReplace(hkey, "!", "Alt+",, 1)
+		hkey := StrReplace(hkey, "^", "Ctrl+",, 1)
+		hkey := StrReplace(hkey, "#", "Win+",, 1)
+		hkey := StrReplace(hkey, "*","",, 1)
+		hkey := StrReplace(hkey, "$","",, 1)
+		hkey := StrReplace(hkey, "~","",, 1)
 		Hotkeys.Push({"Line":A_Index, "Hotkey":hkey, "Comment":comment})
 	}
 	return Hotkeys
@@ -81,7 +79,7 @@ Hotstrings(ByRef Hotstrings)	{
 				hString := StrReplace(hString, "{:}", ":", limit:=-1)
 				hString := StrReplace(hString, "{!}", "!", limit:=-1)
             }
-			if RegExMatch(rString,"({:}|{!}||{Space})")	{
+			if RegExMatch(rString,"({:}|{!}|{Space})")	{
 				rString := StrReplace(rString, "{:}", ":", limit:=-1)
 				rString := StrReplace(rString, "{!}", "!", limit:=-1)
 				rString := StrReplace(rString, "{Space}", " ", limit:=-1)

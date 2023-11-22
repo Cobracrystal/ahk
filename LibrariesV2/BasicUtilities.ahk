@@ -145,9 +145,7 @@ sortKeyArray(keyArr, key, mode := "") {
 reverseString(str) {
 	result := ""
 	Loop Parse, str 
-	{
-		result := A_LoopField . result 
-	}
+		result := A_LoopField . result
 	return result
 }
 
@@ -272,6 +270,17 @@ normalizePath(path) {	; ONLY ABSOLUTE PATHS
 	if (InStr(path, "\..\"))
 		return ""
 	return path
+}
+
+tryEditTextFile(path := A_ScriptFullPath) {
+	try
+		Run('Notepad++ "' . path '"')
+	catch Error {
+		try
+			Run(A_ProgramFiles . '\Notepad++\notepad++.exe "' . path '"')
+		catch Error
+			Run(A_WinDir . '\system32\notepad.exe "' . path '"')
+	}
 }
 
 

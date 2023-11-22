@@ -24,8 +24,9 @@ if !InStr(FileExist("script_files\everything"), "D")
 	DirCreate("script_files\everything")
 SetWorkingDir(A_ScriptDir . "\script_files")
 A_TrayMenu.Delete()
+
 #Include "%A_ScriptDir%\LibrariesV2\TransparentTaskbar.ahk"
-; #Include "%A_ScriptDir%\LibrariesV2\HotkeyManager.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\HotkeyManager.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\WindowManager.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\ReminderManager.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\NeoKeyboardLayout.ahk"
@@ -122,9 +123,9 @@ return
 	MacroRecorder.createMacro(A_ThisHotkey)
 }
 
-; ^F12::{ ; Toggle Hotkey Manager
-; 	HotkeyManager("T")
-; }
+^F12::{ ; Toggle Hotkey Manager
+	HotkeyManager.hotkeyManager("T")
+}
 
 ^F11::{ ; Shows a list of all Windows
 	WindowManager.windowManager("T")
@@ -219,8 +220,8 @@ clickMouse(b, press := 0, *) {
 	}
 #HotIf
 
-~CapsLock::{
-	MsgBox(GetKeyState("CapsLock", "T"))
+~CapsLock::{ ; display capslock state
+	timedTooltip(GetKeyState("CapsLock", "T"))
 ;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
 }
 
@@ -668,7 +669,7 @@ internetConnectionLogger(mode := "T", path := "") {
 			WinSetAlwaysOnTop(1, "INTERNET_LOGGER")
 		}
 		DetectHiddenWindows(0)
-		fileMenu := Menu()
+		fileMenu := TrayMenu.submenus["Files"]
 		fileMenu.Add("Open Internet Log", openFile.Bind(logFile, "notepad++"))
 		A_TrayMenu.Add("Files", fileMenu)
 	}
@@ -717,13 +718,11 @@ trayMenuHandler(itemName, *) {
 	switch itemName {
 		case "Open Recent Lines":
 			ListLines()
-			return
 		case "Help":
 			str := RegexReplace(A_AhkPath, "[^\\]+\.exe$", "AutoHotkey.chm")
 			Run(str)
 			WinWait("AutoHotkey v2 Help")
 			center_window_on_monitor(WinExist("AutoHotkey v2 Help"), 0.8)
-			return
 		case "Window Spy":
 			if !WinExist("Window Spy") {
 				str := RegexReplace(A_AhkPath, "v2\\[^\\]+.exe$", "WindowSpy.ahk")
@@ -731,26 +730,13 @@ trayMenuHandler(itemName, *) {
 			}
 			else
 				WinActivate("Window Spy")
-			return
 		case "Reload this Script":
 			Reload()
 		case "Edit in Notepad++":
-			try {
-				Run('Notepad++ "' . A_ScriptFullPath '"')
-			} catch Error as e {
-				try {
-					str := A_ProgramFiles . '\Notepad++\notepad++.exe "' . A_ScriptFullPath '"'
-					Run(str)
-				} catch Error as f {
-					str := A_WinDir . '\system32\notepad.exe "' . A_ScriptFullPath '"'
-					Run(str)
-				}
-			}
-			return
+			tryEditTextFile(A_ScriptFullPath)
 		case "Pause Script":
 			A_TrayMenu.ToggleCheck("Pause Script")
 			Pause(-1)
-			return
 		case "Suspend Hotkeys":
 			suspendMenu.ToggleCheck("Suspend Hotkeys")
 			Suspend(-1)
@@ -758,11 +744,9 @@ trayMenuHandler(itemName, *) {
 				TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think Warn.ico",, true)
 			else
 				TraySetIcon("C:\Users\Simon\Desktop\programs\Files\Icons\Potet Think.ico",, true)
-			return
 		case "Suspend Reload":
 			suspendMenu.ToggleCheck("Suspend Reload")
 			Hotkey("^+R", "Toggle")
-			return
 		case "Exit":
 			ExitApp()
 	}
@@ -1009,7 +993,7 @@ closeWinRarNotification() {
 
 
 
-^m::{
+^m::{ ; Get Permutations
 	A_Clipboard := getAllPermutations("12345", "abcde")
 }
 
@@ -1075,14 +1059,14 @@ makeTextAnsiColorful(str) {
 	return tStr
 }
 
-^l::{
+^l::{ ; Make colorful Text
 	text := fastCopy()
 	text := makeTextAnsiColorful(text)
 	fastPrint(text)
 }
 
 
-^+F10::{
+^+F10::{ ; Show/Hide Taskbar
 	static hide := false
 	HideShowTaskbar(hide := !hide)
 }
@@ -1099,6 +1083,6 @@ HideShowTaskbar(action) {
 
 
 
-^O::{
+^O::{ ; Load Latex Hotstrings
 	HotstringLoader.load(A_WorkingDir . "\everything\LatexHotstrings_ahk2.json", "LatexHotstrings")
 }

@@ -1,4 +1,11 @@
 #SingleInstance Force
+Loop parse, A_Clipboard, "`n", "`r"
+	{
+		Result := MsgBox("File number " A_Index " is " A_LoopField ".`n`nContinue?",, "y/n")
+	}
+	until Result = "No"
+
+/*
 commandLine:= winmgmt("CommandLine", "Where ProcessId = " 17008)
 msgbox(commandLine[1])
 return
