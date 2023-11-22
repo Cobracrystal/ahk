@@ -16,6 +16,7 @@ class DiscordClient {
 	}
 	
 	sendMessage(content, id, dm := 0) {
+		local channelID
 		if (dm)
 			channelID := this.createDM(id)["id"]
 		else
@@ -82,7 +83,9 @@ class DiscordClient {
 		}
 		if (http.status != 200 && http.status != 204)
 			throw Error("Request failed`n" . "Status: " http.status "`nResponse: " http.responseText "`nendPoint: " . endPoint . "`nContent: `n" . JSON.Dump(content))
-		return JSON.Load(http.responseText)
+		str := http.ResponseText
+		A_Clipboard := str
+		return JSON.Load(str)
 	}
 	
 	class Gateway {
