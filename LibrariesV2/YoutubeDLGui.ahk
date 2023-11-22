@@ -81,7 +81,6 @@ class YoutubeDLGui {
 	}
 
 	updateGuiOutput(cmdLine) {
-		msgbox(cmdLine)
 		lineArray := StrSplit(Rtrim(StrReplace(cmdLine, "`r`n", "`n"), "`n"), "`n")
 		for i, newLine in lineArray {
 			if (Instr(newLine, "https://") || Instr(newLine, "http://")) && !(Instr(this.data.outputLastLine, "[redirect]") || Instr(newLine, "[redirect]")) && (this.data.outputLastLine != "") && (this.data.outputLastLine != this.data.separator . "`n") {
@@ -202,7 +201,6 @@ class YoutubeDLGui {
 		}
 		fullRuncmd := this.controls.editCmdConfig.value . StrReplace(links, "`n", A_Space)
 		output := cmdRet(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8")
-		msgbox(output)
 		fullOutput := this.controls.editOutput.value
 		this.updateGuiOutput(this.data.separator)
 		if (!WinActive(this.gui))
