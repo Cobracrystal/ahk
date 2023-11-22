@@ -55,9 +55,9 @@ token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-
 reminders := ReminderManager()
 youtubeDL := YoutubeDLGui()
 ; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
-reminders.setPeriodicTimerOn(parseTime(,11,21,8,0,0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
-reminders.setPeriodicTimerOn(parseTime(,,,13,36,50), 1, "Days", , reminders.reminder1337)
-reminders.setPeriodicTimerOn(parseTime(,,,3,30,0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
+reminders.setPeriodicTimerOn(parseTime(, 11, 21, 8, 0, 0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
+reminders.setPeriodicTimerOn(parseTime(, , , 13, 36, 50), 1, "Days", , reminders.reminder1337)
+reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
 
 ; Launch Transparent Taskbar at 50ms frequency
@@ -119,7 +119,7 @@ return
 	internetConnectionLogger("T")
 }
 
-^F8::{	; Shows Reminder GUI
+^F8:: {	; Shows Reminder GUI
 	reminders.ReminderManagerGUI("T")
 }
 
@@ -131,7 +131,7 @@ return
 	ListLines()
 }
 
-^+F10::{	; YTDL GUI
+^+F10:: {	; YTDL GUI
 	youtubeDL.YoutubeDLGui("T")
 }
 
@@ -140,7 +140,7 @@ return
 }
 
 ^!+F11:: { ; Block keyboard input until password "password123" is typed
-	if (!A_IsAdmin)	
+	if (!A_IsAdmin)
 		RunAsAdmin()
 	password := "password123"
 	for key in ["CTRL", "SHIFT", "ALT"]
@@ -322,7 +322,7 @@ F11:: { 	; BTD6: Rebind Escape
 	AltDrag.scaleWindow(1)
 }
 
-!XButton1::{	; Minimize Window
+!XButton1:: {	; Minimize Window
 	AltDrag.minimizeWindow()
 }
 
@@ -343,7 +343,7 @@ F11:: { 	; BTD6: Rebind Escape
 		MouseGetPos(&xPosCircle, &yPosCircle, &circleWindow)
 		xPosCircle -= 100
 		yPosCircle -= 100
-	;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", "ahk_id " circleWindow)
+		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", "ahk_id " circleWindow)
 		WinSetRegion("100-100 350-250 175-250 350-400 100-400 Wind", "ahk_id " circleWindow)
 		WinSetStyle("-0xC00000", "ahk_id " circleWindow) ; make it alwaysonTop
 	}
@@ -353,9 +353,9 @@ F11:: { 	; BTD6: Rebind Escape
 	}
 }
 
-^!+K::{ ; Tiles Windows Vertically
+^!+K:: { ; Tiles Windows Vertically
 	static windowInfo, tileState := false
-	if(tileState := !tileState) {
+	if (tileState := !tileState) {
 		windowInfo := WindowManager.getAllWindowInfo(0, 0)
 		shell := ComObject("Shell.Application")
 		if (MsgBox("Tile Windows Vertically", "Confirm Dialog", 0x1) == "OK")
@@ -469,6 +469,19 @@ winSlowMove(hwnd, endX := "", endY := "", endW := "", endH := "", speed := 1) {
 	SetWinDelay(WinDelay)
 }
 
+slowClose(wHandle, HeightStep := 100, WidthStep := 100) {
+	WinGetPos(&x, &y, &w, &h, wHandle)
+	Step := (h - 3) / HeightStep
+	Step2 := (w - 3) / WidthStep
+	Loop (heightStep)
+		WinMove(, y := y + (Step / 2), , h := h - Step, wHandle)
+	WinSetStyle("-0xC00000", wHandle)
+	WinRedraw(wHandle)
+	Loop (WidthStep)
+		WinMove(x := x + (Step2 / 2), , w := w - Step2, , wHandle)
+	WinClose(wHandle)
+}
+
 center_window_on_monitor(hwnd, size_percentage := 0.714286) {
 	NumPut("Uint", 40, monitorInfo := Buffer(40))
 	monitorHandle := DllCall("MonitorFromWindow", "Ptr", hwnd, "UInt", 0x2, "Ptr")
@@ -545,6 +558,41 @@ internetConnectionLogger(mode := "T", path := "") {
 			WinShow("ahk_pid " . internetConsolePID)
 	}
 	return
+}
+
+^j:: {
+	static init := false
+	if (!init) {
+		SystemCursor("I")
+		init := true
+	}
+	SystemCursor(-1)
+}
+
+; doesn't work right now
+SystemCursor(mode := 1) {   ;// stolen from https://www.autohotkey.com/boards/viewtopic.php?t=6167
+	;// INIT = "I"/"Init", OFF = 0/"Off", TOGGLE = -1/"T"/"Toggle", ON = 1
+	static AndMask, XorMask, h_cursor, c := [], b := [], h := [], flag := true
+	; c = system cursors, b = blank cursors, h = handles of default cursors
+	if (SubStr(mode, 1, 1) = "I" || c.Length == 0) {       ; init when requested or at first call
+		h_cursor := Buffer(4444, 1)
+		andMask := Buffer(32 * 4, 0xFF)
+		XOrMask := Buffer(32 * 4, 0)
+		system_cursors := [32512, 32513, 32514, 32515, 32516, 32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650]
+		for i, e in system_cursors {
+			h_cursor := DllCall("LoadCursor", "Ptr", 0, "Ptr", e)
+			h.push(DllCall("CopyImage", "Ptr", h_cursor, "UInt", 2, "Int", 0, "Int", 0, "UInt", 0))
+			b.push(DllCall("CreateCursor", "Ptr", 0, "Int", 0, "Int", 0, "Int", 32, "Int", 32, "Ptr", andMask, "Ptr", XorMask))
+		}
+	}
+	if (mode == 0 || (flag && mode == -1))
+		c := b, flag := false  ; use blank cursors
+	else
+		c := h, flag := true  ; use the saved cursors
+	for i, e in c {
+		h_cursor := DllCall("CopyImage", "Ptr", e, "UInt", 2, "Int", 0, "Int", 0, "UInt", 0)
+		DllCall("SetSystemCursor", "Ptr", h_cursor, "UInt", e)
+	}
 }
 
 openFile(filePath, program := "notepad", *) {
@@ -649,13 +697,13 @@ customExit(ExitReason, ExitCode) {
 }
 
 ; LONG STRINGS
-:X*:@potet::fastPrint("<@245189840470147072>")
-:X*:@burny::fastPrint("<@318350925183844355>")
-:X*:@Y::fastPrint("<@354316862735253505>")
-:X*:@zyntha::fastPrint("<@330811222939271170>")
-:X*:@astro::fastPrint("<@193734142704353280>")
-:X*:@rein::fastPrint("<@315661562398638080>")
-:X:from:me::fastPrint("from:245189840470147072 ")
+:X*:@potet:: fastPrint("<@245189840470147072>")
+:X*:@burny:: fastPrint("<@318350925183844355>")
+:X*:@Y:: fastPrint("<@354316862735253505>")
+:X*:@zyntha:: fastPrint("<@330811222939271170>")
+:X*:@astro:: fastPrint("<@193734142704353280>")
+:X*:@rein:: fastPrint("<@315661562398638080>")
+:X:from:me:: fastPrint("from:245189840470147072 ")
 
 :*?:=/=::≠
 :*?:+-::±
