@@ -1,10 +1,7 @@
 ﻿; OPTION TO MAKE REMINDER MESSAGE A TOOLTIP.
-; have text already inside the edit fields of the GUI. The method of both text and edit control is not a problem, its precisely what we want since blank content -> current date/hour whatever. Can't be hardcoded then tho.
-; todo: manage reminders
-; todo b: save reminders over multiple restarts in ini file.
+; todo: save reminders over multiple restarts in ini file.
 ; then just load those up on starting -> no need to call 1337 reminder everytime. tada
-; for custom functions: add field to add a full function body. This gets added in customReminderFunctions.ahk in appdata folder, and main file gets inclusion.
-
+; custom functions -> text body of function that you write just gets saved in file, timer is set to run that file
 
 ; if nextTimeMS >= 2**32, do nextTimeMS -= 2**32, custom function that will restart itself until timeMS < 2**32, then launch function.
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
