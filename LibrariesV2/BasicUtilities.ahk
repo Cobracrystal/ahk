@@ -211,6 +211,142 @@ recursiveReplaceMap(string, &from, to, index := 1) {
 	return replacedString
 }
 
+/*
+* Extended version of DateAdd, allowing Weeks (W), Months (MO), Years (Y) for timeUnit. Returns YYYYMMDDHH24MISS timestamp
+* @param periodUnit Time Unit can be one of the strings (or their first letter): Years, Weeks, Days, Hours, Minutes, Seconds NOT months because that's bad
+* Remark: Adding years to a leap day will result in the corresponding day number of the resulting year (29-02-2024 + 1 Year -> 30-01-2025)
+* Similarly, if a resulting month does not have as many days as the starting one, the result will be rolled over (31-10-2024 + 1 Month -> 01-12-2024)
+*/
+DateAddW(dateTime, value, timeUnit) {
+	switch timeUnit, 0 {
+		case "Seconds", "S", "Minutes", "M", "Hours", "H", "Days", "D":
+			return DateAdd(dateTime, value, timeUnit)
+		case "Weeks", "W":
+			return DateAdd(dateTime, value*7, "D")
+		case "Years", "Y":
+			newTime := (SubStr(dateTime, 1, 4)+value) . SubStr(dateTime, 5)
+			if !IsTime(newTime) ; leap day
+				newTime := SubStr(newTime, 1, 4) . SubStr(DateAdd(dateTime, 1, "D"), 5)
+			return newTime
+		case "Months", "Mo":
+			month := Format("{:02}", Mod(SubStr(dateTime, 5, 2) + value - 1, 12) + 1)
+			year := SubStr(dateTime, 1, 4) + (SubStr(dateTime, 5, 2) + value - 1)//12
+			nextMonth := Format("{:02}", Mod(month, 12) + 1)
+			nextYear := year + month//12 ; technically unnecessary since when the fuck do we have an invalid december date
+			rolledOverDays := Format("{:02}", SubStr(dateTime, 7, 2) - DateDiff(nextYear . nextMonth, year . month, "D"))
+			if (rolledOverDays > 0)
+				return nextYear . nextMonth . rolledOverDays . SubStr(dateTime, 9)
+			else
+				return year . month . SubStr(dateTime, 7)
+		default:
+			throw Error("Invalid Time Unit: " timeUnit)
+	}
+}
+
+setPeriodicTimerOn(time, period, periodUnit := "Seconds", message := "", function := "") {
+	if (!IsTime(time))
+		throw Error("Invalid Timestamp: " . time)
+	if (period <= 0)
+		throw Error("Invalid Period: " period)
+	timeDiff := DateDiff(time, Now := A_Now, "Seconds")
+	if (timeDiff < 0) {
+		switch periodUnit, 0 {
+			case "Seconds", "S", "Minutes", "M", "Hours", "H", "Days", "D":
+				secs := DateDiff(DateAdd("1998", period, periodUnit), "1998", "Seconds")
+				timeDiff := Mod(timeDiff, secs) + secs
+			case "Weeks", "W":
+				secs := DateDiff(DateAdd("1998", period*7, "D"), "1998", "Seconds")
+				timeDiff := Mod(timeDiff, secs) + secs
+			case "Months", "Mo":
+				monthDiff := Mod((SubStr(time, 1, 4) - A_YYYY) * 12 + (SubStr(time, 5, 2) - A_MM), period)
+				if (monthDiff == 0) {
+					guessTime := A_YYYY . A_MM . SubStr(time, 7)
+					if (!IsTime(guessTime)) {
+						nextMonth := Format("{:02}", Mod(A_MM, 12) + 1)
+						nextYear := A_YYYY + A_MM//12 ; technically unnecessary since when the fuck do we have an invalid december date
+						rolledOverDays := Format("{:02}", SubStr(time, 7, 2) - DateDiff(nextYear . nextMonth, A_YYYY . A_MM, "D"))
+						guessTime := nextYear . nextMonth . rolledOverDays . SubStr(time, 9)
+						if (!IsTime(guessTime))
+							throw Error("Calculating a date just went wrong. Date calculated: " . guessTime)
+					}
+					else if (DateDiff(guessTime, Now, "Seconds") < 0) {
+						monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
+						guessTime := DateAddW(time, monthDiffFull + monthDiff + period, "Months")
+					}
+				}
+				else {
+					monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
+					guessTime := DateAddW(time, monthDiffFull + monthDiff + period, "Months")
+				}
+				timeDiff := DateDiff(guessTime, Now, "Seconds")
+			case "Years", "Y":
+				yearDiff := Mod(SubStr(time, 1, 4) - A_YYYY, period)
+				if (yearDiff == 0) {
+					guessTime := A_YYYY . SubStr(time, 5)
+					if (!IsTime(guessTime)) ; if leap year
+						guessTime := A_YYYY . SubStr(DateAdd(time, 1, "D"), 5)
+					if (DateDiff(guessTime, Now, "Seconds") < 0)
+						guessTime := DateAddW(time, A_YYYY - SubStr(time, 1, 4) + period, "Years")
+				}
+				else
+					guessTime := DateAddW(time, A_YYYY - SubStr(time, 1, 4) + yearDiff + period, "Years")
+				timeDiff := DateDiff(guessTime, Now, "Seconds")
+			default:
+				return
+		}
+	}
+	timeDNext := DateAdd(Now, timeDiff, "S")
+	msgbox(timeDiff)
+}
+
+/*
+* Given a set of time parts, returns a YYYYMMDDHH24MISS timestamp of the next time when all given parts match
+* 
+*/
+parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
+	return A_Now
+}
+
+setSpecificTimer(hours := -1, minutes := -1, seconds := -1, day := -1, month := -1, target := "") {
+	largestSetUnit := "Minute"
+	if (month == -1) {
+		month := A_MM
+		if (day == -1) {
+			day := A_DD
+			if (hours == -1) {
+				hours := A_Hour
+				if (minutes == -1)
+					return 0
+			}
+			else
+				largestSetUnit := "Hour"
+		}
+		else {
+			hours := (hours == -1 ? 7 : hours) ; if month is not set but day, put it as 7:00:00
+			largestSetUnit := "Day"
+		}
+	}
+	else {
+		largestSetUnit := "Month"
+		day := (day == -1 ? 1 : day) ; day ?? 1, use unset instead of -1
+		hours := (hours == -1 ? 0 : hours) ; if month is set, alarm at 1.[month] at 00:00:00
+	}
+	minutes := (minutes == -1 ? 0 : minutes)
+	seconds := (seconds == -1 ? 0 : seconds)
+	
+	month := Format("{:02}", month)
+	day := Format("{:02}", day)
+	hours := Format("{:02}", hours)
+	minutes := Format("{:02}", minutes)
+	seconds := Format("{:02}", seconds)
+	; validate timestamp:
+	tS := A_YYYY . month . day . hours . minutes . seconds
+	if (!IsTime(tS))
+		throw Error()
+	
+}
+
+
 ExecScript(expression, Wait := true) {
 	input := '#Warn All, Off`nFileAppend(' . expression . ', "*")'
 	shell := ComObject("WScript.Shell")

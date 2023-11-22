@@ -52,9 +52,9 @@ GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
 
 ;// set 1337 reminder
 token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
-reminders := ReminderManager(0, 0)
-reminders.setPeriodicTimerOn()
-reminders.setTimerOn()
+; reminders := ReminderManager(0, 0)
+; reminders.setPeriodicTimerOn()
+; reminders.setTimerOn()
 ; ReminderManager.setSpecificTimer("1337reminder", "", , , 13,36,50)
 ;ReminderManager.setSpecificTimer(,"test message", , , 0,42,0)
 ; 	ReminderManager.setSpecificTimer("discordReminder", "GO SLEEP", , , 4,0,0,,,"245189840470147072")

@@ -8,13 +8,14 @@
 ;------------------------------------------------------------------------
 
 ; RIDICULOUSLY COMPLICATED TODO:
-; A) MAKE FUNCTION THAT REMOVES /* */ COMMENTS WHILE KEEPING LINECOUNT
 ; B) CHECK ALL INCLUDED FILES FOR HOTKEYS
 ; C) CREATE SEARCH FUNCTION IN MAIN GUI
-; D) SETTINGS TAB TO SAVE STYLE
-; E) ; BINDING GUI CLOSE FUNCTIONS INSIDE A CLASS !!!! MAKE ALL THIS INTO ONE CLASS https://www.autohotkey.com/boards/viewtopic.php?t=64337 
 
 class HotkeyManager {
+	; prevent instances from being created.
+	static Call() { 
+		return this
+	}
 
 	static hotkeyManager(mode := "O", *) {
 		mode := SubStr(mode, 1, 1)
@@ -25,6 +26,7 @@ class HotkeyManager {
 				this.data.coords := windowGetCoordinates(this.gui.hwnd)
 				this.gui.destroy()
 				this.gui := -1
+				this.LV := [-1,-1,-1]
 			}
 		}
 		else if (mode != "C")

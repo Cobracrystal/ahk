@@ -32,9 +32,10 @@ toggleTimer(timerFunc, delay := 1000) {
 }
 */
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\DiscordClient.ahk"
 
 class ReminderManager {
-	static Call(flagDebug := 0, flagLoad := 0) {
+	static __New(flagDebug := 0, flagLoad := 0) {
 		if (!this.settings.initialized) {
 			guiMenu := TrayMenu.submenus["GUIs"]
 			guiMenu.Add("Open Reminder Manager", this.reminderManagerGUI.Bind(this))
@@ -144,166 +145,76 @@ class ReminderManager {
 	* @param periodUnit Time Unit can be one of the strings (or their first letter): Years, Weeks, Days, Hours, Minutes, Seconds
 	*/
 	setPeriodicTimerOn(time, period, periodUnit := "Seconds", message := "", function := this.defaultReminder) {
-		if (IsTime(time))
+		if (!IsTime(time))
 			throw Error("Invalid Timestamp: " . time)
-		timeDiff := DateDiff(time, A_Now, "Seconds")
+		if (period <= 0)
+			throw Error("Invalid Period: " period)
+		timeDiff := DateDiff(time, Now := A_Now, "Seconds")
 		if (timeDiff < 0) {
 			switch periodUnit, 0 {
 				case "Seconds", "S", "Minutes", "M", "Hours", "H", "Days", "D":
-					secs := DateDiff("1998", DateAdd("1998", period, periodUnit), "Seconds")
+					secs := DateDiff(DateAdd("1998", period, periodUnit), "1998", "Seconds")
 					timeDiff := Mod(timeDiff, secs) + secs
 				case "Weeks", "W":
-					secs := DateDiff("1998", DateAdd("1998", period*7, "D"), "Seconds")
+					secs := DateDiff(DateAdd("1998", period*7, "D"), "1998", "Seconds")
 					timeDiff := Mod(timeDiff, secs) + secs
-				case "Years", "Y":
-					; YEAR DIFFERENCE? eg. given 2020 leap day, year period of 7 -> 2027. + 1 day?
-					; what if given 2020-10-17, with 3 year period -> 2023-10-17 is over -> use 2026 ! ?
-					nextTimestamp := (SubStr(time, 1, 4)+value) . SubStr(dateTime, 5)
-					if !IsTime(nextTimestamp) ; leap day
-						nextTimestamp := DateAdd(nextTimestamp, 1, "D")
-					return nextTimestamp
 				case "Months", "Mo":
-					YMo := SubStr(dateTime, 1, 4) + (value//12) . Format("{:02}", Mod(SubStr(dateTime, 5, 2) + Mod(value, 12) - 1, 12)+1)
-					msgbox(YMo)
-					return DateAdd(dateTime, DateDiff(YMo, SubStr(dateTime, 1, 6), "D"), "D")
+					monthDiff := Mod((SubStr(time, 1, 4) - A_YYYY) * 12 + (SubStr(time, 5, 2) - A_MM), period)
+					if (monthDiff == 0) {
+						guessTime := A_YYYY . A_MM . SubStr(time, 7)
+						if (!IsTime(guessTime)) {
+							nextMonth := Format("{:02}", Mod(A_MM, 12) + 1)
+							nextYear := A_YYYY + A_MM//12 ; technically unnecessary since when the fuck do we have an invalid december date
+							rolledOverDays := Format("{:02}", SubStr(time, 7, 2) - DateDiff(nextYear . nextMonth, A_YYYY . A_MM, "D"))
+							guessTime := nextYear . nextMonth . rolledOverDays . SubStr(time, 9)
+							if (!IsTime(guessTime))
+								throw Error("0xD37824 - This should never happen " . guessTime)
+						}
+						else if (DateDiff(guessTime, Now, "Seconds") < 0) {
+							monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
+							guessTime := DateAddW(time, monthDiffFull + monthDiff + period, "Months")
+						}
+					}
+					else {
+						monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
+						guessTime := DateAddW(time, monthDiffFull + monthDiff + period, "Months")
+					}
+					timeDiff := DateDiff(guessTime, Now, "Seconds")
+				case "Years", "Y":
+					yearDiff := Mod(SubStr(time, 1, 4) - A_YYYY, period)
+					if (yearDiff == 0) {
+						guessTime := A_YYYY . SubStr(time, 5)
+						if (!IsTime(guessTime)) ; if leap year
+							guessTime := A_YYYY . SubStr(DateAdd(time, 1, "D"), 5)
+						if (DateDiff(guessTime, Now, "Seconds") < 0)
+							guessTime := DateAddW(time, A_YYYY - SubStr(time, 1, 4) + period, "Years")
+					}
+					else
+						guessTime := DateAddW(time, A_YYYY - SubStr(time, 1, 4) + yearDiff + period, "Years")
+					timeDiff := DateDiff(guessTime, Now, "Seconds")
 				default:
-					return 0
+					return
 			}
 		}
+		nextTimeMS := (timeDiff == 0 ? -1 : timeDiff * -1000)
+		if (nextTimeMS > 4294967295)
+			throw Error("Integer Limit for Timers reached.")
 		if (function is Func && function.MaxParams > 0)
 			function := function.Bind(message)
 		else
 			function := this.defaultReminder.Bind(this, message)
-		nextTimeMS := (timeDiff == 0 ? -1 : timeDiff * -1000)
-		if (period <= 0)
-			return 0
 		SetTimer(this.restartTimer.bind(this, period, periodUnit, function), nextTimeMS)
 		SetTimer(function, nextTimeMS)
 	}
 
-
 	restartTimer(period, periodUnit, function) {
 		nextOccurence := this.DateAddW(A_Now, period, periodUnit)
 		nextTimeMS := 1000 * DateDiff(A_Now, nextOccurence, "Seconds")
-		SetTimer(,0)
+		SetTimer(,0) ; fix this by accessing a list in data
 		SetTimer(this.restartTimer.bind(this, period, periodUnit, function), nextTimeMS)
 		function()
 	}
-	/*
-	* Extended version of DateAdd, allowing Weeks (W), Months (MO), Years (Y) for timeUnit. Returns YYYYMMDDHH24MISS timestamp
-	* @param periodUnit Time Unit can be one of the strings (or their first letter): Years, Weeks, Days, Hours, Minutes, Seconds NOT months because that's bad
-	* Remark: Adding years to a leap day will result in the corresponding day number of the resulting year (29-02-2024 + 1 Year -> 30-01-2025)
-	* Similarly, if a resulting month does not have as many days as the starting one, the result will be rolled over (31-10-2024 + 1 Month -> 01-12-2024)
-	*/
-	DateAddW(dateTime, value, timeUnit) {
-		switch timeUnit, 0 {
-			case "Seconds", "S", "Minutes", "M", "Hours", "H", "Days", "D":
-				return DateAdd(dateTime, value, timeUnit)
-			case "Weeks", "W":
-				return DateAdd(dateTime, value*7, "D")
-			case "Years", "Y":
-				nextTimestamp := (SubStr(dateTime, 1, 4)+value) . SubStr(dateTime, 5)
-				if !IsTime(nextTimestamp) ; leap day
-					nextTimestamp := DateAdd(nextTimestamp, 1, "D")
-				return nextTimestamp
-			case "Months", "Mo":
-				YMo := SubStr(dateTime, 1, 4) + (value//12) . Format("{:02}", Mod(SubStr(dateTime, 5, 2) + Mod(value, 12) - 1, 12)+1)
-				msgbox(YMo)
-				return DateAdd(dateTime, DateDiff(YMo, SubStr(dateTime, 1, 6), "D"), "D")
-			default:
-				return 0
-		}
-	}
 
-	/*
-	* Given a set of time parts, returns a YYYYMMDDHH24MISS timestamp of the next time when all given parts matchs 
-	*/
-	parseTime(years, months, days, hours, minutes, seconds) {
-
-	}
-
-	setSpecificTimer(function := "", message := "", multiReminder := 0, period := -1, hours := -1, minutes := -1, seconds := -1, day := -1, month := -1, target := "") {
-		flagWeekly := 0
-		largestSetUnit := "Minute"
-		if (month == -1) {
-			month := A_MM
-			if (day == -1) {
-				day := A_DD
-				if (hours == -1) {
-					hours := A_Hour
-					if (minutes == -1)
-						return 0
-				}
-				else
-					largestSetUnit := "Hour"
-			}
-			else {
-				if IsAlpha(day)
-				{
-					day := this.enumerateDay(day)
-					if (day == -1)
-						return 0
-					flagWeekly := 1
-				}
-				hours := (hours == -1 ? 7 : hours) ; if month is not set but day, put it as 7:00:00
-				largestSetUnit := "Day"
-			}
-		}
-		else {
-			largestSetUnit := "Month"
-			day := (day == -1 ? 1 : day) ; day ?? 1, use unset instead of -1
-			hours := (hours == -1 ? 0 : hours) ; if month is set, alarm at 1.[month] at 00:00:00
-		}
-		minutes := (minutes == -1 ? 0 : minutes)
-		seconds := (seconds == -1 ? 0 : seconds)
-		
-		tStamp := this.validateTime(month, day, hours, minutes, seconds)
-		if !(tStamp)
-			throw Error("Timestamp is invalid")
-		timeDiff := this.compareTime(tStamp)
-		msgboxStr := Format("First Guess:`nTimestamp: {} (Reminder on {:02}.{:02}, {:02}:{:02}:{:02})`nTime Difference: {}", tStamp, day, month, hours, minutes, seconds, timeDiff) . ( timeDiff < 0 ? " (invalid)" : Format(" (Reminder in {:02}:{:02}:{:02})", timeDiff//3600, mod(timeDiff,3600)//60, mod(timeDiff,60)) )
-		if (timeDiff < 0) {
-			switch largestSetUnit {
-				case "Month":
-					tStamp := (A_YYYY +1) . SubStr(tStamp, 5)
-				case "Day":
-					if (flagWeekly)
-						EnvAdd, tStamp, 7, Days
-					else
-						tStamp := (A_YYYY +1) . SubStr(tStamp, 5) ; you can't "add a month" cause months have varying lengths, and monthly reminders aren't a thing
-				case "Hour":
-					EnvAdd, tStamp, 1, Days
-				case "Minute":
-					EnvAdd, tStamp, 1, Hours
-			}
-			timeDiff := this.compareTime(tStamp)
-			msgBoxStr .= Format("`nSecond Guess:`nTimestamp: {} (Reminder on {})`nTime Difference: {} (Reminder in {:02}:{:02}:{:02})", tStamp, formatTimeFunc(tStamp,"dd.MM, HH:mm:ss") , timeDiff, timeDiff//3600, mod(timeDiff,3600)//60, mod(timeDiff,60))
-		}
-		if (timeDiff == "")
-			throw Error("Time comparison was blank")
-		nextTimeMS := this.getTimeStampinMS(timeDiff)
-		if (this.settings.flagDebug)
-			msgbox % msgBoxStr . "`nMilliseconds until Reminder: " . nextTimeMS
-		if (function != "") {
-			if (function == "discordReminder" && target != "")
-				reminderFunc := this.discordReminder.Bind(this, message, target)
-			else if (IsFunc(function) == 2)
-				reminderFunc := Func(function).Bind(message)
-			else 
-				reminderFunc := this.defaultReminder.Bind(this, message)
-		}
-		else 
-			reminderFunc := this.defaultReminder.Bind(this, message)
-		SetTimer, % reminderFunc, % nextTimeMS
-		if (multiReminder) {
-			if (period <= 0)
-				return 0
-			multiUseRestarterFuncObj := this.multiUseTimerRestarter.Bind(this, period * 1000, reminderFunc)
-			SetTimer, % multiUseRestarterFuncObj, % nextTimeMS
-		}
-		return 1
-		; return codes: 1 success, 0 failure
-	}
 		
 	enumerateDay(day) {
 		d := Substr(day,1,2)
@@ -327,32 +238,7 @@ class ReminderManager {
 		}
 		return A_DD - A_WDAY + day
 	}
-	
-	validateTime(month, day, hours, minutes, seconds) {
-		month := Format("{:02}", month)
-		day := Format("{:02}", day)
-		hours := Format("{:02}", hours)
-		minutes := Format("{:02}", minutes)
-		seconds := Format("{:02}", seconds)
-		; validate timestamp:
-		tS := A_YYYY . month . day . hours . minutes . seconds
-		if (IsTime(tS))
-			return tS
-		return 0
-	}
-	
-	compareTime(timestamp) {
-		return DateDiff(A_Now, timestamp, "Seconds")
-		return timestamp
-	}
-	
-	getTimeStampinMS(timestamp) {
-		nextTimeMS := timestamp * 1000
-		if (nextTimeMS == 0)
-			nextTimeMS := 1
-		return "-" . nextTimeMS
-	}
-	
+		
 	defaultReminder(text) {
 	;	L1033 -> en-US for day name.
 		message := "It is " . FormatTime("L1033 dddd, dd.MM.yyyy, HH:mm:ss") . "`nYou set a reminder for this point in time."
@@ -360,11 +246,6 @@ class ReminderManager {
 		SoundPlay("*48")
 		MsgBox(message, "Reminder")
 		return
-	}
-	
-	
-	multiUseTimerRestarter(period, funcObj) {
-		SetTimer(funcObj, period)
 	}
 		
 	createReminderFromGUI(button) {
