@@ -87,12 +87,27 @@ objContainsValue(obj, value) {
 	for i, e in obj
 		if (e = value)
 			return i
-	return false
+	return 0
+}
+
+objRemoveValue(obj, value) {
+	if !(obj is Array || obj is Map)
+		throw Error("objRemoveValue does not handle type " . obj.base.__Class)
+	for i, e in obj {
+		if (e = value) {
+			if (obj is Array)
+				obj.RemoveAt(i)
+			else 
+				obj.Delete(i)
+			return 1
+		}
+	}
+	return 0
 }
 
 objRemoveValues(obj, removeAll := 1, values*) {
 	if !(obj is Array || obj is Map)
-		throw Error("objContains does not handle type " . obj.base.__Class)
+		throw Error("objRemoveValues does not handle type " . obj.base.__Class)
 	toRemove := []
 	for i, e in obj {
 		for j, f in values {
@@ -110,6 +125,7 @@ objRemoveValues(obj, removeAll := 1, values*) {
 		else
 			obj.Delete(nE)
 	}
+	return 1
 }
 
 reverseArray(array) { ; linear array, gives weird stuff with assoc
