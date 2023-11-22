@@ -52,7 +52,7 @@ GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
 
 ;// set 1337 reminder
 token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
-reminders := ReminderManager()
+reminders := ReminderManager(,1)
 youtubeDL := YoutubeDLGui()
 ; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", "UwU", reminders.discordReminder.bind(0, token, "245189840470147072"))
 reminders.setPeriodicTimerOn(parseTime(,11,21,8,0,0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
@@ -775,8 +775,4 @@ makeTextAnsiColorful(str) {
 ; 	text := makeTextAnsiColorful(text)
 ; 	fastPrint(text)
 ; }
-
-^j::{
-	msgbox(selectFolderEx(A_WorkingDir,"Select Your mom",,"lmao"))
-}
 ; CHECK IF THE objrelease ARE NECESSARY, ASK IN DISCORD POTENTIALLY!

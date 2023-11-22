@@ -408,8 +408,7 @@ execShell(command) {
 	return exec.StdOut.ReadAll()
 }
 
-selectFolderEx(startingFolder := "", Prompt := "", OwnerHwnd := 0, OkBtnLabel := "") {
-	static osVersion := DllCall("GetVersion", "UChar")
+selectFolderEx(startingFolder := "", prompt := "", ownerHandle := 0, OkBtnLabel := "") {
 	static IID_IShellItem := Buffer(16, 0)
 		, Show := A_PtrSize * 3
 		, SetOptions := A_PtrSize * 9
@@ -417,32 +416,31 @@ selectFolderEx(startingFolder := "", Prompt := "", OwnerHwnd := 0, OkBtnLabel :=
 		, SetTitle := A_PtrSize * 17
 		, SetOkButtonLabel := A_PtrSize * 18
 		, GetResult := A_PtrSize * 20
+	SelectedFolder := "", folderItem := 0, shellItem := 0, strPtrVar := 0
 	DllCall("Ole32.dll\IIDFromString", "WStr", "{43826d1e-e718-42ee-bc55-a1e261c37bfe}", "Ptr", IID_IShellItem)
-	selectedFolder := "", folderItem := 0, shellItem := 0, StrPtrVar := 0
-	OwnerHwnd := DllCall("IsWindow", "Ptr", OwnerHwnd, "UInt") ? OwnerHwnd : 0
-	if !(FileDialog := ComObject("{DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7}", "{42f85136-db7e-439c-85f1-e4075d135fc8}"))
-		Return ""
-	VTBL := NumGet(FileDialog.ptr, "UPtr")
+	ownerHandle := DllCall("IsWindow", "Ptr", ownerHandle, "UInt") ? ownerHandle : 0
+	if !(fileDialog := ComObject("{DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7}", "{42f85136-db7e-439c-85f1-e4075d135fc8}"))
+		return ""
+	VTBL := NumGet(fileDialog.Ptr, "UPtr")
 	; FOS_CREATEPROMPT | FOS_NOCHANGEDIR | FOS_PICKFOLDERS
-	DllCall(NumGet(VTBL + SetOptions, "UPtr"), "Ptr", FileDialog, "UInt", 0x00002028, "UInt")
-	if (startingFolder != "")
-		if !DllCall("Shell32.dll\SHCreateItemFromParsingName", "WStr", startingFolder, "Ptr", 0, "Ptr", IID_IShellItem, "PtrP", &folderItem)
-			DllCall(NumGet(VTBL + SetFolder, "UPtr"), "Ptr", FileDialog, "Ptr", folderItem, "UInt")
+	DllCall(NumGet(VTBL + SetOptions, "UPtr"), "Ptr", fileDialog, "UInt", 0x00002028, "UInt")
+	if (StartingFolder != "")
+		if !DllCall("Shell32.dll\SHCreateItemFromParsingName", "WStr", StartingFolder, "Ptr", 0, "Ptr", IID_IShellItem, "PtrP", &folderItem)
+			DllCall(NumGet(VTBL + SetFolder, "UPtr"), "Ptr", fileDialog, "Ptr", folderItem, "UInt")
 	if (Prompt != "")
-		DllCall(NumGet(VTBL + SetTitle, "UPtr"), "Ptr", FileDialog, "WStr", Prompt, "UInt")
+		DllCall(NumGet(VTBL + SetTitle, "UPtr"), "Ptr", fileDialog, "WStr", Prompt, "UInt")
 	if (OkBtnLabel != "")
-		DllCall(NumGet(VTBL + SetOkButtonLabel, "UPtr"), "Ptr", FileDialog, "WStr", OkBtnLabel, "UInt")
-	if !DllCall(NumGet(VTBL + Show, "UPtr"), "Ptr", FileDialog, "Ptr", OwnerHwnd, "UInt") {
-		if !DllCall(NumGet(VTBL + GetResult, "UPtr"), "Ptr", FileDialog, "PtrP", &ShellItem, "UInt") {
-			GetDisplayName := NumGet(NumGet(ShellItem + 0, "UPtr"), A_PtrSize * 5, "UPtr")
-			if !DllCall(GetDisplayName, "Ptr", ShellItem, "UInt", 0x80028000, "PtrP", &StrPtrVar) ; SIGDN_DESKTOPABSOLUTEPARSING
-				selectedFolder := StrGet(StrPtrVar, "UTF-16"), DllCall("Ole32.dll\CoTaskMemFree", "Ptr", StrPtrVar)
-		;	ObjRelease(shellItem)
+		DllCall(NumGet(VTBL + SetOkButtonLabel, "UPtr"), "Ptr", fileDialog, "WStr", OkBtnLabel, "UInt")
+	if !DllCall(NumGet(VTBL + Show, "UPtr"), "Ptr", fileDialog, "Ptr", ownerHandle, "UInt") {
+		if !DllCall(NumGet(VTBL + GetResult, "UPtr"), "Ptr", fileDialog, "PtrP", &shellItem, "UInt") {
+			GetDisplayName := NumGet(NumGet(shellItem, "UPtr"), A_PtrSize * 5, "UPtr")
+			if !DllCall(GetDisplayName, "Ptr", shellItem, "UInt", 0x80028000, "PtrP", &strPtrVar) ; SIGDN_DESKTOPABSOLUTEPARSING
+				SelectedFolder := StrGet(strPtrVar, "UTF-16"), DllCall("Ole32.dll\CoTaskMemFree", "Ptr", strPtrVar)
+			ObjRelease(shellItem)
 		}
 	}
-;	if (folderItem)
-;	   ObjRelease(folderItem)
-;	ObjRelease(FileDialog.Ptr)
+	if (folderItem)
+		ObjRelease(folderItem)
 	return selectedFolder
 }
 
