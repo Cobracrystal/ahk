@@ -69,7 +69,7 @@ class KeyLogger {
 		catch Error
 			process := "" 
 		this.logAddHeader()
-		FileAppend(Format("{1} Window:`t [{2}, `"{3}`"]`n", time, process, title), this.path, "UTF-8")
+		FileAppend(Format("{1} New Active Window:`t [{2}, `"{3}`"]`n", time, process, title), this.path, "UTF-8")
 	}
 
 	static logAddHeader() {
@@ -112,7 +112,7 @@ class KeyLogger {
 		title := WinGetTitle("ahk_id " handle)
 		process := WinGetProcessName("ahk_id " handle)
 		this.logAddHeader()
-		FileAppend(Format("{1} Mouse:`t {2} @[x={3}, y={4}] Window: [{5}, `"{6}`"]`t Control: {7}`n", time, mouseKey, x, y, process, title, controln), this.path)
+		FileAppend(Format("{1} Mouse:`t {2} @[x={3}, y={4}] On Window: [{5}, `"{6}`"]`t Control: {7}`n", time, mouseKey, x, y, process, title, controln), this.path)
 	}
 }
 
