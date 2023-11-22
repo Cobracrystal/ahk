@@ -36,8 +36,8 @@ class HotstringLoader {
 	static load(filePath, name := "", register := 1, setDefault := 1, encoding := "UTF-8") {
 		fileObj := FileOpen(filePath, "r", encoding)
 		jsonStr := fileObj.Read()
-;		hotstringObj := JSON.Load(jsonStr)
-		hotstringObj := [{string: "asudhsdifu", options:"*", replacement:"owo"}]
+		hotstringObj := JSON.Load(jsonStr)
+;		hotstringObj := [{string: "asudhsdifu", options:"*", replacement:"owo"}]
 		if (name == "") {
 			name := this.hotstrings.Count + 1
 		}
@@ -57,7 +57,7 @@ class HotstringLoader {
 	static registerHotstrings(name) {
 		obj := this.hotstrings[name]
 		for i, e in obj
-			this.callHotstring(e.string, e.options, e.replacement, 1)
+			this.callHotstring(e["string"], e["options"], e["replacement"], 1)
 	}
 	
 	static callHotstring(hString, options := "", replacement := "", onofftoggle := "") {

@@ -470,6 +470,11 @@ return
 	AltDrag.scaleWindow(1)
 }
 
+!XButton1::{	; Minimize Window
+	AltDrag.minimizeWindow()
+}
+
+
 ^NumpadMult:: {	; Show Mouse Coordinates
 	static toggle := false
 	if (toggle := !toggle)
@@ -1079,7 +1084,15 @@ HideShowTaskbar(action) {
 	DllCall("Shell32\SHAppBarMessage", "UInt", ABM_SETSTATE, "Ptr", APPBARDATA)
 }
 
+^k::{
+	a := JSON.load('{ "str": "\u1d573" }')
+	A_Clipboard := a["str"]
+	msgbox("wait")
+	str := JSON.dump(a)
+	A_Clipboard := str
+}
 
+/*
 ^O:: { ; Load Latex Hotstrings
 	HotstringLoader.load(A_WorkingDir . "\everything\LatexHotstrings_ahk2.json", "LatexHotstrings")
 }
@@ -1088,3 +1101,8 @@ HideShowTaskbar(action) {
 	msgbox(selectFolderEx(A_WorkingDir,"Select Your mom",,"lmao"))
 }
 ; CHECK IF THE objrelease ARE NECESSARY, ASK IN DISCORD POTENTIALLY!
+
+^j::{
+	a := BiMap("asd", 1, "asd", 2, "def", 2, 5, "23", [1,2], "str")
+}
+*/

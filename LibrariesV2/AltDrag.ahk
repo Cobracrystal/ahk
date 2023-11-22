@@ -1,8 +1,10 @@
 ﻿/*
-;// 'Traditional' Hotkeys:
+
+;---'Traditional' Hotkeys:
 ;  Alt + Left Button	: Drag to move a window.
 ;  Alt + Right Button	: Drag to resize a window.
 ;  Alt + Middle Button	: Click to switch Max/Restore state of a window.
+;--- & Semi-Traditional
 ;  Alt + Middle Button	: Scroll to scale a window.
 ;  Alt + X4 Button		: Click to minimize a window.
 
@@ -31,6 +33,10 @@
 	AltDrag.scaleWindow(1)
 }
 
+; Minimize Window
+!XButton1::{	
+	AltDrag.minimizeWindow()
+}
 */
 
 class AltDrag {
@@ -73,11 +79,6 @@ class AltDrag {
 					this.monitors[mHandle] := { left:NumGet(monitorInfo, 20, "Int") ,top:NumGet(monitorInfo, 24, "Int")
 												,right:NumGet(monitorInfo, 28, "Int")	,bottom:NumGet(monitorInfo, 32, "Int") }
 				}
-				; adjust snapping options here
-				; last two variables are radius of snapping and correction error for windows.
-				; ~> 30 pixels from edge of screen, it snaps to it, and it adjusts its position by 7 pixels
-				; adjusting position is necessary since windows desktop/visual display of window
-				; is slightly larger than what it should be.
 				this.calculateSnapping(&nx,&ny,winW,winH,mHandle,30,7)
 			}
 			DllCall("SetWindowPos","UInt",winID,"UInt",0,"Int",nx,"Int", ny, "Int", 0, "Int", 0,"Uint",0x0005)
@@ -122,22 +123,21 @@ class AltDrag {
 		cleanHotkey := "{Middle Up}" ; FIX THIS
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
-		winID := WinExist("A")
-		mmx := WinGetMinMax("ahk_id " . winID)
-		if (this.winInBlacklist(winID) || mmx == -1) {
+		wHandle := WinExist("A")
+		mmx := WinGetMinMax("ahk_id " . wHandle)
+		if (this.winInBlacklist(wHandle) || mmx == -1) {
 			return
 		}
-		WinGetPos(&winX, &winY, &winW, &winH, "ahk_id " . winID)
-		mHandle := DllCall("MonitorFromWindow", "Ptr", winID, "UInt", 0x2, "Ptr")
+		WinGetPos(&winX, &winY, &winW, &winH, "ahk_id " . wHandle)
+		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
 		if (!this.monitors.Has(mHandle)) {
-			NumPut("Uint", 40, monitorInfo := Buffer(40))
-			DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-			this.monitors[mHandle] := { left:NumGet(monitorInfo, 20, "Int") ,top:NumGet(monitorInfo, 24, "Int")
-										,right:NumGet(monitorInfo, 28, "Int")	,bottom:NumGet(monitorInfo, 32, "Int") }
+			NumPut("Uint", 40, mI := Buffer(40))
+			DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", mI)
+			this.monitors[mHandle] := { left:NumGet(mI, 20, "Int"), top:NumGet(mI, 24, "Int"), right:NumGet(mI, 28, "Int")	,bottom:NumGet(mI, 32, "Int") }
 		}
 		xChange := floor((this.monitors[mHandle].right - this.monitors[mHandle].left)/2 * (scale_factor-1))
 		yChange := floor(winH * xChange/winW)
-		wLimit := this.winMinMaxSize(winID)
+		wLimit := this.winMinMaxSize(wHandle)
 		if (direction == 1) {
 			nx := winX - xChange, ny := winY - yChange
 			if ((nw := winW + 2 * xChange) >= wLimit.maxX || (nh := winH + 2*yChange) >= wLimit.maxY)
@@ -149,7 +149,7 @@ class AltDrag {
 				return
 		}
 	;	tooltip % "x: " nx "`ny: " ny "`nw: " nw "`nh: " nh "`nxCh: " xChange "`nyCh: " yChange "`nminX: " wLimit.minX "`nminY: " wLimit.minY "`nmaxX: " wLimit.maxX "`nmaxY: " wLimit.maxY
-		DllCall("SetWindowPos","UInt",winID,"UInt",0,"Int",nx,"Int", ny, "Int", nw, "Int", nh,"Uint",0x0004)
+		DllCall("SetWindowPos","UInt",wHandle,"UInt",0,"Int",nx,"Int", ny, "Int", nw, "Int", nh,"Uint",0x0004)
 	}
 
 	static minimizeWindow() {
@@ -159,6 +159,8 @@ class AltDrag {
 		WinMinimize("ahk_id " . winID)
 	}
 	
+	; * radius -> radius in pixels in which windows will snap to points
+	; * edgeWidthPixels -> desktop and window size is slightly incorrect, shifting by ~7 pixels / window border is necessary 
 	static calculateSnapping(&x, &y, w, h, mHandle, radius, edgeWidthPixels) {
 		if (abs(x-this.monitors[mHandle].left) < radius)
 			x := this.monitors[mHandle].left-edgeWidthPixels		;// snap to left edge of screen + adjustment of window Client area to actual window

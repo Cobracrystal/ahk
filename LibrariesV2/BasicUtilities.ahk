@@ -62,6 +62,22 @@ fastPrint(text) {
 	return 1
 }
 
+; param method -> accept text + possible extra params
+modifySelectedText(method, params*) {
+	ClipboardOld := ClipboardAll()
+	A_Clipboard := "" ; free clipboard so that ClipWait is more reliable
+	Send("^c")
+	if !ClipWait(1) {
+		A_Clipboard := ClipboardOld
+		return
+	}
+	A_Clipboard := method(A_Clipboard, params*)
+	SendEvent("^v")
+	Sleep(150)
+	A_Clipboard := ClipboardOld
+	return 1
+}
+
 arrayContains(array, t) {
 	for index, element in array
 		if (element = t)
@@ -321,4 +337,82 @@ tryEditTextFile(path := A_ScriptFullPath) {
 
 doNothing(*) {
 	return
+}
+
+class BiMap extends Map {
+	static Call(params*) {
+		tMap := Map(params*)
+		this.map := Map()
+		this.inverseMap := BiMap()
+		for i, e in tMap
+			this.inverseMap[e] := i
+		for i, e in this.inverseMap
+			this.map[e] := i
+		return this.map
+
+;		inverseMap := { map: this.inverseMap, inverseMap: this }
+	}
+
+	static Clear {
+
+	} 
+
+	static Clone {
+
+	}
+
+	static Delete {
+
+	}
+
+	static Get {
+
+	}
+
+	static Has {
+
+	}
+
+	static Set {
+
+	}
+
+	static Count {
+		get => this.count
+	}
+
+	static Capacity {
+		
+	}
+
+	static CaseSense {
+
+	}
+
+	static Default {
+
+	}
+
+	static __Item[key] {
+		get {
+			return this.map[key]
+		}
+
+		set {
+			if (this.inverseMap.Has(value))
+				this.map.Delete(this.inverseMap[value])
+			if (this.map.Has(key))
+				this.inverseMap.Delete(this.map[key])
+			this.map[key] := value
+			this.inverseMap[value] := key
+		}
+	}
+
+	static inverse() {
+		invMap := BiMap()
+		for i, e in this.map
+			invMap[e] := i
+		return invMap
+	}
+
 }

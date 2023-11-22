@@ -117,7 +117,7 @@ class ReminderManager {
 		}
 		else {
 			largestSetUnit := "Month"
-			day := (day == -1 ? 1 : day)
+			day := (day == -1 ? 1 : day) ; day ?? 1, use unset instead of -1
 			hours := (hours == -1 ? 0 : hours) ; if month is set, alarm at 1.[month] at 00:00:00
 		}
 		minutes := (minutes == -1 ? 0 : minutes)
