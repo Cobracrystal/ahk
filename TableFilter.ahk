@@ -183,7 +183,7 @@ createFilteredList() {
 }
 
 duplicateList() {
-	global LV, data, keyArray, CheckboxDuplicates, abortDuplicateflag, duplicateFilter
+	global LV, data, keyArray, CheckboxDuplicates, duplicateFilter
 	Gui, Submit, NoHide
 	if !(CheckboxDuplicates) {
 		createFilteredList()
@@ -191,52 +191,32 @@ duplicateList() {
 	}
 	GuiControl, -Redraw, LV
 	LV_Delete()
-	duplArr := []
-	abortDuplicateflag := 0
 	if (duplicateFilter)
 		col := duplicateFilter
 	else
 		col := keyArray[1]
-	h := WinActive("A")
-	total := (data.Count() * (data.Count()-1))/2
+	duplicates := {}
 	Gui, +Disabled
-	Loop % data.Count()
-	{
-		i := A_Index
-		row := data[i]
-		rowVal := row[col]
-		if (WinActive("ahk_id" . h)) {
-			if (abortDuplicateflag == 1)
-				break
-			crt := (2*data.count()-i+1)*i/2
-			ToolTip, % "Loading: " . Format("{1:i}", crt/total*100) . "%"
-		}
+	for i, row in data {
+		value := row[col]
+		if (duplicates[value])
+			duplicates[value].push(row)
 		else
-			ToolTip
-		flag := 1
-		if (rowVal == "-" || rowVal == " " || arrayContains(duplArr, rowVal))
+			duplicates[value] := [row]
+	}
+	for i, row in data {
+		value := row[col]
+		if (value == "-" || value == " " || value == "")
 			continue
-		Loop % data.Count() - i
-		{
-			row2 := data[i+A_Index]
-			if (rowVal == row2[col]) {
-				if (flag) {
-					listViewAddRow(row, keyArray)
-					duplarr.push(rowVal)
-					flag := 0
-				}
-				listViewAddRow(row2, keyArray)
+		if (duplicates[value].Count() > 1) {
+			for i, dRow in duplicates[value] {
+				listViewAddRow(dRow, keyArray)
 			}
+			duplicates[value] := {}
 		}
 	}
 	Gui, -Disabled
 	GuiControl, +Redraw, LV
-	if (abortDuplicateflag == 1) {
-		GuiControl,,CheckboxDuplicates, 0
-		createFilteredList()
-	}
-	abortDuplicateflag := -1
-	ToolTip
 }
 
 filterTableRow(row, keyArray) {
@@ -590,16 +570,12 @@ toggleGuiDarkMode(hwnd, dark := 1) {
 }
 
 GuiEscape(GuiHwnd) {
-	global filterGuiArray, CheckboxDuplicates, abortDuplicateflag, editLineGUIOwnerHwnd
+	global filterGuiArray, editLineGUIOwnerHwnd
 	Gui, %GuiHwnd%:Submit, NoHide
 	WinGetTitle, t, ahk_id %GuiHwnd%
 	if (t == "EditLineGUITitleThatIsInvisibleSoNooneWillSeeThatILikeJobot") {
 		Gui, %editLineGUIOwnerHwnd%:-Disabled
 		Gui, %GuiHwnd%:Destroy
-		return
-	}
-	if (CheckboxDuplicates && abortDuplicateflag == 0) {
-		abortDuplicateflag := 1
 		return
 	}
 	GuiClose(GuiHwnd)
