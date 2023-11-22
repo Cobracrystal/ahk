@@ -167,16 +167,33 @@ return
 }
 
 *^LWin Up:: { ; Open Everything Search Window
+	static searchString := "Everything ahk_exe Everything.exe ahk_class EVERYTHING"
 	state := GetKeyState("Shift")
-	move := true
-	if (WinExist("ahk_exe C:\Program Files\Everything\Everything.exe"))
-		ret := false
-	Run("everything.exe -newwindow", "C:\Program Files\Everything")
-	hwnd := WinWaitActive("ahk_exe C:\Program Files\Everything\Everything.exe")
+	move := true, list := []
+	if (WinExist(searchString)) {
+		move := false
+		list := WinGetList(searchString)
+	}
+	Run('"C:\Program Files\Everything\Everything.exe" -newwindow')
+	Loop {
+		if (WinGetCount(searchString) == list.Length) {
+			Sleep(50)
+			continue
+		}
+		list2 := WinGetList(searchString)
+		for i, e in list2 {
+			if (!objContainsValue(list, e))
+				hwnd := e
+		}
+		if (IsSet(hwnd)) ; if we found the window, good
+			break
+		return 0 ; give up else, we probably interfered and closed the window or something
+	}
+	WinActivate(hwnd)
 	WinMoveTop(hwnd)
-	mmx := WinGetMinMax()
+	mmx := WinGetMinMax(hwnd)
 	if (mmx == 1 || mmx == -1)
-		WinRestore()
+		WinRestore(hwnd)
 	if (move)
 		winSlowMove(hwnd, 40, 400, 784, 648, 8)
 	if (state)
