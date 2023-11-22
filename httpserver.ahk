@@ -9,6 +9,7 @@ SetBatchLines, -1
 pathArr := {  "/":"mainIndex"
 			, "404":"NotFound"
 			, "/whoami":"whoami"
+			, "/iptracker": "whoami"
 			, "/redirect":"redirect"
 			, "/page":"page"
 			, "/calc":"calc"
@@ -70,7 +71,7 @@ calc(ByRef req, ByRef res) {
 
 whoami(ByRef req, ByRef res, ByRef server) {
 	logger(req)
-	logFile := A_WorkingDir . "\logRequest.txt"
+	logFile := A_WorkingDir . "\fullRequestLog.txt"
 	str := "-----------------------------------------------------`n"
 	str .= "REQUEST MADE AT " . formatTimeFunc(,"dd-MM-yyyy HH:mm:ss.") . Mod(A_TickCount,1000) . " (System Time)`n"
 	str .= "-----------------------------------------------------`n"
