@@ -1,6 +1,7 @@
 ﻿; https://github.com/cobracrystal/ahk
 ; TODO: Refreshing with F5 should a) be available with a GUI button, c) should be toggleable to update automatically
 ; TODO 3: Add Settings file for excluded windows, automatically form that into regex
+; needs to check if window is in admin mode, else most commands fail (eg winsettransparent)
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\JSON.ahk"
 
