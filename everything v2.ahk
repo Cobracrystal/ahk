@@ -344,7 +344,10 @@ F11:: { 	; BTD6: Rebind Escape
 		xPosCircle -= 100
 		yPosCircle -= 100
 		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", "ahk_id " circleWindow)
-		WinSetRegion("100-100 350-250 175-250 350-400 100-400 Wind", "ahk_id " circleWindow)
+		duoRect := "200-200 1500-200 1500-900 200-900 200-550 850-200 1500-550 850-900 200-550"
+		str := sierpinskiCoords(800, 150, 800, 5)
+	;	msgbox(str)
+		WinSetRegion(str, "ahk_id " circleWindow)
 		WinSetStyle("-0xC00000", "ahk_id " circleWindow) ; make it alwaysonTop
 	}
 	else {
@@ -772,6 +775,15 @@ customExit(ExitReason, ExitCode) {
 ; ###########################################################################
 #HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
 
+sierpinskiCoords(x, y, size, depth) {
+	height := Integer(Round(sqrt(3)/2 * size))
+	if (depth == 0)
+		return Format("{}-{} {}-{} {}-{} {}-{} ", x, y, x+size//2, y+height, x-size//2, y+height, x, y)
+	str := sierpinskiCoords(x, y, size//2, depth-1) . x "-" y " "
+	str .= sierpinskiCoords(x+size//4, y+height//2, size//2, depth-1) . x "-" y " "
+	str .= sierpinskiCoords(x-size//4, y+height//2, size//2, depth-1) . x "-" y " "
+	return str
+}
 
 getAllPermutations(str1, str2) {
 	if (StrLen(str1) != StrLen(str2))
