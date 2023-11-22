@@ -220,13 +220,13 @@ class ReminderManager {
 		this.gui.AddGroupBox("Section w400 h90", "Add Reminder in")
 			this.gui.SetFont("s9")
 			this.gui.AddText("Center ys+22 xs+10", "Remind me in ")
-			this.gui.AddEdit("ys+20 x+5 r1 w30").Name := this.guiVars.1[5]
+			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[5]
 			this.gui.AddText("Center ys+22 x+5", "d")
-			this.gui.AddEdit("ys+20 x+5 r1 w30").Name := this.guiVars.1[4]
+			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[4]
 			this.gui.AddText("Center ys+22 x+5", "h")
-			this.gui.AddEdit("ys+20 x+5 r1 w30").Name := this.guiVars.1[3]
+			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[3]
 			this.gui.AddText("Center ys+22 x+5", "m ")
-			this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden")).Name := this.guiVars.1[2]
+			this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), 0).Name := this.guiVars.1[2]
 			this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), "s")
 			this.gui.AddText("Center ys+22 x+5", "with the message:")
 			this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.1[1]
@@ -234,15 +234,15 @@ class ReminderManager {
 		this.gui.AddGroupBox("xs Section w400 h90", "Add Reminder on")
 			this.gui.SetFont("s9")
 			this.gui.AddText("Center ys+22 xs+10", "Remind me on")
-			this.gui.AddEdit("ys+20 x+5 r1 w30").Name := this.guiVars.2[6]
+			this.gui.AddEdit("ys+20 x+5 r1 w30", A_DD).Name := this.guiVars.2[5]
 			this.gui.AddText("Center ys+22 x+5", ".")
-			this.gui.AddEdit("ys+20 x+5 r1 w30").Name := this.guiVars.2[5]
+			this.gui.AddEdit("ys+20 x+5 r1 w30", A_MM).Name := this.guiVars.2[6]
 			this.gui.AddText("Center ys+22 x+5", ", at")
-			this.gui.AddEdit("ys+20 x+5 r1 w30").Name := this.guiVars.2[4]
+			this.gui.AddEdit("ys+20 x+5 r1 w30", A_Hour).Name := this.guiVars.2[4]
 			this.gui.AddText("Center ys+22 x+5", ":")
-			this.gui.AddEdit("ys+20 x+5 r1 w30").Name := this.guiVars.2[3]
+			this.gui.AddEdit("ys+20 x+5 r1 w30", A_Min).Name := this.guiVars.2[3]
 			this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), ":")
-			this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden")).Name := this.guiVars.2[2]
+			this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), A_Sec).Name := this.guiVars.2[2]
 			this.gui.AddText("Center ys+22 x+5", "with the message:")
 			this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.2[1]
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderOnFromGUI.bind(this))
@@ -256,15 +256,15 @@ class ReminderManager {
 	reminderManagerGUI(mode := "O", *) {
 		mode := SubStr(mode, 1, 1)
 		if (WinExist(this.gui)) {
-			if (mode == "O") ; if gui exists and mode = open, activate window
+			if (mode == "O")
 				WinActivate(this.gui.hwnd)
-			else {	; if gui exists and mode = close/toggle, close
+			else {
 				this.data.coords := windowGetCoordinates(this.gui.hwnd)
 				this.gui.destroy()
 				this.gui := -1
 			}
 		}
-		else if (mode != "C") ; if gui doesn't exist and mode = open/toggle, create
+		else if (mode != "C")
 			this.guiCreate() 
 	}
 	
@@ -342,16 +342,23 @@ class ReminderManager {
 			t.push(this.gui[e].Value)
 		if !(t[1]) && (MsgBox("You have not set a reminder message. Proceed?", "Reminder", 0x1) == "Cancel")
 			return
-		try 
-			this.setTimerOn(parseTime(,t[6]?t[6]:unset, t[5]?t[5]:unset, t[4]?t[4]:unset, t[3]?t[3]:unset, t[2]?t[2]:unset), t[1])
+		try
+			time := parseTime(,t[6]?t[6]:unset, t[5]?t[5]:unset, t[4]?t[4]:unset, t[3]?t[3]:unset, t[2]?t[2]:unset)
 		catch Error {
-			msgbox("Problem setting the Reminder. Check if entered time is valid.")
+			msgbox("Invalid Time specified.")
+			return 0
+		}
+		try
+			this.setTimerOn(time, t[1])
+		catch Error {
+			MsgBox("Cannot set a reminder for that time.")
 			return 0
 		}
 		timedTooltip("Success!", 1000)
 		for i, e in this.guiVars.2
 			this.gui[e].Value := ""
 		this.createListView()
+		return 1
 	}
 
 	defaultReminder(text := "") {
