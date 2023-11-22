@@ -10,7 +10,7 @@
 #Include "%A_ScriptDir%\LibrariesV2\DiscordClient.ahk"
 
 class ReminderManager {
-	/*
+	/**
 	* @param flagLoad Load reminders from a specified file
 	* @param flagDebug Enables seconds for GUI timers and more notifications
 	* @param threshold threshold after which timers will not be started (as it is expected the script will be restarted before it)
@@ -33,7 +33,7 @@ class ReminderManager {
 		return this
 	}
 
-	/*
+	/**
 	* sets a reminder in the given time
 	* @param times* days, hours, minutes, seconds; after which the reminder will be called
 	* @param function A optional function object that will be called when the reminder finishes.
@@ -50,7 +50,7 @@ class ReminderManager {
 		return this.setTimerOn(time, message, function)
 	}
 
-	/*
+	/**
 	* sets a reminder in the given time
 	* @param time YYYYMMDDHHMISS timestamp on which the reminder will be called
 	* @param message An optional message to be displayed via MsgBox instead of a function object
@@ -90,15 +90,15 @@ class ReminderManager {
 		return 1
 	}
 
-	/*
-	* sets a timer with given period after a given time
+	/**
+	* Sets a timer with given period after a given time
 	* @param time year, month, day, hour, minute, second. If omitted, defaults to next instance of largest set units.
 	* @param period Integer period in which the timer will repeat
 	* @param periodUnit Time Unit can be one of the strings (or their first letter): Years, Weeks, Days, Hours, Minutes, Seconds
 	* @param message An optional message to display when the reminder finishes.
 	* @param function A optional function object that will be called when the reminder finishes. If both function and message are given, the function object must accept at least one parameter.
 	* If neither a message or function object are specified, a simple message box will open.
-	*/
+	 */
 	setPeriodicTimerOn(time, period, periodUnit := "Days", message := "", function := "") {
 		MSec := A_Msec
 		if (!IsTime(String(time)))
