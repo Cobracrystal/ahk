@@ -163,30 +163,51 @@ rotateStr(str, offset := 0) {
 	return SubStr(str, -1 * offset + 1) . SubStr(str, 1, -1 * offset)
 }
 
-ReplaceChars(Text, Chars, ReplaceChars) {
-	ReplacedText := Text
-	Loop Parse, Text
-	{
-		Index := A_Index
-		Char := A_LoopField
-		Loop Parse, Chars
-		{
-			if (A_LoopField = Char) {
-				ReplacedText := SubStr(ReplacedText, 1, Index - 1) . SubStr(ReplaceChars, A_Index, 1) . SubStr(ReplacedText, Index + 1)
-				break
-			}
+StrSplitUTF8(str, delim := "", omit := "") {
+	arr := []
+	skip := false
+	count := 1
+	Loop Parse, str, delim, omit {
+		char := A_LoopField
+		if (skip) {
+			skip := false
+			continue
 		}
+		if (StrLen(A_LoopField) == 1 && Ord(A_LoopField) > 0xD7FF && Ord(A_LoopField) < 0xDC00) {
+			skip := true
+			arr.push(A_Loopfield . SubStr(str, count+1, 1))
+			count += 2
+			continue
+		}
+		arr.push(A_LoopField)
+		count += StrLen(A_LoopField) + StrLen(delim)
 	}
-	return ReplacedText
+	return arr
 }
 
-recursiveReplaceMap(string, &from, to, index := 1) { ; why not map/keyarray? because maps aren't ordered, and this replaces in priority (in fact its impossible to replace properly at all without priority)
+
+replaceCharacters(text, alphMap) {
+	if !(alphMap is Map)
+		return text
+	result := ""
+	Loop Parse, text {
+		if (alphMap.Has(A_LoopField))
+			result .= alphMap[A_LoopField]
+		else
+			result .= A_Loopfield
+	}
+	return result
+}
+
+; @from array containing strings that are to be replaced in decreasing priority order
+; @to array containing strings that are the replacements for values in @from, in same order
+recursiveReplaceMap(string, &from, to, index := 1) {
 	replacedString := ""
-	if (index == from.Count())
+	if (index == from.Count)
 		return StrReplace(string, from[index], to[index])
 	strArr := StrSplit(string, from[index])
 	for i, e in strArr
-		replacedString .= recursiveReplaceMap(e, &from, to, index + 1) . (i == strArr.Count() ? "" : to[index])
+		replacedString .= recursiveReplaceMap(e, &from, to, index + 1) . (i == strArr.Count ? "" : to[index])
 	return replacedString
 }
 
@@ -284,6 +305,42 @@ selectFolderEx(startingFolder := "", Prompt := "", OwnerHwnd := 0, OkBtnLabel :=
 ;	   ObjRelease(folderItem)
 ;	ObjRelease(FileDialog.Ptr)
 	return selectedFolder
+}
+
+menu_GetMenuByName(menuName) {
+	; Based on MI.ahk by Lexikos -> http://www.autohotkey.com/board/topic/20253-menu-icons-v2/
+	static HMENU := 0, m
+	if !(HMENU) {
+		m := MenuBar()
+		m.Add()
+		m.Delete()
+		tGui := Gui()
+		tGui.MenuBar := m
+		HMENU := DllCall("User32.dll\GetMenu", "Ptr", tGui.Hwnd, "UPtr")
+		tGui.MenuBar := ""
+		tGui.Destroy()
+	}
+	if !(HMENU)
+		return 0
+	m.Add(menuName)
+	HSUBM := DllCall("User32.dll\GetSubMenu", "Ptr", HMENU, "Int", 0, "UPtr")
+	m.Delete(menuName)
+	return HSUBM
+}
+
+
+menu_RemoveSpace(HMENU, applyToSubMenus := True) {
+	; http://msdn.microsoft.com/en-us/library/ff468864(v=vs.85).aspx
+	static MIsize := (4 * 4) + (A_PtrSize * 3)
+	MI := Buffer(MIsize, 0)
+	Numput("UInt", MIsize, MI, 0)
+	NumPut("UInt", 0x00000010, MI, 4) ; MIM_STYLE = 0x00000010
+	DllCall("User32.dll\GetMenuInfo", "Ptr", HMENU, "Ptr", MI, "UInt")
+	if (applyToSubMenus)
+		NumPut("UInt", 0x80000010, MI, 4) ; MIM_APPLYTOSUBMENUS = 0x80000000| MIM_STYLE : 0x00000010
+	NumPut("UInt", NumGet(MI, 8, "UINT") | 0x80000000, MI, 8) ; MNS_NOCHECK = 0x80000000
+	DllCall("User32.dll\SetMenuInfo", "Ptr", HMENU, "Ptr", MI, "UInt")
+	return true
 }
 
 windowGetCoordinates(wHandle) {

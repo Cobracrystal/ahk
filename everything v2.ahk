@@ -1105,8 +1105,3 @@ HideShowTaskbar(action) {
 	msgbox(selectFolderEx(A_WorkingDir,"Select Your mom",,"lmao"))
 }
 ; CHECK IF THE objrelease ARE NECESSARY, ASK IN DISCORD POTENTIALLY!
-
-^j::{
-	a := BiMap("asd", 1, "asd", 2, "def", 2, 5, "23", [1,2], "str")
-}
-*/
