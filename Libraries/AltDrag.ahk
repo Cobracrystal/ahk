@@ -129,7 +129,6 @@ class AltDrag {
 		winID := WinExist("A")
 		WinGet, mmx, MinMax, % "ahk_id " . winID
 		if (this.winInBlacklist(winID) || mmx == -1) {
-			this.sendKey(cleanHotkey)
 			return
 		}
 		WinGetPos, winX, winY, winW, winH, % "ahk_id " . winID
@@ -155,6 +154,13 @@ class AltDrag {
 		}
 	;	tooltip % "x: " nx "`ny: " ny "`nw: " nw "`nh: " nh "`nxCh: " xChange "`nyCh: " yChange "`nminX: " wLimit.minX "`nminY: " wLimit.minY "`nmaxX: " wLimit.maxX "`nmaxY: " wLimit.maxY
 		DllCall("SetWindowPos","UInt",winID,"UInt",0,"Int",nx,"Int", ny, "Int", nw, "Int", nh,"Uint",0x0004)
+	}
+	
+	minimizeWindow() {
+		winID := WinExist("A")
+		if (this.winInBlacklist(winID))
+			return
+		WinMinimize, % "ahk_id " . winID
 	}
 	
 	calculateSnapping(byref x, byref y, w, h, mHandle, radius, edgeWidthPixels) {
