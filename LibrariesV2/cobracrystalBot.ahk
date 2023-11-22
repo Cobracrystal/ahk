@@ -1,11 +1,13 @@
 #Include "%A_ScriptDir%\LibrariesV2\DiscordClient.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\jsongo.ahk"
 
-class cobracrystalBot {
+class ccBot {
 
-	static __New() {
+	__New(token) {
 		this.workingDir := A_ScriptDir "\script_files\discordBot\"
-		this.servers := this.readJson(this.workingDir "serverIDs.json")
-		this.bot := DiscordClient(FileRead(this.workingDir "discordBotToken.token", "UTF-8"))
+		DirCreate(this.workingDir . "output")
+		this.bot := DiscordClient(token)
 		this.me := this.bot.getCurrentUser()
 		this.themes := {roles: Map(), channels: Map()}
 		this.permissions := {
@@ -58,30 +60,48 @@ class cobracrystalBot {
 			SEND_VOICE_MESSAGES: 0x0000400000000000,
 		}
 	}
-
-	static loadThemes(filepathRoles?, filepathChannels?, save := true) {
+	/**
+	 * @param filepathRoles A path to a file which is either a csv or a json containing a theme structure for Roles.
+	 * @param filepathChannels A path to a file which is either a csv or a json containing a theme structure for Channels.
+	 * Example Structure of a json for Roles:
+	 * { "THEME_NAME_1": { "ROLE_ID": {"name":"THEMED_ROLE_NAME", "color":"THEMED_ROLE_COLOR"}, "ROLE_ID2": ..... }, "THEME_NAME_2": .....}
+	 * and for Channels:
+	 * { "THEME_NAME_1": { "CHANNEL_ID": {"name":"THEMED_ROLE_NAME"}, "CHANNEL_ID": ..... }, "THEME_NAME_2": .....}
+	 * @param save if true, saves both roles and channels (if given) as json files into output folder
+	 */
+	loadThemes(filepathRoles?, filepathChannels?, save := true) {
 		if (IsSet(filepathRoles)) {
 			SplitPath(filepathRoles, , , &ext)
 			if (ext == "csv")
-				roleThemes := this.parseColorCSV(filepathRoles)
+				roleThemes := ccBot.parseColorCSV(filepathRoles)
 			else if (ext == "json")
-				roleThemes := this.readJson(filepathRoles)
+				roleThemes := ccBot.readJson(filepathRoles)
 			else throw Error()
 		}
 		if (IsSet(filepathChannels)) {
 			SplitPath(filepathChannels, , , &ext)
 			if (ext == "csv")
-				channelThemes := this.parseColorCSV(filepathChannels)
+				channelThemes := ccBot.parseColorCSV(filepathChannels)
 			else if (ext == "json")
-				channelThemes := this.readJson(filepathChannels)
+				channelThemes := ccBot.readJson(filepathChannels)
 			else throw Error()
 		}
-		this.themes := {roles:roleThemes?, channels: channelThemes?}
-		if (save)
-			this.writeJson(this.themes, "themes")
+		if !(IsSet(roleThemes) || IsSet(channelThemes))
+			throw Error("Nothing given.")
+		this.themes := {roles:roleThemes??Map(), channels: channelThemes??Map()}
+		if (save) {
+			if IsSet(roleThemes)
+				ccBot.writeJson(roleThemes, this.workingDir, "rolethemes")
+			if IsSet(channelThemes)
+				ccBot.writeJson(channelThemes, this.workingDir, "channelthemes")
+		}
 	}
 	
-	static applyTheme(serverID, themeName) {
+	/**
+	 * @param serverID snowflake ID of the discord server the theme is applied to.
+	 * @param themeName name of the theme as specified inside the theme files.
+	 */
+	applyTheme(serverID, themeName) {
 		; check if bot has permissions. 
 		if (!this.hasPermissionInServer(serverID, "ANY", this.permissions.ADMINISTRATOR, this.permissions.MANAGE_ROLES))
 			throw Error("Missing Permission to Edit Roles")
@@ -105,7 +125,7 @@ class cobracrystalBot {
 						errorlog .= "Did not edit Role " i " because wasn't found.`n"
 				}
 			}
-			catch e {
+			catch as e {
 				MsgBox(errorlog . e.Message "`n" e.What "`n" e.Extra)
 			}
 		}
@@ -125,21 +145,21 @@ class cobracrystalBot {
 						errorlog .= "Channel " i " not found.`n"
 				}
 			}
-			catch e {
+			catch as e {
 				MsgBox(errorlog . e.Message "`n" e.What "`n" e.Extra)
 			}
 		}
 		msgbox(errorlog)
 	}
 
-	static isInGuild(serverID) {
+	isInGuild(serverID) {
 		for i, e in this.bot.getCurrentUserGuilds()
 			if (e["id"] == serverID)
 				return true
 		return false
 	}
 
-	static highestRole(serverID) {
+	highestRole(serverID) {
 		if (!this.isInGuild(serverID))
 			return 0
 		userRoleIDs := this.bot.getGuildMember(serverID, this.me["id"])["roles"]
@@ -155,7 +175,7 @@ class cobracrystalBot {
 		return highestRole
 	}
 
-	static permissionsInServer(serverID) {
+	permissionsInServer(serverID) {
 		if !(this.isInGuild(serverID))
 			return 0
 		userRoleIDs := this.bot.getGuildMember(serverID, this.me["id"])["roles"]
@@ -172,7 +192,7 @@ class cobracrystalBot {
 		return finalPermissions
 	}
 
-	static hasPermissionInServer(serverID, mode, wantpermission*) {
+	hasPermissionInServer(serverID, mode, wantpermission*) {
 		permissions := this.permissionsInServer(serverID)
 		if (mode = "ANY" || mode = "OR") {
 			for i, e in wantpermission {
@@ -189,8 +209,8 @@ class cobracrystalBot {
 
 	; helper functions
 
-	static writeJson(obj, name) {
-		nfile := FileOpen(this.workingDir "output\" name ".json", "w", "UTF-8")
+	static writeJson(obj, path, name) {
+		nfile := FileOpen(path "\output\" name ".json", "w", "UTF-8")
 		nfile.Write(jsongo.Stringify(obj, , "`t"))
 		nfile.Close()
 	}
