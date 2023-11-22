@@ -551,14 +551,14 @@ class TableFilter {
 			DirCreate(this.data.savePath)
 		if (mode == "S") {
 			f := FileOpen(this.data.savePath . "\settings.json", "w", "UTF-8")
-			f.Write(JSON.Dump(this.settings))
+			f.Write(jsongo.Stringify(this.settings))
 			f.Close()
 			return 1
 		}
 		else if (mode == "L") {
 			this.settings := {}
 			if (FileExist(this.data.savePath "\settings.json")) {
-				try this.settings := JSON.Load(FileRead(this.data.savePath "\settings.json", "UTF-8"), , false)
+				try this.settings := jsongo.Parse(FileRead(this.data.savePath "\settings.json", "UTF-8"), , false)
 			}
 			; populate remaining settings with default values
 			for i, e in Tablefilter.getDefaultSettings().OwnProps() {
