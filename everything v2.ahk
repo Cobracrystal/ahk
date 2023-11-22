@@ -528,10 +528,10 @@ center_window_on_monitor(hwnd, size_percentage := 0.714286) {
 	workRight := NumGet(monitorInfo, 28, "Int") ; Right
 	workBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
 	WinRestore("ahk_id " hwnd)
-	WinMove(workLeft + (workRight - workLeft) * (1 - size_percentage) / 2, ; // left edge of screen + half the width of it - half the width of the window, to center it.
-		workTop + (workBottom - workTop) * (1 - size_percentage) / 2,  ; // same as above but with top bottom
-		(workRight - workLeft) * size_percentage,	; // width
-		(workBottom - workTop) * size_percentage,	; // height
+	WinMove(workLeft + (workRight - workLeft) * (1 - size_percentage) / 2, ; left edge of screen + half the width of it - half the width of the window, to center it.
+		workTop + (workBottom - workTop) * (1 - size_percentage) / 2,  ; same as above but with top bottom
+		(workRight - workLeft) * size_percentage,	; width
+		(workBottom - workTop) * size_percentage,	; height
 		"ahk_id " hwnd)
 }
 
@@ -842,9 +842,11 @@ makeTextAnsiColorful(str) {
 	return tStr
 }
 
+
 ^!+Ä:: {	; Reload other script
 	PostMessage(0x111, 65303, , "ahk_id " 0x408f2)
 }
+ 
 
 ; ^m:: { ; Get Permutations
 ; 	A_Clipboard := getAllPermutations("12345", "abcde")

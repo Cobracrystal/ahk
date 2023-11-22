@@ -92,37 +92,27 @@ class HotkeyManager {
 	}
 
 	static getFullScript() {
-		fileObj := FileOpen(A_ScriptFullPath, "r", "UTF-8")
-		script := fileObj.Read()
-		fileObj.Close()
-		flagCom := false
-		flagMult := false
+		script := FileRead(A_ScriptFullPath, "UTF-8")
+		flagComment := false
 		cleanScript := ""
 		Loop Parse, script, "`n", "`r"
 		{
-			if (flagCom) {
-				if (RegExMatch(A_Loopfield, "^\s*\*\/"))
-					flagCom := false
+			if (flagComment) {
+				if (RegExMatch(A_Loopfield, "^\s*\*\/")) 
+					flagComment := false
 				cleanScript .= "`n"
 			}
-			else if (RegExMatch(A_Loopfield, "^\s*\/\*")) {
-				flagCom := true
-				cleanScript .= "`n"
-			}
-			else if (flagMult) {
-				if (RegExMatch(A_Loopfield, "^\s*\)"))
-					flagMult := false
-				cleanScript .= "`n"
-			}
-			else if (RegExMatch(A_Loopfield, "^\s*\(")) {
-				flagMult := true
+			else if (RegExMatch(A_Loopfield, "^\s*\/\*")) { ; /* comments MUST be at start of line
+				if (!RegexMatch(A_LoopField, "^\s*\/*.*\*\/"))
+					flagComment := true
 				cleanScript .= "`n"
 			}
 			else
 				cleanScript .= A_LoopField . "`n"
 		}
 		return cleanScript
-	;	return := RegExReplace(script, "ms`a)^\s*\/\*.*?^\s*\*\/\s*|^\s*\(.*?^\s*\)\s*") 
+	;	return RegExReplace(script, "ms`a)(?:^\s*\/\*.*?\*\/\s*\v|^\s*\/\*(?!.*\*\/\s*\v).*)")
+		; ^this works but it doesn't keep line numbers intact for obvious reasons
 	}
 
 	static getHotkeys(&script)	{
@@ -170,9 +160,9 @@ class HotkeyManager {
 	static getHotstrings(&script) {
 		Hotstrings := []
 		Loop Parse, script, "`n", "`r" {
-			if (RegExMatch(A_LoopField,"i)^\s*:([0-9\*\?XBCKOPRSIEZ]*?):(.*?)::(.*)`;?\s*(.*)", &match) || RegexMatch(A_LoopField, "i)^\s*Hotstring\(\`":([0-9\*\?BCKOPRSIEZ]*?):(.*?)\`",\`"(?:(.*)\`"),.*?\)\s*`;?\s*(.*)", &match))	{
-				;// start of line : [possible modifiers only once]:[string]:(escape char):(seconds string)[check for spaces][comment] OR ALTERNATIVELY
-				;// HotString(" (<- escaped via "" which turns into ", and that escaped via \ so \"" = ")[modifiers]:[string]","[replacement]", [variable which we don't need])
+			if (RegExMatch(A_LoopField,'i)^\s*:([0-9\*\?XBCKOPRSIEZ]*?):(.*?)::(.*)`;?\s*(.*)', &match) || RegexMatch(A_LoopField, 'i)^\s*Hotstring\(\":([0-9\*\?BCKOPRSIEZ]*?):(.*?)\",\"(?:(.*)\"),.*?\)\s*`;?\s*(.*)', &match))	{
+				; start of line : [possible modifiers only once]:[string]:(escape char):(seconds string)[check for spaces][comment] OR ALTERNATIVELY
+				; HotString(" (<- escaped via "" which turns into ", and that escaped via \ so \"" = ")[modifiers]:[string]","[replacement]", [variable which we don't need])
 				modifiers := match[1]
 				hString := match[2]
 				rString := match[3]
