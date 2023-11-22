@@ -25,24 +25,25 @@ if !InStr(FileExist("script_files\everything"), "D")
 SetWorkingDir(A_ScriptDir . "\script_files")
 A_TrayMenu.Delete()
 
-#Include "%A_ScriptDir%\LibrariesV2\TransparentTaskbar.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\HotkeyManager.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\WindowManager.ahk"
-; #Include "%A_ScriptDir%\LibrariesV2\ReminderManager.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\NeoKeyboardLayout.ahk"
-; #Include "%A_ScriptDir%\LibrariesV2\YoutubeDLGui.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\TextEditMenu.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\MacroRecorder.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\TimestampConverter.ahk"
-; #Include "%A_ScriptDir%\LibrariesV2\DiscordClient.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\DiscordBotCommands.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\AltDrag.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\MathUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\ColorUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\HotstringLoader.ahk"
+#Include "%A_ScriptDir%\LibrariesV2"
+#Include "TransparentTaskbar.ahk"
+#Include "HotkeyManager.ahk"
+#Include "WindowManager.ahk"
+; #Include "ReminderManager.ahk"
+#Include "NeoKeyboardLayout.ahk"
+; #Include "YoutubeDLGui.ahk"
+#Include "TextEditMenu.ahk"
+#Include "MacroRecorder.ahk"
+#Include "TimestampConverter.ahk"
+; #Include "DiscordClient.ahk"
+#Include "DiscordBotCommands.ahk"
+#Include "AltDrag.ahk"
+#Include "MathUtilities.ahk"
+#Include "ColorUtilities.ahk"
+#Include "BasicUtilities.ahk"
+#Include "HotstringLoader.ahk"
 
-; #Include "%A_ScriptDir%\LibrariesV2\JSON.ahk"
+; #Include "JSON.ahk"
 
 ;[style]} ______________________________________________________________________________________________
 ;[style]							: VARIABLES

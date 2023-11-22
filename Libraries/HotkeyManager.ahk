@@ -46,7 +46,7 @@ Hotkeys(ByRef Hotkeys)	{
 	; no comments like /* this */ or ( this )
     Hotkeys := {}
 	Loop, Parse, cleanScript, `n, `r
-	if RegExMatch(A_LoopField,"O)^((?!(?:;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`").*`".*::)).*)::{?(?:.*;)?\s*(.*)",match)	{  ;//matches hotkey text and recognizes ";", hotstrings, quotes and Gui as negative lookaheads
+	if RegExMatch(A_LoopField,"O)^((?!(?:;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`"").*`"".*::)).*)::{?(?:.*;)?\s*(.*)",match)	{  ;//matches hotkey text and recognizes ";", hotstrings, quotes and Gui as negative lookaheads
 		comment := (match[2] == "" ? "None" : match[2])
 		hkey := match[1]
 		hkey := (InStr(hkey, "+") == StrLen(hkey) ? hkey : StrReplace(hkey, "+", "Shift+",, limit:=1))

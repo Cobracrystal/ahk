@@ -40,21 +40,20 @@ class JSON
 	 *                           JSON.parse() 'reviver' parameter
 	 */
 	class Load extends JSON.Functor	{
-		Call(self, &text, reviver:="")
-		{
+		static Call(&text, reviver:="")	{
 			this.rev := IsObject(reviver) ? reviver : false
 			; Object keys(and array indices) are temporarily stored in arrays so that
 			; we can enumerate them in the order they appear in the document/text instead
 			; of alphabetically. Skip if no reviver function is specified.
-			this.keys := this.rev ? {} : false
+			this.keys := this.rev ? Map() : false
 
-			static json_value := '"{[01234567890-tfn'
-			     , json_value_or_array_closing := '"{[]01234567890-tfn'
-			     , object_key_or_object_closing := '"}'
+			static quot := Chr(34), json_value := quot . "{[01234567890-tfn"
+			     , json_value_or_array_closing := quot . "{[]01234567890-tfn"
+			     , object_key_or_object_closing := quot . "}"
 
 			key := ""
 			is_key := false
-			root := {}
+			root := Map()
 			stack := [root]
 			next := json_value
 			pos := 0
@@ -63,16 +62,16 @@ class JSON
 				if InStr(" `t`r`n", ch)
 					continue
 				if !InStr(next, ch, 1)
-					this.ParseError(next, text, pos)
+					this.ParseError(next, &text, pos)
 
 				holder := stack[1]
-				is_array := holder.IsArray
+				is_array := holder is Array
 
 				if InStr(",:", ch) {
-					next := (is_key := !is_array && ch == ",") ? '"' : json_value
+					next := (is_key := !is_array && ch == ",") ? quot : json_value
 
 				} else if InStr("}]", ch) {
-					ObjRemoveAt(stack, 1)
+					stack.RemoveAt(1)
 					next := stack[1]==root ? "" : stack[1].IsArray ? ",]" : ",}"
 
 				} else {
@@ -80,35 +79,34 @@ class JSON
 					; Check if Array() is overridden and if its return value has
 					; the 'IsArray' property. If so, Array() will be called normally,
 					; otherwise, use a custom base object for arrays
-						static json_array := Func("Array").IsBuiltIn || ![].IsArray ? {IsArray: true} : 0
+						static json_array := Map("IsArray", true)
 					
 					; sacrifice readability for minor(actually negligible) performance gain
 						(ch == "{")
 							? ( is_key := true
-							  , value := {}
+							  , value := Map()
 							  , next := object_key_or_object_closing )
 						; ch == "["
-							: ( value := json_array ? new json_array : []
+							: ( value := json_array ? json_array : []
 							  , next := json_value_or_array_closing )
 						
-						ObjInsertAt(stack, 1, value)
+						stack.InsertAt(1,value)
 
 						if (this.keys)
 							this.keys[value] := []
 					
 					} else {
-						if (ch == '"') {
+						if (ch == quot) {
 							i := pos
-							while (i := InStr(text, '"',, i+1)) {
+							while (i := InStr(text, quot,, i+1)) {
 								value := StrReplace(SubStr(text, pos+1, i-pos-1), "\\", "\u005c")
 
-								static tail := A_AhkVersion<"2" ? 0 : -1
-								if (SubStr(value, tail) != "\")
+								if (SubStr(value, -1) != "\")
 									break
 							}
 
 							if (!i)
-								this.ParseError("'", text, pos)
+								this.ParseError("'", &text, pos)
 
 							  value := StrReplace(value,  "\/",  "/")
 							, value := StrReplace(value,  '\"', "`"")
@@ -123,10 +121,10 @@ class JSON
 							i := 0
 							while (i := InStr(value, "\",, i+1)) {
 								if !(SubStr(value, i+1, 1) == "u")
-									this.ParseError("\", text, pos - StrLen(SubStr(value, i+1)))
+									this.ParseError("\", &text, pos - StrLen(SubStr(value, i+1)))
 
 								uffff := Abs("0x" . SubStr(value, i+2, 4))
-								if (A_IsUnicode || uffff < 0x100)
+								if (uffff < 0x100)
 									value := SubStr(value, 1, i-1) . Chr(uffff) . SubStr(value, i+6)
 							}
 
@@ -138,10 +136,9 @@ class JSON
 						} else {
 							value := SubStr(text, pos, i := RegExMatch(text, "[\]\},\s]|$",, pos)-pos)
 
-							static number := "number", integer :="integer"
-							if value is %number%
+							if IsNumber(value)
 							{
-								if value is %integer%
+								if IsInteger(value)
 									value += 0
 							}
 							else if (value == "true" || value == "false")
@@ -151,7 +148,7 @@ class JSON
 							else
 							; we can do more here to pinpoint the actual culprit
 							; but that's just too much extra work.
-								this.ParseError(next, text, pos, i)
+								this.ParseError(next, &text, pos, i)
 
 							pos += i-1
 						}
@@ -159,7 +156,7 @@ class JSON
 						next := holder==root ? "" : is_array ? ",]" : ",}"
 					} ; If InStr("{[", ch) { ... } else
 
-					is_array? key := ObjPush(holder, value) : holder[key] := value
+					is_array ? key := holder.push(value) : holder[key] := value
 
 					if (this.keys && this.keys.HasKey(holder))
 						this.keys[holder].Push(key)
@@ -170,28 +167,27 @@ class JSON
 			return this.rev ? this.Walk(root, "") : root[""]
 		}
 
-		ParseError(expect, &text, pos, len:=1)
+		static ParseError(expect, &text, pos, len:=1)
 		{
-			line := StrSplit(SubStr(text, 1, pos), "`n", "`r").Length()
+			line := StrSplit(SubStr(text, 1, pos), "`n", "`r").Length
 			col := pos - InStr(text, "`n",, -(StrLen(text)-pos+1))
 			msg := Format("{1}`n`nLine:`t{2}`nCol:`t{3}`nChar:`t{4}"
 			,     (expect == "")     ? "Extra data"
 			    : (expect == "'")    ? "Unterminated string starting at"
 			    : (expect == "\")    ? "Invalid \escape"
 			    : (expect == ":")    ? "Expecting ':' delimiter"
-			    : (expect == '"')   ? "Expecting object key enclosed in double quotes"
-			    : (expect == '"}')  ? "Expecting object key enclosed in double quotes or object closing '}'"
+			    : (expect == """")   ? "Expecting object key enclosed in double quotes"
+			    : (expect == """}")  ? "Expecting object key enclosed in double quotes or object closing '}'"
 			    : (expect == ",}")   ? "Expecting ',' delimiter or object closing '}'"
 			    : (expect == ",]")   ? "Expecting ',' delimiter or array closing ']'"
 			    : InStr(expect, "]") ? "Expecting JSON value or array closing ']'"
 			    :                      "Expecting JSON value(string, number, true, false, null, object or array)"
 			, line, col, pos)
 
-			static offset := A_AhkVersion<"2" ? -3 : -4
-			throw Error(msg, offset, SubStr(text, pos, len))
+			throw Error(msg, -4, SubStr(text, pos, len))
 		}
 
-		Walk(holder, key)
+		static Walk(holder, key)
 		{
 			value := holder[key]
 			if IsObject(value) {
@@ -201,7 +197,7 @@ class JSON
 					if (v != JSON.Undefined)
 						value[k] := v
 					else
-						ObjDelete(value, k)
+						value.delete(k)
 				}
 			}
 			
@@ -224,14 +220,13 @@ class JSON
 	 */
 	class Dump extends JSON.Functor
 	{
-		Call(self, value, replacer:="", space:="", escape_unicode:=true)
+		static Call(value, replacer:="", space:="", escape_unicode:=true)
 		{
 			this.rep := IsObject(replacer) ? replacer : ""
 
 			this.gap := ""
 			if (space) {
-				static integer := "integer"
-				if space is %integer%
+				if IsInteger(space)
 					Loop((n := Abs(space))>10 ? 10 : n)
 						this.gap .= " "
 				else
@@ -243,12 +238,12 @@ class JSON
 			return this.Str(Map("", value), "", escape_unicode)
 		}
 
-		Str(holder, key, escape_unicode:=true)
+		static Str(holder, key, escape_unicode:=true)
 		{
 			value := holder[key]
 
 			if (this.rep)
-				value := this.rep.Call(holder, key, ObjHasKey(holder, key) ? value : JSON.Undefined)
+				value := this.rep.Call(holder, key, holder.HasKey(key) ? value : JSON.Undefined)
 
 			if IsObject(value) {
 			; Check object type, skip serialization for other object types such as
@@ -305,10 +300,10 @@ class JSON
 				}
 			
 			} else ; is_number ? value : "value"
-				return ObjGetCapacity([value], 1)=="" ? value : this.Quote(value, escape_unicode)
+				return [value].GetCapacity(1)=="" ? value : this.Quote(value, escape_unicode)
 		}
 
-		Quote(string, escape_unicode:=true)
+		static Quote(string, escape_unicode:=true)
 		{
 			if (string != "") {
 				  string := StrReplace(string,  "\",  "\\")
@@ -320,10 +315,9 @@ class JSON
 				, string := StrReplace(string, "`r",  "\r")
 				, string := StrReplace(string, "`t",  "\t")
 				
-				static rx_escapable := A_AhkVersion<"2" ? "O)[^\x20-\x7e]" : "[^\x20-\x7e]"
 				if (escape_unicode) {
-					while RegExMatch(string, rx_escapable, m)
-						string := StrReplace(string, m.Value, Format("\u{1:04x}", Ord(m.Value)))
+					while RegExMatch(string, "[^\x20-\x7e]", &m)
+						string := StrReplace(string, m[0], Format("\u{1:04x}", Ord(m[0])))
 				}
 			}
 
@@ -349,7 +343,7 @@ class JSON
 	static Undefined
 	{
 		get {
-			static empty := {}, vt_empty := ComObject(0, &empty, 1)
+			static empty := Map(), vt_empty := ComObject(0)
 			return vt_empty
 		}
 	}
@@ -362,9 +356,9 @@ class JSON
 		; so as to avoid directly storing the properties(used across sub-methods)
 		; into the "function object" itself.
 			if IsObject(method)
-				return (new this).Call(method, arg, args*)
+				return this.Call(method, arg, args*)
 			else if (method == "")
-				return (new this).Call(arg, args*)
+				return this.Call(arg, args*)
 		}
 	}
 }

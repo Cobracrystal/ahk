@@ -53,7 +53,7 @@ class HotkeyManager {
 		tabObj := this.gui.AddTab3("w526 h500", ["AHK Hotkeys", "Other Hotkeys", "Hotstrings", "Settings"])
 		tabObj.UseTab(1)
 			this.lv[1] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Keys", "Comment"])
-			for i, e in this.getHotkeys(script)
+			for i, e in this.getHotkeys(&script)
 				this.lv[1].Add(,e.line, e.hotkey, e.comment)
 			Loop(this.lv[1].GetCount("Col"))
 				this.lv[1].ModifyCol(A_Index,"AutoHdr")
@@ -68,7 +68,7 @@ class HotkeyManager {
 			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile(this.data.savedHotkeysPath) : 0)
 		tabObj.UseTab(3)
 			this.lv[3] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Options", "Text", "Correction", "Comment"])
-			for i, e in this.getHotstrings(script)
+			for i, e in this.getHotstrings(&script)
 				this.lv[3].Add(,e.line, e.options, e.hotstring, e.replaceString, e.comment)
 			Loop(this.lv[3].GetCount("Col"))
 				this.lv[3].ModifyCol(A_Index,"AutoHdr")
@@ -126,7 +126,7 @@ class HotkeyManager {
 	;	return := RegExReplace(script, "ms`a)^\s*\/\*.*?^\s*\*\/\s*|^\s*\(.*?^\s*\)\s*") 
 	}
 
-	static getHotkeys(script)	{
+	static getHotkeys(&script)	{
 		hotkeys := []
 		hotkeyModifiers := [  {mod:"+", replacement:"Shift"}, {mod:"<^>!", replacement:"AltGr"}
 							, {mod:"^", replacement:"Ctrl"}	, {mod:"!", replacement:"Alt"}
@@ -163,7 +163,7 @@ class HotkeyManager {
 		return hotkeys
 	}
 
-	static getHotstrings(script) {
+	static getHotstrings(&script) {
 		Hotstrings := []
 		Loop Parse, script, "`n", "`r" {
 			if (RegExMatch(A_LoopField,"i)^\s*:([0-9\*\?BCKOPRSIEZ]*?):(.*?):`:(.*)\;?\s*(.*)", &match) || RegexMatch(A_LoopField, "i)^\s*(?:HotString|Hotstring)\(\`":([0-9\*\?BCKOPRSIEZ]*?):(.*?)\`",\`"(?:(.*)\`"),.*?\)\s*\;?\s*(.*)", &match))	{
