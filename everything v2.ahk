@@ -62,6 +62,8 @@ reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
 ; Launch Transparent Taskbar at 50ms frequency
 TransparentTaskbar.TransparentTaskbar(1, 50)
+; Start keeping track of desktop window changes
+DesktopState.enable()
 ; Start Loop to close winrar popups
 SetTimer(closeWinRarNotification, -100, -100000) ; priority -100k so it doesn't interrupt
 ; Initialize Internet Logging Script
@@ -378,22 +380,9 @@ F11:: { 	; BTD6: Rebind Escape
 }
 
 ^!+L:: { ; save / restore desktop state
-	static windowInfo, restore := false
-	if (restore := !restore)
-		windowInfo := WindowManager.getAllWindowInfo(0, 0)
-	else {
-		for i, e in windowInfo {
-			if (!WinExist(e.hwnd))
-				continue
-			if (e.state == -1)
-				WinMinimize(e.hwnd)
-			else if (e.state == 1)
-				WinMaximize(e.hwnd)
-			else
-				WinMove(e.xpos, e.ypos, e.width, e.height, e.hwnd)
-		}
-	}
+	DesktopState.restore()
 }
+
 
 ^!+I:: { ; Center & Adjust Active Window
 	if WinActive("ahk_group cornerMusicPlayers")
