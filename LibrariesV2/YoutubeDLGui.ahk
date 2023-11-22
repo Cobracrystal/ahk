@@ -243,7 +243,7 @@ class YoutubeDLGui {
 			return
 		}
 		fullRuncmd := this.controls.editCmdConfig.value . StrReplace(links, "`n", A_Space)
-		output := cmdRet(fullRuncmd, this.updateGuiOutput.bind(this), "CP850")
+		output := cmdRet(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8")
 		fullOutput := this.controls.editOutput.value
 		this.updateGuiOutput(this.data.separator)
 		if (!WinActive(this.gui))
