@@ -38,7 +38,7 @@ createResult(expression) {
 		return primetest(m.Value(1))
 	}
 ;// integer functions and stuff done: clean
-	expression := clean_expression(expression)
+;	expression := clean_expression(expression)
 ;//	expression := equation
 	if (InStr(expression, "x")) {
 ;//		expression := equation_transformer(expression)

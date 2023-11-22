@@ -194,6 +194,48 @@ readFileIntoVar(path, encoding := "UTF-8") {
 	return dataFile.Read()
 }
 
+SelectFolderEx(StartingFolder := "", Prompt := "", OwnerHwnd := 0, OkBtnLabel := "") {
+   Static OsVersion := DllCall("GetVersion", "UChar")
+        , IID_IShellItem := 0
+        , InitIID := VarSetCapacity(IID_IShellItem, 16, 0)
+                  & DllCall("Ole32.dll\IIDFromString", "WStr", "{43826d1e-e718-42ee-bc55-a1e261c37bfe}", "Ptr", &IID_IShellItem)
+        , Show := A_PtrSize * 3
+        , SetOptions := A_PtrSize * 9
+        , SetFolder := A_PtrSize * 12
+        , SetTitle := A_PtrSize * 17
+        , SetOkButtonLabel := A_PtrSize * 18
+        , GetResult := A_PtrSize * 20
+   SelectedFolder := ""
+   If (OsVersion < 6) { ; IFileDialog requires Win Vista+, so revert to FileSelectFolder
+      FileSelectFolder, SelectedFolder, *%StartingFolder%, 3, %Prompt%
+      Return SelectedFolder
+   }
+   OwnerHwnd := DllCall("IsWindow", "Ptr", OwnerHwnd, "UInt") ? OwnerHwnd : 0
+   If !(FileDialog := ComObjCreate("{DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7}", "{42f85136-db7e-439c-85f1-e4075d135fc8}"))
+      Return ""
+   VTBL := NumGet(FileDialog + 0, "UPtr")
+   ; FOS_CREATEPROMPT | FOS_NOCHANGEDIR | FOS_PICKFOLDERS
+   DllCall(NumGet(VTBL + SetOptions, "UPtr"), "Ptr", FileDialog, "UInt", 0x00002028, "UInt")
+   If (StartingFolder <> "")
+      If !DllCall("Shell32.dll\SHCreateItemFromParsingName", "WStr", StartingFolder, "Ptr", 0, "Ptr", &IID_IShellItem, "PtrP", FolderItem)
+         DllCall(NumGet(VTBL + SetFolder, "UPtr"), "Ptr", FileDialog, "Ptr", FolderItem, "UInt")
+   If (Prompt <> "")
+      DllCall(NumGet(VTBL + SetTitle, "UPtr"), "Ptr", FileDialog, "WStr", Prompt, "UInt")
+   If (OkBtnLabel <> "")
+      DllCall(NumGet(VTBL + SetOkButtonLabel, "UPtr"), "Ptr", FileDialog, "WStr", OkBtnLabel, "UInt")
+   If !DllCall(NumGet(VTBL + Show, "UPtr"), "Ptr", FileDialog, "Ptr", OwnerHwnd, "UInt") {
+      If !DllCall(NumGet(VTBL + GetResult, "UPtr"), "Ptr", FileDialog, "PtrP", ShellItem, "UInt") {
+         GetDisplayName := NumGet(NumGet(ShellItem + 0, "UPtr"), A_PtrSize * 5, "UPtr")
+         If !DllCall(GetDisplayName, "Ptr", ShellItem, "UInt", 0x80028000, "PtrP", StrPtr) ; SIGDN_DESKTOPABSOLUTEPARSING
+            SelectedFolder := StrGet(StrPtr, "UTF-16"), DllCall("Ole32.dll\CoTaskMemFree", "Ptr", StrPtr)
+         ObjRelease(ShellItem)
+   }  }
+   If (FolderItem)
+      ObjRelease(FolderItem)
+   ObjRelease(FileDialog)
+   return SelectedFolder
+}
+
 windowGetCoordinates(windowHWND) {
 	WinGet, minimize_status, MinMax, ahk_id %windowHWND%
 	if (minimize_status != -1) 
@@ -246,3 +288,4 @@ sortFunc(varS, formatString := "") {
 doNothing() {
 	return
 }
+
