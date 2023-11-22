@@ -29,7 +29,7 @@ class WebSocket {
 	 * @param {Integer} TimeOut Set resolve, connect, send and receive timeout
 	 */
 	__New(Url, Events := 0, Async := true, Headers := '', TimeOut := 0, InitialSize := 8192) {
-		if (!RegExMatch(Url, 'i)^((?<SCHEME>wss?)://)?((?<USERNAME>[^:]+):(?<PASSWORD>.+)@)?(?<HOST>[^/:\s]+)(:(?<PORT>\d+))?(?<PATH>/\S*)?$', &m))
+		if (!RegExMatch(Url, 'i)^((?<SCHEME>wss?)://)?((?<USERNAME>[^:]+):(?<PASSWORD>.+)@)?(?<HOST>[^/?:\s]+)(:(?<PORT>\d+))?(?<PATH>(?:/\S*|\?\S*))?$', &m))
 			Throw WebSocket.Error('Invalid websocket url')
 		if !hSession := DllCall('Winhttp\WinHttpOpen', 'ptr', 0, 'uint', 0, 'ptr', 0, 'ptr', 0, 'uint', Async ? 0x10000000 : 0, 'ptr')
 			Throw WebSocket.Error()
@@ -142,7 +142,9 @@ class WebSocket {
 		static async_shutdown(self) {
 			if self.Ptr
 				DllCall('Winhttp\WinHttpSetOption', 'ptr', self, 'uint', 45, 'ptr*', 0, 'uint', A_PtrSize)
-			(WebSocket.Prototype.shutdown)(self), self.__context := unset, self.__send_queue := []
+			(WebSocket.Prototype.shutdown)(self)
+			self.__context := unset
+			self.__send_queue := []
 		}
 
 		static get_sync_callback() {
