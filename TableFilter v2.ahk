@@ -6,8 +6,9 @@
 
 #SingleInstance Force
 ; temporary
-tableInstance := TableFilter()
-tableInstance.guiCreate()
+tableInstance := TableFilter(1)
+; tableInstance.guiCreate()
+tableInstance.loadData()
 #Include "LibrariesV2\BasicUtilities.ahk"
 #Include "LibrariesV2\JSON.ahk"
 
@@ -21,12 +22,13 @@ class TableFilter {
 
 	}
 
-	__New() {
-		this.data := { savePath: A_AppData "\Autohotkey\Tablefilter", openFile: "", filename: "", ext: "", data: {}, keys: [], isSaved: true }
+	__New(debug := 0) {
+		this.data := { savePath: A_AppData "\Autohotkey\Tablefilter", openFile: "", data: [], keys: [], isSaved: true }
 		this.guis := []
 		this.menu := this.createMenu()
 
 		this.settingsManager("Load")
+		this.settings.debug := debug
 		tableFilterMenu := TrayMenu.submenus["tablefilter"]
 		tableFilterMenu.Add("Open GUI: ", (*) => this.guiCreate())
 		tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => (menuObj.ToggleCheck("Use Darkmode"), this.settingHandler("Darkmode", -1)))
@@ -46,32 +48,37 @@ class TableFilter {
 			WinActivate(this.guis[1].hwnd)
 			return 0
 		}
-		obj := Gui("+Border", this.base.__Class . SubStr(this.data.openFile, RegexMatch(this.data.openFile, "\\[^\\]*\.[^\\]+$") + 1))
-		obj.OnEvent("Close", this.guiClose.bind(this))
-		obj.OnEvent("Escape", this.guiClose.bind(this))
-		obj.OnEvent("DropFiles", this.dropFiles.bind(this))
-		GroupAdd("TableFilterGUIs", "ahk_id " obj.hwnd)
+		newGui := Gui("+Border", this.base.__Class . " - " . (this.data.openFile ? SubStr(this.data.openFile, RegexMatch(this.data.openFile, "\\[^\\]*\.[^\\]+$") + 1) : "Select file."))
+		newGui.OnEvent("Close", this.guiClose.bind(this))
+		newGui.OnEvent("Escape", this.guiClose.bind(this))
+		newGui.OnEvent("DropFiles", this.dropFiles.bind(this))
+		GroupAdd("TableFilterGUIs", "ahk_id " newGui.hwnd)
 		if (this.data.openFile) {
-			;	this.createSearchBoxesinGUI(this.data.keys)
-			LV := obj.AddListView("xs R35 w950", this.data.keys) ; LVEvent, Altsubmit
-			;	this.createAddLineBoxesinGUI(this.data.keys)
-			obj.AddButton("yp-1 xp+37 r1 w100", "Add Row to List").OnEvent("Click", (*) => this.addLineToData())
+			;	this.createSearchBoxesinGUI()
+			rowKeys := this.data.keys.Clone()
+			rowKeys.push("DataIndex")
+			newGui.LV := newGui.AddListView("R35 w950", rowKeys) ; LVEvent, Altsubmit
+			;	this.createAddLineBoxesinGUI()
+			newGui.AddButton("r1 w100", "Add Row to List").OnEvent("Click", (*) => this.addLineToData())
 			;	this.createFileButtonsinGUI()
-			this.createFilteredList()
+			this.createFilteredList(newGui, false)
 			; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
 			if !(this.settings.debug)
-				LV.ModifyCol(LV.GetCount("Col"), 0)
-			Loop (LV.GetCount("Col") - 1)
-				LV.ModifyCol(A_Index, "AutoHdr")
-			showString := "Center AutoSize"
+				newGui.LV.ModifyCol(newGui.LV.GetCount("Col"), "0 Integer")
+			else
+				newGui.LV.ModifyCol(newGui.LV.GetCount("Col"), "Integer")
+			Loop (newGui.LV.GetCount("Col") - 1)
+				newGui.LV.ModifyCol(A_Index, "AutoHdr")
+				; this needs to do autohdr within a limit (as in, autohdr if <200 width else limit to 200. Possible how?)
+			showString := "Center Autosize"
 		} else {
-			obj.AddButton("x200 y190 r1 w100", "Load File").OnEvent("Click", this.loadData.bind(this, ""))
+			newGui.AddButton("x200 y190 r1 w100", "Load File").OnEvent("Click", this.loadData.bind(this, ""))
 			showString := "Center w500 h400"
 		}
 		if (this.settings.darkMode)
 			this.settingsHandler("darkmode", -1)
-		this.guis.push(obj)
-		obj.Show(showString)
+		this.guis.push(newGui)
+		newGui.Show(showString)
 	}
 
 	createSearchBoxesInGUI() {
@@ -86,7 +93,32 @@ class TableFilter {
 
 	}
 
-	createFilteredList() {
+	createFilteredList(_gui, isExist := false) {
+		if (isExist) {
+			_gui.Opt("+Disabled")
+			_gui.LV.Opt("-Redraw")
+			_gui.LV.Delete()
+		}
+		count := 1
+		for i, e in this.data.data {
+			if (this.filterTableRow(e)) {
+				row2 := []
+				for _, key in this.data.keys
+					row2.push(e.Has(key) ? e[key] : "")
+				row2.push(count)
+				_gui.LV.Add("",row2*)
+			}
+			count++
+		}
+		if (isExist) {
+			if (_gui.LV.GetCount() == 0)
+				_gui.LV.Add("Col2", "/", "No Results Found.")
+			_gui.LV.Opt("+Redraw")
+			_gui.Opt("-Disabled")
+		}
+	}
+
+	listViewAddRow(row) {
 
 	}
 
@@ -94,8 +126,8 @@ class TableFilter {
 
 	}
 
-	filterTableRow() {
-
+	filterTableRow(row) {
+		return true
 	}
 
 	addRow() {
@@ -208,17 +240,14 @@ class TableFilter {
 
 	}
 
-	guiClose(obj) {
-		objRemoveValues(this.guis, , obj)
-		obj.Destroy()
+	guiClose(guiObj) {
+		objRemoveValue(this.guis, guiObj)
+		guiObj.Destroy()
 	}
 
 	dropFiles(gui, ctrlObj, fileArr, x, y) {
 		if (fileArr.Length > 1)
 			return
-		if (!this.data.isSaved)
-			if (MsgBox("You have unsaved Changes. Load " fileArr[1] " anyway?") != "Ok")
-				return
 		this.loadData(fileArr[1], gui)
 	}
 
@@ -242,70 +271,29 @@ class TableFilter {
 				return
 		}
 		this.settingsHandler("lastUsedFile", file)
-		this.loadFile(path)
+		this.loadFile(file)
 		; add option for tab controls here (aka supporting multiple files)
 
 		; now, update gui or all guis with the new data. ????
-		xmlString := data.Pop()
-		metaData := data.Pop()
-		keyArrLenOld := keyArray.Count()
-		keyArray := data.Pop()
-		guiName := SubStr(loadedFilePath, RegexMatch(loadedFilePath, "\\[^\\\n]*\.xml$")+1) . " - " . metaData.RowName
-		if (flagUseBackups) {
-			updateGUIsettings(,,false)
-			SetTimer, backupIterator, Off
-			backupIterator(1)
-			SetTimer, backupIterator, % settingBackupInterval * 60000
-			updateGUIsettings(,,true)
+		if (this.settings.useBackups) {
+			; update backup function
 		}
-		if (flagSimpleSaving)
-			updateGUIsettings(loadedFilePath, false)
-		else
-			updateGUIsettings("",false)
-		if (flagLoaded) && (keyArrLenOld == keyArray.Count()) {	;// true only if we have GUI windows and a database already + new & old have same key lengths.
-			tHwnd := A_Gui
-			if (filterGuiArray.Count() > 3) {
-				Msgbox, 4, % "Open File", % "You have " . filterGuiArray.Count() . "GUI Windows Open. Loading a new file now will take some time to update. Close windows?"
-				IfMsgBox No
-				{
-					updateGUIs(filterGuiArray)
-					WinActivate, ahk_id %tHwnd%
-				}
-				else {
-					while (filterGuiArray.Count() > 0) { ;// no for-loop here because the index shifts with every iteration. backwards for loop would be possible, but eh.
-						guiHwnd := filterGuiArray.Pop()
-						if (guiHwnd != tHwnd)
-							GuiClose(guiHwnd)
-					}
-					Gui, %tHwnd%:Default
-					GuiControl,,CheckboxDuplicates, 0
-					createFilteredList()
-				}
-			}
-			else {
-				updateGUIs(filterGuiArray)
-				WinActivate, ahk_id %tHwnd%
-			}
-		}
-		else {
-			while (filterGuiArray.Count() > 0)	;// no for-loop here because the index shifts with every iteration. backwards for loop would be possible, but eh.
-				GuiClose(filterGuiArray.Pop())
-			flagLoaded := true
-			createMainGUI()
-		}
-		}
+		for i, e in this.guis
+			e.Destroy()
+		while(this.guis.Length > 0)
+			this.guiClose(this.guis.pop())
+		this.guiCreate()
 	}
 
 	loadFile(path) {
 		SplitPath(path, , , &ext, &fileName)
-		this.data.fileName := fileName
-		this.data.ext := ext
 		this.data.openFile := path
 		fileAsStr := FileRead(path, "UTF-8")
+		lastSeenKey := ""
 		if (ext = "json") {
-			this.data.data := JSON.Load(fileAsStr)
+			data := JSON.Load(fileAsStr)
 			keys := []
-			for i, e in this.data.data {
+			for i, e in data {
 				for j, f in e {
 					if !(objContainsValue(keys, j)) {
 						keys.InsertAt(objContainsValue(keys, lastSeenKey) + 1, j)
@@ -313,40 +301,40 @@ class TableFilter {
 					lastSeenKey := j
 				}
 			}
-			this.data.keys := keys
-		} 
+		}
 		else if (ext = "xml") {
-			xmlString := ""
 			Loop Parse, fileAsStr, "`n", "`r" {
+				if (RegexMatch(A_Loopfield, "^\s*<\?") || RegexMatch(A_LoopField, "^\s*<dataroot"))
+					continue
 				if(RegexMatch(A_LoopField, "^\s*<(.*?)>\s*$", &m)) {
 					rowName := m[1]
 					break
 				}
 			}
+			rawData := []
 			data := []
 			keys := []
 			count := 1
 			fileAsStr := StrReplace(fileAsStr, "<" rowName ">", "¶")
 			Loop Parse, fileAsStr, "¶" {
-				o := Map()
+				row := Map()
 				flag := 0
 				Loop Parse, A_LoopField, "`n", "`r" {
-					if RegexMatch(A_LoopField, "O)<(.*?)>([\s\S]*?)<\/\1>", &m) {
+					if RegexMatch(A_LoopField, "<(.*?)>([\s\S]*?)<\/\1>", &m) {
 						key := m[1]
-						o[key] := m[2]
+						row[key] := m[2]
 						if !(objContainsValue(keys, key)) {
 							keys.InsertAt(objContainsValue(keys, lastSeenKey)+1, key)
 						}
 						lastSeenKey := key
 					}
 				}
-				if (o.Count > 0)
-					data.Push(o)
+				if (row.Count > 0)
+					rawData.Push(row)
 			}
-			cleanData := []
-			cleanData.Length := data.Length
+			data.Length := rawData.Length
 			encode := Map("&apos", "'", "&amp", "&", "&quot", '"', "&gt", ">", "&lt", "<", "_x0027_", "'")
-			for i, e in data {
+			for i, e in rawData {
 				t := Map()
 				for j, f in e {
 					s1 := j
@@ -357,16 +345,16 @@ class TableFilter {
 					}
 					t[s1] := s2
 				}
-				cleanData[i] := t
+				data[i] := t
 			}
 			for i, e in keys {
 				for j, k in encode {
 					keys[i] := StrReplace(keys[i], j, k)
 				}
 			}
-			this.data.data := cleanData
-			this.data.keys := keys
 		}
+		this.data.keys := keys
+		this.data.data := data
 	}
 
 	exportFile() {
