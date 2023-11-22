@@ -218,7 +218,7 @@ extendFactorials(expression) {
 
 
 roundProper(number, precision := 12) {
-	if (IsSpace(number))
+	if (!IsNumber(number) || IsSpace(number))
 		return number
 	if (isInteger(number) || Round(number) == number)
 		return Round(number)

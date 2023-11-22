@@ -2,12 +2,12 @@
 
 
 class DiscordClient {
-	this.BaseURL := "https://discord.com/api/v10"
-	this.waitingTime := 0
-	this.gw := this.Gateway("ahk_class")
 	
 	__New(token) {
 		this.token := token
+		this.BaseURL := "https://discord.com/api/v10"
+		this.waitingTime := 0
+		this.gw := this.Gateway("ahk_class")
 	}
 	
 	createDM(userID) {
@@ -80,7 +80,7 @@ class DiscordClient {
 			break ; only loop if rate limit, else directly continue
 		}
 		if (http.status != 200 && http.status != 204)
-			throw Exception("Request failed`n" . "Status: " http.status "`nResponse: " http.responseText "`nendPoint: " . endPoint . "`nContent: `n" . JSON.Dump(content))
+			throw Error("Request failed`n" . "Status: " http.status "`nResponse: " http.responseText "`nendPoint: " . endPoint . "`nContent: `n" . JSON.Dump(content))
 		return JSON.Load(http.responseText)
 	}
 	

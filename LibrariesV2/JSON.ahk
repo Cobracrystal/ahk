@@ -48,10 +48,9 @@ class JSON
 			; of alphabetically. Skip if no reviver function is specified.
 			this.keys := this.rev ? {} : false
 
-			static quot := Chr(34), bashq := "\" . quot
-			     , json_value := quot . "{[01234567890-tfn"
-			     , json_value_or_array_closing := quot . "{[]01234567890-tfn"
-			     , object_key_or_object_closing := quot . "}"
+			static json_value := '"{[01234567890-tfn'
+			     , json_value_or_array_closing := '"{[]01234567890-tfn'
+			     , object_key_or_object_closing := '"}'
 
 			key := ""
 			is_key := false
@@ -70,7 +69,7 @@ class JSON
 				is_array := holder.IsArray
 
 				if InStr(",:", ch) {
-					next := (is_key := !is_array && ch == ",") ? quot : json_value
+					next := (is_key := !is_array && ch == ",") ? '"' : json_value
 
 				} else if InStr("}]", ch) {
 					ObjRemoveAt(stack, 1)
@@ -98,9 +97,9 @@ class JSON
 							this.keys[value] := []
 					
 					} else {
-						if (ch == quot) {
+						if (ch == '"') {
 							i := pos
-							while (i := InStr(text, quot,, i+1)) {
+							while (i := InStr(text, '"',, i+1)) {
 								value := StrReplace(SubStr(text, pos+1, i-pos-1), "\\", "\u005c")
 
 								static tail := A_AhkVersion<"2" ? 0 : -1
@@ -112,7 +111,7 @@ class JSON
 								this.ParseError("'", text, pos)
 
 							  value := StrReplace(value,  "\/",  "/")
-							, value := StrReplace(value, bashq, quot)
+							, value := StrReplace(value,  '\"', "`"")
 							, value := StrReplace(value,  "\b", "`b")
 							, value := StrReplace(value,  "\f", "`f")
 							, value := StrReplace(value,  "\n", "`n")
@@ -173,8 +172,6 @@ class JSON
 
 		ParseError(expect, &text, pos, len:=1)
 		{
-			static quot := Chr(34), qurly := quot . "}"
-			
 			line := StrSplit(SubStr(text, 1, pos), "`n", "`r").Length()
 			col := pos - InStr(text, "`n",, -(StrLen(text)-pos+1))
 			msg := Format("{1}`n`nLine:`t{2}`nCol:`t{3}`nChar:`t{4}"
@@ -182,8 +179,8 @@ class JSON
 			    : (expect == "'")    ? "Unterminated string starting at"
 			    : (expect == "\")    ? "Invalid \escape"
 			    : (expect == ":")    ? "Expecting ':' delimiter"
-			    : (expect == quot)   ? "Expecting object key enclosed in double quotes"
-			    : (expect == qurly)  ? "Expecting object key enclosed in double quotes or object closing '}'"
+			    : (expect == '"')   ? "Expecting object key enclosed in double quotes"
+			    : (expect == '"}')  ? "Expecting object key enclosed in double quotes or object closing '}'"
 			    : (expect == ",}")   ? "Expecting ',' delimiter or object closing '}'"
 			    : (expect == ",]")   ? "Expecting ',' delimiter or array closing ']'"
 			    : InStr(expect, "]") ? "Expecting JSON value or array closing ']'"
@@ -313,12 +310,10 @@ class JSON
 
 		Quote(string, escape_unicode:=true)
 		{
-			static quot := Chr(34), bashq := "\" . quot
-
 			if (string != "") {
 				  string := StrReplace(string,  "\",  "\\")
 				; , string := StrReplace(string,  "/",  "\/") ; optional in ECMAScript
-				, string := StrReplace(string, quot, bashq)
+				, string := StrReplace(string, "`"",  '\"')
 				, string := StrReplace(string, "`b",  "\b")
 				, string := StrReplace(string, "`f",  "\f")
 				, string := StrReplace(string, "`n",  "\n")
@@ -332,7 +327,7 @@ class JSON
 				}
 			}
 
-			return quot . string . quot
+			return '"' . string . '"'
 		}
 	}
 
