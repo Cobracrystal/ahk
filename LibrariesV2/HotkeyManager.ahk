@@ -137,10 +137,10 @@ class HotkeyManager {
 							, {mod:"#", replacement:"Win"}  , {mod:"<", replacement:"Left"}
 							, {mod:">",	replacement:"Right"}]
 		Loop Parse, script, "`n", "`r" { ; loop parse > strsplit for memory
-			if !(InStr(A_LoopField, "::")) ; skip non-hotkeys
+			if !(InStr(SubStr(A_Loopfield, 1, RegexMatch(A_Loopfield, "\s;")), "::")) ; skip non-hotkeys
 				continue
 			StrReplace(SubStr(A_Loopfield, 1, InStr(A_Loopfield, "::")), "`"",,, &count)
-			if (count > 1) ; skip strings containing two quotes before ::
+			if (count > 1) ; skip strings containing > 1 quotes before ::
 				continue
 			; matches duo keys, modifier keys, modifie*d* leys, numeric value hotkeys, virtual key code hkeys and gets comment after
 			if RegExMatch(A_LoopField,"^((?!(?:;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`").*`".*::)).*)::\s*{?(?:.*;)?\s*(.*)", &match)	{
@@ -170,7 +170,7 @@ class HotkeyManager {
 	static getHotstrings(&script) {
 		Hotstrings := []
 		Loop Parse, script, "`n", "`r" {
-			if (RegExMatch(A_LoopField,"i)^\s*:([0-9\*\?BCKOPRSIEZ]*?):(.*?):`:(.*)\;?\s*(.*)", &match) || RegexMatch(A_LoopField, "i)^\s*(?:HotString|Hotstring)\(\`":([0-9\*\?BCKOPRSIEZ]*?):(.*?)\`",\`"(?:(.*)\`"),.*?\)\s*\;?\s*(.*)", &match))	{
+			if (RegExMatch(A_LoopField,"i)^\s*:([0-9\*\?XBCKOPRSIEZ]*?):(.*?)::(.*)`;?\s*(.*)", &match) || RegexMatch(A_LoopField, "i)^\s*Hotstring\(\`":([0-9\*\?BCKOPRSIEZ]*?):(.*?)\`",\`"(?:(.*)\`"),.*?\)\s*`;?\s*(.*)", &match))	{
 				;// EXPLANATION: start of line : [possible modifiers only once]:[string]:(escape char):(seconds string)[check for spaces][comment] OR ALTERNATIVELY
 				;// HotString(" (<- escaped via "" which turns into ", and that escaped via \ so \"" = ")[modifiers]:[string]","[replacement]", [variable which we don't need])
 				modifiers := match[1]
