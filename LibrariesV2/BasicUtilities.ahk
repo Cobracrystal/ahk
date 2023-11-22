@@ -81,38 +81,33 @@ modifySelectedText(method, params*) {
 	return 1
 }
 
-arrayContains(array, t) {
-	for index, element in array
-		if (element = t)
-			return index
-	return 0
-}
-
-mapContains(array, key, value) {
-	for i, e in array
-		if (e[key] == value)
+objContainsValue(obj, value) {
+	if !(obj is Array || obj is Map)
+		throw Error("objContains does not handle type " . obj.base.__Class)
+	for i, e in obj
+		if (e = value)
 			return i
-	return 0
 }
 
-arrayRemove(&array, t, removeAll := 1) {
-	for i, e in array
-		if (i != A_Index)
-			throw TypeError("This function does not handle objects/Maps.")
+objRemoveValues(obj, removeAll := 1, values*) {
+	if !(obj is Array || obj is Map)
+		throw Error("objContains does not handle type " . obj.base.__Class)
 	toRemove := []
-	for index, element in array
-	{
-		if (element = t) {
-			toRemove.push(index)
-			if (!removeAll)
-				break
+	for i, e in obj {
+		for j, f in values {
+			if (e = f) {
+				toRemove.push(i)
+				if (!removeAll)
+					break
+			}
 		}
 	}
-	Loop {
-		tV := toRemove.pop()
-		if (tV == "")
-			break
-		array.removeAt(tV)
+	while (toRemove.Length > 0) {
+		nE := toRemove.Pop()
+		if (obj is Array)
+			obj.RemoveAt(nE)
+		else
+			obj.Delete(nE)
 	}
 }
 
@@ -386,8 +381,8 @@ cmdRet(sCmd, callBackFuncObj := "", encoding := '') {
 	NumPut("Ptr", hPipeWrite, "Ptr", hPipeWrite, STARTUPINFO, A_PtrSize * 4 + 4 * 8 + A_PtrSize * 3)
 
 	PROCESS_INFORMATION := Buffer(A_PtrSize * 2 + 4 * 2, 0)
-	if !DllCall("CreateProcess", "Ptr", 0, "Str", sCmd, "Ptr", 0, "Ptr", 0, "UInt", true, "UInt", CREATE_NO_WINDOW
-		, "Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
+	if !DllCall("CreateProcess", "Ptr", 0, "Str", sCmd, "Ptr", 0, "Ptr", 0, "UInt", true, "UInt", CREATE_NO_WINDOW,
+		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		DllCall("CloseHandle", "Ptr", hPipeWrite)
 		throw OSError("CreateProcess has failed")
@@ -409,42 +404,6 @@ execShell(command) {
 	shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_Comspec " /C " command)
 	return exec.StdOut.ReadAll()
-}
-
-selectFolderEx(startingFolder := "", prompt := "", ownerHandle := 0, OkBtnLabel := "") {
-	static IID_IShellItem := Buffer(16, 0)
-		, Show := A_PtrSize * 3
-		, SetOptions := A_PtrSize * 9
-		, SetFolder := A_PtrSize * 12
-		, SetTitle := A_PtrSize * 17
-		, SetOkButtonLabel := A_PtrSize * 18
-		, GetResult := A_PtrSize * 20
-	SelectedFolder := "", folderItem := 0, shellItem := 0, strPtrVar := 0
-	DllCall("Ole32.dll\IIDFromString", "WStr", "{43826d1e-e718-42ee-bc55-a1e261c37bfe}", "Ptr", IID_IShellItem)
-	ownerHandle := DllCall("IsWindow", "Ptr", ownerHandle, "UInt") ? ownerHandle : 0
-	if !(fileDialog := ComObject("{DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7}", "{42f85136-db7e-439c-85f1-e4075d135fc8}"))
-		return ""
-	VTBL := NumGet(fileDialog.Ptr, "UPtr")
-	; FOS_CREATEPROMPT | FOS_NOCHANGEDIR | FOS_PICKFOLDERS
-	DllCall(NumGet(VTBL + SetOptions, "UPtr"), "Ptr", fileDialog, "UInt", 0x00002028, "UInt")
-	if (StartingFolder != "")
-		if !DllCall("Shell32.dll\SHCreateItemFromParsingName", "WStr", StartingFolder, "Ptr", 0, "Ptr", IID_IShellItem, "PtrP", &folderItem)
-			DllCall(NumGet(VTBL + SetFolder, "UPtr"), "Ptr", fileDialog, "Ptr", folderItem, "UInt")
-	if (Prompt != "")
-		DllCall(NumGet(VTBL + SetTitle, "UPtr"), "Ptr", fileDialog, "WStr", Prompt, "UInt")
-	if (OkBtnLabel != "")
-		DllCall(NumGet(VTBL + SetOkButtonLabel, "UPtr"), "Ptr", fileDialog, "WStr", OkBtnLabel, "UInt")
-	if !DllCall(NumGet(VTBL + Show, "UPtr"), "Ptr", fileDialog, "Ptr", ownerHandle, "UInt") {
-		if !DllCall(NumGet(VTBL + GetResult, "UPtr"), "Ptr", fileDialog, "PtrP", &shellItem, "UInt") {
-			GetDisplayName := NumGet(NumGet(shellItem, "UPtr"), A_PtrSize * 5, "UPtr")
-			if !DllCall(GetDisplayName, "Ptr", shellItem, "UInt", 0x80028000, "PtrP", &strPtrVar) ; SIGDN_DESKTOPABSOLUTEPARSING
-				SelectedFolder := StrGet(strPtrVar, "UTF-16"), DllCall("Ole32.dll\CoTaskMemFree", "Ptr", strPtrVar)
-			ObjRelease(shellItem)
-		}
-	}
-	if (folderItem)
-		ObjRelease(folderItem)
-	return selectedFolder
 }
 
 menu_RemoveSpace(menuHandle, applyToSubMenus := true) {
