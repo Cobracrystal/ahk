@@ -1,6 +1,4 @@
-﻿#NoEnv 
-#SingleInstance Force
-SendMode Input
+﻿#SingleInstance Force
 num := 200
 height := 1
 period := 2
@@ -12,12 +10,11 @@ return
 launchwave(size, sleepTime) {
 	global coords
 	ind := []
-	Loop % coords.Count()
-	{
-		Gui, wave%A_Index%:New, +AlwaysOnTop +ToolWindow -Caption +hwndtHwnd
-		Gui, wave%A_Index%:Color, 0080ff
-		coords[A_Index].hwnd := tHwnd
-		Gui, % coords[A_Index].hwnd ":Show", % Format("x{1}y{2} w{3} h{3} NoActivate",coords[A_Index].x, coords[A_Index].y, size)
+	guis := []
+	Loop(coords.Length) {
+		coords[A_Index].gui := Gui("+AlwaysOnTop +ToolWindow -Caption")
+		coords[A_Index].gui.BackColor := 0x0080FF
+		coords[A_Index].gui.Show(Format("x{1} y{2} w{3} h{3} NoActivate",coords[A_Index].x, coords[A_Index].y, size))
 	}
 }
 
@@ -26,18 +23,11 @@ calculateCurveValues(height, periods := 2, width:=70) { ; 10, 1, 2
 	lPeriod := (A_ScreenWidth+width)/periods
 	hPeriod := height*lPeriod/(2*pi)
 	arr := []
-	Loop % A_ScreenWidth+width+1
-	{
-		i := A_Index-width-1
-		arr.push({"x":i, "y":A_ScreenHeight//2+hPeriod*sin(i/lPeriod*2*pi)})
-	}
+	Loop(A_ScreenWidth+width+1)
+		arr.push({x:A_Index-width-1, y:A_ScreenHeight//2+hPeriod*sin((A_Index-width-1)/lPeriod*2*pi)})
 	return arr
 }
 
-+!^r::
-Reload
-return
++!^r::Reload()
 
-+^p::
-Pause
-return
++^p::Pause()
