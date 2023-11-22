@@ -68,6 +68,7 @@ class TextEditMenu {
 		textModifyMenu.Add("Flip", (*) => modifySelectedText(this.flip.bind(this)))
 		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(this.spreadString.bind(this), " "))
 		textModifyMenu.Add("Add Zalgo", (*) => modifySelectedText(this.zalgo.bind(this), 5))
+	;	menu_RemoveSpace(textModifyMenu.Handle) ; this also decreases vertical spacing.
 		this.menu := textModifyMenu
 	}
 

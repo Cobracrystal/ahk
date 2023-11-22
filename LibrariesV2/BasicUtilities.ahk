@@ -309,37 +309,37 @@ selectFolderEx(startingFolder := "", Prompt := "", OwnerHwnd := 0, OkBtnLabel :=
 
 menu_GetMenuByName(menuName) {
 	; Based on MI.ahk by Lexikos -> http://www.autohotkey.com/board/topic/20253-menu-icons-v2/
-	static HMENU := 0, m
-	if !(HMENU) {
-		m := MenuBar()
-		m.Add()
-		m.Delete()
+	static menuHandle := 0, men
+	if !(menuHandle) {
+		men := MenuBar()
+		men.Add()
+		men.Delete()
 		tGui := Gui()
-		tGui.MenuBar := m
-		HMENU := DllCall("User32.dll\GetMenu", "Ptr", tGui.Hwnd, "UPtr")
+		tGui.MenuBar := men
+		menuHandle := DllCall("User32.dll\GetMenu", "Ptr", tGui.Hwnd, "UPtr")
 		tGui.MenuBar := ""
 		tGui.Destroy()
 	}
-	if !(HMENU)
+	if !(menuHandle)
 		return 0
-	m.Add(menuName)
-	HSUBM := DllCall("User32.dll\GetSubMenu", "Ptr", HMENU, "Int", 0, "UPtr")
-	m.Delete(menuName)
-	return HSUBM
+	men.Add(menuName)
+	submenuHandle := DllCall("User32.dll\GetSubMenu", "Ptr", menuHandle, "Int", 0, "UPtr")
+	men.Delete(menuName)
+	return submenuHandle
 }
 
 
-menu_RemoveSpace(HMENU, applyToSubMenus := True) {
+menu_RemoveSpace(menuHandle, applyToSubMenus := True) {
 	; http://msdn.microsoft.com/en-us/library/ff468864(v=vs.85).aspx
 	static MIsize := (4 * 4) + (A_PtrSize * 3)
 	MI := Buffer(MIsize, 0)
 	Numput("UInt", MIsize, MI, 0)
 	NumPut("UInt", 0x00000010, MI, 4) ; MIM_STYLE = 0x00000010
-	DllCall("User32.dll\GetMenuInfo", "Ptr", HMENU, "Ptr", MI, "UInt")
+	DllCall("User32.dll\GetMenuInfo", "Ptr", menuHandle, "Ptr", MI, "UInt")
 	if (applyToSubMenus)
 		NumPut("UInt", 0x80000010, MI, 4) ; MIM_APPLYTOSUBMENUS = 0x80000000| MIM_STYLE : 0x00000010
 	NumPut("UInt", NumGet(MI, 8, "UINT") | 0x80000000, MI, 8) ; MNS_NOCHECK = 0x80000000
-	DllCall("User32.dll\SetMenuInfo", "Ptr", HMENU, "Ptr", MI, "UInt")
+	DllCall("User32.dll\SetMenuInfo", "Ptr", menuHandle, "Ptr", MI, "UInt")
 	return true
 }
 
@@ -394,82 +394,4 @@ tryEditTextFile(path := A_ScriptFullPath) {
 
 doNothing(*) {
 	return
-}
-
-class BiMap extends Map {
-	static Call(params*) {
-		tMap := Map(params*)
-		this.map := Map()
-	;	this.inverseMap := BiMap()
-		; for i, e in tMap
-		; 	this.inverseMap[e] := i
-		; for i, e in this.inverseMap
-		; 	this.map[e] := i
-		return this.map
-
-;		inverseMap := { map: this.inverseMap, inverseMap: this }
-	}
-
-	static Clear {
-
-	} 
-
-	static Clone {
-
-	}
-
-	static Delete {
-
-	}
-
-	static Get {
-
-	}
-
-	static Has {
-
-	}
-
-	static Set {
-
-	}
-
-	static Count {
-
-	}
-
-	static Capacity {
-		
-	}
-
-	static CaseSense {
-
-	}
-
-	static Default {
-
-	}
-
-	; static __Item[key] {
-	; 	get {
-	; 		return this.map[key]
-	; 	}
-
-	; 	set {
-	; 		if (this.inverseMap.Has(value))
-	; 			this.map.Delete(this.inverseMap[value])
-	; 		if (this.map.Has(key))
-	; 			this.inverseMap.Delete(this.map[key])
-	; 		this.map[key] := value
-	; 		this.inverseMap[value] := key
-	; 	}
-	; }
-
-	; static inverse() {
-	; 	invMap := BiMap()
-	; 	for i, e in this.map
-	; 		invMap[e] := i
-	; 	return invMap
-	; }
-
 }

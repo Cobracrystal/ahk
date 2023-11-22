@@ -63,7 +63,7 @@ class WindowManager {
 		this.gui.AddCheckbox("Section vCheckboxHiddenWindows Checked" . this.settings.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . this.settings.showExcludedWindows, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxGetCommandLine Checked" . this.settings.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.settingCheckboxHandler.bind(this))
-		this.gui.AddText("ys xs+900 w100 vWindowCount", "Window Count: 0")
+		this.gui.AddText("ys xs+890 w110 vWindowCount", "Window Count: 0")
 		this.LV := this.gui.AddListView("xs R20 w1000 -Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "PID", "Process Path", "Command Line"])
 		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
