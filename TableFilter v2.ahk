@@ -1,5 +1,8 @@
 ﻿; still todo
-
+; listview that lists last used files when opening anew
+; or menubar that lists them
+; in settings option to delete all backups (or restore them)
+; the option to open backup folder should also be in there (?)
 
 #SingleInstance Force
 ; temporary
