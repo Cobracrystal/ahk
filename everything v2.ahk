@@ -31,7 +31,6 @@ A_TrayMenu.Delete()
 #Include "MacroRecorder.ahk"
 #Include "TimestampConverter.ahk"
 #Include "DiscordClient.ahk"
-#Include "DiscordBotCommands.ahk"
 #Include "AltDrag.ahk"
 #Include "MathUtilities.ahk"
 #Include "ColorUtilities.ahk"

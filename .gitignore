@@ -1,9 +1,6 @@
 /*
 !/*.ahk
-/wallpaper_scene_extractor.ahk
-/discordSendBot.ahk
-/httpserver.ahk
-/everything.ahk
+/discordBotTest.ahk
 /test.ahk
 !/*.md
 !/.gitignore
