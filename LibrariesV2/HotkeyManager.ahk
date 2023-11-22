@@ -199,7 +199,7 @@ class HotkeyManager {
 			FileAppend("// Add Custom Hotkeys not from the script here to show up in the Hotkey List.`n// Format is Hotkey/Hotstring:[hotkey/hotstring], [Program], [Command (optional)]", this.data.savedHotkeysPath)
 			return []
 		}
-		savedHotkeysFull := FileRead(this.data.savedHotkeysPath, "UTF-8"))
+		savedHotkeysFull := FileRead(this.data.savedHotkeysPath, "UTF-8")
 		savedHotkeys := []
 		Loop Parse, savedHotkeysFull, "`n", "`r"
 			if RegExMatch(A_LoopField,"^(?!\s*;|//)Hotkey:\s*(.*)\s*,\s*(.*)\s*,\s*(.*)\s*", &match)
