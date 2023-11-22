@@ -105,10 +105,10 @@ class WindowManager {
 		this.LV.Insert(rowN, , t.hwnd, t.title, t.process, t.state, t.xpos, t.ypos, t.width, t.height, t.class, t.pid, t.processPath, t.commandLine)
 	}
 
-	static getAllWindowInfo(hidden := false, notExclude := false) {
+	static getAllWindowInfo(getHidden := false, notExclude := false) {
 		windows := []
 		SetTitleMatchMode("RegEx")
-		DetectHiddenWindows(hidden)
+		DetectHiddenWindows(getHidden)
 		if (notExclude)
 			wHandles := WinGetList()
 		else
@@ -279,5 +279,38 @@ class WindowManager {
 		obj.Destroy()
 		this.gui.Opt("-Disabled -AlwaysOnTop")
 		WinActivate(this.gui)
+	}
+}
+
+class DesktopState {
+	static __New() {
+		this.timer := this.save.bind(this)
+	}
+
+	static enable() {
+		this.prevState := []
+		this.save()
+		SetTimer(this.timer, 60000)
+	}
+
+	static disable() {
+		SetTimer(this.timer, 0)
+	}
+
+	static save() {
+		this.prevState := WindowManager.getAllWindowInfo(0, 0)
+	}
+
+	static restore() {
+		for i, e in this.prevState {
+			if (!WinExist(e.hwnd))
+				continue
+			if (e.state == -1)
+				WinMinimize(e.hwnd)
+			else if (e.state == 1)
+				WinMaximize(e.hwnd)
+			else
+				WinMove(e.xpos, e.ypos, e.width, e.height, e.hwnd)
+		}
 	}
 }
