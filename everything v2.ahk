@@ -29,7 +29,7 @@ A_TrayMenu.Delete()
 ; #Include "%A_ScriptDir%\LibrariesV2\HotkeyManager.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\WindowManager.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\ReminderManager.ahk"
-; #Include "%A_ScriptDir%\LibrariesV2\NeoKeyboardLayout.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\NeoKeyboardLayout.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\YoutubeDLGui.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\TextEditMenu.ahk"
 ; #Include "%A_ScriptDir%\LibrariesV2\MacroRecorder.ahk"
@@ -131,9 +131,9 @@ return
 ; 	WindowManager.windowManager("T")
 ; }
 
-; ^F10::{	; Neokeyboard Layout
-; 	NeoKeyboardLayout.KeyboardLayoutGUI("T")
-; }
+^F10::{	; Neokeyboard Layout
+	NeoKeyboardLayout.KeyboardLayoutGUI("T")
+}
 
 ^F9::{	; Shows Internet Connection
 	internetConnectionLogger("T")
