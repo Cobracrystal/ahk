@@ -58,7 +58,7 @@ GroupAdd("cornerMusicPlayers", "foobar2000 ahk_exe foobar2000.exe",, "Scratchbox
 ;[style]} ______________________________________________________________________________________________
 ;[style]							: STARTING FUNCTIONS
 ;[style]{ ______________________________________________________________________________________________
-
+InstallKeybdHook(true, true)
 ; Check if script is reloaded
 SCRIPTVAR_WASRELOADED := (DllCall("GetCommandLine", "str") == '"' . A_AhkPath . '" /restart /script "' . A_scriptFullPath . '"' ? true : false)
 ;// set 1337 reminder
@@ -160,13 +160,13 @@ return
 }
 
 toggleNumpadMouseMove() {
-	static init
+	static init := 0
 	if !(init) {
 		Hotkey("Numpad2", moveMousePixel.bind(0, 1))
 		Hotkey("Numpad4", moveMousePixel.bind(-1,0))
 		Hotkey("Numpad6", moveMousePixel.bind(1, 0))
 		Hotkey("Numpad8", moveMousePixel.bind(0,-1))
-		Hotkey("NumpadEnter", clickMouse.Bind("L"))
+		Hotkey("NumpadEnter", clickMouse.Bind("L",0))
 		Hotkey("NumpadAdd", clickMouse.Bind("L", 1))
 		init := 1
 		return
@@ -179,16 +179,15 @@ toggleNumpadMouseMove() {
 	Hotkey("NumpadAdd", "Toggle")
 }
 
-moveMousePixel(x,y) {
-	MouseMove(x,y,,"R")
-	
+moveMousePixel(x,y, *) {
+	MouseMove(x,y,0,"R")
 }
 
-clickMouse(b, press := 0) {
+clickMouse(b, press := 0, *) {
 	b := SubStr(b, 1, 1)
 	if (press)
 		st := GetKeyState(b . "Button") ? "U" : "D"
-	MouseClick(b,,,,,st)
+	MouseClick(b,,,,,st?)
 }
 
 
@@ -213,13 +212,19 @@ clickMouse(b, press := 0) {
 #HotIf WinActive("ahk_exe vlc.exe")
 	^D::{		; VLC: Open/Close Media Playlist
 		SetControlDelay(-1) 
-		vlcid := WinGetID("VLC media player",,"Wiedergabeliste")
-		WinGetPos(,,,&vlcH,"ahk_id " . vlcid)
-		controlY := vlcH - 49
+		vlcid := WinGetID("VLC media player ahk_exe vlc.exe",,"Wiedergabeliste")
+		WinGetClientPos(,,,&vlcH,"ahk_id " . vlcid)
+		controlY := vlcH - 40
 		ControlSend("{Esc}",, "ahk_id " vlcid)
-		ControlClick("X222 Y" controlY, "ahk_id " vlcid,,,, "Pos NA")
+		ControlClick("X212 Y" controlY, "ahk_id " vlcid,,,, "Pos NA")
 	}
 #HotIf
+
+~CapsLock::{
+	MsgBox(GetKeyState("CapsLock", "T"))
+;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
+}
+
 
 ;[style]} ______________________________________________________________________________________________
 ;[style]					 		: STANDARD / GAMES
@@ -330,27 +335,30 @@ return
 return
 */
 ^,::{	; BTD6: press comma
+	static toggle := 0
 	if !(presscomma)
 		presscomma := Send.Bind(",")
-	if (presscommaToggle := !presscommaToggle)
+	if (toggle := !toggle)
 		SetTimer(presscomma, 30)
 	else
 		SetTimer(presscomma, 0)
 }
 
 ^.::{	; BTD6: press dot
+	static toggle := 0
 	if !(pressdot)
 		pressdot := Send.Bind(".")
-	if (pressdotToggle := !pressdotToggle)
+	if (toggle := !toggle)
 		SetTimer(pressdot, 30)
 	else
 		SetTimer(pressdot, 0)
 }
 
 ^-::{	; BTD6: press minus
+	static toggle := 0
 	if !(pressminus)
 		pressminus := Send.Bind("-")
-	if (pressminusToggle := !pressminusToggle)
+	if (toggle := !toggle)
 		SetTimer(pressminus, 30)
 	else
 		SetTimer(pressminus, 0)
@@ -462,7 +470,8 @@ return
 }
 
 ^NumpadMult::{	; Show Mouse Coordinates
-	if (coordtoggle := !coordtoggle)
+	static toggle := false
+	if (toggle := !toggle)
 		SetTimer(showcoords, 50)
 	else {
 		SetTimer(showcoords, 0)
@@ -471,7 +480,8 @@ return
 }
 
 ^!H::{	; Make Window Circle Visible
-	if (toggleExp := !toggleExp) {
+	static toggle := false, circleWindow
+	if (toggle := !toggle) {
 		MouseGetPos(&xPosCircle, &yPosCircle, &circleWindow)
 		xPosCircle -= 100
 		yPosCircle -= 100
@@ -496,7 +506,8 @@ return
 }
 
 ^!+H::{ ; Make Active Window Transparent
-	if (TranspToggle:= !TranspToggle)
+	static toggle := false
+	if (toggle:= !toggle)
 		WinSetTransparent(120, "A") 
 	else
 		WinSetTransparent("Off", "A")
@@ -507,18 +518,19 @@ return
 }
 
 <^>!M::{		; Minimizes Active Window
-	if (togglewinmin := !togglewinmin) {
+	static toggle := false, winToggleID
+	if (toggle := !toggle) {
 		winToggleID := WinGetID("A")
-		WinMinimize("ahk_id " winToggleID)
+		WinMinimize(winToggleID)
 	}
 	else {
-		mmx := WinGetMinMax("ahk_id " winToggleID)
-		if (WinActive("ahk_id " . winToggleID) && mmx != -1) {
-			WinMinimize("ahk_id " winToggleID)
-			togglewinmin := !togglewinmin
+		mmx := WinGetMinMax(winToggleID)
+		if (WinActive(winToggleID) && mmx != -1) {
+			WinMinimize(winToggleID)
+			toggle := !toggle
 		}
 		else
-			WinRestore("ahk_id " winToggleID)
+			WinRestore(winToggleID)
 	}
 }
 
@@ -600,13 +612,14 @@ center_window_on_monitor(hwnd, size_percentage := 0.714286) {
 
 ;// moved to own scripts
 runAsAdmin() {
+	params := ""
 	for i, e in A_Args  ; For each parameter:
 		params .= A_Space . e
 	if !A_IsAdmin
 	{
-		If A_IsCompiled
+		if A_IsCompiled
 			DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_ScriptFullPath, "str", params , "str", A_WorkingDir, "int", 1)
-		Else
+		else
 			DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_AhkPath, "str", '"' . A_ScriptFullPath . '"' . A_Space . params, "str", A_WorkingDir, "int", 1)
 		ExitApp()
 	}
@@ -707,21 +720,14 @@ trayMenuHandler(itemName, *) {
 			ListLines()
 			return
 		case "Help":
-			if (A_AhkVersion >= 2.0)
-				title := "AutoHotkey v2 Help"
-			else
-				title := "Autohotkey Help"
 			str := RegexReplace(A_AhkPath, "[^\\]+\.exe$", "AutoHotkey.chm")
 			Run(str)
-			WinWait(title)
-			center_window_on_monitor(WinExist(title), 0.8)
+			WinWait("AutoHotkey v2 Help")
+			center_window_on_monitor(WinExist("AutoHotkey v2 Help"), 0.8)
 			return
 		case "Window Spy":
 			if !WinExist("Window Spy") {
-				if (A_AhkVersion >= 2.0)
-					str := RegexReplace(A_AhkPath, "v2\\[^\\]+.exe$", "WindowSpy.ahk")
-				else
-					str := RegExReplace(A_AhkPath, "[^\\]+\.exe$", "WindowSpy.ahk")
+				str := RegexReplace(A_AhkPath, "v2\\[^\\]+.exe$", "WindowSpy.ahk")
 				Run(str)
 			}
 			else
@@ -1012,11 +1018,6 @@ closeWinRarNotification() {
 	A_Clipboard := getAllPermutations("12345", "abcde")
 }
 
-^b::{
-	A_Clipboard := genRegexForExcludingWords("www.", "")
-}
-
-
 
 getAllPermutations(str1, str2) {
 	if (StrLen(str1) != StrLen(str2))
@@ -1036,69 +1037,6 @@ getAllPermutations(str1, str2) {
 		out .= e "`n"
 	return out
 }
-
-genRegexForExcludingWords(str1, str2, opt:=0) {
-	temp := "(?:[^\W{}]|-)"
-	gRegex := "(?i)^[^#\n]*\b"
-	n := StrLen(str1)
-	if (StrLen(str1) != StrLen(str2))
-	{
-		if (n > StrLen(str2))
-			n := StrLen(swapVars(&str1, &str2))
-		m := StrLen(str2)
-		gRegex .= Format("(?:{}|{}{}", word(1,n-1), (n==m-1 ? "" : word(n+1,m-1) . "|"), word(m+1,0))
-		Loop(n)
-			gRegex .= Format("|(?:{}{}{})", word(A_Index-1), Format(temp, SubStr(str1,A_Index,1)), word(n-A_Index))
-		Loop(m)
-			gRegex .= Format("|(?:{}{}{})", word(A_Index-1), Format(temp, SubStr(str2,A_Index,1)), word(m-A_Index))
-		return gRegex . ")\b"
-	}
-	gRegex .= Format("(?:{}|{}",word(1,n-1),word(n+1,0))
-	Loop(n) {
-		arrB := []
-		arrB[i := A_Index] := Format(temp, SubStr(str1,i,1))
-		arrB[Mod(i,n)+1] := Format(temp, SubStr(str2, Mod(i,n)+1, 1))
-		Loop(n)
-			strH .= ( arrB[A_Index] ? arrB[A_Index] : word(1) )
-		gRegex .= "|(?:" . strH . ")"
-		strH := ""
-	}
-	return gRegex . ")\b"
-}
-
-swapVars(&v1, &v2) {
-	v3 := v1
-	v1 := v2
-	v2 := v3
-	return v1
-}
-
-word(n:=1,m:=-1,flag:=0) {
-	str := "[\w-]"
-	if (flag) {
-		Loop(n<=0 ? 0 : n)
-			strH .= str
-		return strH
-	}
-	if (m == 0)
-		return str . (n==1 ? "+" : (n==0 ? "*" : "{" n ",}"))
-	if (m != -1 && n > m)
-		return ""
-	if (n==m || m==-1)
-		return (n==0 ? "" : str . (n==1 ? "" : "{" n "}"))
-	if (n<m)
-		return str . (m==1 ? "?" : "{" n "," m "}")
-	return "????????????????????????????"
-}
-
-rotateStr(str, offset:=0) {
-	if (offset > StrLen(str))
-		offset := Mod(offset,StrLen(str))
-	return SubStr(str, -1*offset+1) . SubStr(str, 1, -1*offset)
-}
-
-
-
 
 clickloop(rows, columns, rHeight, cWidth) {
 	MouseGetPos(&initialX, &initialY)
@@ -1142,21 +1080,29 @@ makeTextAnsiColorful(str) {
 	return tStr
 }
 
+^l::{
+	text := fastCopy()
+	text := makeTextAnsiColorful(text)
+	fastPrint(text)
+}
+
+^+F12::{
+	static hide := false
+	HideShowTaskbar(hide := !hide)
+}
+
+HideShowTaskbar(action) {
+   static ABM_SETSTATE := 0xA, ABS_AUTOHIDE := 0x1, ABS_ALWAYSONTOP := 0x2
+   APPBARDATA := Buffer(size := 2*A_PtrSize + 2*4 + 16 + A_PtrSize, 0)
+   NumPut("Uint", size, APPBARDATA)
+   NumPut("Ptr", WinExist("ahk_class Shell_TrayWnd"), APPBARDATA, A_PtrSize)
+   NumPut("Uint", action ? ABS_AUTOHIDE : ABS_ALWAYSONTOP, APPBARDATA, size - A_PtrSize)
+   DllCall("Shell32\SHAppBarMessage", "UInt", ABM_SETSTATE, "Ptr", APPBARDATA)
+}
+
 
 
 
 ^O::{
 	HotstringLoader.load(A_WorkingDir . "\everything\LatexHotstrings_ahk2.json", "LatexHotstrings")
-}
-
-Numpad3::{
-	if !WinActive("ahk_exe CoreKeeper.exe")
-		return
-	Loop {
-		MouseMove(960, 570, 0)
-		SendInput("z")
-		Sleep(300)
-		SendInput("i")
-		Sleep(100)
-	}
 }
