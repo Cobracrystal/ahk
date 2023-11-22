@@ -545,7 +545,7 @@ runAsAdmin() {
 connectNextDNS() {
 	try {
 		whr := ComObject("WinHttp.WinHttpRequest.5.1")
-		whr.Open("GET", "https://link-ip.nextdns.io/8b77eb/e2c727ac3ea569ce", true)
+		whr.Open("GET", "https://link-ip.nextdns.io/" . FileRead(A_WorkingDir "\everything\nextDNS_Link.id"), true)
 		whr.Send()
 		whr.WaitForResponse()
 	} catch as e {

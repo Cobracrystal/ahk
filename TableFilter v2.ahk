@@ -442,7 +442,7 @@ class TableFilter {
 			data := JSON.Load(fileAsStr)
 			keys := []
 			for i, e in data {
-				for j, f in e {
+				for j, f in e { ; todo: this messes up the order of the keys btw in case of json. custom parse??
 					if !(objContainsValue(keys, j)) {
 						keys.InsertAt(objContainsValue(keys, lastSeenKey) + 1, j)
 					}
