@@ -579,7 +579,7 @@ customTrayMenu() {
 	A_TrayMenu.Add()
 	A_TrayMenu.Add("Window Spy", trayMenuHandler)
 	A_TrayMenu.Add("Reload this Script", trayMenuHandler)
-	A_TrayMenu.Add("Edit in Notepad++", trayMenuHandler)
+	A_TrayMenu.Add("Edit Script in Notepad++", trayMenuHandler)
 	A_TrayMenu.Add()
 	A_TrayMenu.Add("Pause Script", trayMenuHandler)
 	A_TrayMenu.Add("Suspend/Stop", suspendMenu)
@@ -607,8 +607,8 @@ trayMenuHandler(itemName, *) {
 				WinActivate("Window Spy")
 		case "Reload this Script":
 			Reload()
-		case "Edit in Notepad++":
-			tryEditTextFile(A_ScriptFullPath)
+		case "Edit Script in Notepad++":
+			tryEditTextFile('Notepad++', '"' A_ScriptFullPath '"')
 		case "Pause Script":
 			A_TrayMenu.ToggleCheck("Pause Script")
 			Pause(-1)

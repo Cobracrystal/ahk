@@ -42,7 +42,7 @@ class HotkeyManager {
 		guiMenu.Add("Open Hotkey Manager", this.hotkeyManager.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
 		fileMenu := TrayMenu.submenus["Files"]
-		fileMenu.Add("Edit Hotkey File", (*) => tryEditTextFile(tryEditTextFile(this.data.savedHotkeysPath)))
+		fileMenu.Add("Edit Hotkey File", (*) => tryEditTextFile("Notepad++", this.data.savedHotkeysPath))
 		A_TrayMenu.Add("Files", fileMenu)
 		; init class variables
 	}
@@ -60,14 +60,15 @@ class HotkeyManager {
 			Loop(this.lv[1].GetCount("Col"))
 				this.lv[1].ModifyCol(A_Index,"AutoHdr")
 			this.lv[1].ModifyCol(1,"Integer")
-			this.lv[1].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile(A_ScriptFullPath '" "-n' obj.GetText(rowN, 1)) : 0)
+			this.lv[1].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' obj.GetText(rowN, 1)) : 0)
+			
 		tabObj.UseTab(2)	
 			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["Keys","Program","Comment"])
 			for i, e in this.getSavedHotkeys()	
 				this.lv[2].Add(,e.hotkey, e.program, e.comment)
 			Loop(this.lv[2].GetCount("Col"))
 				this.lv[2].ModifyCol(A_Index,"AutoHdr")
-			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile(this.data.savedHotkeysPath) : 0)
+			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile("Notepad++", this.data.savedHotkeysPath) : 0)
 		tabObj.UseTab(3)
 			this.lv[3] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Options", "Text", "Correction", "Comment"])
 			for i, e in this.getHotstrings(&script)
@@ -75,7 +76,7 @@ class HotkeyManager {
 			Loop(this.lv[3].GetCount("Col"))
 				this.lv[3].ModifyCol(A_Index,"AutoHdr")
 			this.lv[3].ModifyCol(1,"Integer")
-			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile(A_ScriptFullPath '" "-n' obj.GetText(rowN, 1)) : 0)
+			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' obj.GetText(rowN, 1)) : 0)
 		tabObj.UseTab(4)
 		this.gui.AddText(,"SETTINGS HERE LATER")
 		tabObj.UseTab()
@@ -88,11 +89,12 @@ class HotkeyManager {
 		ctrl := this.gui.FocusedCtrl
 		switch ctrl {
 			case this.lv[1], this.lv[3]:
-				if (rowN := ctrl.GetNext())
-					tryEditTextFile(A_ScriptFullPath '" "-n' ctrl.GetText(rowN, 1))
+				if (rowN := ctrl.GetNext()) {
+					tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' ctrl.GetText(rowN, 1))
+				}
 			case this.lv[2]:
 				if (ctrl.GetNext())
-					tryEditTextFile(this.data.savedHotkeysPath)
+					tryEditTextFile("Notepad++", this.data.savedHotkeysPath)
 		}
 	}
 

@@ -505,15 +505,16 @@ normalizePath(path) {	; ONLY ABSOLUTE PATHS
 	return path
 }
 
-tryEditTextFile(path := A_ScriptFullPath) {
-	try
-		Run('Notepad++ "' . path '"')
-	catch Error {
-		try
-			Run(A_ProgramFiles . '\Notepad++\notepad++.exe "' . path '"')
-		catch Error
-			Run(A_WinDir . '\system32\notepad.exe "' . path '"')
-	}
+tryEditTextFile(editor := A_WinDir . "\system32\notepad.exe", params := "") {
+	if (InStr(editor, A_Space) && SubStr(editor, 1, 1) != '"' && SubStr(editor, -1, 1) != '"')
+		editor := '"' editor '"'
+	try 
+		Run(editor ' ' params)
+	catch
+		try Run(A_WinDir . '\system32\notepad.exe ' . params)
+	; Run(A_AppData . '\..\Local\Programs\Microsoft VS Code\Code.exe" "' path '"')
+	; Run('"' A_ProgramFiles . '\Notepad++\notepad++.exe" "' . path '"')
+	; Run('Notepad++ "' . path '"')
 }
 
 
