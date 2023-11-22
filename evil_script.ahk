@@ -3,7 +3,7 @@
 #NoTrayIcon
 #Persistent
 #SingleInstance Force
-Random, r, 300000, 600000
+Random, r, 3 1200000, 12000000
 SetTimer, randomError, %r%
 return
 

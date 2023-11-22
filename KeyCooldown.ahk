@@ -4,17 +4,14 @@ SetWorkingDir %A_ScriptDir%
 #MaxHotkeysPerInterval 50000
 Critical On
 scriptenabled := 1
-Gui, gui1:Default
-Gui, gui1:New, +Border -MaximizeBox
-Gui, gui1:Add, Checkbox, section gScriptToggle, Enable Script
-Gui, gui1:Add, Button, gReloadScript ys-3, Reload Script
-Gui, gui1:Add, ListView,vThisList R7 w310 xs, KEY|TYPE|COMMENT
-for Index, Element in Hotkeys(Hotkeys)
-    LV_Add("",Element.Hotkey, Element.Type, Element.Comment)
+Gui, New, +Border -MaximizeBox
+Gui, Add, Checkbox, section Checked1 gScriptToggle, Enable Script
+Gui, Add, Button, gReloadScript ys-3, Reload Script
+Gui, Add, ListView,vThisList R7 w310 xs, KEY|TYPE|COMMENT
+for i, e in Hotkeys(Hotkeys)
+    LV_Add("",e.Hotkey, e.Type, e.Comment)
 LV_ModifyCol()
-Gui, gui1:Show, x200y200 NoActivate Autosize,:PauseChamp:
-GuiControl,gui1:, Enable Script, 1
-;SetTimer, CheckGui, 200
+Gui, Show, x200y200 NoActivate Autosize,:PauseChamp:
 return
 
 ; ";" means comment, so if you want a hotkey do deactivate for now just add ; in front of it
@@ -30,80 +27,80 @@ return
 
 
 ; This is for left/rightclick. remove ; to enable
-;$LButton::MouseCooldown("{Click}",1,500)
-;$RButton::MouseCooldown("{Click,,,Right}",2,500)
+;$LButton::MouseCooldown("{Click}",500)
+;$RButton::MouseCooldown("{Click,,,Right}",500)
 
 ; This is for keys. Line below is the the way it works
-; *${KEY}::Cooldown("{KEY}",{number of hotkey cooldown},{Cooldown in ms})
+; *${KEY}::Cooldown("{KEY}",{Cooldown in ms})
 
-*$ü::Cooldown("ü",1,3000) ; Cooldown of ü
-;*$ä::Cooldown("ä",2,3000) ; Cooldown of ä
-;*$ö::Cooldown("ö",3,3000) ; Cooldown of ö
-;*$d::Cooldown("d",4,3000)
+*$ü::Cooldown("ü",3000) ; Cooldown of ü
+;*$ä::Cooldown("ä",3000) ; Cooldown of ä
+;*$ö::Cooldown("ö",3000) ; Cooldown of ö
+;*$d::Cooldown("d",3000)
 
 ; This is for a cooldown when you hold down a key
-; *${KEY}::Cooldown("{KEY}",{number of hotkey cooldown},{Cooldown in ms},{Maximum Time you can hold the key before it goes on cooldown)
-*$Left::KeyHoldingCooldown("Left",1,2000,2000)
+; *${KEY}::Cooldown("{KEY}",{Cooldown in ms},{Maximum Time you can hold the key before it goes on cooldown)
+*$Left::KeyHoldingCooldown("Left",2000,2000)
 
 
 ^+R:: ; Reloads Script
-ReloadScript:
-Reload
-
-^+!F:: ; Toggles Script Activity
-Suspend, Toggle
-scriptenabled := !scriptenabled
-GuiControl,gui1:, Enable Script, %scriptenabled%
-return
-
+ReloadScript() {
+	Reload
+}
 
 ^+K:: ; Closes Script
 GuiClose:
 ExitApp
 
-ScriptToggle:
-scriptenabled := !scriptenabled
-Suspend, Toggle
-return
+^+!F:: ; pauses script
+ScriptToggle(ctrlhwnd := 0, guievent := 0, eventinfo := 0) {
+	if (ctrlhwnd == 0) {
+		GuiControlGet, tvar,, Enable Script
+		GuiControl,, Enable Script, !tvar
+	}
+	Suspend, Toggle
+	return
+}
 
-Cooldown(keys,n,cd)
+Cooldown(keys,cd)
 {
-	static t:=[A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount]
-    if (A_TickCount - t[n] > cd)
+	static t:=[]
+	if !(t[keys])
+		t[keys] := 0
+	if (A_TickCount - t[keys] > cd)
 	{
 		SendInput {%keys% down}
 		KeyWait, %keys%, U 
 		SendInput {%keys% up}
-        t[n] := A_TickCount
+        t[keys] := A_TickCount
     }
 }
 
 KeyHoldingCooldown(keys,n,cd1,cd2)
 {
-	static t3:=[A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount,A_TickCount]
-    if (A_TickCount - t3[n] > cd1)
+	
+	static t:=[]
+	if !(t[keys])
+		t[keys] := 0
+	if (A_TickCount - t[keys] > cd1)
 	{
 		cd2 := cd2/1000
 		SendInput {%keys% Down}
 		KeyWait, %keys%, U ; T%cd2%
 		SendInput {%keys% Up}
-		t3[n] := A_TickCount
+		t[keys] := A_TickCount
     }
 }
 
 MouseCooldown(keys,n,cd)
 {
-	static t2:=[A_TickCount,A_TickCount]
-    if (A_TickCount - t2[n] > cd)
+	static t:=[A_TickCount,A_TickCount]
+    if (A_TickCount - t[n] > cd)
 	{
 		SendInput %keys%
-        t2[n] := A_TickCount
+        t[n] := A_TickCount
     }
 }
-
-CheckGui:
-Gui, gui1:Submit, NoHide
-return
 
 Hotkeys(ByRef Hotkeys)
 {

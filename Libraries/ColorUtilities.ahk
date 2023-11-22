@@ -94,7 +94,6 @@ hexcodeColorPreview(hotkey) {
 	Gui, colorPreview:New, +AlwaysOnTop +Lastfound  +ToolWindow -Caption +hwndColorHwnd
 	Gui, colorPreview:Color, %text%
 	Gui, colorPreview:Show, % "x" . x-30 . " y" . y-30 . "w50 h50 NoActivate"
-	CoordMode, Mouse, %tcm%
 	Sleep, 1500
 	Gui, colorPreview:Destroy
 }

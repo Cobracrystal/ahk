@@ -94,7 +94,9 @@ class WindowManager {
 		for Index, Element in this.getAllWindowInfo(excludeWindowRegex)
 			LV_Add("",Element.ahk_id, Element.ahk_title, Element.process, Element.win_state, Element.xpos, Element.ypos, Element.width, Element.height, Element.ahk_class, Element.process_path)
 		Loop, 10
-			A_Index<4||A_Index>8 ? LV_ModifyCol(A_Index) : (A_Index<=6 ? LV_ModifyCol(A_Index, 40) : LV_ModifyCol(A_Index, 50))
+			LV_ModifyCol(A_Index, "AutoHdr")
+		Loop, 5
+			LV_ModifyCol(A_Index+3, "Integer")
 		if (LV_GetCount() > 40)
 			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, h640
 		else if (LV_GetCount() >= 20)

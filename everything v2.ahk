@@ -737,13 +737,13 @@ trayMenuHandler(itemName, *) {
 			Reload()
 		case "Edit in Notepad++":
 			try {
-				Run("Notepad++ " . A_ScriptFullPath)
+				Run('Notepad++ "' . A_ScriptFullPath '"')
 			} catch Error as e {
 				try {
-					str := A_ProgramFiles . "\Notepad++\notepad++.exe " . A_ScriptFullPath
+					str := A_ProgramFiles . '\Notepad++\notepad++.exe "' . A_ScriptFullPath '"'
 					Run(str)
 				} catch Error as f {
-					str := A_WinDir . "\system32\notepad.exe " . A_ScriptFullPath
+					str := A_WinDir . '\system32\notepad.exe "' . A_ScriptFullPath '"'
 					Run(str)
 				}
 			}
@@ -1083,7 +1083,7 @@ makeTextAnsiColorful(str) {
 }
 
 
-^+F12::{
+^+F11::{
 	static hide := false
 	HideShowTaskbar(hide := !hide)
 }

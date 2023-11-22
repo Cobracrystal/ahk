@@ -93,10 +93,12 @@ class WindowManager {
 		DetectHiddenWindows, % this.settings.DetectHiddenWindows
 		if (!this.settings.showExcludedWindows)
 			excludeWindowRegex := "(ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|^$)"
-		for Index, Element in this.getAllWindowInfo(excludeWindowRegex)
-			LV_Add("",Element.ahk_id, Element.ahk_title, Element.process, Element.win_state, Element.xpos, Element.ypos, Element.width, Element.height, Element.ahk_class, Element.process_path)
+		for i, e in this.getAllWindowInfo(excludeWindowRegex)
+			LV_Add("",e.ahk_id, e.ahk_title, e.process, e.win_state, e.xpos, e.ypos, e.width, e.height, e.ahk_class, e.process_path)
 		Loop, 10
-			A_Index<4||A_Index>8 ? LV_ModifyCol(A_Index) : (A_Index<=6 ? LV_ModifyCol(A_Index, 40) : LV_ModifyCol(A_Index, 50))
+			LV_ModifyCol(A_Index, "AutoHdr")
+		Loop 5
+			LV_ModifyCol(A_Index+3, "Integer")
 		if (LV_GetCount() > 40)
 			GuiControl, WindowManager:Move, % this.controls.listviewWindows.handle, h640
 		else if (LV_GetCount() >= 20)
