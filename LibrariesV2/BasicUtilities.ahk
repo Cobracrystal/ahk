@@ -6,6 +6,7 @@ class TrayMenu {
 
 	static __New() {
 		this.menus := Map()
+		this.menus.CaseSense := 0
 		this.menus["traymenu"] := A_TrayMenu
 		this.menus[A_TrayMenu] := A_TrayMenu
 	}

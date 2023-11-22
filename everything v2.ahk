@@ -623,8 +623,7 @@ clipboardTracker(type) {
 }
 
 customTrayMenu() {
-	suspendMenu := Menu()
-	TrayMenu.submenus["SuspendMenu"] := suspendMenu
+	suspendMenu := TrayMenu.submenus["SuspendMenu"]
 	suspendMenu.Add("Suspend Hotkeys", trayMenuHandler)
 	suspendMenu.Add("Suspend Reload", trayMenuHandler)
 	suspendMenu.Default := "Suspend Reload"
