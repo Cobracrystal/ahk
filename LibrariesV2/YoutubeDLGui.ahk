@@ -63,19 +63,12 @@ class YoutubeDLGui {
 		this.data := { coords: [750, 425], savePath: A_Appdata . "\Autohotkey\YTDL", output:"", outputLastLine: "", outputLastLineCFlag: 0
 			, separator: "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
 			, separatorSmall: "══════════════════════════════════════════════════════════════════════════════" }
-		; (attempt to ) load settings from settings file
-		if (!this.settingsManager("Load")) {
-			this.settings := { resetConverttoAudio: 1, useAliases: 0, openExplorer: 1, trySelectFile: 0, outputPath: A_ScriptDir
-				, outputPattern: A_ScriptDir . "\%(title)s.%(ext)s", ffmpegPath: "", ytdlPath: "", debug: 0, options: YoutubeDLGui.youtubeDLOptions }
-			this.options := this.settings.options
-			for i, e in ["", "ignore-config", "output", "no-overwrites", "no-playlist", "retries", "limit-rate", "format", "ffmpeg-location", "merge-output-format"]
-				this.options[e].selected := true
-			; maybe ["","ignore-config","no-playlist","retries"] ?
-		}
+		this.settingsManager("Load")
 		this.settings.flagDebug := flagDebug
 		this.controls := {}
 		this.resetGUI()
 	}
+
 	guiCreate() {
 		this.gui := Gui("+Border", "YoutubeDL Manager")
 		this.gui.OnEvent("Escape", (*) => this.youtubeDLGui("Hide"))
@@ -94,6 +87,7 @@ class YoutubeDLGui {
 	}
 
 	updateGuiOutput(cmdLine) {
+		msgbox(cmdLine)
 		lineArray := StrSplit(Rtrim(StrReplace(cmdLine, "`r`n", "`n"), "`n"), "`n")
 		for i, newLine in lineArray {
 			if (Instr(newLine, "https://") || Instr(newLine, "http://")) && !(Instr(this.data.outputLastLine, "[redirect]") || Instr(newLine, "[redirect]")) && (this.data.outputLastLine != "") && (this.data.outputLastLine != this.data.separator . "`n") {
@@ -146,9 +140,10 @@ class YoutubeDLGui {
 			if (param != -1 && this.options[option].HasOwnProp("param")) ; change param if given
 				this.options[option].param := param
 		}
+		str := '"' this.settings.ytdlPath '" '
 		for i, e in this.options ; generate string for gui
 			if (e.selected)
-				str .= (i ? (this.settings.useAliases && e.HasOwnProp("alias") ? e.alias ' ' : '--' i ' ') : '') . (e.HasOwnProp("param") ? '"' . e.param . '" ' : '')
+				str .= (this.settings.useAliases && e.HasOwnProp("alias") ? e.alias ' ' : '--' i ' ') . (e.HasOwnProp("param") ? '"' . e.param . '" ' : '')
 		if (updateGui)
 			this.controls.editCmdConfig.value := str
 	}
@@ -197,42 +192,11 @@ class YoutubeDLGui {
 				if (fileP != "") {
 					this.settings.ytdlPath := fileP
 					this.controls.editYTDLPath.Value := fileP
-					this.ytdlOptionHandler("", , fileP)
 				}
 			default:
 				return
 		}
 		this.settingsManager("Save")
-	}
-
-	settingsManager(mode := "Save") {
-		mode := Substr(mode, 1, 1)
-		if (!Instr(FileExist(this.data.savePath), "D"))
-			DirCreate(this.data.savePath)
-		if (mode == "S") {
-			f := FileOpen(this.data.savePath . "\ahk_settings.json", "w", "UTF-8")
-			f.Write(JSON.Dump(this.settings))
-			f.Close()
-			return 1
-		}
-		else if (mode == "L") {
-			if (FileExist(this.data.savePath "\ahk_settings.json")) {
-				s := FileRead(this.data.savePath "\ahk_settings.json", "UTF-8")
-				try 
-					this.settings := JSON.Load(s, , false)
-				catch
-					return 0
-				if (ObjOwnPropCount(this.settings) == 0)
-					return 0
-				this.options := Map()
-				for i, e in this.settings.options.OwnProps()
-					this.options[i] := e
-				this.settings.options := this.options
-				return 1
-			}
-			return 0
-		}
-		return 0
 	}
 
 	mainButton() {
@@ -244,6 +208,7 @@ class YoutubeDLGui {
 		}
 		fullRuncmd := this.controls.editCmdConfig.value . StrReplace(links, "`n", A_Space)
 		output := cmdRet(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8")
+		msgbox(output)
 		fullOutput := this.controls.editOutput.value
 		this.updateGuiOutput(this.data.separator)
 		if (!WinActive(this.gui))
@@ -331,48 +296,95 @@ class YoutubeDLGui {
 		this.gui := 0
 	}
 
-	static __New() {
-		this.youtubeDLOptions := Map()
-		this.youtubeDLOptions[""] := { param: "" }
+	settingsManager(mode := "Save") {
+		mode := Substr(mode, 1, 1)
+		if (!Instr(FileExist(this.data.savePath), "D"))
+			DirCreate(this.data.savePath)
+		if (mode == "S") {
+			f := FileOpen(this.data.savePath . "\ahk_settings.json", "w", "UTF-8")
+			f.Write(JSON.Dump(this.settings))
+			f.Close()
+			return 1
+		}
+		else if (mode == "L") {
+			this.settings := {}
+			if (FileExist(this.data.savePath "\ahk_settings.json")) {
+				s := FileRead(this.data.savePath "\ahk_settings.json", "UTF-8")
+				try this.settings := JSON.Load(s, , false)
+			}
+			for i, e in YoutubeDLGui.getDefaultSettings().OwnProps() {
+				if !(this.settings.HasOwnProp(i))
+					this.settings.%i% := e
+			}
+			this.options := Map()
+			for i, e in YoutubeDLGui.getOptions()
+				this.options[i] := (this.settings.options.HasOwnProp(i) ? this.settings.options.%i% : e)
+			this.settings.options := this.options
+			for i, e in ["ignore-config", "output", "no-overwrites", "no-playlist", "retries", "limit-rate", "format", "ffmpeg-location", "merge-output-format"]
+				this.options[e].selected := true
+			; maybe [,"ignore-config","no-playlist","retries"]
+			return 2
+		}
+		return 0
+	}
+
+	; these functions exist to get the first-time default values.
+	static getDefaultSettings() {
+		settings := { resetConverttoAudio: 1
+			, useAliases: 0
+			, openExplorer: 1
+			, trySelectFile: 0
+			, outputPath: A_ScriptDir
+			, outputPattern: A_ScriptDir . "\%(title)s.%(ext)s"
+			, ffmpegPath: ""
+			, ytdlPath: ""
+			, debug: 0
+			, options: {} } ; options as object since json saves and loads them as object anyway
+		return settings
+	}
+
+	static getOptions() {
+		youtubeDLOptions := Map()
 		; General and Meta Options
-		this.youtubeDLOptions["ignore-config"] := {}
-		this.youtubeDLOptions["update"] := { alias: "-U" }
-		this.youtubeDLOptions["simulate"] := { alias: "-s" }
-		this.youtubeDLOptions["list-formats"] := { alias: "-F" }
-		this.youtubeDLOptions["print-traffic"] := {}
-		this.youtubeDLOptions["newline"] := {}
+		youtubeDLOptions["ignore-config"] := {}
+		youtubeDLOptions["update"] := { alias: "-U" }
+		youtubeDLOptions["simulate"] := { alias: "-s" }
+		youtubeDLOptions["list-formats"] := { alias: "-F" }
+		youtubeDLOptions["print-traffic"] := {}
+		youtubeDLOptions["newline"] := {}
 		; Downloading Options
-		this.youtubeDLOptions["output"] := { alias: "-o", param: A_ScriptDir . "\%(title)s.%(ext)s" }
-		this.youtubeDLOptions["no-overwrites"] := { alias: "-w" }
-		this.youtubeDLOptions["force-overwrites"] := {}
-		this.youtubeDLOptions["no-playlist"] := {}
-		this.youtubeDLOptions["retries"] := { alias: "-R", param: 1 }
-		this.youtubeDLOptions["restrict-filenames"] := {}
-		this.youtubeDLOptions["limit-rate"] := { alias: "-r", param: "5M" }
-		this.youtubeDLOptions["format"] := { alias: "-f", param: "bestvideo[height<=1080]+bestaudio/best" }
+		youtubeDLOptions["output"] := { alias: "-o", param: A_ScriptDir . "\%(title)s.%(ext)s" }
+		youtubeDLOptions["no-overwrites"] := { alias: "-w" }
+		youtubeDLOptions["force-overwrites"] := {}
+		youtubeDLOptions["no-playlist"] := {}
+		youtubeDLOptions["retries"] := { alias: "-R", param: 1 }
+		youtubeDLOptions["restrict-filenames"] := {}
+		youtubeDLOptions["limit-rate"] := { alias: "-r", param: "5M" }
+		youtubeDLOptions["format"] := { alias: "-f", param: "bestvideo[height<=1080]+bestaudio/best" }
 		; Extra Data Options
-		this.youtubeDLOptions["skip-download"] := {}
-		this.youtubeDLOptions["write-description"] := {}
-		this.youtubeDLOptions["write-info-json"] := {}
-		this.youtubeDLOptions["write-comments"] := {}
-		this.youtubeDLOptions["write-thumbnail"] := {}
-		this.youtubeDLOptions["write-subs"] := {}
+		youtubeDLOptions["skip-download"] := {}
+		youtubeDLOptions["write-description"] := {}
+		youtubeDLOptions["write-info-json"] := {}
+		youtubeDLOptions["write-comments"] := {}
+		youtubeDLOptions["write-thumbnail"] := {}
+		youtubeDLOptions["write-subs"] := {}
 		; Authentification Options
-		this.youtubeDLOptions["username"] := { alias: "-u", param: "" }
-		this.youtubeDLOptions["password"] := { alias: "-p", param: "" }
-		this.youtubeDLOptions["twofactor"] := { alias: "-2", param: "" }
+		youtubeDLOptions["username"] := { alias: "-u", param: "" }
+		youtubeDLOptions["password"] := { alias: "-p", param: "" }
+		youtubeDLOptions["twofactor"] := { alias: "-2", param: "" }
 		; Post-Processing Options
-		this.youtubeDLOptions["ffmpeg-location"] := { param: "" }
-		this.youtubeDLOptions["extract-audio"] := { alias: "-x" }
-		this.youtubeDLOptions["audio-quality"] := { param: 0 }
-		this.youtubeDLOptions["audio-format"] := { param: "mp3" }
-		this.youtubeDLOptions["merge-output-format"] := { param: "mp4" }
-		this.youtubeDLOptions["embed-subs"] := {}
-		this.youtubeDLOptions["embed-thumbnail"] := {}
-		this.youtubeDLOptions["embed-metadata"] := {}
-		this.youtubeDLOptions["parse-metadata"] := { param: "" }
-		this.youtubeDLOptions["convert-thumbnails"] := { param: "jpg" }
-		for i, e in this.youtubeDLOptions
-			this.youtubeDLOptions[i].selected := false
+		youtubeDLOptions["ffmpeg-location"] := { param: "" }
+		youtubeDLOptions["extract-audio"] := { alias: "-x" }
+		youtubeDLOptions["audio-quality"] := { param: 0 }
+		youtubeDLOptions["audio-format"] := { param: "mp3" }
+		youtubeDLOptions["merge-output-format"] := { param: "mp4" }
+		youtubeDLOptions["embed-subs"] := {}
+		youtubeDLOptions["embed-thumbnail"] := {}
+		youtubeDLOptions["embed-metadata"] := {}
+		youtubeDLOptions["parse-metadata"] := { param: "" }
+		youtubeDLOptions["convert-thumbnails"] := { param: "jpg" }
+		for i, e in youtubeDLOptions
+			youtubeDLOptions[i].selected := false
+		return youtubeDLOptions
 	}
 }
