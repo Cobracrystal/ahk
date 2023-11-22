@@ -57,8 +57,9 @@ youtubeDL := YoutubeDLGui()
 reminders.setPeriodicTimerOn(parseTime(, 11, 21, 8, 0, 0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
 reminders.setPeriodicTimerOn(parseTime(, , , 13, 36, 50), 1, "Days", , reminders.reminder1337)
 reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
+reminders.setPeriodicTimerOn(parseTime(,,,23,0,0), 1, "D", "Eat an apple. One Apple a day.")
+reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
-
 ; Launch Transparent Taskbar at 50ms frequency
 TransparentTaskbar.TransparentTaskbar(1, 50)
 ; Start Loop to close winrar popups
@@ -346,7 +347,7 @@ F11:: { 	; BTD6: Rebind Escape
 		; yPosCircle -= 100
 		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", "ahk_id " circleWindow)
 		;	duoRect := "200-200 1500-200 1500-900 200-900 200-550 850-200 1500-550 850-900 200-550"
-		str := sierpinskiCoords(w//2, 50, w-50, h-60, 4)
+		str := sierpinskiCoords(w//2, 50, w-50, h-60, 0)
 		WinSetStyle("-0xC00000", shapedWindow)
 		WinSetAlwaysOnTop(1, shapedWindow)
 		WinSetRegion(str, shapedWindow)
