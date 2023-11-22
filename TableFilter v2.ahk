@@ -3,7 +3,12 @@
 ; or menubar that lists them
 ; in settings option to delete all backups (or restore them)
 ; the option to open backup folder should also be in there (?)
-
+; add checkbox to filter empty values next to duplicates
+; figure out how to use icon for settings
+; limit autohdr for columns to fixed max width (eg autohdr if < 200, else 200)
+; settings usedefaultrunic -> needs runic translator function.
+; instead of tooltip and disabled gui, use actual progress window (like magicbox example) to display duplicate progress (also makes escape as interruption clearer)
+; while checkbox duplicates is checked, normal searching should still take that into account
 #SingleInstance Force
 ; temporary
 tableInstance := TableFilter(1)
@@ -23,7 +28,17 @@ class TableFilter {
 	}
 
 	__New(debug := 0) {
-		this.data := { savePath: A_AppData "\Autohotkey\Tablefilter", openFile: "", data: [], keys: [], isSaved: true }
+		this.data := { 
+			savePath: A_AppData "\Autohotkey\Tablefilter", 
+			openFile: "", 
+			data: [], 
+			keys: [],
+			defaultValues: Map(),
+			isSaved: true, 
+			isInBackup: true 
+		}
+		this.data.defaultValues.CaseSense := false
+		this.data.defaultValues.Set("Wortart", "?", "Deutsch", "-", "Kayoogis", "-", "Tema'i", "0")
 		this.guis := []
 		this.menu := this.createMenu()
 
@@ -48,28 +63,33 @@ class TableFilter {
 			WinActivate(this.guis[1].hwnd)
 			return 0
 		}
-		newGui := Gui("+Border", this.base.__Class . " - " . (this.data.openFile ? SubStr(this.data.openFile, RegexMatch(this.data.openFile, "\\[^\\]*\.[^\\]+$") + 1) : "Select file."))
+		newGui := Gui("+Border", this.base.__Class . " - " . (this.data.openFile ? SubStr(this.data.openFile, RegexMatch(this.data.openFile, "\\[^\\]*\.[^\\]+$") + 1) : "Select file"))
 		newGui.OnEvent("Close", this.guiClose.bind(this))
 		newGui.OnEvent("Escape", this.guiClose.bind(this))
 		newGui.OnEvent("DropFiles", this.dropFiles.bind(this))
 		GroupAdd("TableFilterGUIs", "ahk_id " newGui.hwnd)
 		if (this.data.openFile) {
-			;	this.createSearchBoxesinGUI()
+			newGui.AddGroupBox("Section w745 h42", "Search")
+			for i, e in this.data.keys {
+				t := newGui.AddText("ys+16 xp+" (i==1?10:55), e)
+				t.GetPos(,, &w)
+				newGui.AddEdit("ys+13 xp+" w+10 " r1 w45 vEditSearchCol" i).OnEvent("Change", this.createFilteredList.bind(this))
+			}
+			newGui.AddCheckbox("ys+13", "Find Duplicates").OnEvent("Click", this.searchDuplicates.bind(this))
 			rowKeys := this.data.keys.Clone()
 			rowKeys.push("DataIndex")
-			newGui.LV := newGui.AddListView("R35 w950", rowKeys) ; LVEvent, Altsubmit
-			;	this.createAddLineBoxesinGUI()
-			newGui.AddButton("r1 w100", "Add Row to List").OnEvent("Click", (*) => this.addLineToData())
-			;	this.createFileButtonsinGUI()
-			this.createFilteredList(newGui, false)
-			; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
-			if !(this.settings.debug)
-				newGui.LV.ModifyCol(newGui.LV.GetCount("Col"), "0 Integer")
-			else
-				newGui.LV.ModifyCol(newGui.LV.GetCount("Col"), "Integer")
-			Loop (newGui.LV.GetCount("Col") - 1)
-				newGui.LV.ModifyCol(A_Index, "AutoHdr")
-				; this needs to do autohdr within a limit (as in, autohdr if <200 width else limit to 200. Possible how?)
+			newGui.LV := newGui.AddListView("xs R35 w950", rowKeys) ; LVEvent, Altsubmit
+				this.createFilteredList(newGui, false)
+				; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
+				if !(this.settings.debug)
+					newGui.LV.ModifyCol(newGui.LV.GetCount("Col"), "0 Integer")
+				else
+					newGui.LV.ModifyCol(newGui.LV.GetCount("Col"), "Integer")
+				Loop (newGui.LV.GetCount("Col") - 1)
+					newGui.LV.ModifyCol(A_Index, "AutoHdr")
+			this.createAddLineBoxesinGUI(newGui)
+			newGui.AddButton("ys+9 xp+160 w100", "Load json/xml File").OnEvent("Click", (*) => this.loadData())
+			newGui.AddButton("w100", "Export to File").OnEvent("Click", (*) => this.exportFile())
 			showString := "Center Autosize"
 		} else {
 			newGui.AddButton("x200 y190 r1 w100", "Load File").OnEvent("Click", this.loadData.bind(this, ""))
@@ -81,65 +101,121 @@ class TableFilter {
 		newGui.Show(showString)
 	}
 
-	createSearchBoxesInGUI() {
-
-	}
-
-	createAddLineBoxesinGUI() {
-
-	}
-
-	createFileButtonsinGUI() {
-
-	}
-
-	createFilteredList(_gui, isExist := false) {
-		if (isExist) {
-			_gui.Opt("+Disabled")
-			_gui.LV.Opt("-Redraw")
-			_gui.LV.Delete()
+	createAddLineBoxesinGUI(_gui, row := Map()) {
+		_gui.AddGroupBox("Section w750 h65", "Add Row")
+		for i, e in this.data.keys {
+			_gui.AddText("ys+15 xs+" 10+((i-1) * 95), e)
+			_gui.AddEdit("r1 w85 vEditAddRow" i, row.Has(e) ? row[e] : "").OnEvent("Change", this.validValueChecker.bind(this))
 		}
-		count := 1
+		_gui.AddButton("ys+15 xs+" 10+95*this.data.keys.Length " h40 w65", "Add Row to List").OnEvent("Click", this.addEntry.bind(this))
+	}
+
+	createFilteredList(gui, *) {
+		if (gui.HasProp("Gui"))
+			gui := gui.Gui
+		gui.Opt("+Disabled")
+		gui.LV.Opt("-Redraw")
+		gui.LV.Delete()
 		for i, e in this.data.data {
-			if (this.filterTableRow(e)) {
-				row2 := []
-				for _, key in this.data.keys
-					row2.push(e.Has(key) ? e[key] : "")
-				row2.push(count)
-				_gui.LV.Add("",row2*)
+			if (this.rowIncludeFromSearch(gui, e))
+				this.addRow(gui, e, i)
+		}
+		if (gui.LV.GetCount() == 0)
+			gui.LV.Add("", "/", "Nothing Found.")
+		gui.LV.Opt("+Redraw")
+		gui.Opt("-Disabled")
+	}
+
+	searchDuplicates(ctrlObj, *) {
+		local gui := ctrlObj.Gui
+		if !(ctrlObj.Value) {
+			this.createFilteredList(ctrlObj.Gui)
+			return
+		}
+		gui.LV.Opt("-Redraw")
+		gui.LV.Delete()
+		duplArr := []
+		filterKey := this.settings.duplicateColumn
+		total := (this.data.data.Length * (this.data.data.Length-1))/2
+		gui.Opt("+Disabled")
+		duplicateMap := Map()
+		duplicateMap.CaseSense := this.settings.filterCaseSense
+		for i, row in this.data.data {
+			v := row[filterKey]
+			if (duplicateMap.has(v))
+				duplicateMap[v].push([row, i])
+			else 
+				duplicateMap[v] := [[row, i]]
+		}
+		for i, row in this.data.data {
+			v := row[filterKey]
+			if (v == "" || v == this.data.defaultValues[filterKey])
+				continue
+			if (duplicateMap[v].Length > 1) {
+				for _, arr in duplicateMap[v] {
+					if (this.rowIncludeFromSearch(gui, arr[1]))
+						this.addRow(gui, arr[1], arr[2])
+				}
 			}
-			count++
 		}
-		if (isExist) {
-			if (_gui.LV.GetCount() == 0)
-				_gui.LV.Add("Col2", "/", "No Results Found.")
-			_gui.LV.Opt("+Redraw")
-			_gui.Opt("-Disabled")
+		gui.Opt("-Disabled")
+		gui.LV.Opt("+Redraw")
+	}
+
+	rowIncludeFromSearch(gui, row) {
+		for i, e in this.data.keys {
+			v := gui["EditSearchCol" . i].Value
+			if (v != "" && (!row.Has(e) || !InStr(row[e], v, this.settings.filterCaseSense))) {
+				return false
+			}
 		}
-	}
-
-	listViewAddRow(row) {
-
-	}
-
-	searchDuplicates() {
-
-	}
-
-	filterTableRow(row) {
 		return true
 	}
 
-	addRow() {
-
+	addRow(gui, row, index) {
+		rowArr := []
+		for _, key in this.data.keys
+			rowArr.push(row.Has(key) ? row[key] : "")
+		rowArr.push(index)
+		gui.LV.Add("",rowArr*)
 	}
 
-	addLineToData() {
-
+	addEntry(ctrlObj, *) {
+		newRow := Map()
+		aGui := ctrlObj.Gui
+		for i, key in this.data.keys {
+			newRow[key] := aGui["EditAddRow" i].Value
+			aGui["EditAddRow" i].Value := ""
+		}
+		this.cleanRowData(newRow)		
+		this.data.data.push(newRow)
+		this.settingsHandler("isSaved", false, false)
+		this.settingsHandler("isInBackup", false, false)
+		for _, g in this.guis
+			if (this.rowIncludeFromSearch(g, newRow))
+				this.addRow(g, newRow, this.data.data.Length)
+		aGui.LV.Modify(aGui.LV.GetCount(), "Select Focus Vis")
 	}
 
-	trimRowValues() {
-
+	cleanRowData(row) { ; row is a map and this operates onto the object
+		for i, e in this.data.keys {
+			if (this.settings.useDefaultValues && (!row.Has(e) || row[e] == "")) {
+				switch e, 0 {
+					case "Wortart": ; 1 -> Wortart
+						row[e] := this.data.defaultValues[e]
+					case "Deutsch", "Kayoogis": ; 2,3 -> Deutsch, Kayoogis
+						row[e] := this.data.defaultValues[e]
+					case "Runen": ; Runen
+						if (this.settings.useDefaultRunic)
+							row[e] := "" ; todo
+					case "Tema'i": ; Tema'i
+						row[e] := this.data.defaultValues[0]
+				}
+			}
+			if (i == 1)
+				row[e] := Format("{:U}", row[e])
+			row[e] := Trim(row[e])
+		}
 	}
 
 	editRow() {
@@ -155,10 +231,6 @@ class TableFilter {
 	}
 
 	databaseitemremove() {
-
-	}
-
-	databaseiteminsert() {
 
 	}
 
@@ -186,8 +258,25 @@ class TableFilter {
 
 	}
 
-	addLineBoxChecker() {
-
+	validValueChecker(ctrlObj, *) {
+		newFont := (this.settings.darkMode ? "c0xFFFFFF" : "cDefault Norm")
+		switch Integer(SubStr(ctrlObj.Name, -1)) {
+			case 1: ; 1 -> Wortart
+				if (!RegexMatch(ctrlObj.Value, "i)^[?nvaspg]?$"))
+					newFont := "cRed Bold"
+			case 3: ; 3 -> Kayoogis
+				if (RegexMatch(ctrlObj.Value, "i)[cjqwx]"))
+					newFont := "cBlue Bold"
+			case 4: ; Runen
+				if (RegexMatch(ctrlObj.Value, "i)[a-z]"))
+					newFont := "cRed Bold"
+			case 7: ; Tema'i
+				if (!RegexMatch(ctrlObj.Value, "i)^[01]?$"))
+					newFont := "cRed Bold"
+			default:
+				return
+		}
+		ctrlObj.SetFont(newFont)
 	}
 
 	lvEvent() {
@@ -375,12 +464,17 @@ class TableFilter {
 	}
 
 
+
 	settingsHandler(setting := "", value := "", save := true) {
 		switch setting, 0 {
 			case "darkmode":
 				this.settings.darkMode := (value == -1 ? !this.settings.darkMode : value)
 			case "lastUsedFile":
 				this.settings.lastUsedFile := value
+			case "isSaved":
+				this.data.isSaved := (value == -1 ? !this.data.isSaved : value)
+			case "isInBackup":
+				this.data.isInBackup := (value == -1 ? !this.data.isInBackup : value)
 			default:
 				throw Error("uhhh setting: " . setting)
 		}
@@ -433,7 +527,9 @@ class TableFilter {
 			backupAmount: 4, ; amount of files to be kept
 			backupInterval: 15, ; in minutes
 			useDefaultValues: true,
-			duplicateColumn: "Deutsch",
+			useDefaultRunic: true,
+			duplicateColumn: "Deutsch", ; maybe use index instead? as in, 2/3/4
+			filterCaseSense: false,
 			saveHotkey: "^s", ; IS THIS NECESSARY THO?????
 			guiHotkey: "^p",
 			lastUsedFile: ""
