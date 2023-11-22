@@ -1,31 +1,42 @@
-﻿InstallMouseHook()
-/*
-;// Recommended Hotkeys:
+﻿/*
+;// 'Traditional' Hotkeys:
 ;  Alt + Left Button	: Drag to move a window.
 ;  Alt + Right Button	: Drag to resize a window.
-;  Alt + Middle Button	: Toggle Max/Restore state of a window.
+;  Alt + Middle Button	: Click to switch Max/Restore state of a window.
+;  Alt + Middle Button	: Scroll to scale a window.
+;  Alt + X4 Button		: Click to minimize a window.
 
-;// Method to use when including this script:
-; call with parameter A_ThisHotkey to easily check for holding down the corresponding key.
-!LButton::
-moveWindow(A_ThisHotkey)
-return
+; Drag Window 
+!LButton::{	
+	AltDrag.moveWindow(A_ThisHotkey)
+}
 
-!RButton::	; Resize Window 
-resizeWindow(A_ThisHotkey)
-return
+; Resize Window 
+!RButton::{	
+	AltDrag.resizeWindow(A_ThisHotkey)
+}
 
-!MButton::	; Toggle Max/Restore of clicked window
-toggleMaxRestore()
-return
+; Toggle Max/Restore of clicked window
+!MButton::{	
+	AltDrag.toggleMaxRestore()
+}
 
+; Scale Window Down
+!WheelDown::{	
+	AltDrag.scaleWindow(-1)
+}
+
+; Scale Window Up
+!WheelUp::{	
+	AltDrag.scaleWindow(1)
+}
 
 */
-; AltDrag.initialize()
 
 class AltDrag {
 		
 	static __New() {
+		InstallMouseHook()
 		this.boolSnapping := true
 		this.monitors := Map()
 		this.blacklist := ["ahk_class MultitaskingViewFrame ahk_exe explorer.exe"
@@ -79,20 +90,19 @@ class AltDrag {
 		CoordMode("Mouse", "Screen")
 		cleanHotkey := RegexReplace(hotkey, "#|!|\^|\+|<|>|\$|~", "")
 		;// abort if max/min or on blacklist
-		MouseGetPos(&mouseX1, &mouseY1, &winID)
-		if (this.winInBlacklist(winID) || WinGetMinMax(winID) != 0) {
+		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
+		if (this.winInBlacklist(wHandle) || WinGetMinMax(wHandle) != 0) {
 			this.sendKey(cleanHotkey)
 			return
 		}
-		WinGetPos(&winX, &winY, &winW, &winH, "ahk_id " . winID)
-		WinActivate("ahk_id " . winID)
+		WinGetPos(&winX, &winY, &winW, &winH, wHandle)
+		WinActivate(wHandle)
 		; direction from which direction to resize
 		resizeLeft := (mouseX1 < winX + winW/2)
 		resizeUp := (mouseY1 < winY + winH/2)
-	;	VarSetCapacity(windowInfo, 16)
+		wLimit := this.winMinMaxSize(wHandle)
 		while GetKeyState(cleanHotkey, "P") {
 			MouseGetPos(&mouseX2, &mouseY2)
-			wLimit := this.winMinMaxSize(winID)
 			diffX := mouseX2 - mouseX1
 			diffY := mouseY2 - mouseY1
 			nx := (resizeLeft ? winX + Max(Min(diffX, winW-wLimit.minX),winW-wLimit.maxX) : winX)
@@ -102,7 +112,7 @@ class AltDrag {
 		;	if (nw == wLimit.minX && nh == wLimit.minY)
 		;		continue ; THIS CAUSES JUMPS (or stucks) BECAUSE IT DOESN'T UPDATE THE VERY LAST RESIZE IT NEEDS TO. CHECK PREVIOUS SIZE?
 		;	tooltip % "x: " nx "`ny: " ny "`nw: " nw "`nh: " nh "`nlimX " wLimit.minX "`nlimY " wLimit.minY
-			DllCall("SetWindowPos","UInt",winID,"UInt",0,"Int",nx,"Int", ny, "Int", nw, "Int", nh,"Uint",0x0004)
+			DllCall("SetWindowPos","UInt",wHandle,"UInt",0,"Int",nx,"Int", ny, "Int", nw, "Int", nh,"Uint",0x0004)
 			DllCall("Sleep","UInt",5)
 		}
 	}
@@ -202,18 +212,23 @@ class AltDrag {
 		A_TrayMenu.ToggleCheck("Enable Snapping")
 	}
 
-	static sendKey(hotkey) {
-		if (hotkey = "LButton" || hotkey = "RButton" || hotkey = "MButton") {
-			hhL := SubStr(hotkey,1,1)
+	static sendKey(hkey) {
+		if (hkey = "LButton" || hkey = "RButton" || hkey = "MButton") {
+			hhL := SubStr(hkey,1,1)
 			Click("Down " . hhL)
-			if (!GetKeyState(hotkey, "P")) {
-				Click("up " hhL)
-				return
-			}
+			Hotkey("*" hkey " Up", this.sendClickUp.bind(this, hhL), "On")
+			; while(GetKeyState(hkey, "P"))
+			;	continue
+			; Click("Up " hhL)
 		}
 		else
-			Send("{Blind}" . hotkey)
+			Send("{Blind}" . hkey)
 		return
+	}
+
+	static sendClickUp(hhL, hkey) {
+		Click("Up " . hhL)
+		Hotkey(hkey, "Off")
 	}
 }
 
