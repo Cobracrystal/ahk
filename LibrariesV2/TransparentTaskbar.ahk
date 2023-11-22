@@ -17,7 +17,7 @@ class TransparentTaskbar {
 		if (SubStr(mode, 1, 1) == "T" || mode == -1)
 			mode := !this.onOffStatus
 		if (mode == 1) {
-			SetTimer(this.taskbar_timer, (newPeriod == -1 ? this.period : this.period := newPeriod))
+			SetTimer(this.taskbar_timer, (newPeriod == -1 ? this.period : (this.period := newPeriod)))
 			TrayMenu.submenus["Timers"].Check("Taskbar Transparency Timer")
 			this.onOffStatus := true
 		}
@@ -37,6 +37,7 @@ class TransparentTaskbar {
 		A_TrayMenu.Add("Timers", timerMenu)
 		this.taskbar_timer := this.updateTaskbarTimer.Bind(this)
 		this.period := 200
+		this.isLocked := false
 		this.blacklist := "(Program Manager|NVIDIA GeForce Overlay|^$)"
 		this.logStatus := 0
 		this.taskbar_accent_color := 0x202020 ; the gray of the taskbar when turning off
@@ -83,9 +84,18 @@ class TransparentTaskbar {
 	static updateTaskbarTimer(override := false) {
 		static index := 0
 		ListLines(this.logStatus)
-		if (this.sessionIsLocked())
+		if (this.sessionIsLocked()) {
+			if (!this.isLocked) {
+				this.isLocked := true
+				SetTimer(this.taskbar_timer, 400)
+			}
 			return
-		else try {
+		}
+		else if (this.isLocked) {
+			this.isLocked := false
+			SetTimer(this.taskbar_timer, this.period)
+		}
+		try {
 			maximizedMonitors := this.getMaximizedMonitors()
 			for i, el in this.monitors {
 				if (maximizedMonitors[el.MonitorNumber]) {

@@ -158,7 +158,7 @@ class YoutubeDLGui {
 			case "CheckboxConvertToAudio":
 				if (this.settings.ffmpegPath == "") {
 					ctrlObject.Value := 0
-					msgbox("Please choose FFmpeg.exe location first.")
+					Msgbox("Please choose FFmpeg.exe location first.")
 					this.settingsGUI("Open")
 					return
 				}
