@@ -1,5 +1,5 @@
 ﻿; https://github.com/cobracrystal/ahk
-
+; .json for hotkeys requires format [{ "options": "o?", "string": "youre", "replacement": "you're"}, ...]
 #Include %A_ScriptDir%\LibrariesV2\JSON.ahk
 
 class HotstringLoader {
@@ -58,7 +58,7 @@ class HotstringLoader {
 				HotString(":" e["options"] ":" e["string"], e["replacement"], 1)
 			catch
 				if (!skipError)
-					throw Error("Hotstring function failed:`nHotString(" . hotstring . ", " . e["replacement"] . ", " . 1 . ")")
+					throw Error("Register Hotstring function failed:`nHotString(" . hotstring . ", " . e["replacement"] . ", " . 1 . ")")
 		}
 	}
 }
