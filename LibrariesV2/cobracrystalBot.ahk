@@ -48,6 +48,7 @@ class ccBot {
 	}
 	
 	/**
+	 * Applies a loaded theme to the specified server (which must correspond with the theme)
 	 * @param serverID snowflake ID of the discord server the theme is applied to.
 	 * @param themeName name of the theme as specified inside the theme files.
 	 */
