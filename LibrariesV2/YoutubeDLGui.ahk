@@ -14,8 +14,8 @@ add option to clean part files
 add option to abort (modify cmdret potentially?)
 */
 
-#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
-#Include %A_ScriptDir%\LibrariesV2\jsongo.ahk
+#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 class YoutubeDLGui {
 	youtubeDLGui(mode := "O") {

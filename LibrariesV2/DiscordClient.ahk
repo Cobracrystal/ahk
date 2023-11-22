@@ -1,5 +1,5 @@
 ﻿; https://github.com/cobracrystal/ahk
-#Include %A_ScriptDir%\LibrariesV2\jsongo.ahk
+#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 class DiscordClient {
 	
@@ -85,48 +85,25 @@ class DiscordClient {
 		return this.callApi("PATCH", "/channels/" channelID, content)
 	}
 	
-	/**
-	 * Checks if the bot is inside a specified server
-	 * @param serverID Snowflake of the server to check
-	 * @returns {Number} true if bot is inside the server, false otherwise
-	 */
 	isInGuild(serverID) {
-		for i, e in this.bot.getCurrentUserGuilds()
+		for i, e in this.getCurrentUserGuilds()
 			if (e["id"] == serverID)
 				return true
 		return false
 	}
 
-	/**
-	 * Gets the users permissions inside a server
-	 * @param userID Snowflake of the User
-	 * @param serverID Server To Check Permissions in
-	 * @returns {number} A 16-digit hexadecimal number representing the permissions of the user based on the roles.
-	 */
-	permissionsInServer(userID, serverID) {
-		; CHECK IF USER IS INSIDE SERVER. DO THIS BY GRABBING ALL MEMBERS OF THE SERVER BEFOREHAND. WHICH IS STUPID.
-		; BELOW IS TEMPORARY
-		if (!this.isInGuild(serverID))
-			return 0
-		userRoleIDs := this.bot.getGuildMember(serverID, userID)["roles"]
-		serverRoles := this.bot.getRoles(serverID)
+	permissionsInServer(userRoles, serverRoles) {
 		finalPermissions := 0x0000000000000000
 		for i, e in serverRoles {
-			if (this.inArr(userRoleIDs, e["id"])) {
+			if (this.inArr(userRoles, e["id"])) {
 				finalPermissions := finalPermissions | Integer(e["permissions"])
 			}
 		}
 		return finalPermissions
 	}
 
-	/**
-	 * returns true if user has the given permissions. false otherwise
-	 * @param serverID Server ID of the Server to Check
-	 * @param mode "ANY" or "OR" returns true if the user has any of the given permissions. Otherwise, it must have ALL given permissions
-	 * @param wantpermission any number of permission strings, in 16-digit hexadecimal strings
-	 */
-	hasPermissionInServer(userID, serverID, mode, wantpermission*) {
-		local permissions := this.permissionsInServer(userID, serverID) 
+	hasPermissionInServer(userRoles, serverRoles, mode, wantpermission*) {
+		local permissions := this.permissionsInServer(userRoles, serverRoles) 
 		if (mode = "ANY" || mode = "OR") {
 			for i, e in wantpermission {
 				if (e & permissions)
@@ -140,15 +117,10 @@ class DiscordClient {
 		return (permissions & p)
 	}
 
-	getHighestRole(userID, serverID) {
-		; below is temporary.
-		if (!this.isInGuild(serverID))
-			return 0
-		userRoleIDs := this.getGuildMember(serverID, this.bot.me["id"])["roles"]
-		serverRoles := this.getRoles(serverID)
-		highestRole := {}
+	getHighestRole(userRoles, serverRoles) {
+		highestRole := Map("position", 0)
 		for i, e in serverRoles
-			if (this.inArr(userRoleIDs, e["id"]) && e["position"] >= highestRole["position"])
+			if (this.inArr(userRoles, e["id"]) && e["position"] >= highestRole["position"])
 				highestRole := e
 		return highestRole
 	}

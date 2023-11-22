@@ -3,7 +3,7 @@
 ; check all included files for hotkeys
 ; create search function in main gui
 
-#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
+#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 
 class HotkeyManager {
 	; prevent instances from being created.

@@ -1,6 +1,6 @@
-#Include "%A_ScriptDir%\LibrariesV2\DiscordClient.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\DiscordClient.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 class ccBot {
 
@@ -56,13 +56,14 @@ class ccBot {
 		if (!this.bot.isInGuild(serverID))
 			throw Error("Bot is not in given Server.")
 		errorlog := ""
+		userRoles := this.bot.getGuildMember(serverID, this.bot.me["id"])["roles"]
+		guildRoles := this.bot.getRoles(serverID)
 		if (this.themes.roles.Has(themeName)) {
-			if (!this.bot.hasPermissionInServer(this.bot.me["id"], serverID, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_ROLES))
+			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_ROLES))
 				throw Error("Missing Permission to Edit Roles")	
 			try {
 				roleTheme := this.themes.roles[themeName]
-				guildRoles := this.bot.getRoles(serverID)
-				highestRole := this.highestRole(serverID)
+				highestRole := this.bot.getHighestRole(userRoles, guildRoles)
 				rolesbyID := Map()
 				for i, e in guildRoles
 					rolesbyID[e["id"]] := e
@@ -82,7 +83,7 @@ class ccBot {
 			}
 		}
 		if (this.themes.channels.Has(themeName)) {
-			if (!this.bot.hasPermissionInServer(this.bot.me["id"], serverID, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_CHANNELS))
+			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_CHANNELS))
 				throw Error("Missing Permission to Edit Channels at all")
 			try {
 				channelTheme := this.themes.channels[themeName]

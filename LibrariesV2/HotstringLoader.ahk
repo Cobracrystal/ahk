@@ -1,6 +1,6 @@
 ﻿; https://github.com/cobracrystal/ahk
 ; .json for hotkeys requires format [{ "options": "o?", "string": "youre", "replacement": "you're"}, ...]
-#Include %A_ScriptDir%\LibrariesV2\jsongo.ahk
+#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 class HotstringLoader {
 		

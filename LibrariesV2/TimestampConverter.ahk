@@ -1,6 +1,6 @@
 ﻿; https://github.com/cobracrystal/ahk
 
-#Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
+#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 
 ; note: does not acknowledge summer/winter time. will interpret locale time, if affected by summer/winter time, as ±1 timezone.
 textTimestampConverter() {
