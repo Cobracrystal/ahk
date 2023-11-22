@@ -1,5 +1,6 @@
 ﻿; https://github.com/cobracrystal/ahk
-
+; todo
+; setting option to reset settings to defaults (all) (aka caling getdefaultsettings)
 /*
 todo:
 clean links from stuff
