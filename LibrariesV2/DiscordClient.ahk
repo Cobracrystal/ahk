@@ -7,6 +7,7 @@ class DiscordClient {
 		this.token := token
 		this.BaseURL := "https://discord.com/api/v10"
 		this.waitingTime := 0
+		this.me := this.getCurrentUser()
 		this.gw := DiscordClient.Gateway("placeholder")
 	}
 	
@@ -84,6 +85,74 @@ class DiscordClient {
 		return this.callApi("PATCH", "/channels/" channelID, content)
 	}
 	
+	/**
+	 * Checks if the bot is inside a specified server
+	 * @param serverID Snowflake of the server to check
+	 * @returns {Number} true if bot is inside the server, false otherwise
+	 */
+	isInGuild(serverID) {
+		for i, e in this.bot.getCurrentUserGuilds()
+			if (e["id"] == serverID)
+				return true
+		return false
+	}
+
+	/**
+	 * Gets the users permissions inside a server
+	 * @param userID Snowflake of the User
+	 * @param serverID Server To Check Permissions in
+	 * @returns {number} A 16-digit hexadecimal number representing the permissions of the user based on the roles.
+	 */
+	permissionsInServer(userID, serverID) {
+		; CHECK IF USER IS INSIDE SERVER. DO THIS BY GRABBING ALL MEMBERS OF THE SERVER BEFOREHAND. WHICH IS STUPID.
+		; BELOW IS TEMPORARY
+		if (!this.isInGuild(serverID))
+			return 0
+		userRoleIDs := this.bot.getGuildMember(serverID, userID)["roles"]
+		serverRoles := this.bot.getRoles(serverID)
+		finalPermissions := 0x0000000000000000
+		for i, e in serverRoles {
+			if (this.inArr(userRoleIDs, e["id"])) {
+				finalPermissions := finalPermissions | Integer(e["permissions"])
+			}
+		}
+		return finalPermissions
+	}
+
+	/**
+	 * returns true if user has the given permissions. false otherwise
+	 * @param serverID Server ID of the Server to Check
+	 * @param mode "ANY" or "OR" returns true if the user has any of the given permissions. Otherwise, it must have ALL given permissions
+	 * @param wantpermission any number of permission strings, in 16-digit hexadecimal strings
+	 */
+	hasPermissionInServer(userID, serverID, mode, wantpermission*) {
+		local permissions := this.permissionsInServer(userID, serverID) 
+		if (mode = "ANY" || mode = "OR") {
+			for i, e in wantpermission {
+				if (e & permissions)
+					return true
+			}
+			return false
+		}
+		p := 0x0000000000000000
+		for i, e in wantpermission
+			p := p | e
+		return (permissions & p)
+	}
+
+	getHighestRole(userID, serverID) {
+		; below is temporary.
+		if (!this.isInGuild(serverID))
+			return 0
+		userRoleIDs := this.getGuildMember(serverID, this.bot.me["id"])["roles"]
+		serverRoles := this.getRoles(serverID)
+		highestRole := {}
+		for i, e in serverRoles
+			if (this.inArr(userRoleIDs, e["id"]) && e["position"] >= highestRole["position"])
+				highestRole := e
+		return highestRole
+	}
+	
 	callApi(method, endPoint, content := "") {
 		http := ComObject("WinHTTP.WinHTTPRequest.5.1")
 		Loop(2) {
@@ -92,7 +161,7 @@ class DiscordClient {
 			http.SetRequestHeader("User-Agent", "DiscordBot ($https://discordapp.com, $1337)")
 			http.SetRequestHeader("Content-Type", "application/json")
 			if (content)
-				http.Send(asd := jsongo.Stringify(content))
+				http.Send(jsongo.Stringify(content))
 			else 
 				http.Send()
 			if (http.status == 429) { ; rate limit
@@ -115,10 +184,68 @@ class DiscordClient {
 		A_Clipboard := str
 		return jsongo.Parse(str)
 	}
+
+	inArr(arr, val) {
+		for i, e in arr
+			if (e = val)
+				return i
+		return 0
+	}
 	
 	class Gateway {
 		__New(placeholder) {
 			return
 		}
 	}
+
+}
+
+class Permissions {
+	static CREATE_INSTANT_INVITE := 0x0000000000000001
+	static KICK_MEMBERS := 0x0000000000000002
+	static BAN_MEMBERS := 0x0000000000000004
+	static ADMINISTRATOR := 0x0000000000000008
+	static MANAGE_CHANNELS := 0x0000000000000010
+	static MANAGE_GUILD := 0x0000000000000020
+	static ADD_REACTIONS := 0x0000000000000040
+	static VIEW_AUDIT_LOG := 0x0000000000000080
+	static PRIORITY_SPEAKER := 0x0000000000000100
+	static STREAM := 0x0000000000000200
+	static VIEW_CHANNEL := 0x0000000000000400
+	static SEND_MESSAGES := 0x0000000000000800
+	static SEND_TTS_MESSAGES := 0x0000000000001000
+	static MANAGE_MESSAGES := 0x0000000000002000
+	static EMBED_LINKS := 0x0000000000004000
+	static ATTACH_FILES := 0x0000000000008000
+	static READ_MESSAGE_HISTORY := 0x0000000000010000
+	static MENTION_EVERYONE := 0x0000000000020000
+	static USE_EXTERNAL_EMOJIS := 0x0000000000040000
+	static VIEW_GUILD_INSIGHTS := 0x0000000000080000
+	static CONNECT := 0x0000000000100000
+	static SPEAK := 0x0000000000200000
+	static MUTE_MEMBERS := 0x0000000000400000
+	static DEAFEN_MEMBERS := 0x0000000000800000
+	static MOVE_MEMBERS := 0x0000000001000000
+	static USE_VAD := 0x0000000002000000
+	static CHANGE_NICKNAME := 0x0000000004000000
+	static MANAGE_NICKNAMES := 0x0000000008000000
+	static MANAGE_ROLES := 0x0000000010000000
+	static MANAGE_WEBHOOKS := 0x0000000020000000
+	static MANAGE_GUILD_EXPRESSIONS := 0x0000000040000000
+	static USE_APPLICATION_COMMANDS := 0x0000000080000000
+	static REQUEST_TO_SPEAK := 0x0000000100000000
+	static MANAGE_EVENTS := 0x0000000200000000
+	static MANAGE_THREADS := 0x0000000400000000
+	static CREATE_PUBLIC_THREADS := 0x0000000800000000
+	static CREATE_PRIVATE_THREADS := 0x0000001000000000
+	static USE_EXTERNAL_STICKERS := 0x0000002000000000
+	static SEND_MESSAGES_IN_THREADS := 0x0000004000000000
+	static USE_EMBEDDED_ACTIVITIES := 0x0000008000000000
+	static MODERATE_MEMBERS := 0x0000010000000000
+	static VIEW_CREATOR_MONETIZATION_ANALYTICS := 0x0000020000000000
+	static USE_SOUNDBOARD := 0x0000040000000000
+	static CREATE_GUILD_EXPRESSIONS := 0x0000080000000000
+	static CREATE_EVENTS := 0x0000100000000000
+	static USE_EXTERNAL_SOUNDS := 0x0000200000000000
+	static SEND_VOICE_MESSAGES := 0x0000400000000000
 }

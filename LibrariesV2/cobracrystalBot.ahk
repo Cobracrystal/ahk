@@ -8,57 +8,7 @@ class ccBot {
 		this.workingDir := A_ScriptDir "\script_files\discordBot\"
 		DirCreate(this.workingDir . "output")
 		this.bot := DiscordClient(token)
-		this.me := this.bot.getCurrentUser()
 		this.themes := {roles: Map(), channels: Map()}
-		this.permissions := {
-			CREATE_INSTANT_INVITE: 0x0000000000000001,
-			KICK_MEMBERS: 0x0000000000000002,
-			BAN_MEMBERS: 0x0000000000000004,
-			ADMINISTRATOR: 0x0000000000000008,
-			MANAGE_CHANNELS: 0x0000000000000010,
-			MANAGE_GUILD: 0x0000000000000020,
-			ADD_REACTIONS: 0x0000000000000040,
-			VIEW_AUDIT_LOG: 0x0000000000000080,
-			PRIORITY_SPEAKER: 0x0000000000000100,
-			STREAM: 0x0000000000000200,
-			VIEW_CHANNEL: 0x0000000000000400,
-			SEND_MESSAGES: 0x0000000000000800,
-			SEND_TTS_MESSAGES: 0x0000000000001000,
-			MANAGE_MESSAGES: 0x0000000000002000,
-			EMBED_LINKS: 0x0000000000004000,
-			ATTACH_FILES: 0x0000000000008000,
-			READ_MESSAGE_HISTORY: 0x0000000000010000,
-			MENTION_EVERYONE: 0x0000000000020000,
-			USE_EXTERNAL_EMOJIS: 0x0000000000040000,
-			VIEW_GUILD_INSIGHTS: 0x0000000000080000,
-			CONNECT: 0x0000000000100000,
-			SPEAK: 0x0000000000200000,
-			MUTE_MEMBERS: 0x0000000000400000,
-			DEAFEN_MEMBERS: 0x0000000000800000,
-			MOVE_MEMBERS: 0x0000000001000000,
-			USE_VAD: 0x0000000002000000,
-			CHANGE_NICKNAME: 0x0000000004000000,
-			MANAGE_NICKNAMES: 0x0000000008000000,
-			MANAGE_ROLES: 0x0000000010000000,
-			MANAGE_WEBHOOKS: 0x0000000020000000,
-			MANAGE_GUILD_EXPRESSIONS: 0x0000000040000000,
-			USE_APPLICATION_COMMANDS: 0x0000000080000000,
-			REQUEST_TO_SPEAK: 0x0000000100000000,
-			MANAGE_EVENTS: 0x0000000200000000,
-			MANAGE_THREADS: 0x0000000400000000,
-			CREATE_PUBLIC_THREADS: 0x0000000800000000,
-			CREATE_PRIVATE_THREADS: 0x0000001000000000,
-			USE_EXTERNAL_STICKERS: 0x0000002000000000,
-			SEND_MESSAGES_IN_THREADS: 0x0000004000000000,
-			USE_EMBEDDED_ACTIVITIES: 0x0000008000000000,
-			MODERATE_MEMBERS: 0x0000010000000000,
-			VIEW_CREATOR_MONETIZATION_ANALYTICS: 0x0000020000000000,
-			USE_SOUNDBOARD: 0x0000040000000000,
-			CREATE_GUILD_EXPRESSIONS: 0x0000080000000000,
-			CREATE_EVENTS: 0x0000100000000000,
-			USE_EXTERNAL_SOUNDS: 0x0000200000000000,
-			SEND_VOICE_MESSAGES: 0x0000400000000000,
-		}
 	}
 	/**
 	 * @param filepathRoles A path to a file which is either a csv or a json containing a theme structure for Roles.
@@ -103,10 +53,12 @@ class ccBot {
 	 */
 	applyTheme(serverID, themeName) {
 		; check if bot has permissions. 
-		if (!this.hasPermissionInServer(serverID, "ANY", this.permissions.ADMINISTRATOR, this.permissions.MANAGE_ROLES))
-			throw Error("Missing Permission to Edit Roles")
+		if (!this.bot.isInGuild(serverID))
+			throw Error("Bot is not in given Server.")
 		errorlog := ""
 		if (this.themes.roles.Has(themeName)) {
+			if (!this.bot.hasPermissionInServer(this.bot.me["id"], serverID, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_ROLES))
+				throw Error("Missing Permission to Edit Roles")	
 			try {
 				roleTheme := this.themes.roles[themeName]
 				guildRoles := this.bot.getRoles(serverID)
@@ -129,9 +81,9 @@ class ccBot {
 				MsgBox(errorlog . e.Message "`n" e.What "`n" e.Extra)
 			}
 		}
-		if (!this.hasPermissionInServer(serverID, "ANY", this.permissions.ADMINISTRATOR, this.permissions.MANAGE_CHANNELS))
-			throw Error("Missing Permission to Edit Channels at all")
 		if (this.themes.channels.Has(themeName)) {
+			if (!this.bot.hasPermissionInServer(this.bot.me["id"], serverID, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_CHANNELS))
+				throw Error("Missing Permission to Edit Channels at all")
 			try {
 				channelTheme := this.themes.channels[themeName]
 				guildChannels := this.bot.getGuildChannels(serverID)
@@ -139,7 +91,7 @@ class ccBot {
 				for i, e in guildChannels
 					channelIDs.push(e["id"])
 				for i, e in channelTheme {
-					if (objContainsValue(channelIDs, i))
+					if (this.bot.inArr(channelIDs, i))
 						this.bot.modifyChannel(i, e)
 					else
 						errorlog .= "Channel " i " not found.`n"
@@ -152,60 +104,8 @@ class ccBot {
 		msgbox(errorlog)
 	}
 
-	isInGuild(serverID) {
-		for i, e in this.bot.getCurrentUserGuilds()
-			if (e["id"] == serverID)
-				return true
-		return false
-	}
 
-	highestRole(serverID) {
-		if (!this.isInGuild(serverID))
-			return 0
-		userRoleIDs := this.bot.getGuildMember(serverID, this.me["id"])["roles"]
-		serverRoles := this.bot.getRoles(serverID)
-		highestRolePos := 0
-		highestRole := {}
-		for i, e in serverRoles {
-			if (objContainsValue(userRoleIDs, e["id"]) && e["position"] >= highestRolePos) {
-				highestRolePos := e["position"]
-				highestRole := e
-			}
-		}
-		return highestRole
-	}
 
-	permissionsInServer(serverID) {
-		if !(this.isInGuild(serverID))
-			return 0
-		userRoleIDs := this.bot.getGuildMember(serverID, this.me["id"])["roles"]
-		serverRoles := this.bot.getRoles(serverID)
-		permissions := []
-		for i, e in serverRoles {
-			if (objContainsValue(userRoleIDs, e["id"])) {
-				permissions.push(e["permissions"])
-			}
-		}
-		finalPermissions := 0x0000000000000000
-		for i, e in permissions
-			finalPermissions := finalPermissions | Integer(e) ; bitwise or
-		return finalPermissions
-	}
-
-	hasPermissionInServer(serverID, mode, wantpermission*) {
-		permissions := this.permissionsInServer(serverID)
-		if (mode = "ANY" || mode = "OR") {
-			for i, e in wantpermission {
-				if (e & permissions)
-					return true
-			}
-			return false
-		}
-		p := 0x0000000000000000
-		for i, e in wantpermission
-			p := p | e
-		return (permissions & p)
-	}
 
 	; helper functions
 
