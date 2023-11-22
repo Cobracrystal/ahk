@@ -1,29 +1,36 @@
-﻿;// made by Cobracrystal
+﻿;// github.com/cobracrystal/ahk
 #Include %A_ScriptDir%\LibrariesV2\BasicUtilities.ahk
 #Include %A_ScriptDir%\LibrariesV2\JSON.ahk
 
-/*
-HERE IS DOCUMENTATION
 
-PATHS can be found in settings at line 71, where they are set from line 73-76
-The convertToAudio setting (same area) is the default on launch, but can be changed within the GUI.
-to include this script, simply use
+/*
 ^+F10::
 YoutubeDLGui.YoutubeDLGui("T")
 return
-
-the various ytdl(p) options are in the ytdlOptions starting at line 80.
-changing parameters by directly editing them.
-include more parameters by a) manually setting "selected" to 1 (not recommended)
-or b) including their index (in comments to the right, or count the lines from 0 ) in defaultConfigSelection in line 73 in the array (ordering doesn't matter)
-
-ADD OPTION TO CHOOSE OUTPUT FOLDER
 */
 
-;------------------------- AUTO EXECUTE SECTION -------------------------
+/*
+todo:
+clean links
+(resolution option?)
+format option (mp3, mp4, wav, etc)
+thumbnail download?
 
+FORMAT -f "bestvideo+bestaudio": twitter, instagram do not have an audio file so bestaudio causes failure.
+
+only show finished + launch explorer if successful
+
+add option to clean part files
+add option to abort (modify cmdret potentially?)
+
+settings:
+ffmpeg path get from PATH ?
+
+add override for domains -> instagram -> other format etc
+(when multiple links provided, they must all have same domain? otherwise other static settings used.)
+
+*/
 class YoutubeDLGui {
-	; ------------------------ MAIN FUNCTION
 	youtubeDLGui(mode := "O") {
 		mode := SubStr(mode, 1, 1)
 		if (mode == "T")
@@ -369,29 +376,3 @@ class YoutubeDLGui {
 			this.youtubeDLOptions[i].selected := false
 	}
 }
-/*
-clean links
-(resolution option?)
-format option (mp3, mp4, wav, etc)
-thumbnail download?
-
-FORMAT -f "bestvideo+bestaudio": twitter, instagram do not have an audio file so bestaudio causes failure.
-
-only show finished + launch explorer if successful
-
-add option to clean part files
-add option to abort (modify cmdret potentially?)
-
-gui to edit settings (and change params!)
-if editing params manually, it shouldn't change those unless removed
-
-settings:
-ffmpeg path get from PATH ?
-allow options for
-stuff
-
-add override for domains -> instagram -> other format etc
-(when multiple links provided, they must all have same domain? otherwise other static settings used.)
-
-if outputpath is not set, undefined behaviour. fix that
-*/
