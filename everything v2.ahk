@@ -73,7 +73,7 @@ Menu, Timers, Disable, 1337 Timer: On
 Menu, Timers, Check, 1337 Timer: On
 */
 ;// transparent taskbar ini
-TransparentTaskbar.TransparentTaskbar(1,,,50)
+TransparentTaskbar.TransparentTaskbar(1,50)
 ;// start clipboardwatcher
 OnClipboardChange(clipboardTracker, 1)
 ;// better icon
