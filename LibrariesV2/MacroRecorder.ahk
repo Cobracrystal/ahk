@@ -229,8 +229,7 @@ class MacroRecorder {
 			FileAppend("`n" . code, A_ScriptFullPath)
 		else
 			return
-		ret := MsgBox("Added to script. Reload?", "Reload?", 4)
-		if (ret == "Yes")
+		if (MsgBox("Added to script. Reload?", "Reload?", 4) == "Yes")
 			Reload()
 		return
 	}

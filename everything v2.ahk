@@ -705,14 +705,6 @@ customExit(ExitReason, ExitCode) {
 #HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
 
 
-^+!Ä:: {	; Reload other script
-	PostMessage(0x111, 65303, , "ahk_id " 0x408f2)
-}
-
-
-^m:: { ; Get Permutations
-	A_Clipboard := getAllPermutations("12345", "abcde")
-}
 
 
 getAllPermutations(str1, str2) {
@@ -776,14 +768,21 @@ makeTextAnsiColorful(str) {
 	return tStr
 }
 
-^l:: { ; Make colorful Text
-	text := fastCopy()
-	text := makeTextAnsiColorful(text)
-	fastPrint(text)
+^+!Ä:: {	; Reload other script
+	PostMessage(0x111, 65303, , "ahk_id " 0x408f2)
 }
 
+; ^m:: { ; Get Permutations
+; 	A_Clipboard := getAllPermutations("12345", "abcde")
+; }
 
-^k::{
+; ^l:: { ; Make colorful Text
+; 	text := fastCopy()
+; 	text := makeTextAnsiColorful(text)
+; 	fastPrint(text)
+; }
+
+^j::{
 	msgbox(selectFolderEx(A_WorkingDir,"Select Your mom",,"lmao"))
 }
 ; CHECK IF THE objrelease ARE NECESSARY, ASK IN DISCORD POTENTIALLY!

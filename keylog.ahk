@@ -15,122 +15,89 @@ LogKey() {
 	FileAppend, % (StrLen(Key) == 1 ? "0" : "") . Key, Log.log
 }
 */
-logdir = %A_AppData%\keylogger
-FileCreateDir, %logdir%
 
-doublequote = `"
+KeyLogger.start()
 
-global log := getlog(logdir)
-make_menu()
-getwin()
-mouse_logger_handler("Log Mouse: On")
-wingetLoopFunc := Func("wingetLoop")
-SetTimer, %wingetLoopFunc%, 0
-return
+class KeyLogger {
+	static start() {
+		this.logdir := A_AppData "\keylogger"
+		DirCreate(this.logdir)
+		this.keylog := this.setlog()
+		A_TrayMenu.Delete()
+		A_TrayMenu.Add("Logger: Active", this.logToggleMenu)
+		A_TrayMenu.Check("Logger: Active")
+		A_TrayMenu.Add("Log Mouse: On", this.mouseLogToggleMenu)
+		A_TrayMenu.Check("Log Mouse: On")
+		A_TrayMenu.Add()
+		A_TrayMenu.Add("Start new logfile", this.setlog.bind(this))
+		A_TrayMenu.Add("Open log folder", (*) => Run('explorer.exe "' this.logdir '"'))
+		A_TrayMenu.Add("Reload", Reload)
+		A_TrayMenu.Add("Exit", ExitApp)
+		this.getwin()
+		this.mouseLogToggleMenu()
+		SetTimer(this.wingetLoop.bind(this), 1)
+	}
+
+	static winGetLoop() {
+		WinWaitNotActive("ahk_id " WinActive("A"))
+		this.getwin()
+	}
+
+	static setlog() {
+		time :=	FormatTime(A_Now, "yyyy-MM-dd-HH.mm.ss")
+		this.keylog := this.logdir "\" time ".txt"
+	}
+	
+	static getwin() {
+		time := FormatTime(A_Now, "yyyy-MM-dd-HH:mm:ss")
+		handle := WinExist("A")
+		title := WinGetTitle(handle)
+		process := WinGetProcessName(handle)
+		FileAppend(A_Tab . time . A_Tab . process . A_Tab . Title, this.keylog)
+	}
+
+	static mouseLogToggleMenu(*) {
+		A_TrayMenu.ToggleCheck("Log Mouse")
+		Hotkey("~LButton", "Toggle")
+		Hotkey("~#LButton", "Toggle")
+		Hotkey("~!LButton", "Toggle")
+		Hotkey("~^LButton", "Toggle")
+		Hotkey("~MButton", "Toggle")
+		Hotkey("~#MButton", "Toggle")
+		Hotkey("~!MButton", "Toggle")
+		Hotkey("~^MButton", "Toggle")
+		Hotkey("~RButton", "Toggle")
+		Hotkey("~#RButton", "Toggle")
+		Hotkey("~!RButton", "Toggle")
+		Hotkey("~^RButton", "Toggle")
+	}
+
+	static logToggleMenu(*) {
+		static is_paused := false
+		A_TrayMenu.ToggleCheck("Enable Logger")
+		Suspend(-1)
+		is_paused := !is_paused
+		Pause(is_paused)
+	}
+}
 
 ; -------------------------------
 
-wingetLoop() {
-    WinWaitNotActive, % "ahk_id " WinActive("A")
-    getwin()
-}
-
-getlog(logdir) {
-    FormatTime, time, , yyyy-MM-dd-HH.mm.ss
-    newlog = %logdir%\%time%.txt
-    return %newlog%
-}
     
 keyevent(key) {
-    FileAppend, %key%`n, *%log%
-    ;previousnewline = 0
+	FileAppend(key "`n", KeyLogger.keylog)
 }
 
 mouseevent(message) {
-    WinGetActiveTitle, Title
-    WinGet, ProcessName, ProcessName, A
-    MouseGetPos, x, y, window, controln
-    FileAppend, %A_Tab%{%message%}%A_Tab%%x%%A_Tab%%y%%A_Tab%%ProcessName%%A_Tab%%Title%%A_Tab%%controln%`n, *%log%
+	title := WinGetTitle("A")
+	process := WinGetProcessName("A")
+    MouseGetPos(&x, &y, &win, &controln)
+    FileAppend(A_Tab "{" message "}" A_Tab x A_Tab y A_Tab process A_Tab title A_Tab controln "`n", KeyLogger.keylog)
 }
 
-getwin() {
-    FormatTime, time, , yyyy-MM-dd-HH:mm:ss
-    WinGetActiveTitle, Title
-    WinGet, win_proc, ProcessName, A
-    WinGet, uniq_id, ID, A
-    if %uniq_id%
-        FileAppend, %A_Tab%%time%%A_Tab%%win_proc%%A_Tab%%Title%`n, *%log%
-}
 
-make_menu() {
-    Menu, Tray, add, Logger: Active, logger_handler
-	Menu, Tray, Check, Logger: Active
-	Menu, Tray, add, Log Mouse: On, mouse_logger_handler
-	Menu, Tray, Check, Log Mouse: On
-    Menu, Tray, add,
-    Menu, Tray, add, Start new logfile, newlog_handler
-	Menu, Tray, add, Open Log Folder, logfolder_handler
-    Menu, Tray, NoStandard
-	; Menu, Tray, Standard ; // FOR EDITING, PUT THIS
-	Menu, Tray, Add, Reload, reload_handler
-	Menu, Tray, Add, Exit, exit_handler
-}
 
-newlog_handler() {
-	global
-	log := getlog(logdir)
-}
 
-mouse_logger_handler(menuLabel) {
-	switch menuLabel {
-		case "Log Mouse: On":
-			Menu, Tray, Rename, Log Mouse: On, Log Mouse: Off
-			Menu, Tray, ToggleCheck, Log Mouse: Off
-		case "Log Mouse: Off":
-			Menu, Tray, Rename, Log Mouse: Off, Log Mouse: On
-			Menu, Tray, ToggleCheck, Log Mouse: On
-	}
-	Hotkey, ~LButton, Toggle
-	Hotkey, ~#LButton, Toggle
-	Hotkey, ~!LButton, Toggle
-	Hotkey, ~^LButton, Toggle
-	Hotkey, ~MButton, Toggle
-	Hotkey, ~#MButton, Toggle
-	Hotkey, ~!MButton, Toggle
-	Hotkey, ~^MButton, Toggle
-	Hotkey, ~RButton, Toggle
-	Hotkey, ~#RButton, Toggle
-	Hotkey, ~!RButton, Toggle
-	Hotkey, ~^RButton, Toggle
-}
-
-logger_handler(menuLabel) {
-	switch menuLabel {
-		case "Logger: Active":
-			Menu, Tray, Rename, Logger: Active, Logger: Disabled
-			Menu, Tray, ToggleCheck, Logger: Disabled
-			Suspend On
-			Pause On ;// order in this case is important due to pause directly pausing the current thread, while other threads launched by the menu still work
-		case "Logger: Disabled":
-			Suspend Off
-			Pause Off
-			Menu, Tray, Rename, Logger: Disabled, Logger: Active
-			Menu, Tray, ToggleCheck, Logger: Active
-	}
-}
-
-logfolder_handler() {
-	global logdir
-	run, explorer.exe "%logdir%"
-}
-
-reload_handler() {
-	Reload
-}
-
-exit_handler() {
-	ExitApp
-}
 ; { -------------------- HOTKEY EVENTS HERE
 ~LButton::mouseevent("LButton")
 ~#LButton::mouseevent("LButton")
@@ -441,10 +408,10 @@ exit_handler() {
 ~#SC028::keyevent("'")
 ~!SC028::keyevent("'")
 ~^SC028::keyevent("'")
-~+SC028::keyevent(doublequote)
-~#+SC028::keyevent(doublequote)
-~!+SC028::keyevent(doublequote)
-~^+SC028::keyevent(doublequote)
+~+SC028::keyevent('"')
+~#+SC028::keyevent('"')
+~!+SC028::keyevent('"')
+~^+SC028::keyevent('"')
 ~,::keyevent(",")
 ~#,::keyevent(",")
 ~!,::keyevent(",")
@@ -807,4 +774,3 @@ exit_handler() {
 ~RShift::keyevent("{RShift}")
 ~LAlt::keyevent("{LAlt}")
 ~RAlt::keyevent("{RAlt}")
-; }

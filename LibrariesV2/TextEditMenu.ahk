@@ -43,7 +43,7 @@ class TextEditMenu {
 		fontMenu.Add("Superscript", (*) => modifySelectedText(this.replaceCharacters.bind(this), "superscript"))
 		fontMenu.Add("Small Capitals", (*) => modifySelectedText(this.replaceCharacters.bind(this), "smallcapitals"))
 		fontMenu.Add("Italics", (*) => modifySelectedText(this.replaceCharacters.bind(this), "italic"))
-		fontMenu.Add("Italics", (*) => modifySelectedText(this.replaceCharacters.bind(this), "bold"))
+		fontMenu.Add("Bold", (*) => modifySelectedText(this.replaceCharacters.bind(this), "bold"))
 		;	fontMenu.Add("𝐁𝐨𝐥𝐝 𝐒𝐞𝐫𝐢𝐟", (*) => modifySelectedText(this.replaceCharacters.bind(this), "serifBold"))
 		;	fontMenu.Add("𝐼𝑡𝑎𝑙𝑖𝑐 𝑆𝑒𝑟𝑖𝑓", (*) => modifySelectedText(this.replaceCharacters.bind(this), "serifItalic"))
 		;	fontMenu.Add("𝑩𝒐𝒍𝒅 𝑰𝒕𝒂𝒍𝒊𝒄 𝑺𝒆𝒓𝒊𝒇", (*) => modifySelectedText(this.replaceCharacters.bind(this), "serifBoldItalic"))
