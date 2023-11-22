@@ -86,12 +86,12 @@ factorization(expression) {
 }
 
 primetest(n) {
-	if IsInteger(n)
-		return -1
+	if !IsInteger(n)
+		return false
 	if (n == 2)
 		return true
 	i := 2
-	while (i <= sqrt(n)) {
+	while (i <= Ceil(sqrt(n))) {
 		if (Mod(n,i)==0)
 			return false
 		i++
@@ -244,3 +244,4 @@ perfectPowers(n) {
 	}
 	return arr
 }
+

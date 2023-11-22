@@ -1104,8 +1104,22 @@ HideShowTaskbar(action) {
 }
 
 ^j::{
-	t := perfectPowers(150)
+	t := perfectPowers(300)
 	for i, e in t
 		str .= e "`n"
+	A_Clipboard := str
+}	
+
+
+^h::{
+	i := 2
+	while(i <= 5000) {
+		r := i**3 - 2
+		if (primetest(r)) {
+			tooltip(i ", " r)
+			str .= i ", " r "`n"
+		}
+		i++
+	}
 	A_Clipboard := str
 }
