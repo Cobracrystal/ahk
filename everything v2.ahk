@@ -370,6 +370,24 @@ F11:: { 	; BTD6: Rebind Escape
 	}
 }
 
+^!+L:: { ; save / restore desktop state
+	static windowInfo, restore := false
+	if (restore := !restore)
+		windowInfo := WindowManager.getAllWindowInfo(0, 0)
+	else {
+		for i, e in windowInfo {
+			if (!WinExist(e.hwnd))
+				continue
+			if (e.state == -1)
+				WinMinimize(e.hwnd)
+			else if (e.state == 1)
+				WinMaximize(e.hwnd)
+			else
+				WinMove(e.xpos, e.ypos, e.width, e.height, e.hwnd)
+			}
+	}
+}
+
 ^!+I:: { ; Center & Adjust Active Window
 	if WinActive("ahk_group cornerMusicPlayers")
 		WinMove(-600, 550, 515, 550)
