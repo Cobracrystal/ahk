@@ -156,6 +156,7 @@ class TableFilter {
 					if (this.rowIncludeFromSearch(gui, arr[1]))
 						this.addRow(gui, arr[1], arr[2])
 				}
+				duplicateMap[v] := []
 			}
 		}
 		gui.Opt("-Disabled")
