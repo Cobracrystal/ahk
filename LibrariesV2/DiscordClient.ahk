@@ -4,25 +4,27 @@
 
 class DiscordClient {
 	
-	__New(token) {
+	__New(token, useWS := true) {
 		this.token := token
 		version := "10"
 		this.BaseURL := "https://discord.com/api/v" version
 		this.me := this.getCurrentUser()
-		this.wsData := {
-			heartbeatACK: false,
-			heartbeatInterval: 0,
-			url: this.callApi("GET", "/gateway/bot")["url"] . "?v=" version "&encoding=json"
-		}
-		this.ws := Websocket(
-			this.wsData.url,
-			{
-				open: this.ws_OnOpen.bind(this), ; (this)=>void,
-				data: this.ws_OnData.bind(this), ; (this, data, size)=>bool,
-				message: this.ws_OnMessage.bind(this), ; (this, msg)=>bool,
-				close: this.ws_OnClose.bind(this) ; (this, status, reason)=>void
+		if (useWS) {
+			this.wsData := {
+				heartbeatACK: false,
+				heartbeatInterval: 0,
+				url: this.callApi("GET", "/gateway/bot")["url"] . "?v=" version "&encoding=json"
 			}
-		)
+			this.ws := Websocket(
+				this.wsData.url,
+				{
+					open: this.ws_OnOpen.bind(this), ; (this)=>void,
+					data: this.ws_OnData.bind(this), ; (this, data, size)=>bool,
+					message: this.ws_OnMessage.bind(this), ; (this, msg)=>bool,
+					close: this.ws_OnClose.bind(this) ; (this, status, reason)=>void
+				}
+			)
+		}
 	}
 	
 	createDM(userID) {

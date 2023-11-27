@@ -381,7 +381,7 @@ class ReminderManager {
 	}
 
 	discordReminder(token, id, text) {
-		discordBot := DiscordClient(token)
+		discordBot := DiscordClient(token, false)
 		time := FormatTime("L1033 dddd, dd.MM.yyyy, HH:mm:ss") ; L1033 -> en-US for day name.
 		message := "It is " . time . "`nYou set a reminder for this point in time."
 		message .= (text == "" ? "" : "`nReminder Message: " . text)
