@@ -264,9 +264,16 @@ DateAddW(dateTime, value, timeUnit) {
 	}
 }
 /*
-* Given a set of time parts, returns a YYYYMMDDHH24MISS timestamp of the earlist possible time in the future when all given parts match
-* If given time units with a gap, it will assume default values for units between (given month = 10, hours = 16, it will find the next instance of YEAR-10-01-16-00-00).
-* Breaks if given >30 days or a leap date
+* Given a set of time units, returns a YYYYMMDDHH24MISS timestamp of the earlist possible time in the future when all given parts match
+* Examples: The current time is 27th December, 2023, 17:16:34
+* parseTime() => A_Now
+* parseTime(2023,12) => A_Now.
+* parseTime(2023, , 27) => A_Now.
+* parseTime(2023, , 28) => 20231228000000.
+* parseTime(, 2, 29) => 20240229000000 (next leap year).
+* parseTime(2022, ...) => 0.
+* parseTime(2025, 02, 29) => throw Error: Invalid Date 
+* parseTime(, 1, , , 19) => 20240101001900
 */
 parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 	Now := A_Now
@@ -275,8 +282,10 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 		case 0:
 			return Now
 		case 1:
-			if (years == A_YYYY && data[2])
-				return parseTime(, months?, days?, hours?, minutes?, seconds?)
+			if (years == A_YYYY && data[2]) { ; why compare to current year? leap year stuff
+				tStamp := parseTime(, months?, days?, hours?, minutes?, seconds?)
+				return (SubStr(tStamp, 1, 4) == years) ? tStamp : 0
+			}
 			tStamp := (years ?? A_YYYY) tf(months ?? 1) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (!IsTime(tStamp)) {
 				if (!IsSet(years) && IsSet(months) && months == 2 && IsSet(days) && days == 29) ; correct leap year
@@ -284,27 +293,36 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				else if (!IsSet(months) && days > 29) ; correct possible month error. no need for mod, since dec has 31 days
 					tStamp := SubStr(tStamp 1, 4) . tf(A_MM+1) . SubStr(tStamp, 7)
 				if (!IsTime(tStamp))
-					throw Error("Invalid date specified.")
+					throw ValueError("Invalid date specified.")
 			}
-			if (DateDiff(tStamp, Now, "S") > 0)
+			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
+			; this case is ONLY for when year is in the present AND there is no gap present (if year is in the future, datediff must be positive.)
+			if (data[3] < 6) ; populate unset vars with current time before giving up
+				return parseTime(years, months ?? A_MM, days ?? A_DD, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
 			return 0 ; a year in the past will never occur again
 		case 2:
-			if (months == A_MM && data[2])
-				return parseTime(,,days?,hours?, minutes?, seconds?)
+			if (months == A_MM && data[2]) {
+				tStamp := parseTime(,, days?, hours?, minutes?, seconds?)
+				return SubStr(tStamp, 5, 2) == months ? tStamp : DateAddW(tStamp, 1, "Y")
+			}
 			tStamp := A_YYYY tf(months) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (!IsTime(tStamp)) {
 				if (months == 2 && IsSet(days) && days == 29) ; leap year
 					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
 				if (!IsTime(tStamp))
-					throw Error("Invalid date specified.")
+					throw ValueError("Invalid date specified.")
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
+			if (data[3] < 6)
+				return parseTime(, months, days ?? A_DD, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "Y")
 		case 3:
-			if (days == A_DD && data[2])
-				return parseTime(,,,hours?, minutes?, seconds?)
+			if (days == A_DD && data[2]) {
+				tStamp := parseTime(,,, hours?, minutes?, seconds?)
+				return (SubStr(tStamp, 7, 2) == days) ? tStamp : DateAddW(tStamp, 1, "Mo")
+			}
 			tStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (!IsTime(tStamp)) {
 				if (A_MM == 02 && days == 29) ; leap year
@@ -312,42 +330,54 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				else if (days > 29) ; correct possible month error. no need for mod, since dec has 31 days
 					tStamp := SubStr(tStamp 1, 4) . tf(A_MM+1) . SubStr(tStamp, 7)
 				if (!IsTime(tStamp))
-					throw Error("Invalid date specified.")
+					throw ValueError("Invalid date specified.")
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
+			if (data[3] < 6)
+				return parseTime(,, days, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "Mo")
 		case 4:
-			if (hours == A_Hour && data[2])
-				return parseTime(,,,,,seconds?)
+			if (hours == A_Hour && data[2]) {
+				tStamp := parseTime(,,,, minutes?, seconds?)
+				return (SubStr(tStamp, 9, 2) == hours) ? tStamp : DateAddW(tStamp, 1, "D")
+			}
 			tStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
+			if (data[3] < 6)
+				return parseTime(,,, hours, minutes ?? A_Min, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "D")
 		case 5:
-			if (minutes == A_Min && !IsSet(seconds))
-				return Now
+			if (minutes == A_Min) {
+				tStamp := parseTime(,,,,, seconds?)
+					return SubStr(tStamp, 11, 2) == minutes ? tStamp : 0
+			}
 			tStamp := SubStr(Now, 1, 10) . tf(minutes) . tf(seconds ?? 0)
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
+			if (data[3] < 6)
+				return parseTime(,,,, minutes, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "H")
 		case 6:
 			tStamp := SubStr(Now, 1, 12) . tf(seconds)
 			if (DateDiff(tStamp, Now, "S") >= 0)
-				return SubStr(Now, 1, 12) . tf(seconds)
-			return DateAddW(SubStr(Now, 1, 12) . tf(seconds), 1, "M")
+				return tStamp
+			return DateAddW(tStamp, 1, "M")
 	}
 	tf(n) => Format("{:02}", n)
 
+	; returns first given var, last given var before the first gap and if there is a gap at all.
 	gap(y?, mo?, d?, h?, m?, s?) {
-		mapA := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?),	first := 0
+		mapA := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?),	first := 0, last := 0
 		for i, e in mapA {
 			if (A_Index == 1)
 				first := i
+			last := i
 			if (first+A_Index-1 != i)
-				return [first, true]
+				return [first, true, last]
 		}
-		return [first, false]
+		return [first, false, last]
 	}
 }
 
