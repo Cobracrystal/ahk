@@ -497,17 +497,25 @@ sendRequest(url := "https://icanhazip.com/", method := "GET") {
 	return Trim(httpobj.ResponseText, "`n`r`t ")
 }
 
+/**
+ * Given a path, removes any backtracking of paths through \..\ to create a unique absolute path.
+ * @param path Path to normalize
+ * @returns {string} A normalized Path (if valid) or an empty string if the path could not be resolved.
+ */
 normalizePath(path) {	; ONLY ABSOLUTE PATHS
-	path := StrReplace(path, "/", "\")
 	path := StrReplace(path, "\\", "\")
-	if (!RegexMatch(path, "i)^[a-z]:\\") || RegexMatch(path, "i)^[a-z]:\\\.\."))
+	path := StrReplace(path, "/", "\")
+	if (!RegexMatch(path, "i)^[a-z]:\\") || RegexMatch(path, "i)^[a-z]:\\\.\.\\"))
 		return ""
+	path := StrReplace(path, "\.\", "\")
+	if (SubStr(path, -2) == "\.")
+		path := SubStr(path, 1, -2)
 	Loop {
-		path := RegexReplace(path, "\\(?!\.\.\\)[^\\]+?\\\.\.\\", "\", &rCount)
+		path := RegexReplace(path, "\\(?!\.\.\\)[^\\]+?\\\.\.(?:\\|$)", "\", &rCount)
 		if (rCount == 0)
 			break
 	}
-	if (InStr(path, "\..\"))
+	if (InStr(path, "\..\") || SubStr(path, -3) == "\..")
 		return ""
 	return path
 }
@@ -527,4 +535,3 @@ tryEditTextFile(editor := A_WinDir . "\system32\notepad.exe", params := "", *) {
 doNothing(*) {
 	return
 }
-
