@@ -48,7 +48,6 @@ GroupAdd("cornerMusicPlayers", "foobar2000 ahk_exe foobar2000.exe", , "Scratchbo
 ; for windows in winrar class
 GroupAdd("rarReminders", "ahk_class RarReminder")
 GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
-
 ;// set 1337 reminder
 token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
 reminders := ReminderManager()
@@ -130,7 +129,8 @@ return
 }
 
 ^+F11:: { ; Gives Key History
-	ListLines()
+	DetectHiddenWindows(1)
+	PostMessage(0x111, 65409,,, "ahk_id " A_ScriptHwnd)
 }
 
 ^+F10:: {	; YTDL GUI
@@ -669,7 +669,7 @@ customTrayMenu() {
 	A_TrayMenu.Add()
 	A_TrayMenu.Add("Window Spy", trayMenuHandler)
 	A_TrayMenu.Add("Reload this Script", trayMenuHandler)
-	A_TrayMenu.Add("Edit Script in Notepad++", trayMenuHandler)
+	A_TrayMenu.Add("Edit Script", trayMenuHandler)
 	A_TrayMenu.Add()
 	A_TrayMenu.Add("Pause Script", trayMenuHandler)
 	A_TrayMenu.Add("Suspend/Stop", suspendMenu)
@@ -680,30 +680,36 @@ customTrayMenu() {
 
 trayMenuHandler(itemName, *) {
 	suspendMenu := TrayMenu.submenus["SuspendMenu"]
+	DetectHiddenWindows(1)
 	switch itemName {
 		case "Open Recent Lines":
-			ListLines()
+			PostMessage(0x111, 65406,,, "ahk_id " A_ScriptHwnd)
+			; ListLines()
 		case "Help":
 			str := RegexReplace(A_AhkPath, "[^\\]+\.exe$", "AutoHotkey.chm")
 			Run(str)
 			WinWait("AutoHotkey v2 Help")
 			center_window_on_monitor(WinExist("AutoHotkey v2 Help"), 0.8)
 		case "Window Spy":
-			if !WinExist("Window Spy") {
-				str := RegexReplace(A_AhkPath, "v2\\[^\\]+.exe$", "WindowSpy.ahk")
-				Run(str)
-			}
-			else
-				WinActivate("Window Spy")
+			PostMessage(0x111, 65402,,, "ahk_id " A_ScriptHwnd)
+			; if !WinExist("Window Spy") {
+			; 	str := RegexReplace(A_AhkPath, "v2\\[^\\]+.exe$", "WindowSpy.ahk")
+			; 	Run(str)
+			; }
+			; else
+			; 	WinActivate("Window Spy")
 		case "Reload this Script":
-			Reload()
-		case "Edit Script in Notepad++":
+			PostMessage(0x111, 65303, ,, "ahk_id " A_ScriptHwnd)
+		case "Edit Script":
+			; PostMessage(0x111, 65401,,, "ahk_id " A_ScriptHwnd)
 			tryEditTextFile('Notepad++', '"' A_ScriptFullPath '"')
 		case "Pause Script":
+			PostMessage(0x111, 65403,,, "ahk_id " A_ScriptHwnd)
 			A_TrayMenu.ToggleCheck("Pause Script")
-			Pause(-1)
+			; Pause(-1)
 		case "Suspend Hotkeys":
 			suspendMenu.ToggleCheck("Suspend Hotkeys")
+			; PostMessage(0x111, 65404,,, "ahk_id " A_ScriptHwnd) ; no postmessage because its async and will buffer, causing next line to execute too early
 			Suspend(-1)
 			if (A_IsSuspended)
 				TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think Warn.ico", , true)
@@ -713,7 +719,7 @@ trayMenuHandler(itemName, *) {
 			suspendMenu.ToggleCheck("Suspend Reload")
 			Hotkey("^+R", "Toggle")
 		case "Exit":
-			ExitApp()
+			PostMessage(0x111, 65405,,, "ahk_id " A_ScriptHwnd)
 	}
 }
 
@@ -732,6 +738,7 @@ customExit(ExitReason, ExitCode) {
 }
 
 ; LONG STRINGS
+#HotIf WinActive("ahk_exe Discord.exe") 
 :X*:@potet:: fastPrint("<@245189840470147072>")
 :X*:@burny:: fastPrint("<@318350925183844355>")
 :X*:@Y:: fastPrint("<@354316862735253505>")
@@ -739,6 +746,7 @@ customExit(ExitReason, ExitCode) {
 :X*:@astro:: fastPrint("<@193734142704353280>")
 :X*:@rein:: fastPrint("<@315661562398638080>")
 :X:from:me:: fastPrint("from:245189840470147072 ")
+#HotIf
 
 :*?:=/=::≠
 :*?:+-::±
@@ -844,7 +852,8 @@ makeTextAnsiColorful(str) {
 
 
 ^!+Ä:: {	; Reload other script
-	PostMessage(0x111, 65303, , "ahk_id " 0x408f2)
+	DetectHiddenWindows("On")
+	PostMessage(0x111, 65303, ,, "ahk_id " A_ScriptHwnd)
 }
  
 
