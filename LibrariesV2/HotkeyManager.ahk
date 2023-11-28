@@ -114,7 +114,7 @@ class HotkeyManager {
 					line := RegExReplace(line, "^\s*\*\/")
 				}
 				if (RegExMatch(line, "^\s*\/\*")) { ; /* comments MUST be at start of line
-					if (!RegexMatch(line, "^\s*\/*.*\*\/")) ; these lines are ENTIRELY comments regardless. /* */ [text] is the same as ; [text]
+					if (!RegexMatch(line, "^\s*\/*.*\*\/\h*$")) ; these lines are ENTIRELY comments regardless. /* */ [text] is the same as ; [text]
 						flagComment := true
 					cleanScript .= "`n"
 					continue

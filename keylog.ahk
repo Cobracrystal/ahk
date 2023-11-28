@@ -3,7 +3,7 @@
 ; modified yet again by Cobracrystal to make it into a readable, functionable thing that isn't terrible
 ; // maybe todo: if only keys in succession without mouse interruption then chain them together into one line
 ; // if key is held down for a while, log it only once
-#Requires Autohotkey v2.0
+#Requires Autohotkey v2+
 #SingleInstance Force
 
 ; LogKey() {

@@ -1,12 +1,26 @@
 ﻿; https://github.com/cobracrystal/ahk
-; TODO: Refreshing with F5 should a) be available with a GUI button, c) should be toggleable to update automatically
-; TODO 3: Add Settings file for excluded windows, automatically form that into regex
-; needs to check if window is in admin mode, else most commands fail (eg winsettransparent)
+; TODO: Refreshing with F5 should 
+; a) be available with a GUI button, 
+; c) should be toggleable to update automatically
+; TODO 3: Add Settings for excluded windows (with editable list, like in PATH native settings), automatically form that into regex
+; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
+; add rightclick menu option to show command line only for this window
+; add search that allows default ahk syntax via "wintitle ahk_exe test.exe"
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 ; Usage:
 ; ^+F11::WindowManager.windowManager("T")
+
+/*
+hotkeys: 
+F5 to refresh view
+Enter to activate
+Del to close window
+shift+del to forcefully close window (skipping warnings etc)
+ctrl+C to copy window title
+ctrl+shift+c to copy all window data in json format
+*/
 
 class WindowManager {
 	static windowManager(mode := "O", *) {
@@ -169,12 +183,16 @@ class WindowManager {
 	static onKeyPress(ctrlObj, lParam) {
 		vKey := NumGet(lParam, 24, "ushort")
 		rowN := this.LV.GetNext()
+		DetectHiddenWindows(1)
 		switch vKey {
 			case "46": 	;// Del/Entf Key -> Close that window
 				if (!rowN)
 					return
 				wHandle := Integer(this.LV.GetText(rowN, 1))
-				WinClose(wHandle) ;// winkill possibly overkill. add setting?
+				if GetKeyState("Shift") 
+					WinKill(wHandle)
+				else
+					WinClose(wHandle)
 				if (WinWaitClose(wHandle, , 0.5))
 					this.LV.delete(rowN)
 			case "67": ; ctrl C
@@ -188,7 +206,7 @@ class WindowManager {
 						info := this.getWindowInfo(wHandle)
 						if !(this.settings.getCommandLine)
 							info.DeleteProp("commandLine")
-						A_Clipboard := jsongo.Stringify(info)
+						A_Clipboard := jsongo.Stringify(info, , "`t")
 						; Loop(this.LV.GetCount("Col"))
 						; 	str .= this.LV.GetText(rowN, A_Index) "`t"
 					}

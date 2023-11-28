@@ -1,6 +1,6 @@
 ﻿; https://github.com/cobracrystal/ahk
 
-#Requires Autohotkey 2.0
+#Requires Autohotkey v2+
 
 class TrayMenu {
 
@@ -220,24 +220,40 @@ replaceCharacters(text, alphMap) {
 	return result
 }
 
-; @from array containing strings that are to be replaced in decreasing priority order
-; @to array containing strings that are the replacements for values in @from, in same order
-recursiveReplaceMap(string, &from, to, index := 1) {
+/**
+ * Makes a string literal for regex usage
+ * @param str 
+ * @returns {string} 
+ */
+RegExEscape(str) => "\Q" StrReplace(str, "\E", "\E\\E\Q") "\E"
+
+/**
+ * 
+ * @param string String in which to replace the strings
+ * @param from Array containing strings that are to be replaced in decreasing priority order
+ * @param to Array containing strings that are the replacements for values in @from, in same order
+ * @param {number} index Internally used only
+ * @returns {string} 
+ */
+recursiveReplaceMap(string, &from, to, __index := 1) {
 	replacedString := ""
-	if (index == from.Count)
-		return StrReplace(string, from[index], to[index])
-	strArr := StrSplit(string, from[index])
+	if (__index == from.Count)
+		return StrReplace(string, from[__index], to[__index])
+	strArr := StrSplit(string, from[__index])
 	for i, e in strArr
-		replacedString .= recursiveReplaceMap(e, &from, to, index + 1) . (i == strArr.Count ? "" : to[index])
+		replacedString .= recursiveReplaceMap(e, &from, to, __index + 1) . (i == strArr.Count ? "" : to[__index])
 	return replacedString
 }
 
 /**
-* Extended version of DateAdd, allowing Weeks (W), Months (MO), Years (Y) for timeUnit. Returns YYYYMMDDHH24MISS timestamp
-* @param periodUnit Time Unit can be one of the strings (or their first letter): Years, Weeks, Days, Hours, Minutes, Seconds NOT months because that's bad
-* Remark: Adding years to a leap day will result in the corresponding day number of the resulting year (29-02-2024 + 1 Year -> 30-01-2025)
-* Similarly, if a resulting month does not have as many days as the starting one, the result will be rolled over (31-10-2024 + 1 Month -> 01-12-2024)
-*/
+ * Extended version of DateAdd, allowing Weeks (W), Months (MO), Years (Y) for timeUnit. Returns YYYYMMDDHH24MISS timestamp
+ * @param dateTime valid YYYYMMDDHH24MISS timestamp to add time to.
+ * @param value Amount of time to be added.
+ * @param timeUnit Time Unit can be one of the strings (or their first letter): Years, Weeks, Days, Hours, Minutes, Seconds.
+ * Months / Mo is available. Adding a month will result in the same day number the next month unless that would be invalid, in which case the number of days in the current month will be added.
+ * Similarly, adding years to a leap day will result in the corresponding day number of the resulting year (2024-02-29 + 1 Year -> 2025-03-01)
+ * @returns {string} YYYYMMDDHH24MISS Timestamp.
+ */
 DateAddW(dateTime, value, timeUnit) {
 	switch timeUnit, 0 {
 		case "Seconds", "S", "Minutes", "M", "Hours", "H", "Days", "D":
@@ -367,7 +383,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 	}
 	tf(n) => Format("{:02}", n)
 
-	; returns first given var, last given var before the first gap and if there is a gap at all.
+	; returns first given var, last given var before the first gap and whether there is a gap at all.
 	gap(y?, mo?, d?, h?, m?, s?) {
 		mapA := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?),	first := 0, last := 0
 		for i, e in mapA {

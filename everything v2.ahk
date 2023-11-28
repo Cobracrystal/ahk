@@ -1,7 +1,7 @@
 ﻿; ###########################################################################
 ; ############################# INITIALIZATION ##############################
 ; ###########################################################################
-#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2+
 #SingleInstance Force
 KeyHistory(500)
 #UseHook
@@ -38,16 +38,16 @@ A_TrayMenu.Delete()
 #Include "HotstringLoader.ahk"
 
 ; #Include "jsongo.ahk"
-
 ; for windows in which ctrl+ should replace scrolling
 GroupAdd("zoomableWindows", "ahk_exe Mindustry.exe")
 ; for windows that should be put in the corner when ctrlaltI'd
 GroupAdd("cornerMusicPlayers", "VLC media player ahk_exe vlc.exe", , "Wiedergabeliste")
 GroupAdd("cornerMusicPlayers", "Daum PotPlayer ahk_exe PotPlayerMini64.exe", , "Einstellungen")
 GroupAdd("cornerMusicPlayers", "foobar2000 ahk_exe foobar2000.exe", , "Scratchbox")
-; for windows in winrar class
-GroupAdd("rarReminders", "ahk_class RarReminder")
-GroupAdd("rarReminders", "Please purchase WinRAR license ahk_class #32770")
+; for windows that i don't want to see
+GroupAdd("instantCloseWindows", "ahk_class RarReminder")
+GroupAdd("instantCloseWindows", "Please purchase WinRAR license ahk_class #32770")
+GroupAdd("instantCloseWindows", "pCloud Promo ahk_exe pcloud.exe")
 ;// set 1337 reminder
 token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
 reminders := ReminderManager()
@@ -130,7 +130,7 @@ return
 
 ^+F11:: { ; Gives Key History
 	DetectHiddenWindows(1)
-	PostMessage(0x111, 65409,,, "ahk_id " A_ScriptHwnd)
+	PostMessage(0x111, 65409,,, A_ScriptHwnd)
 }
 
 ^+F10:: {	; YTDL GUI
@@ -198,18 +198,18 @@ return
 		winSlowMove(hwnd, 40, 400, 784, 648, 8)
 	if (state)
 		return
-	WinWaitNotActive("ahk_id " hwnd)
-	try WinClose("ahk_id" hwnd)
+	WinWaitNotActive(hwnd)
+	try WinClose(hwnd)
 }
 
 #HotIf WinActive("ahk_exe vlc.exe")
 ^D:: {		; VLC: Open/Close Media Playlist
 	SetControlDelay(-1)
 	vlcid := WinGetID("VLC media player ahk_exe vlc.exe", , "Wiedergabeliste")
-	WinGetClientPos(, , , &vlcH, "ahk_id " . vlcid)
+	WinGetClientPos(, , , &vlcH, vlcid)
 	controlY := vlcH - 40
-	ControlSend("{Esc}", , "ahk_id " vlcid)
-	ControlClick("X212 Y" controlY, "ahk_id " vlcid, , , , "Pos NA")
+	ControlSend("{Esc}", , vlcid)
+	ControlClick("X212 Y" controlY, vlcid, , , , "Pos NA")
 }
 #HotIf
 
@@ -368,7 +368,7 @@ F11:: { 	; BTD6: Rebind Escape
 		WinGetPos(&x, &y, &w, &h, shapedWindow)
 		; xPosCircle -= 100
 		; yPosCircle -= 100
-		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", "ahk_id " circleWindow)
+		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", circleWindow)
 		;	duoRect := "200-200 1500-200 1500-900 200-900 200-550 850-200 1500-550 850-900 200-550"
 		str := sierpinskiCoords(w//2, 50, w-50, h-60, 0)
 		WinSetStyle("-0xC00000", shapedWindow)
@@ -387,7 +387,7 @@ F11:: { 	; BTD6: Rebind Escape
 	if (tileState := !tileState) {
 		windowInfo := WindowManager.getAllWindowInfo(0, 0)
 		shell := ComObject("Shell.Application")
-		if (MsgBox("Tile Windows Vertically", "Confirm Dialog", 0x1) == "OK")
+		if (MsgBox("Tile Windows Vertically?", "Confirm Dialog", 0x1) == "OK")
 			shell.TileVertically()
 	}
 	else {
@@ -464,8 +464,8 @@ clickMouse(b, press := 0, *) {
 }
 closeWinRarNotification() {
 	Loop {
-		WinWait("ahk_group rarReminders")
-		WinClose("ahk_group rarReminders")
+		WinWait("ahk_group instantCloseWindows")
+		WinClose("ahk_group instantCloseWindows")
 	}
 }
 
@@ -473,21 +473,21 @@ showcoords() {
 	CoordMode("Mouse", "Screen")
 	MouseGetPos(&ttx, &tty, &ttWin)
 	ttc := PixelGetColor(ttx, tty)
-	ttWinT := WinGetTitle("ahk_id " . ttWin)
+	ttWinT := WinGetTitle(ttWin)
 	Tooltip(ttx ", " tty ", " ttc "`n" ttWinT)
 }
 
 winSlowMove(hwnd, endX := "", endY := "", endW := "", endH := "", speed := 1) {
 	WinDelay := A_WinDelay
 	SetWinDelay(-1)
-	mmx := WinGetMinMax("ahk_id " hwnd)
+	mmx := WinGetMinMax(hwnd)
 	if (mmx == 1 || mmx == -1)
 		return
 	if (endX == "" && endY == "" && endW == "" && endH == "")
 		return
-	WinGetPos(&iniX, &iniY, &iniW, &iniH, "ahk_id " hwnd)
+	WinGetPos(&iniX, &iniY, &iniW, &iniH, hwnd)
 	if (speed == 0) {
-		WinMove(endX, endY, endW, endH, "ahk_id " hwnd)
+		WinMove(endX, endY, endW, endH, hwnd)
 	} else {
 		iter := Ceil(((endX != "" ? Abs(iniX - endX) : 0) + (endY != "" ? Abs(iniY - endY) : 0) + (endW != "" ? Abs(iniW - endW) : 0) + (endH != "" ? Abs(iniH - endH) : 0)) / (speed))
 		tX := (endX != "" ? (endX - iniX) : 0)
@@ -497,7 +497,7 @@ winSlowMove(hwnd, endX := "", endY := "", endW := "", endH := "", speed := 1) {
 		Loop (iter)
 		{
 			sT := (1 - cos(A_Index / iter * 3.1415926)) / 2
-			try WinMove(iniX + tX * sT, iniY + tY * sT, iniW + tW * sT, iniH + tH * sT, "ahk_id " hwnd)
+			try WinMove(iniX + tX * sT, iniY + tY * sT, iniW + tW * sT, iniH + tH * sT, hwnd)
 			catch
 				break
 		}
@@ -527,12 +527,12 @@ center_window_on_monitor(hwnd, size_percentage := 0.714286) {
 	workTop := NumGet(monitorInfo, 24, "Int") ; Top
 	workRight := NumGet(monitorInfo, 28, "Int") ; Right
 	workBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
-	WinRestore("ahk_id " hwnd)
+	WinRestore(hwnd)
 	WinMove(workLeft + (workRight - workLeft) * (1 - size_percentage) / 2, ; left edge of screen + half the width of it - half the width of the window, to center it.
 		workTop + (workBottom - workTop) * (1 - size_percentage) / 2,  ; same as above but with top bottom
 		(workRight - workLeft) * size_percentage,	; width
 		(workBottom - workTop) * size_percentage,	; height
-		"ahk_id " hwnd)
+		hwnd)
 }
 
 ; ###########################################################################
@@ -683,34 +683,27 @@ trayMenuHandler(itemName, *) {
 	DetectHiddenWindows(1)
 	switch itemName {
 		case "Open Recent Lines":
-			PostMessage(0x111, 65406,,, "ahk_id " A_ScriptHwnd)
-			; ListLines()
+			ListLines()
 		case "Help":
-			str := RegexReplace(A_AhkPath, "[^\\]+\.exe$", "AutoHotkey.chm")
-			Run(str)
-			WinWait("AutoHotkey v2 Help")
-			center_window_on_monitor(WinExist("AutoHotkey v2 Help"), 0.8)
+			PostMessage(0x111, 65411,,, A_ScriptHwnd)
+			tMM := A_TitleMatchMode
+			SetTitleMatchMode("RegEx")
+			hwnd := WinWait("AutoHotkey (?:v2)? Help ahk_exe hh\.exe")
+			SetTitleMatchMode(tMM)
+			center_window_on_monitor(hwnd, 0.8)
 		case "Window Spy":
-			PostMessage(0x111, 65402,,, "ahk_id " A_ScriptHwnd)
-			; if !WinExist("Window Spy") {
-			; 	str := RegexReplace(A_AhkPath, "v2\\[^\\]+.exe$", "WindowSpy.ahk")
-			; 	Run(str)
-			; }
-			; else
-			; 	WinActivate("Window Spy")
+			PostMessage(0x111, 65402,,, A_ScriptHwnd)
 		case "Reload this Script":
-			PostMessage(0x111, 65303, ,, "ahk_id " A_ScriptHwnd)
+			Reload()
 		case "Edit Script":
-			; PostMessage(0x111, 65401,,, "ahk_id " A_ScriptHwnd)
-			tryEditTextFile('Notepad++', '"' A_ScriptFullPath '"')
+			; Edit()
+			PostMessage(0x111, 65401,,, A_ScriptHwnd)
 		case "Pause Script":
-			PostMessage(0x111, 65403,,, "ahk_id " A_ScriptHwnd)
+			Pause(-1)
 			A_TrayMenu.ToggleCheck("Pause Script")
-			; Pause(-1)
 		case "Suspend Hotkeys":
 			suspendMenu.ToggleCheck("Suspend Hotkeys")
-			; PostMessage(0x111, 65404,,, "ahk_id " A_ScriptHwnd) ; no postmessage because its async and will buffer, causing next line to execute too early
-			Suspend(-1)
+			Suspend(-1) ; async bad, no postmessage
 			if (A_IsSuspended)
 				TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think Warn.ico", , true)
 			else
@@ -719,7 +712,7 @@ trayMenuHandler(itemName, *) {
 			suspendMenu.ToggleCheck("Suspend Reload")
 			Hotkey("^+R", "Toggle")
 		case "Exit":
-			PostMessage(0x111, 65405,,, "ahk_id " A_ScriptHwnd)
+			ExitApp()
 	}
 }
 
@@ -853,7 +846,7 @@ makeTextAnsiColorful(str) {
 
 ^!+Ä:: {	; Reload other script
 	DetectHiddenWindows("On")
-	PostMessage(0x111, 65303, ,, "ahk_id " A_ScriptHwnd)
+	PostMessage(0x111, 65303, ,, A_ScriptHwnd)
 }
  
 
@@ -870,4 +863,9 @@ makeTextAnsiColorful(str) {
 ~CapsLock:: { ; display capslock state
 	timedTooltip(GetKeyState("CapsLock", "T"))
 	;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
+}
+/* */ test
+
+k:: {
+	msgbox("uwu")
 }
