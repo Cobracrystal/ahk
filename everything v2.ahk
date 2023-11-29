@@ -646,6 +646,9 @@ clipboardTracker(type) {
 				if (RegexMatch(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)")) {
 					A_Clipboard := RegexReplace(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)", "youtube.com/watch?v=$1")
 				}
+				else if (RegexMatch(A_Clipboard, "youtube\.com\/watch\?v=([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&pp=\S*")) {
+					A_Clipboard := RegexReplace(A_Clipboard, "youtube\.com\/watch\?v=([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&pp=\S*", "youtube.com/watch?v=$1$2")
+				}
 				else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*")) {
 					A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
 				}
