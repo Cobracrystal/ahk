@@ -183,7 +183,7 @@ class WindowManager {
 	static onKeyPress(ctrlObj, lParam) {
 		vKey := NumGet(lParam, 24, "ushort")
 		rowN := this.LV.GetNext()
-		DetectHiddenWindows(1)
+		DetectHiddenWindows(this.settings.detectHiddenWindows)
 		switch vKey {
 			case "46": 	;// Del/Entf Key -> Close that window
 				if (!rowN)
