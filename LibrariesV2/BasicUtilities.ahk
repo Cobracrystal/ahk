@@ -128,7 +128,7 @@ objRemoveValues(obj, removeAll := 1, values*) {
 	return 1
 }
 
-reverseArray(array) { ; linear array, gives weird stuff with assoc
+reverseArray(array) {
 	arr := []
 	for i, e in array
 		arr.InsertAt(1, e)
@@ -148,23 +148,44 @@ sortArray(arr, mode := "") {
 	return arr2
 }
 
-sortMap(map, key, mode := "") {
+; gets a map of maps. sorts it by a key of the submap, returns it as array
+; requires all contents of mapInner[key] to be of the same type (number or string)
+sortObjectByKey(tmap, key, mode := "") {
+	isArr := tMap is Array
+	isMap := tMap is Map 
+	if !(tmap is Object)
+		throw ValueError("Expected Object, but got " tmap.Prototype.Name)
+	isObj := !(isArr || isMap)
 	arr2 := Map()
 	arr3 := []
-	l := map.Count()
-	for i, e in map
-	{
-		arr2[e[key]] := i ; IF el[key] OCCURS TWICE, IT OVERWRITES A VALUE (EG count = 1231 for two usernames -> only last one gets taken)
-		str .= e[key] . "`n"
+	l := isArr ? tmap.Length : isMap ? tmap.Count : ObjOwnPropCount(tmap)
+	for i, e in (isObj ? tmap.OwnProps() : tmap) {
+		if (!IsSet(innerIsObj)) 
+			innerIsObj := !(e is Map || e is Array)
+		tv := innerIsObj ? e.%key% : e[key]
+		if (!IsSet(isString))
+			isString := (tv is String)
+		if (arr2.Has(tv))
+			arr2[tv].push(i)
+		else 
+			arr2[tv] := [i]
+		str .= tv . "`n"
 	}
 	newStr := Sort(str, mode)
 	strArr := StrSplit(newStr, "`n")
 	strArr.Pop()
-	for i, e in strArr
-		arr3.push(map[arr2[e]])
+	counter := 1
+	Loop(strArr.Length) {
+		if (counter > strArr.Length)
+			break
+		el := isString ? strArr[counter] . "" : Number(strArr[counter])
+		for j, f in arr2[el] {
+			arr3.push({index:f, value: isObj ? tmap.%f% : tmap[f]})
+		}
+		counter += arr2[el].Length
+	}
 	return arr3
 }
-
 
 reverseString(str) {
 	result := ""
@@ -245,6 +266,28 @@ recursiveReplaceMap(string, &from, to, __index := 1) {
 	return replacedString
 }
 
+MapToObj(mapInput, recursive := true) {
+	flag := mapInput is Map
+	flagObj := !(mapInput is Map || mapInput is Array)
+	flagAny := !(mapInput is Object)
+	if (flagAny)
+		return mapInput
+	objI := {}
+	objE := flagObj ? {} : flag ? Map() : Array()
+	if (objE is Array)
+		objE.Length := mapInput.Length
+	for i, e in (flagObj ? mapInput.OwnProps() : mapInput) {
+		if (recursive)
+			f := MapToObj(e, true)
+		if (flag)
+			objI.%i% := f ?? e
+		if (!flag && recursive) {
+			(flagObj ? objE.%i% := f : objE[i] := f)
+		}
+	}
+	return (flag ? objI : recursive ? objE : mapInput)
+}
+
 /**
  * Extended version of DateAdd, allowing Weeks (W), Months (MO), Years (Y) for timeUnit. Returns YYYYMMDDHH24MISS timestamp
  * @param dateTime valid YYYYMMDDHH24MISS timestamp to add time to.
@@ -293,7 +336,7 @@ DateAddW(dateTime, value, timeUnit) {
 */
 parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 	Now := A_Now
-	data := gap(years?, months?, days?, hours?, minutes?, seconds?)
+	local data := gap(years?, months?, days?, hours?, minutes?, seconds?)
 	switch data[1] {
 		case 0:
 			return Now
