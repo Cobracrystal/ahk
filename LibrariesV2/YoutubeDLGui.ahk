@@ -57,7 +57,7 @@ class YoutubeDLGui {
 			separatorSmall: "══════════════════════════════════════════════════════════════════════════════",
 		}
 		this.settingsManager("Load")
-		this.settings.flagDebug := flagDebug
+		this.settings.debug := flagDebug
 		this.controls := {}
 		this.resetGUI()
 	}
@@ -184,6 +184,7 @@ class YoutubeDLGui {
 				if (fileP != "") {
 					this.settings.ytdlPath := fileP
 					this.controls.editYTDLPath.Value := fileP
+					this.ytdlOptionHandler() ; just updates the thing
 				}
 			default:
 				return
@@ -198,6 +199,7 @@ class YoutubeDLGui {
 			this.settingsGUI("Open")
 			return
 		}
+		this.ytdlOptionHandler()
 		fullRuncmd := this.controls.editCmdConfig.value . StrReplace(links, "`n", A_Space)
 		output := cmdRet(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8")
 		fullOutput := this.controls.editOutput.value
@@ -220,7 +222,7 @@ class YoutubeDLGui {
 				if (o != "")
 					fileNames.push(o[1])
 			}
-			if (this.settings.flagDebug)
+			if (this.settings.debug)
 				for i, e in fileNames
 					this.updateGuiOutput(e)
 			if (fileNames.Length == 0)
@@ -306,7 +308,7 @@ class YoutubeDLGui {
 	}
 
 	settingsManager(mode := "Save") {
-		mode := Substr(mode, 1, 1)
+		mode := StrUpper(Substr(mode, 1, 1))
 		if (!Instr(FileExist(this.data.savePath), "D"))
 			DirCreate(this.data.savePath)
 		if (mode == "S") {
@@ -319,15 +321,17 @@ class YoutubeDLGui {
 			this.settings := {}
 			if (FileExist(this.data.savePath "\ahk_settings.json")) {
 				s := FileRead(this.data.savePath "\ahk_settings.json", "UTF-8")
-				try this.settings := jsongo.Parse(s, , false)
+				try settings := jsongo.Parse(s)
 			}
+			this.settings := MapToObj(settings, true)
 			for i, e in YoutubeDLGui.getDefaultSettings().OwnProps() {
 				if !(this.settings.HasOwnProp(i))
 					this.settings.%i% := e
 			}
 			this.options := Map()
-			for i, e in YoutubeDLGui.getOptions()
+			for i, e in YoutubeDLGui.getOptions() {
 				this.options[i] := (this.settings.options.HasOwnProp(i) ? this.settings.options.%i% : e)
+			}
 			this.settings.options := this.options
 			; maybe [,"ignore-config","no-playlist","retries"]
 			return 1
