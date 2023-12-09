@@ -166,9 +166,7 @@ class DiscordClient {
 		}
 		if (http.status != 200 && http.status != 204)
 			throw Error("Request failed`nStatus: " http.status "`nResponse: " jsongo.Stringify(jsongo.parse(http.responseText),,"`t") "`nendPoint: " . endPoint . "`nContent: `n" . jsongo.Stringify(content))
-		str := http.ResponseText
-		A_Clipboard := str
-		return jsongo.Parse(str)
+		return jsongo.Parse(http.ResponseText)
 	}
 
 	inArr(arr, val) {
