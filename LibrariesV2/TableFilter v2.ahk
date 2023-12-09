@@ -45,10 +45,11 @@ class TableFilter {
 		this.data.defaultValues.CaseSense := false
 		this.data.defaultValues.Set("Wortart", "?", "Deutsch", "-", "Kayoogis", "-", "Tema'i", "0")
 		this.guis := []
-		this.menu := this.createMenu()
 
 		this.settingsManager("Load")
 		this.settings.debug := debug
+
+		this.menu := this.createMenu()
 		tableFilterMenu := TrayMenu.submenus["tablefilter"]
 		tableFilterMenu.Add("Open GUI: ", (*) => this.guiCreate())
 		tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => this.settingsHandler("Darkmode", -1, true, menuObj, iName))
@@ -89,17 +90,17 @@ class TableFilter {
 			newGui.CBDuplicates.OnEvent("Click", this.searchDuplicates.bind(this))
 			rowKeys := this.data.keys.Clone()
 			rowKeys.push("DataIndex")
-			newGui.LV := newGui.AddListView("xs R35 w950", rowKeys) ; LVEvent, Altsubmit
+			newGui.LV := newGui.AddListView("xs R35 w950 +Multi", rowKeys) ; LVEvent, Altsubmit
 			newGui.LV.OnNotify(-155, this.LV_Event.bind(this, "Key"))
 			newGui.LV.OnEvent("ContextMenu", this.LV_Event.bind(this, "ContextMenu"))
 			newGui.LV.OnEvent("DoubleClick", this.LV_Event.bind(this, "DoubleClick"))
 				this.createFilteredList(newGui, false)
 				; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
 				if !(this.settings.debug)
-					newGui.LV.ModifyCol(newGui.LV.GetCount("Col"), "0 Integer")
+					newGui.LV.ModifyCol(this.data.keys.Length + 1, "0 Integer")
 				else
-					newGui.LV.ModifyCol(newGui.LV.GetCount("Col"), "Integer")
-				Loop (newGui.LV.GetCount("Col") - 1)
+					newGui.LV.ModifyCol(this.data.keys.Length + 1, "100 Integer")
+				Loop (this.data.keys.Length)
 					newGui.LV.ModifyCol(A_Index, "AutoHdr")
 			this.createAddLineBoxesinGUI(newGui)
 			newGui.AddButton("ys+9 xs+850 w100", "Load json/xml File").OnEvent("Click", this.loadData.bind(this, ""))
@@ -222,13 +223,55 @@ class TableFilter {
 		; this should combine editRowFromMenu AND editSelectedRow ANd editRow (if it exists)
 	}
 
-	removeSelectedRows() {
-		; note the plural
-
-	}
-
-	databaseitemremove() {
-
+	removeSelectedRows(gui) {
+		rows := []
+		gui.Opt("+Disabled")
+		Loop {
+			rowN := gui.LV.GetNext(rowN ?? 0) ;// next row
+			if !(rowN)
+				break
+			rows.push({ rowIndex: rowN, dataIndex: gui.LV.GetText(rowN, this.data.keys.Length + 1)})
+		}
+		if (!rows.Length)
+			return
+		sortedRows := sortObjectByKey(rows, "dataIndex", "R N")
+		for _, g in this.guis {
+			g.Opt("+Disabled")
+			rowsInLV := [], indexToRemove := []
+			for j, n in sortedRows
+				if (this.rowIncludeFromSearch(g, this.data.data[n.value.dataIndex]))
+					rowsInLV.push(n.value.dataIndex)
+			Loop(g.LV.GetCount()) {
+				rowN := A_Index
+				dataIndex := g.LV.GetText(rowN, this.data.keys.Length + 1)
+				for j, n in rowsInLV {
+					if (dataIndex == n) {
+						indexToRemove.push(rowN)
+						rowsInLV.RemoveAt(j)
+						continue 2 ; continue outer to skip rest. its not harmful though, just break works fine (but is slower)
+					}
+				}
+				offset := 0
+				for j, n in sortedRows {
+					if (dataIndex > n.value.dataIndex) {
+						offset := sortedRows.Length - j + 1
+						break
+					}
+				}
+				if (offset)
+					g.LV.Modify(rowN, "Col" . this.data.keys.Length + 1, dataIndex - offset)
+			}
+			for k, rowN in indexToRemove
+				g.LV.Delete(indexToRemove[indexToRemove.Length - k + 1]) ; backwards to avoid fucking up the list
+			; instead of queueing deletions and doing them backwards, 
+			; we could also shift the index backwards in the big loop everytime we delete a line.
+			; LV.Delete() is slow as fuck and we want to replace it. But thats not possible. Oh well.
+			g.Opt("-Disabled")
+		}
+		for i, e in sortedRows
+			this.data.data.RemoveAt(e.value.dataIndex)
+		this.settingsHandler("isSaved", false)
+		this.settingsHandler("isInBackup", false)
 	}
 
 	cleanRowData(row) { ; row is a map and this operates onto the object
@@ -260,7 +303,7 @@ class TableFilter {
 					newFont := "cRed Bold"
 			case "Kayoogis":
 				if (RegexMatch(ctrlObj.Value, "i)[cjqwx]"))
-					newFont := "cBlue Bold"
+					newFont := "cYellow Bold"
 			case "Runen":
 				if (RegexMatch(ctrlObj.Value, "i)[a-z]"))
 					newFont := "cRed Bold"
@@ -324,7 +367,7 @@ class TableFilter {
 				vKey := NumGet(lParam, 24, "ushort")
 				switch vKey {
 					case 46: ; DEL key
-						this.removeSelectedRows()
+						this.removeSelectedRows(gui)
 					case 67: ; C key
 						if ((rowN := gui.LV.GetNext()) == 0)
 							return
@@ -336,9 +379,10 @@ class TableFilter {
 						this.createFilteredList(gui)
 				}
 			case "ContextMenu":
+				this.menu.launcherObj := gui
 				this.menu.Show()
 			case "DoubleClick":
-				return ; todo
+				return ; edit. f2 should also edit, check tablefilter for other
 		}
 	}
 
@@ -373,19 +417,32 @@ class TableFilter {
 		rMenu.Add("🌲 Pflanzen", this.cMenuHandler.bind(this))
 		rMenu.Add("🐕 Tiere ", this.cMenuHandler.bind(this))
 		rMenu.Add("🌧️ Wetter", this.cMenuHandler.bind(this))
-		rMenu.Add("All", this.cMenuHandler.bind(this))
 		rMenu.Add("🔢 Zahl", this.cMenuHandler.bind(this))
+		rMenu.Add("All", this.cMenuHandler.bind(this))
 		tMenu := Menu()
 		tMenu.Add("Edit Selected Row", this.cMenuHandler.bind(this))
 		tMenu.Add("Delete Selected Row(s)", this.cMenuHandler.bind(this))
 		tMenu.Add("Add Category to Selected Row(s)", aMenu)
 		tMenu.Add("Remove Category from Selected Row(s)", rMenu)
+		if (this.settings.debug)
+			tMenu.Add("Show Debug Entry", this.cMenuHandler.bind(this))
 		return tMenu
 	}
 
 
 	cMenuHandler(itemName, itemPos, menuObj) {
 		; this should handle both menus
+		if ((rowN := this.menu.launcherObj.LV.GetNext()) == 0)
+			return
+		n := this.menu.launcherObj.LV.GetText(rowN, this.data.keys.Length + 1)
+		switch itemName {
+			case "Edit Selected Row":
+				return
+			case "Show Debug Entry":
+				this.debugShowDatabaseEntry(n, rowN)
+			case "Delete Selected Row(s)":
+				this.removeSelectedRows(this.menu.launcherObj)
+		}
 	}
 
 	guiClose(guiObj) {
@@ -517,8 +574,10 @@ class TableFilter {
 
 	}
 
-	debugShowDatabaseEntry() {
-
+	debugShowDatabaseEntry(n, rowN) {
+		row := this.data.data[n]
+		s := jsongo.Stringify(this.data.data[n],,A_Tab)
+		msgbox(s "`nDatabase Index: " n "`nRow Number: " rowN)
 	}
 
 	settingsHandler(setting := "", value := "", save := true, extra*) {
@@ -556,10 +615,12 @@ class TableFilter {
 			return 1
 		}
 		else if (mode == "L") {
-			this.settings := {}
+			this.settings := {}, settings := Map()
 			if (FileExist(this.data.savePath "\settings.json")) {
-				try this.settings := jsongo.Parse(FileRead(this.data.savePath "\settings.json", "UTF-8"), , false)
+				try settings := jsongo.Parse(FileRead(this.data.savePath "\settings.json", "UTF-8"))
 			}
+			for i, e in settings
+				this.settings.%i% := e
 			; populate remaining settings with default values
 			for i, e in Tablefilter.getDefaultSettings().OwnProps() {
 				if !(this.settings.HasOwnProp(i))
