@@ -121,6 +121,7 @@ class WindowManager {
 
 	static getAllWindowInfo(getHidden := false, notExclude := false) {
 		windows := []
+		tMM := A_TitleMatchMode
 		SetTitleMatchMode("RegEx")
 		DetectHiddenWindows(getHidden)
 		if (notExclude)
@@ -129,6 +130,7 @@ class WindowManager {
 			wHandles := WinGetList(, , this.settings.excludeWindowsRegex)
 		for i, wHandle in wHandles
 			windows.push(this.getWindowInfo(wHandle))
+		SetTitleMatchMode(tMM)
 		return windows
 	}
 
