@@ -47,7 +47,8 @@ GroupAdd("cornerMusicPlayers", "foobar2000 ahk_exe foobar2000.exe", , "Scratchbo
 ; for windows that i don't want to see
 GroupAdd("instantCloseWindows", "ahk_class RarReminder")
 GroupAdd("instantCloseWindows", "Please purchase WinRAR license ahk_class #32770")
-GroupAdd("instantCloseWindows", "pCloud Promo ahk_exe pcloud.exe")
+GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND O IS CYRILLIC
+; GroupAdd("instantCloseWindows", "Unbenannt - Editor ahk_exe notepad.exe")
 ;// set 1337 reminder
 token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
 reminders := ReminderManager()
@@ -64,7 +65,7 @@ TransparentTaskbar.TransparentTaskbar(1, 50)
 ; Start keeping track of desktop window changes
 DesktopState.enable(60000)
 ; Start Loop to close winrar popups
-SetTimer(closeWinRarNotification, -100, -100000) ; priority -100k so it doesn't interrupt
+SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't interrupt
 ; Initialize Internet Logging Script
 internetConnectionLogger("Init", A_Desktop "\programs\programming\bat\log.txt")
 ; Load LaTeX Hotstrings
@@ -462,6 +463,7 @@ clickMouse(b, press := 0, *) {
 		st := GetKeyState(b . "Button") ? "U" : "D"
 	MouseClick(b, , , , , st?)
 }
+
 closeWinRarNotification() {
 	Loop {
 		WinWait("ahk_group instantCloseWindows")
@@ -646,8 +648,8 @@ clipboardTracker(type) {
 				if (RegexMatch(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)")) {
 					A_Clipboard := RegexReplace(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)", "youtube.com/watch?v=$1")
 				}
-				else if (RegexMatch(A_Clipboard, "youtube\.com\/watch\?v=([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&pp=\S*")) {
-					A_Clipboard := RegexReplace(A_Clipboard, "youtube\.com\/watch\?v=([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&pp=\S*", "youtube.com/watch?v=$1$2")
+				else if (RegexMatch(A_Clipboard, "(?:youtube\.com\/watch\?v=|youtu\.be\/)([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&(?:pp|si|sl)=\S*")) {
+					A_Clipboard := RegexReplace(A_Clipboard, "(?:youtube\.com\/watch\?v=|youtu\.be\/)([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&(?:pp|si|sl)=\S*", "youtube.com/watch?v=$1$2")
 				}
 				else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*")) {
 					A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
@@ -866,9 +868,4 @@ makeTextAnsiColorful(str) {
 ~CapsLock:: { ; display capslock state
 	timedTooltip(GetKeyState("CapsLock", "T"))
 	;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
-}
-/* */ test
-
-k:: {
-	msgbox("uwu")
 }
