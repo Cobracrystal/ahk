@@ -7,7 +7,7 @@ class ccBot {
 	__New(token) {
 		this.workingDir := A_ScriptDir "\script_files\discordBot\"
 		DirCreate(this.workingDir . "output")
-		this.bot := DiscordClient(token)
+		this.bot := DiscordClient(token, false)
 		this.themes := {roles: Map(), channels: Map()}
 	}
 	/**
@@ -80,7 +80,7 @@ class ccBot {
 				}
 			}
 			catch as e {
-				MsgBox(errorlog . e.Message "`n" e.What "`n" e.Extra)
+				MsgBox("Role Error: " errorlog . e.Message "`n" e.What "`n" e.Extra)
 			}
 		}
 		if (this.themes.channels.Has(themeName)) {
@@ -100,10 +100,10 @@ class ccBot {
 				}
 			}
 			catch as e {
-				MsgBox(errorlog . e.Message "`n" e.What "`n" e.Extra)
+				MsgBox("Channel Error: " . errorlog . e.Message "`n" e.What "`n" e.Extra)
 			}
 		}
-		msgbox(errorlog)
+		return errorlog
 	}
 
 
