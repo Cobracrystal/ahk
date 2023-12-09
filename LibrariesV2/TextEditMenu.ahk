@@ -92,21 +92,21 @@ class TextEditMenu {
 		c := ""
 		for i, e in StrSplitUTF8(text) {
 			caseFormat := Random(0, 1)
-			if (A_LoopField == "ß" || A_LoopField == "ẞ")
+			if (e == "ß" || e == "ẞ")
 				c := caseFormat ? "ß" : "ẞ"
 			if (caseFormat)
-				c := Format("{:U}", A_LoopField)
+				c := Format("{:U}", e)
 			else
-				c := Format("{:L}", A_LoopField)
-			if (A_LoopField = "I" || A_LoopField = "i")
+				c := Format("{:L}", e)
+			if (e = "i")
 				c := "i"
-			else if (A_LoopField = "L" || A_LoopField = "l")
+			else if (e = "l")
 				c := "L"
-			else if (A_LoopField == "ß" || A_LoopField == "ẞ")
+			else if (e == "ß" || e == "ẞ")
 				c := (caseFormat ? "ß" : "ẞ")
 			result := result . c
 		}
-		return result
+		return result 
 	}
 
 	static replaceCharacters(text, alphName) {

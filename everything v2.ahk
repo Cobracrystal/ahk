@@ -563,6 +563,7 @@ connectNextDNS() {
 		whr.WaitForResponse()
 	} catch as e {
 		Msgbox("Could not connect to NextDNS. Error:`n" e.What "`n" e.Extra)
+		return ""
 	}
 	return whr.ResponseText
 }
