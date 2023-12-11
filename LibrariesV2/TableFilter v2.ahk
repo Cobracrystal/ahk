@@ -669,7 +669,7 @@ class TableFilter {
 			useDefaultRunic: true,
 			duplicateColumn: "Deutsch",
 			copyColumn: "Runen",
-			filterCaseSense: false,
+			filterCaseSense: "Locale",
 			saveHotkey: "^s", ; IS THIS NECESSARY THO?????
 			guiHotkey: "^p",
 			lastUsedFile: ""
