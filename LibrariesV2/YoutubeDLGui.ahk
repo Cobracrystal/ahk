@@ -63,14 +63,14 @@ class YoutubeDLGui {
 	}
 
 	guiCreate() {
-		this.gui := Gui("+Border", "YoutubeDL Manager")
+		this.gui := Gui("+Border +OwnDialogs", "YoutubeDL Manager")
 		this.gui.OnEvent("Escape", (*) => this.youtubeDLGui("Hide"))
 		this.gui.OnEvent("Close", (*) => this.youtubeDLGui("Close"))
 		this.gui.AddText("Center Section", "Enter Link(s) to download")
 		this.controls.editInput := this.gui.AddEdit("ys+17 xs r7 w373")
 		this.gui.AddCheckbox("vCheckboxConvertToAudio yp xs+383 Checked" . (this.settings.resetConverttoAudio ? 0 : this.options["extract-audio"].selected), "Convert to Audio?").OnEvent("Click", this.settingsHandler.bind(this))
 		this.gui.AddCheckbox("vCheckboxUpdate Checked" this.options["update"].selected, "Update YoutubeDL Gui").OnEvent("Click", this.settingsHandler.bind(this))
-		this.gui.AddButton("", "Settings").OnEvent("Click", (*) => this.settingsGUI("O"))
+		this.gui.AddButton("", "Settings").OnEvent("Click", this.settingsGUI.bind(this))
 		this.gui.AddButton("xs-1 h35 w375 Default", "Launch yt-dlp").OnEvent("Click", (*) => this.mainButton())
 		this.controls.editCmdConfig := this.gui.AddEdit("xs+1 r1 w500 -Multi Readonly", "")
 		this.controls.editOutput := this.gui.AddEdit("xs+1 r13 w500 Multi Readonly")
@@ -146,7 +146,7 @@ class YoutubeDLGui {
 				if (this.settings.ffmpegPath == "") {
 					ctrlObject.Value := 0
 					Msgbox("Please choose FFmpeg.exe location first.")
-					this.settingsGUI("Open")
+					this.settingsGUI()
 					return
 				}
 				this.ytdlOptionHandler(["extract-audio", "audio-quality", "audio-format"])
@@ -196,7 +196,7 @@ class YoutubeDLGui {
 		links := this.controls.editInput.Value
 		if (this.settings.ytdlPath == "") {
 			Msgbox("Please set YoutubeDL path.")
-			this.settingsGUI("Open")
+			this.settingsGUI()
 			return
 		}
 		this.ytdlOptionHandler()
@@ -246,36 +246,45 @@ class YoutubeDLGui {
 		;	Run, % "explorer /select, """ . this.settings.outputPath . "\" . o.Value(1) . """" ; THIS IF THE INPUT IS ONLY ONE LINE (AKA ONE FILE)
 	}
 
-	settingsGUI(mode := "O", *) {
-		mode := SubStr(mode, 1, 1)
-		if (mode == "O") {
-			this.gui.Opt("+Disabled")
-			this.guiSettings := Gui("+Border +Owner" . this.gui.Hwnd, "Settings")
-			this.guiSettings.OnEvent("Escape", (*) => this.settingsGUI("Close"))
-			this.guiSettings.OnEvent("Close", (*) => this.settingsGUI("Close"))
+	settingsGUI(*) {
+		settingsGui := Gui("+Border +OwnDialogs +Owner" . this.gui.Hwnd, "Settings")
+		this.gui.Opt("+Disabled")
+		settingsGui.OnEvent("Escape", settingsGUIClose)
+		settingsGui.OnEvent("Close", settingsGUIClose)
 
-			this.guiSettings.AddText("Center Section", "Settings for YoutubeDL Gui")
-			this.guiSettings.AddCheckbox("vCheckboxUseAliases Checked" this.settings.useAliases, "Use aliases for arguments").OnEvent("Click", this.settingsHandler.bind(this))
-			this.guiSettings.AddCheckbox("vCheckboxDownloadPlaylist Checked" . !this.options["no-playlist"].selected, "Download playlist?").OnEvent("Click", this.settingsHandler.bind(this))
-			this.guiSettings.AddCheckbox("vCheckboxOpenExplorer Checked" this.settings.openExplorer, "Open Explorer after download").OnEvent("Click", this.settingsHandler.bind(this))
-			this.guiSettings.AddCheckbox("vCheckboxTrySelectFile Checked" this.settings.trySelectFile, "Try Selecting File When Opening Explorer (Experimental)").OnEvent("Click", this.settingsHandler.bind(this))
-			this.guiSettings.AddCheckbox("vCheckboxResetConvertToAudio Checked" this.settings.resetConverttoAudio, "Always Start with `"Convert To Audio`" Off").OnEvent("Click", this.settingsHandler.bind(this))
+		settingsGui.AddText("Center Section", "Settings for YoutubeDL Gui")
+		settingsGui.AddCheckbox("vCheckboxUseAliases Checked" this.settings.useAliases, "Use aliases for arguments").OnEvent("Click", this.settingsHandler.bind(this))
+		settingsGui.AddCheckbox("vCheckboxDownloadPlaylist Checked" . !this.options["no-playlist"].selected, "Download playlist?").OnEvent("Click", this.settingsHandler.bind(this))
+		settingsGui.AddCheckbox("vCheckboxOpenExplorer Checked" this.settings.openExplorer, "Open Explorer after download").OnEvent("Click", this.settingsHandler.bind(this))
+		settingsGui.AddCheckbox("vCheckboxTrySelectFile Checked" this.settings.trySelectFile, "Try Selecting File When Opening Explorer (Experimental)").OnEvent("Click", this.settingsHandler.bind(this))
+		settingsGui.AddCheckbox("vCheckboxResetConvertToAudio Checked" this.settings.resetConverttoAudio, "Always Start with `"Convert To Audio`" Off").OnEvent("Click", this.settingsHandler.bind(this))
 
-			this.guiSettings.AddButton("vButtonOutputPath xs-1", "Choose Output Path").OnEvent("Click", this.settingsHandler.bind(this))
-			this.controls.editOutputPath := this.guiSettings.AddEdit("xs r1 w400 -Multi Readonly", this.settings.outputPath)
-			this.guiSettings.AddButton("vButtonFFmpegPath xs-1", "Choose FFmpeg Path").OnEvent("Click", this.settingsHandler.bind(this))
-			this.controls.editFFmpegPath := this.guiSettings.AddEdit("xs r1 w400 -Multi Readonly", this.settings.ffmpegPath)
-			this.guiSettings.AddButton("vButtonYTDLPath xs-1", "Choose YTDL Executable Path").OnEvent("Click", this.settingsHandler.bind(this))
-			this.controls.editYTDLPath := this.guiSettings.AddEdit("xs r1 w400 -Multi Readonly", this.settings.ytdlPath)
-			this.guiSettings.AddButton("xs-1", "Reset Settings").OnEvent("Click", this.resetSettings.bind(this))
-			this.guiSettings.Show(Format("x{1}y{2} Autosize", this.data.coords[1] + 20, this.data.coords[2] + 20))
+		settingsGui.AddButton("vButtonOutputPath xs-1", "Choose Output Path").OnEvent("Click", this.settingsHandler.bind(this))
+		this.controls.editOutputPath := settingsGui.AddEdit("xs r1 w400 -Multi Readonly", this.settings.outputPath)
+		settingsGui.AddButton("vButtonFFmpegPath xs-1", "Choose FFmpeg Path").OnEvent("Click", this.settingsHandler.bind(this))
+		this.controls.editFFmpegPath := settingsGui.AddEdit("xs r1 w400 -Multi Readonly", this.settings.ffmpegPath)
+		settingsGui.AddButton("vButtonYTDLPath xs-1", "Choose YTDL Executable Path").OnEvent("Click", this.settingsHandler.bind(this))
+		this.controls.editYTDLPath := settingsGui.AddEdit("xs r1 w400 -Multi Readonly", this.settings.ytdlPath)
+		settingsGui.AddButton("xs-1", "Reset Settings").OnEvent("Click", resetSettings)
+		settingsGui.Show(Format("x{1}y{2} Autosize", this.data.coords[1] + 20, this.data.coords[2] + 20))
+
+		resetSettings(*) {
+			if (MsgBox("Are you sure? This will reset all settings to their default values.", "Reset Settings", "0x1") == "Cancel")
+				return
+			this.settings := YoutubeDLGui.getDefaultSettings()
+			this.options := YoutubeDLGui.getOptions()
+			this.settings.options := this.options
+			this.ytdlOptionHandler()
+			settingsGUIClose()
+			this.settingsGUI()
+			this.gui["CheckboxConvertToAudio"].Value := 0
+			this.gui["CheckboxUpdate"].Value := 0
+			this.settingsManager("Save")
 		}
-		else if (mode == "C") {
-			WinSetAlwaysOnTop(1, this.gui)
-			this.guiSettings.Destroy()
+
+		settingsGUIClose(*) {
 			this.gui.Opt("-Disabled")
-			WinSetAlwaysOnTop(0, this.gui)
-			WinActivate(this.gui)
+			settingsGui.Destroy()
 		}
 	}
 
@@ -289,22 +298,6 @@ class YoutubeDLGui {
 		this.data.outputLastLine := ""
 		this.data.outputLastLineCFlag := 0
 		this.gui := 0
-	}
-
-	resetSettings(*) {
-		if (MsgBox("Are you sure? This will reset all settings to their default values.", "Reset Settings", "0x1") == "Cancel")
-			return
-		newSettings := YoutubeDLGui.getDefaultSettings()
-		options := YoutubeDLGui.getOptions()
-		this.settings := newSettings
-		this.options := options
-		this.settings.options := this.options
-		this.ytdlOptionHandler()
-		this.settingsGUI("Close")
-		this.settingsGUI("Open")
-		this.gui["CheckboxConvertToAudio"].Value := 0
-		this.gui["CheckboxUpdate"].Value := 0
-		this.settingsManager("Save")
 	}
 
 	settingsManager(mode := "Save") {

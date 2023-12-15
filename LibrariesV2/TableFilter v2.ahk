@@ -468,11 +468,11 @@ class TableFilter {
 		}
 		if (file == "") {
 			path := this.settings.lastUsedFile ? this.settings.lastUsedFile : A_ScriptDir
-			for i, e in this.guis
-				e.Opt("+Disabled")
+			for i, g in this.guis
+				g.Opt("+Disabled")
 			file := FileSelect("3", path, "Load File", "Data (*.xml; *.json)")
-			for i, e in this.guis
-				e.Opt("-Disabled")
+			for i, g in this.guis
+				g.Opt("-Disabled")
 			if (!file)
 				return
 		}

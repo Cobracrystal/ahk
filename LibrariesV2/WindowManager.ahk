@@ -67,14 +67,19 @@ class WindowManager {
 			showExcludedWindows: 0,
 			detectHiddenWindows: 0,
 			getCommandLine: 0,
+			darkMode: 1,
+			darkThemeColor: SubStr("c0x002b36", 2),
+			darkThemeFontColor: SubStr("c0x109698",2),
 			excludeWindowsRegex: "i)(?:ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|Program Manager|^$)"
 		}
 	}
 
 	static guiCreate() {
-		this.gui := Gui("+OwnDialogs", "Window Manager")
+		this.gui := Gui("+OwnDialogs +Resize", "Window Manager")
 		this.gui.OnEvent("Close", (*) => this.windowManager("Close"))
 		this.gui.OnEvent("Escape", (*) => this.windowManager("Close"))
+		this.gui.OnEvent("Size", this.onResize.bind(this))
+		this.gui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 		this.gui.AddCheckbox("Section vCheckboxHiddenWindows Checked" . this.settings.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . this.settings.showExcludedWindows, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxGetCommandLine Checked" . this.settings.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.settingCheckboxHandler.bind(this))
@@ -86,9 +91,44 @@ class WindowManager {
 		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", (*) => (this.LV.Focused && (rowN := this.LV.GetNext()) != 0 ? WinActivate(Integer(this.LV.GetText(rowN, 1))) : 0))
 		;	this.LV.OnEvent("ColClick", this.onColClick.bind(this)) ; store sorting state for refresh?
 		this.guiListviewCreate(false)
+		if (this.settings.darkMode)
+			this.toggleGuiDarkMode(this.settings.darkMode)
 		this.gui.Show(Format("x{1}y{2} Autosize", this.settings.coords[1], this.settings.coords[2]))
 		this.insertWindowInfo(this.gui.Hwnd, 1) ;// inserts the first row to be about the windowManager itself
 		this.LV.Focus()
+	}
+
+	static toggleGuiDarkMode(dark) {
+		static WM_THEMECHANGED := 0x031A
+		;// title bar dark
+		if (VerCompare(A_OSVersion, "10.0.17763")) {
+			attr := 19
+			if (VerCompare(A_OSVersion, "10.0.18985")) {
+				attr := 20
+			}
+			if (dark)
+				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", this.gui.hwnd, "int", attr, "int*", true, "int", 4)
+			else
+				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", this.gui.hwnd, "int", attr, "int*", false, "int", 4)
+		}
+		this.gui.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
+		font := (dark ? "c" this.settings.darkThemeFontColor : "cDefault")
+		this.gui.SetFont(font)
+		for cHandle, ctrl in this.gui {
+			ctrl.Opt(dark ? "+Background" this.settings.darkThemeColor : "-Background")
+			ctrl.SetFont(font)
+			if (ctrl is Gui.Button || ctrl is Gui.ListView) {
+				; todo: listview headers dark -> https://www.autohotkey.com/boards/viewtopic.php?t=115952
+				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
+				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
+				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
+			}
+			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
+				this.validValueChecker(ctrl)
+			}
+		}
+		; todo: setting to make this look like this ? 
+		; DllCall("uxtheme\SetWindowTheme", "ptr", _gui.LV.hwnd, "str", "Explorer", "ptr", 0)
 	}
 
 	static guiListviewCreate(redraw := true) {
@@ -103,15 +143,16 @@ class WindowManager {
 		this.LV.ModifyCol(10, "+Integer")
 		if (!this.settings.getCommandLine)
 			this.LV.ModifyCol(12, "0")
-		if ((c := this.LV.GetCount() + !redraw + 1) > 40) ; redraw -> adjust for insertWindowInfo on first; +1 for empty space
-			this.LV.Move(, , , 640)
-		else if (c >= 20)
-			this.LV.Move(, , , 45 + c * 17)
-		else
-			this.LV.Move(, , , 368)
-		this.gui["WindowCount"].Value := Format("Window Count: {:5}", c - 1)
-		if (redraw)
+		this.gui["WindowCount"].Value := Format("Window Count: {:5}", (c := this.LV.GetCount()) - 1)
+		if (redraw) {
+			if (c + 1 > 40) ; redraw -> adjust for insertWindowInfo on first; +1 for empty space
+				this.LV.Move(, , , 640)
+			else if (c >= 20)
+				this.LV.Move(, , , 45 + c * 17)
+			else
+				this.LV.Move(, , , 368)
 			this.gui.Show("Autosize")
+		}
 	}
 
 	static insertWindowInfo(wHandle, rowN) {
@@ -171,6 +212,13 @@ class WindowManager {
 		return (s.length > 0 ? s : [""])
 	}
 
+	static onResize(gui, mmx, w, h) {
+		if (mmx == -1) ; minimized
+			return
+		this.LV.Move(,,w-20,h-35)
+		this.gui["WindowCount"].Move(w-111)
+	}
+
 	static onContextMenu(ctrlObj, rowN, isRightclick, x, y) {
 		if (rowN == 0)
 			return
@@ -214,12 +262,11 @@ class WindowManager {
 					}
 				}
 			case "116":	;// F5 Key -> Reload
-				this.guiListviewCreate()
+				this.guiListviewCreate(false)
 			default:
 				return
 		}
 	}
-
 
 	static settingCheckboxHandler(guiCtrlObj, *) {
 		switch guiCtrlObj.Name {
@@ -234,7 +281,7 @@ class WindowManager {
 			default:
 				return
 		}
-		this.guiListviewCreate()
+		this.guiListviewCreate(false)
 	}
 
 	; ------------------------- MENU FUNCTIONS -------------------------
@@ -284,21 +331,18 @@ class WindowManager {
 		transparencyGUI := Gui("Border -SysMenu +Owner" this.gui.hwnd, "Transparency Menu")
 		transparencyGUI.AddText("x32", "Change Transparency")
 		transparencyGUI.AddSlider("x10 yp+20 AltSubmit Range0-255 NoTicks Page16 ToolTip", tp).OnEvent("Change", (obj, *) => WinSetTransparent(obj.Value, Integer(this.LV.GetText(this.LV.GetNext(), 1))))
-		transparencyGUI.AddButton("w80 yp+30 xp+20 Default", "OK").OnEvent("Click", this.transparencyGUIClose.bind(this))
-		transparencyGUI.OnEvent("Escape", this.transparencyGUIClose.bind(this))
-		transparencyGUI.OnEvent("Close", this.transparencyGUIClose.bind(this))
+		transparencyGUI.AddButton("w80 yp+30 xp+20 Default", "OK").OnEvent("Click", transparencyGUIClose)
+		transparencyGUI.OnEvent("Escape", transparencyGUIClose)
+		transparencyGUI.OnEvent("Close", transparencyGUIClose)
+		this.gui.Opt("+Disabled")
 		transparencyGUI.Show()
-		this.gui.Opt("+Disabled +AlwaysOnTop")
-	}
 
-	static transparencyGUIClose(obj, info := "") {
-		if (HasProp(obj, "Gui"))
-			obj := obj.gui
-		if (WinGetTransparent(wHandle := Integer(this.LV.GetText(this.LV.GetNext(), 1))) == 255)
-			WinSetTransparent("Off", wHandle)
-		obj.Destroy()
-		this.gui.Opt("-Disabled -AlwaysOnTop")
-		WinActivate(this.gui)
+		transparencyGUIClose(*) {
+			if (WinGetTransparent(wHandle := Integer(this.LV.GetText(this.LV.GetNext(), 1))) == 255)
+				WinSetTransparent("Off", wHandle)
+			this.gui.Opt("-Disabled")
+			transparencyGUI.Destroy()
+		}
 	}
 }
 
