@@ -29,7 +29,10 @@ class WindowManager {
 			if (mode == "O")
 				WinActivate(this.gui.hwnd)
 			else {
-				this.settings.coords := windowGetCoordinates(this.gui.hwnd)
+				if (WinGetMinMax(this.gui.hwnd) == 1)
+					this.settings.coords[5] := 1
+				else	
+					this.settings.coords := windowGetCoordinates(this.gui.hwnd)
 				this.gui.destroy()
 				this.gui := -1
 			}
@@ -63,7 +66,7 @@ class WindowManager {
 		; init class variables
 		this.gui := -1
 		this.settings := {
-			coords: [300, 200],
+			coords: [300, 200, 1022, 432, 0],
 			showExcludedWindows: 0,
 			detectHiddenWindows: 0,
 			getCommandLine: 0,
@@ -93,14 +96,15 @@ class WindowManager {
 		this.guiListviewCreate(false)
 		if (this.settings.darkMode)
 			this.toggleGuiDarkMode(this.settings.darkMode)
-		this.gui.Show(Format("x{1}y{2} Autosize", this.settings.coords[1], this.settings.coords[2]))
+		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.settings.coords[1], this.settings.coords[2], this.settings.coords[3] - 2, this.settings.coords[4] - 32, this.settings.coords[5] == 1 ? "Maximize" : "Restore"))
 		this.insertWindowInfo(this.gui.Hwnd, 1) ;// inserts the first row to be about the windowManager itself
 		this.LV.Focus()
 	}
 
+	; this function was frankenstein'd by combining things from a variety of different people that are too numerous to name
 	static toggleGuiDarkMode(dark) {
 		static WM_THEMECHANGED := 0x031A
-		;// title bar dark
+		; // title bar dark
 		if (VerCompare(A_OSVersion, "10.0.17763")) {
 			attr := 19
 			if (VerCompare(A_OSVersion, "10.0.18985")) {
@@ -128,7 +132,7 @@ class WindowManager {
 			}
 		}
 		; todo: setting to make this look like this ? 
-		; DllCall("uxtheme\SetWindowTheme", "ptr", _gui.LV.hwnd, "str", "Explorer", "ptr", 0)
+		; DllCall("uxtheme\SetWindowTheme", "ptr", this.LV.hwnd, "str", "Explorer", "ptr", 0)
 	}
 
 	static guiListviewCreate(redraw := true) {
@@ -243,8 +247,8 @@ class WindowManager {
 					WinKill(wHandle)
 				else
 					WinClose(wHandle)
-				if (WinWaitClose(wHandle, , 0.5))
-					this.LV.delete(rowN)
+				if WinWaitClose(wHandle, , 0.5)
+					this.LV.Delete(rowN)
 			case "67": ; ctrl C
 				if (!rowN)
 					return

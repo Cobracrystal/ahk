@@ -56,8 +56,6 @@ class TableFilter {
 		if (this.settings.darkMode)
 			tableFilterMenu.Check("Use Dark Mode")
 		tableFilterMenu.Add("Open Backup Folder", (*) => Run('explorer.exe "' this.data.savepath '"'))
-		if (this.settings.darkMode)
-			tableFilterMenu.Check("Use Dark Mode")
 		A_TrayMenu.Add("Tablefilter", tableFilterMenu)
 		HotIfWinactive("ahk_group TableFilterGUIs")
 		;	Hotkey(this.settings.saveHotkey, (*) => this.directSave())
