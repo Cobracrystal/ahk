@@ -52,7 +52,7 @@ class ccBot {
 	 * @param serverID snowflake ID of the discord server the theme is applied to.
 	 * @param themeName name of the theme as specified inside the theme files.
 	 */
-	applyTheme(serverID, themeName) {
+	applyTheme(serverID, themeName, silentError := 0) {
 		; check if bot has permissions. 
 		if (!this.bot.isInGuild(serverID))
 			throw Error("Bot is not in given Server.")
@@ -60,9 +60,13 @@ class ccBot {
 		userRoles := this.bot.getGuildMember(serverID, this.bot.me["id"])["roles"]
 		guildRoles := this.bot.getRoles(serverID)
 		if (this.themes.roles.Has(themeName)) {
-			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_ROLES))
-				throw Error("Missing Permission to Edit Roles")	
+			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_ROLES)) {
+				if (silentError)
+					errorlog .= "Missing permission to edit roles`n"
+				else throw Error("Missing permission to edit roles")
+			}
 			try {
+				rolesEditedCount := 0
 				roleTheme := this.themes.roles[themeName]
 				highestRole := this.bot.getHighestRole(userRoles, guildRoles)
 				rolesbyID := Map()
@@ -70,8 +74,10 @@ class ccBot {
 					rolesbyID[e["id"]] := e
 				for i, e in roleTheme {
 					if (rolesbyID.Has(i)) {
-						if (rolesbyID[i]["position"] < highestRole["position"])
+						if (rolesbyID[i]["position"] < highestRole["position"]) {
 							this.bot.modifyGuildRole(serverID, i, e)
+							rolesEditedCount++ 
+						}
 						else 
 							errorlog .= "Did not edit Role " i "(" rolesbyID[i]["name"] ") because it was higher ranked than the Bot role.`n"
 					}
@@ -81,26 +87,36 @@ class ccBot {
 			}
 			catch as e {
 				MsgBox("Role Error: " errorlog . e.Message "`n" e.What "`n" e.Extra)
+			} finally {
+				errorlog .= rolesEditedCount . " channels edited.`n"
 			}
 		}
 		if (this.themes.channels.Has(themeName)) {
-			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_CHANNELS))
-				throw Error("Missing Permission to Edit Channels at all")
+			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_CHANNELS)) {
+				if (silentError)
+					errorlog .= "Missing permission to edit channels`n"
+				else throw Error("Missing permission to edit channels")
+			}
 			try {
+				channelsEditedCount := 0
 				channelTheme := this.themes.channels[themeName]
 				guildChannels := this.bot.getGuildChannels(serverID)
 				channelIDs := []
 				for i, e in guildChannels
 					channelIDs.push(e["id"])
 				for i, e in channelTheme {
-					if (this.bot.inArr(channelIDs, i))
+					if (this.bot.inArr(channelIDs, i)) {
 						this.bot.modifyChannel(i, e)
+						channelsEditedCount++
+					}
 					else
 						errorlog .= "Channel " i " not found.`n"
 				}
 			}
 			catch as e {
 				MsgBox("Channel Error: " . errorlog . e.Message "`n" e.What "`n" e.Extra)
+			} finally {
+				errorlog .= channelsEditedCount . " channels edited.`n"
 			}
 		}
 		return errorlog

@@ -1,4 +1,4 @@
-﻿; modified from:
+﻿; original idea from:
 ; http://www.autohotkey.com/board/topic/30294-simple-key-stroke-recorder/
 ; modified yet again by Cobracrystal to make it into a readable, functionable thing that isn't terrible
 ; // maybe todo: if only keys in succession without mouse interruption then chain them together into one line
@@ -43,6 +43,29 @@ class KeyLogger {
 			Hotkey("~*+" . Chr(A_Index+64), this.keyEvent.bind(this))
 		Loop(36)
 			Hotkey("~*" . Chr(A_Index+90), this.keyEvent.bind(this))
+		Loop(24)
+			Hotkey("~*F" . A_Index, this.keyEvent.bind(this, "{F" . A_Index . "}"))
+		; special keys
+		nonAsciiKeys := ["´","°","§","ß"]
+		numpadKeys := ["0","1","2","3","4","5","6","7","8","9","Add","Clear","Del","Div","Dot","Down","End","Enter","Home","Ins","Left","Mult","PgDn","PgUp","Right","Sub","Up"]
+		genFunctionKeys := ["AppsKey","PrintScreen","Pause","Delete","Insert","Home","End","PgUp","PgDn","Up","Down","left","Right","NumLock","ScrollLock","CapsLock","Esc","Enter","Tab","Space","XButton1","XButton2"]
+		mouseButtons := ["LButton","RButton","MButton"] ; xbutton1/2 are mouse, but not relevant for coordinates
+		modKeys := ["Win","Control","Shift","Alt"]
+		for i, key in nonAsciiKeys
+			Hotkey("~*" key, this.keyEvent.bind(this))
+		for i, key in numpadKeys
+			Hotkey("~*Numpad" . key, this.keyEvent.bind(this, "{Numpad" key "}"))
+		for i, key in genFunctionKeys
+			Hotkey("~*" key, this.keyEvent.Bind(this,"{" key "}"))
+		for i, mKey in mouseButtons
+			Hotkey("~*" mKey, this.mouseevent.Bind(this, mKey))
+		for i, modKey in modKeys {
+			Hotkey("~*L" modKey, this.keyEvent.bind(this, "{L" modKey " Down}"))
+			Hotkey("~*R" modKey, this.keyEvent.bind(this, "{R" modKey " Down}"))
+			Hotkey("~*L" modKey " Up", this.keyEvent.bind(this, "{L" modKey " Up}"))
+			Hotkey("~*R" modKey " Up", this.keyEvent.bind(this, "{R" modKey " Up}"))
+		}
+		Hotkey("~*SC00E", this.keyEvent.bind(this,"{BS}"))
 	}
 
 	static setlog(*) {
@@ -94,7 +117,7 @@ class KeyLogger {
 		Pause(is_paused)
 	}
 
-	static keyEvent(key) {
+	static keyEvent(key, *) {
 		if (SubStr(key, 1, 2) == "~*") {
 			key := SubStr(key, 3)
 			if (StrLen(key) == 2 && SubStr(key, 1, 1) == "+")
@@ -104,13 +127,16 @@ class KeyLogger {
 		FileAppend(Format("{1} Key:`t {2}`n", FormatTime(A_Now, "HH:mm:ss"), key), this.path, "UTF-8")
 	}
 
-	static mouseevent(mouseKey) {
+	static mouseevent(mouseKey, *) {
 		DetectHiddenWindows(1)
 		CoordMode("Mouse", "Screen")
 		time := FormatTime(A_Now, "HH:mm:ss")
 		MouseGetPos(&x, &y, &handle, &controln)
 		title := WinGetTitle("ahk_id " handle)
-		process := WinGetProcessName("ahk_id " handle)
+		try
+			process := WinGetProcessName("ahk_id " handle)
+		catch as e 
+			process := "?"
 		this.logAddHeader()
 		FileAppend(Format("{1} Mouse:`t {2} @[x={3}, y={4}] On Window: [{5}, `"{6}`"]`t Control: {7}`n", time, mouseKey, x, y, process, title, controln), this.path)
 	}
@@ -119,106 +145,8 @@ class KeyLogger {
 ; -------------------------------
 
 ; -------------------- HOTKEY EVENTS HERE
-~*LButton:: KeyLogger.mouseEvent("LButton")
-~*MButton:: KeyLogger.mouseEvent("MButton")
-~*RButton:: KeyLogger.mouseEvent("RButton")
 
-~*F1:: KeyLogger.keyEvent("{F1}")
-~*F2:: KeyLogger.keyEvent("{F2}")
-~*F3:: KeyLogger.keyEvent("{F3}")
-~*F4:: KeyLogger.keyEvent("{F4}")
-~*F5:: KeyLogger.keyEvent("{F5}")
-~*F6:: KeyLogger.keyEvent("{F6}")
-~*F7:: KeyLogger.keyEvent("{F7}")
-~*F8:: KeyLogger.keyEvent("{F8}")
-~*F9:: KeyLogger.keyEvent("{F9}")
-~*F10:: KeyLogger.keyEvent("{F10}")
-~*F11:: KeyLogger.keyEvent("{F11}")
-~*F12:: KeyLogger.keyEvent("{F12}")
-~*F13:: KeyLogger.keyEvent("{F13}")
-~*F14:: KeyLogger.keyEvent("{F14}")
-~*F15:: KeyLogger.keyEvent("{F15}")
-~*F16:: KeyLogger.keyEvent("{F16}")
-~*F17:: KeyLogger.keyEvent("{F17}")
-~*F18:: KeyLogger.keyEvent("{F18}")
-~*F19:: KeyLogger.keyEvent("{F19}")
-~*F20:: KeyLogger.keyEvent("{F20}")
-~*F21:: KeyLogger.keyEvent("{F21}")
-~*F22:: KeyLogger.keyEvent("{F22}")
-~*F23:: KeyLogger.keyEvent("{F23}")
-~*F24:: KeyLogger.keyEvent("{F24}")
-~*AppsKey:: KeyLogger.keyEvent("{AppsKey}")
-~*PrintScreen:: KeyLogger.keyEvent("{PrintScreen}")
-
-~*LWin:: KeyLogger.keyEvent("{LWin Down}")
-~*RWin:: KeyLogger.keyEvent("{RWin Down}")
-~*LControl:: KeyLogger.keyEvent("{LControl Down}")
-~*RControl:: KeyLogger.keyEvent("{RControl Down}")
-~*LShift:: KeyLogger.keyEvent("{LShift Down}")
-~*RShift:: KeyLogger.keyEvent("{RShift Down}")
-~*LAlt:: KeyLogger.keyEvent("{LAlt Down}")
-~*RAlt:: KeyLogger.keyEvent("{RAlt Down}")
-
-~*LWin Up:: KeyLogger.keyEvent("{LWin Up}")
-~*RWin Up:: KeyLogger.keyEvent("{RWin Up}")
-~*LControl Up:: KeyLogger.keyEvent("{LControl Up}")
-~*RControl Up:: KeyLogger.keyEvent("{RControl Up}")
-~*LShift Up:: KeyLogger.keyEvent("{LShift Up}")
-~*RShift Up:: KeyLogger.keyEvent("{RShift Up}")
-~*LAlt Up:: KeyLogger.keyEvent("{LAlt Up}")
-~*RAlt Up:: KeyLogger.keyEvent("{RAlt Up}")
-
-~*NumLock:: KeyLogger.keyEvent("{NumLock}")
-~*Numpad0:: KeyLogger.keyEvent("{Numpad0}")
-~*Numpad1:: KeyLogger.keyEvent("{Numpad1}")
-~*Numpad2:: KeyLogger.keyEvent("{Numpad2}")
-~*Numpad3:: KeyLogger.keyEvent("{Numpad3}")
-~*Numpad4:: KeyLogger.keyEvent("{Numpad4}")
-~*Numpad5:: KeyLogger.keyEvent("{Numpad5}")
-~*Numpad6:: KeyLogger.keyEvent("{Numpad6}")
-~*Numpad7:: KeyLogger.keyEvent("{Numpad7}")
-~*Numpad8:: KeyLogger.keyEvent("{Numpad8}")
-~*Numpad9:: KeyLogger.keyEvent("{Numpad9}")
-~*NumpadAdd:: KeyLogger.keyEvent("{NumpadAdd}")
-~*NumpadClear:: KeyLogger.keyEvent("{NumpadClear}")
-~*NumpadDel:: KeyLogger.keyEvent("{NumpadDel}")
-~*NumpadDiv:: KeyLogger.keyEvent("{NumpadDiv}")
-~*NumpadDot:: KeyLogger.keyEvent("{NumpadDot}")
-~*NumpadDown:: KeyLogger.keyEvent("{NumpadDown}")
-~*NumpadEnd:: KeyLogger.keyEvent("{NumpadEnd}")
-~*NumpadEnter:: KeyLogger.keyEvent("{NumpadEnter}")
-~*NumpadHome:: KeyLogger.keyEvent("{NumpadHome}")
-~*NumpadIns:: KeyLogger.keyEvent("{NumpadIns}")
-~*NumpadLeft:: KeyLogger.keyEvent("{NumpadLeft}")
-~*NumpadMult:: KeyLogger.keyEvent("{NumpadMult}")
-~*NumpadPgDn:: KeyLogger.keyEvent("{NumpadPgDn}")
-~*NumpadPgUp:: KeyLogger.keyEvent("{NumpadPgUp}")
-~*NumpadRight:: KeyLogger.keyEvent("{NumpadRight}")
-~*NumpadSub:: KeyLogger.keyEvent("{NumpadSub}")
-~*NumpadUp:: KeyLogger.keyEvent("{NumpadUp}")
-
-~*Pause:: KeyLogger.keyEvent("{Pause}")
-~*Delete:: KeyLogger.keyEvent("{Delete}")
-~*Insert:: KeyLogger.keyEvent("{Insert}")
-~*Home:: KeyLogger.keyEvent("{Home}")
-~*End:: KeyLogger.keyEvent("{End}")
-~*PgUp:: KeyLogger.keyEvent("{PgUp}")
-~*PgDn:: KeyLogger.keyEvent("{PgDn}")
-~*Up:: KeyLogger.keyEvent("{Up}")
-~*Down:: KeyLogger.keyEvent("{Down}")
-~*Left:: KeyLogger.keyEvent("{Left}")
-~*Right:: KeyLogger.keyEvent("{Right}")
-~*ScrollLock:: KeyLogger.keyEvent("{ScrollLock}")
-~*CapsLock:: KeyLogger.keyEvent("{CapsLock}")
-~*Esc:: KeyLogger.keyEvent("{Esc}")
-~*SC00E:: KeyLogger.keyEvent("{BS}")
-~*Enter:: KeyLogger.keyEvent("{Enter}")
-~*Tab:: KeyLogger.keyEvent("{Tab}")
-~*Space:: KeyLogger.keyEvent("{Space}")
-~*´:: KeyLogger.keyEvent("´")
-~*°:: KeyLogger.keyEvent("°")
-~*§:: KeyLogger.keyEvent("§")
-~*ß:: KeyLogger.keyEvent("ß")
+; for keys that remain undetected by writing out the symbol directly
 ~*^!7:: KeyLogger.keyEvent("{")
 ~*^!8:: KeyLogger.keyEvent("[")
 ~*^!9:: KeyLogger.keyEvent("]")
@@ -232,6 +160,108 @@ class KeyLogger {
 ~*^!+:: KeyLogger.keyEvent("~")
 ~*^!2:: KeyLogger.keyEvent("²")
 ~*^!3:: KeyLogger.keyEvent("³")
+
+; ~*´:: KeyLogger.keyEvent("´")
+; ~*°:: KeyLogger.keyEvent("°")
+; ~*§:: KeyLogger.keyEvent("§")
+; ~*ß:: KeyLogger.keyEvent("ß")
+
+; ~*LButton:: KeyLogger.mouseEvent("LButton")
+; ~*MButton:: KeyLogger.mouseEvent("MButton")
+; ~*RButton:: KeyLogger.mouseEvent("RButton")
+
+; ~*Pause:: KeyLogger.keyEvent("{Pause}")
+; ~*Delete:: KeyLogger.keyEvent("{Delete}")
+; ~*Insert:: KeyLogger.keyEvent("{Insert}")
+; ~*Home:: KeyLogger.keyEvent("{Home}")
+; ~*End:: KeyLogger.keyEvent("{End}")
+; ~*PgUp:: KeyLogger.keyEvent("{PgUp}")
+; ~*PgDn:: KeyLogger.keyEvent("{PgDn}")
+; ~*Up:: KeyLogger.keyEvent("{Up}")
+; ~*Down:: KeyLogger.keyEvent("{Down}")
+; ~*Left:: KeyLogger.keyEvent("{Left}")
+; ~*Right:: KeyLogger.keyEvent("{Right}")
+; ~*ScrollLock:: KeyLogger.keyEvent("{ScrollLock}")
+; ~*CapsLock:: KeyLogger.keyEvent("{CapsLock}")
+; ~*Esc:: KeyLogger.keyEvent("{Esc}")
+; ~*SC00E:: KeyLogger.keyEvent("{BS}")
+; ~*Enter:: KeyLogger.keyEvent("{Enter}")
+; ~*Tab:: KeyLogger.keyEvent("{Tab}")
+; ~*Space:: KeyLogger.keyEvent("{Space}")
+; ~*AppsKey:: KeyLogger.keyEvent("{AppsKey}")
+; ~*PrintScreen:: KeyLogger.keyEvent("{PrintScreen}")
+
+; ~*LWin:: KeyLogger.keyEvent("{LWin Down}")
+; ~*RWin:: KeyLogger.keyEvent("{RWin Down}")
+; ~*LControl:: KeyLogger.keyEvent("{LControl Down}")
+; ~*RControl:: KeyLogger.keyEvent("{RControl Down}")
+; ~*LShift:: KeyLogger.keyEvent("{LShift Down}")
+; ~*RShift:: KeyLogger.keyEvent("{RShift Down}")
+; ~*LAlt:: KeyLogger.keyEvent("{LAlt Down}")
+; ~*RAlt:: KeyLogger.keyEvent("{RAlt Down}")
+
+; ~*LWin Up:: KeyLogger.keyEvent("{LWin Up}")
+; ~*RWin Up:: KeyLogger.keyEvent("{RWin Up}")
+; ~*LControl Up:: KeyLogger.keyEvent("{LControl Up}")
+; ~*RControl Up:: KeyLogger.keyEvent("{RControl Up}")
+; ~*LShift Up:: KeyLogger.keyEvent("{LShift Up}")
+; ~*RShift Up:: KeyLogger.keyEvent("{RShift Up}")
+; ~*LAlt Up:: KeyLogger.keyEvent("{LAlt Up}")
+; ~*RAlt Up:: KeyLogger.keyEvent("{RAlt Up}")
+
+; ~*F1:: KeyLogger.keyEvent("{F1}")
+; ~*F2:: KeyLogger.keyEvent("{F2}")
+; ~*F3:: KeyLogger.keyEvent("{F3}")
+; ~*F4:: KeyLogger.keyEvent("{F4}")
+; ~*F5:: KeyLogger.keyEvent("{F5}")
+; ~*F6:: KeyLogger.keyEvent("{F6}")
+; ~*F7:: KeyLogger.keyEvent("{F7}")
+; ~*F8:: KeyLogger.keyEvent("{F8}")
+; ~*F9:: KeyLogger.keyEvent("{F9}")
+; ~*F10:: KeyLogger.keyEvent("{F10}")
+; ~*F11:: KeyLogger.keyEvent("{F11}")
+; ~*F12:: KeyLogger.keyEvent("{F12}")
+; ~*F13:: KeyLogger.keyEvent("{F13}")
+; ~*F14:: KeyLogger.keyEvent("{F14}")
+; ~*F15:: KeyLogger.keyEvent("{F15}")
+; ~*F16:: KeyLogger.keyEvent("{F16}")
+; ~*F17:: KeyLogger.keyEvent("{F17}")
+; ~*F18:: KeyLogger.keyEvent("{F18}")
+; ~*F19:: KeyLogger.keyEvent("{F19}")
+; ~*F20:: KeyLogger.keyEvent("{F20}")
+; ~*F21:: KeyLogger.keyEvent("{F21}")
+; ~*F22:: KeyLogger.keyEvent("{F22}")
+; ~*F23:: KeyLogger.keyEvent("{F23}")
+; ~*F24:: KeyLogger.keyEvent("{F24}")
+
+; ~*NumLock:: KeyLogger.keyEvent("{NumLock}")
+; ~*Numpad0:: KeyLogger.keyEvent("{Numpad0}")
+; ~*Numpad1:: KeyLogger.keyEvent("{Numpad1}")
+; ~*Numpad2:: KeyLogger.keyEvent("{Numpad2}")
+; ~*Numpad3:: KeyLogger.keyEvent("{Numpad3}")
+; ~*Numpad4:: KeyLogger.keyEvent("{Numpad4}")
+; ~*Numpad5:: KeyLogger.keyEvent("{Numpad5}")
+; ~*Numpad6:: KeyLogger.keyEvent("{Numpad6}")
+; ~*Numpad7:: KeyLogger.keyEvent("{Numpad7}")
+; ~*Numpad8:: KeyLogger.keyEvent("{Numpad8}")
+; ~*Numpad9:: KeyLogger.keyEvent("{Numpad9}")
+; ~*NumpadAdd:: KeyLogger.keyEvent("{NumpadAdd}")
+; ~*NumpadClear:: KeyLogger.keyEvent("{NumpadClear}")
+; ~*NumpadDel:: KeyLogger.keyEvent("{NumpadDel}")
+; ~*NumpadDiv:: KeyLogger.keyEvent("{NumpadDiv}")
+; ~*NumpadDot:: KeyLogger.keyEvent("{NumpadDot}")
+; ~*NumpadDown:: KeyLogger.keyEvent("{NumpadDown}")
+; ~*NumpadEnd:: KeyLogger.keyEvent("{NumpadEnd}")
+; ~*NumpadEnter:: KeyLogger.keyEvent("{NumpadEnter}")
+; ~*NumpadHome:: KeyLogger.keyEvent("{NumpadHome}")
+; ~*NumpadIns:: KeyLogger.keyEvent("{NumpadIns}")
+; ~*NumpadLeft:: KeyLogger.keyEvent("{NumpadLeft}")
+; ~*NumpadMult:: KeyLogger.keyEvent("{NumpadMult}")
+; ~*NumpadPgDn:: KeyLogger.keyEvent("{NumpadPgDn}")
+; ~*NumpadPgUp:: KeyLogger.keyEvent("{NumpadPgUp}")
+; ~*NumpadRight:: KeyLogger.keyEvent("{NumpadRight}")
+; ~*NumpadSub:: KeyLogger.keyEvent("{NumpadSub}")
+; ~*NumpadUp:: KeyLogger.keyEvent("{NumpadUp}")
 
 ; ~*a:: KeyLogger.keyEvent("a")
 ; ~*b:: KeyLogger.keyEvent("b")

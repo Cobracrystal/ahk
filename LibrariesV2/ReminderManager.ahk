@@ -242,7 +242,7 @@ class ReminderManager {
 		this.gui.AddText("Center ys+22 x+5", ":")
 		this.gui.AddEdit("ys+20 x+5 r1 w30", A_Min).Name := this.guiVars.2[3]
 		this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), ":")
-		this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), A_Sec).Name := this.guiVars.2[2]
+		this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), (this.settings.flagDebug ? A_Sec : 0)).Name := this.guiVars.2[2]
 		this.gui.AddText("Center ys+22 x+5", "with the message:")
 		this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.2[1]
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderOnFromGUI.bind(this))
@@ -364,7 +364,7 @@ class ReminderManager {
 
 	defaultReminder(text := "") {
 		;	L1033 -> en-US for day name.
-		message := "It is " . FormatTime("L1033 dddd, dd.MM.yyyy, HH:mm:ss") . "`nYou set a reminder for this point in time."
+		message := "It is " . FormatTime("L1033", "dddd, dd.MM.yyyy, HH:mm:ss") . "`nYou set a reminder for this point in time."
 		message .= (text == "" ? "" : "`nReminder Message: " . text)
 		SoundPlay("*48")
 		MsgBox(message, "Reminder")
@@ -382,7 +382,7 @@ class ReminderManager {
 
 	discordReminder(token, id, text) {
 		discordBot := DiscordClient(token, false)
-		time := FormatTime("L1033 dddd, dd.MM.yyyy, HH:mm:ss") ; L1033 -> en-US for day name.
+		time := FormatTime("L1033", "dddd, dd.MM.yyyy, HH:mm:ss") ; L1033 -> en-US for day name.
 		message := "It is " . time . "`nYou set a reminder for this point in time."
 		message .= (text == "" ? "" : "`nReminder Message: " . text)
 		discordBot.sendMessage({content:message}, id, 1)

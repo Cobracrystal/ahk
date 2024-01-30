@@ -363,7 +363,7 @@ F11:: { 	; BTD6: Rebind Escape
 }
 
 ^!H:: {	; Change Window Shape
-	static toggle := false, shapedWindow
+	static toggle := false, shapedWindow, depth := 5
 	if (toggle := !toggle) {
 		MouseGetPos(&xPosCircle, &yPosCircle, &shapedWindow)
 		WinGetPos(&x, &y, &w, &h, shapedWindow)
@@ -371,7 +371,7 @@ F11:: { 	; BTD6: Rebind Escape
 		; yPosCircle -= 100
 		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", circleWindow)
 		;	duoRect := "200-200 1500-200 1500-900 200-900 200-550 850-200 1500-550 850-900 200-550"
-		str := sierpinskiCoords(w//2, 50, w-50, h-60, 0)
+		str := sierpinskiCoords(w//2, 50, w-50, h-60, depth := Mod(depth+1, 6))
 		WinSetStyle("-0xC00000", shapedWindow)
 		WinSetAlwaysOnTop(1, shapedWindow)
 		WinSetRegion(str, shapedWindow)
@@ -866,7 +866,3 @@ makeTextAnsiColorful(str) {
 ; 	fastPrint(text)
 ; }
 
-~CapsLock:: { ; display capslock state
-	timedTooltip(GetKeyState("CapsLock", "T"))
-	;	SetCapsLockState(!GetKeyState("CapsLock", "T"))
-}

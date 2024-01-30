@@ -154,7 +154,8 @@ bettercounter2(ByRef req, ByRef res, ByRef server) {
 }
 
 indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", title := "", ext := "*", mode := "DF") {
-	t := FileExist(origin . vpath)
+	normPath := normalizePath(origin . vpath)
+	t := FileExist(normPath)
 	if (t) {
 		if (InStr(t, "D")) {
 			if (SubStr(vpath, 0) != "\") {
@@ -169,10 +170,10 @@ indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", titl
 				res.SetBodyText("Illegal File access.")
 		}
 		else {
-			SplitPath, % origin . vpath, , , fExt
+			SplitPath, % normPath, , , fExt
 			if (ext == "*" || fExt == ext) {
 			;	res.Set ; make a title for the tab??
-				server.ServeFile(res, origin . vpath)
+				server.ServeFile(res, normPath)
 			}
 			else 
 				res.SetBodyText("File not available.")
