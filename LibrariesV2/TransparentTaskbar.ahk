@@ -143,7 +143,7 @@ class TransparentTaskbar {
 		for i, e in id
 			try	{
 				if (WinExist("ahk_id " . e) && WinGetMinMax("ahk_id " . e) == 1)
-				maximizedMonitors[this.get_window_monitor_number(e)] := 1
+					maximizedMonitors[this.get_window_monitor_number(e)] := 1
 			}
 		return maximizedMonitors
 	}
