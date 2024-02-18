@@ -527,19 +527,59 @@ menu_RemoveSpace(menuHandle, applyToSubMenus := true) {
 }
 
 windowGetCoordinates(wHandle) {
+	dhw := A_DetectHiddenWindows
 	DetectHiddenWindows(1)
 	minimize_status := WinGetMinMax(wHandle)
-	if (minimize_status != -1)
-		WinGetPos(&x, &y, &w, &h, wHandle)
-	else {
-		NumPut("Uint", 44, pos := Buffer(44, 0))
-		DllCall("GetWindowPlacement", "uint", wHandle, "uint", pos.ptr)
-		x := NumGet(pos, 28, "int")
-		y := NumGet(pos, 32, "int")
-		w := NumGet(pos, 36, "int") - x
-		h := NumGet(pos, 40, "int") - y
-	}
-	return [x, y, w, h, minimize_status]
+	NumPut("Uint", 44, pos := Buffer(44, 0))
+	DllCall("GetWindowPlacement", "uint", wHandle, "uint", pos.ptr)
+	mmx := NumGet(pos, 8, "int")
+	x := NumGet(pos, 28, "int")
+	y := NumGet(pos, 32, "int")
+	w := NumGet(pos, 36, "int") - x
+	h := NumGet(pos, 40, "int") - y
+	pos := Buffer(16)
+	DllCall("GetClientRect", "uint", wHandle, "uint", pos.ptr)
+	cw := NumGet(pos, 8, "int")
+	ch := NumGet(pos, 12, "int")
+	DetectHiddenWindows(dhw)
+	return [x, y, w, h, cw, ch, mmx]
+}
+
+GetWindowPlacement(hwnd) {
+	DllCall("User32.dll\GetWindowPlacement", "Ptr", hwnd, "Ptr", WP := Buffer(44))
+	Lo := NumGet(WP, 28, "Int")        ; X coordinate of the upper-left corner of the window in its original restored state
+	To := NumGet(WP, 32, "Int")        ; Y coordinate of the upper-left corner of the window in its original restored state
+	Wo := NumGet(WP, 36, "Int") - Lo   ; Width of the window in its original restored state
+	Ho := NumGet(WP, 40, "Int") - To   ; Height of the window in its original restored state
+
+	CMD := NumGet(WP, 8, "Int") ; ShowCMD
+	flags := NumGet(WP, 4, "Int")  ; flags
+	MinX := NumGet(WP, 12, "Int")
+	MinY := NumGet(WP, 16, "Int")
+	MaxX := NumGet(WP, 20, "Int")
+	MaxY := NumGet(WP, 24, "Int")        
+
+	return { X: Lo, Y: to, W: Wo, H: Ho , cmd: CMD, flags: flags, MinX: MinX, MinY: MinY, MaxX: MaxX, MaxY: MaxY }
+}
+
+SetWindowPlacement(hwnd:="", X:="", Y:="", W:="", H:="", action := 9) {        
+	DllCall("User32.dll\GetWindowPlacement", "Ptr", hwnd, "Ptr", WP := Buffer(44))
+	Lo := NumGet(WP, 28, "Int")        ; X coordinate of the upper-left corner of the window in its original restored state
+	To := NumGet(WP, 32, "Int")        ; Y coordinate of the upper-left corner of the window in its original restored state
+	Wo := NumGet(WP, 36, "Int") - Lo   ; Width of the window in its original restored state
+	Ho := NumGet(WP, 40, "Int") - To   ; Height of the window in its original restored state
+	L := X = "" ? Lo : X               ; X coordinate of the upper-left corner of the window in its new restored state
+	T := Y = "" ? To : Y               ; Y coordinate of the upper-left corner of the window in its new restored state
+	R := L + (W = "" ? Wo : W)         ; X coordinate of the bottom-right corner of the window in its new restored state
+	B := T + (H = "" ? Ho : H)         ; Y coordinate of the bottom-right corner of the window in its new restored state
+
+	NumPut("UInt",action,WP,8)
+	NumPut("UInt",L,WP,28)
+	NumPut("UInt",T,WP,32)
+	NumPut("UInt",R,WP,36)
+	NumPut("UInt",B,WP,40)
+	
+	Return DllCall("User32.dll\SetWindowPlacement", "Ptr", hwnd, "Ptr", WP)
 }
 
 timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
