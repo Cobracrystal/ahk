@@ -29,10 +29,8 @@ class WindowManager {
 			if (mode == "O")
 				WinActivate(this.gui.hwnd)
 			else {
-				if (WinGetMinMax(this.gui.hwnd) == 1)
-					this.settings.coords[5] := 1
-				else	
-					this.settings.coords := windowGetCoordinates(this.gui.hwnd)
+				this.settings.coords := windowGetCoordinates(this.gui.hwnd)
+				this.settings.coords[7] := (this.settings.coords[7] == 3 ? 1 : (this.settings.coords[7] == 2 ? -1 : 0))
 				this.gui.destroy()
 				this.gui := -1
 			}
@@ -66,7 +64,7 @@ class WindowManager {
 		; init class variables
 		this.gui := -1
 		this.settings := {
-			coords: [300, 200, 1022, 432, 0],
+			coords: [300, 200, 1022, 432, 1000, 400, 0],
 			showExcludedWindows: 0,
 			detectHiddenWindows: 0,
 			getCommandLine: 0,
@@ -86,6 +84,7 @@ class WindowManager {
 		this.gui.AddCheckbox("Section vCheckboxHiddenWindows Checked" . this.settings.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . this.settings.showExcludedWindows, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxGetCommandLine Checked" . this.settings.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.settingCheckboxHandler.bind(this))
+		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false))
 		this.gui.AddText("ys xs+890 w110 vWindowCount", "Window Count: 0")
 		this.LV := this.gui.AddListView("xs R20 w1000 -Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "PID", "Process Path", "Command Line"])
 		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
@@ -93,11 +92,11 @@ class WindowManager {
 		this.LV.OnEvent("DoubleClick", (obj, rowN) => rowN == 0 ? 0 : WinActivate(Integer(obj.GetText(rowN, 1))))
 		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", (*) => (this.LV.Focused && (rowN := this.LV.GetNext()) != 0 ? WinActivate(Integer(this.LV.GetText(rowN, 1))) : 0))
 		;	this.LV.OnEvent("ColClick", this.onColClick.bind(this)) ; store sorting state for refresh?
-		this.guiListviewCreate(false)
+		this.guiListviewCreate(true, true)
 		if (this.settings.darkMode)
 			this.toggleGuiDarkMode(this.settings.darkMode)
-		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.settings.coords[1], this.settings.coords[2], this.settings.coords[3] - 2, this.settings.coords[4] - 32, this.settings.coords[5] == 1 ? "Maximize" : "Restore"))
 		this.insertWindowInfo(this.gui.Hwnd, 1) ;// inserts the first row to be about the windowManager itself
+		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.settings.coords[1], this.settings.coords[2], this.settings.coords[3] - 2 - 14, this.settings.coords[4] - 32 - 7, this.settings.coords[7] == 1 ? "Maximize" : "Restore"))
 		this.LV.Focus()
 	}
 
@@ -135,38 +134,52 @@ class WindowManager {
 		; DllCall("uxtheme\SetWindowTheme", "ptr", this.LV.hwnd, "str", "Explorer", "ptr", 0)
 	}
 
-	static guiListviewCreate(redraw := true) {
+	static guiListviewCreate(redraw := false, first := false, guiCtrl := false, *) {
+		this.gui.Opt("+Disabled")
+		this.LV.Opt("-Redraw")
 		this.LV.Delete()
-		for i, e in this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.showExcludedWindows)
-			this.LV.Add(, e.hwnd, e.title, e.process, e.state, e.xpos, e.ypos, e.width, e.height, e.class, e.pid, e.processPath, e.commandLine)
-		Loop (this.LV.GetCount("Col"))
-			this.LV.ModifyCol(A_Index, "+AutoHdr")
-		Loop (5)
-			this.LV.ModifyCol(A_Index + 3, "+Integer")
-		this.LV.ModifyCol(1, "+Integer")
-		this.LV.ModifyCol(10, "+Integer")
-		if (!this.settings.getCommandLine)
-			this.LV.ModifyCol(12, "0")
-		this.gui["WindowCount"].Value := Format("Window Count: {:5}", (c := this.LV.GetCount()) - 1)
-		if (redraw) {
-			if (c + 1 > 40) ; redraw -> adjust for insertWindowInfo on first; +1 for empty space
-				this.LV.Move(, , , 640)
-			else if (c >= 20)
-				this.LV.Move(, , , 45 + c * 17)
-			else
-				this.LV.Move(, , , 368)
-			this.gui.Show("Autosize")
+		static winInfo := []
+		if (!guiCtrl)
+			winInfo := this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.showExcludedWindows)
+		for i, win in winInfo
+			if (this.isIncludedInSearch(win))
+				this.LV.Add(, win.hwnd, win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
+		this.gui["WindowCount"].Value := Format("Window Count: {:5}", this.LV.GetCount() + (first ? 1 : 0))
+		if (this.LV.GetCount() == 0)
+			this.LV.Add("", "/", "Nothing Found.")
+		if (first) {
+			Loop (5)
+				this.LV.ModifyCol(A_Index + 3, "+Integer")
+			this.LV.ModifyCol(1, "+Integer")
+			this.LV.ModifyCol(10, "+Integer")
 		}
+		if (redraw) {
+			Loop (this.LV.GetCount("Col"))
+				this.LV.ModifyCol(A_Index, "+AutoHdr")
+		}
+		this.LV.Opt("+Redraw")
+		this.gui.Opt("-Disabled")
+	}
+
+	static isIncludedInSearch(win) {
+		search := this.gui["EditFilterWindows"].Value
+		if (search == "")
+			return true
+		for i, e in win.OwnProps()
+			if (InStr(e, search))
+				return true
+		return false 
 	}
 
 	static insertWindowInfo(wHandle, rowN) {
-		t := this.getWindowInfo(wHandle)
-		this.LV.Insert(rowN, , t.hwnd, t.title, t.process, t.state, t.xpos, t.ypos, t.width, t.height, t.class, t.pid, t.processPath, t.commandLine)
+		t := this.getWindowInfo(wHandle) 
+		this.LV.Insert(rowN, , t.hwnd, t.title, t.process, this.settings.coords[7], this.settings.coords[1], this.settings.coords[2], this.settings.coords[3], this.settings.coords[4], t.class, t.pid, t.processPath, t.commandLine)
 	}
 
 	static getAllWindowInfo(getHidden := false, notExclude := false) {
 		windows := []
 		tMM := A_TitleMatchMode
+		dHW := A_DetectHiddenWindows
 		SetTitleMatchMode("RegEx")
 		DetectHiddenWindows(getHidden)
 		if (notExclude)
@@ -176,6 +189,7 @@ class WindowManager {
 		for i, wHandle in wHandles
 			windows.push(this.getWindowInfo(wHandle))
 		SetTitleMatchMode(tMM)
+		DetectHiddenWindows(dHW)
 		return windows
 	}
 
@@ -191,7 +205,7 @@ class WindowManager {
 			pid := WinGetPID(wHandle)
 			if (this.settings.getCommandLine)
 				cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
-			; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = 23944" in powershell btw
+			; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
 		}
 		return {
 			hwnd: wHandle,
@@ -266,7 +280,7 @@ class WindowManager {
 					}
 				}
 			case "116":	;// F5 Key -> Reload
-				this.guiListviewCreate(false)
+				this.guiListviewCreate()
 			default:
 				return
 		}
@@ -285,7 +299,7 @@ class WindowManager {
 			default:
 				return
 		}
-		this.guiListviewCreate(false)
+		this.guiListviewCreate(true)
 	}
 
 	; ------------------------- MENU FUNCTIONS -------------------------
