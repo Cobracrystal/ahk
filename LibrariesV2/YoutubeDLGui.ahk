@@ -251,7 +251,7 @@ class YoutubeDLGui {
 		this.gui.Opt("+Disabled")
 		settingsGui.OnEvent("Escape", settingsGUIClose)
 		settingsGui.OnEvent("Close", settingsGUIClose)
-
+		settingsGui.OnEvent("DropFiles", settingsGUIDropFiles)
 		settingsGui.AddText("Center Section", "Settings for YoutubeDL Gui")
 		settingsGui.AddCheckbox("vCheckboxUseAliases Checked" this.settings.useAliases, "Use aliases for arguments").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxDownloadPlaylist Checked" . !this.options["no-playlist"].selected, "Download playlist?").OnEvent("Click", this.settingsHandler.bind(this))
@@ -259,12 +259,15 @@ class YoutubeDLGui {
 		settingsGui.AddCheckbox("vCheckboxTrySelectFile Checked" this.settings.trySelectFile, "Try Selecting File When Opening Explorer (Experimental)").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxResetConvertToAudio Checked" this.settings.resetConverttoAudio, "Always Start with `"Convert To Audio`" Off").OnEvent("Click", this.settingsHandler.bind(this))
 
-		settingsGui.AddButton("vButtonOutputPath xs-1", "Choose Output Path").OnEvent("Click", this.settingsHandler.bind(this))
-		this.controls.editOutputPath := settingsGui.AddEdit("xs r1 w400 -Multi Readonly", this.settings.outputPath)
-		settingsGui.AddButton("vButtonFFmpegPath xs-1", "Choose FFmpeg Path").OnEvent("Click", this.settingsHandler.bind(this))
-		this.controls.editFFmpegPath := settingsGui.AddEdit("xs r1 w400 -Multi Readonly", this.settings.ffmpegPath)
-		settingsGui.AddButton("vButtonYTDLPath xs-1", "Choose YTDL Executable Path").OnEvent("Click", this.settingsHandler.bind(this))
-		this.controls.editYTDLPath := settingsGui.AddEdit("xs r1 w400 -Multi Readonly", this.settings.ytdlPath)
+		settingsGui.AddText("xs", "Output Path:")
+		this.controls.editOutputPath := settingsGui.AddEdit("yp-3 xp+70 r1 w250 -Multi Readonly", this.settings.outputPath)
+		settingsGui.AddButton("vButtonOutputPath yp-1 xp+255", "Browse...").OnEvent("Click", this.settingsHandler.bind(this))
+		settingsGui.AddText("xs", "FFMpeg Path:")
+		this.controls.editFFmpegPath := settingsGui.AddEdit("yp-3 xp+70 r1 w250 -Multi Readonly", this.settings.ffmpegPath)
+		settingsGui.AddButton("vButtonFFmpegPath yp-1 xp+255", "Browse...").OnEvent("Click", this.settingsHandler.bind(this))
+		settingsGui.AddText("xs", "YTDL Path:")
+		this.controls.editYTDLPath := settingsGui.AddEdit("yp-3 xp+70 r1 w250 -Multi Readonly", this.settings.ytdlPath)
+		settingsGui.AddButton("vButtonYTDLPath yp-1 xp+255", "Browse...").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddButton("xs-1", "Reset Settings").OnEvent("Click", resetSettings)
 		settingsGui.Show(Format("x{1}y{2} Autosize", this.data.coords[1] + 20, this.data.coords[2] + 20))
 
@@ -285,6 +288,28 @@ class YoutubeDLGui {
 		settingsGUIClose(*) {
 			this.gui.Opt("-Disabled")
 			settingsGui.Destroy()
+		}
+
+		settingsGUIDropFiles(guiObj, guiCtrlObj, fileArray, x, y) {
+			for i, fileP in fileArray {
+				if (RegexMatch(fileP, ".*\\(?:youtube-dl|yt-dlp)\.exe$")) {
+					this.settings.ytdlPath := fileP
+					this.controls.editYTDLPath.Value := fileP
+					this.ytdlOptionHandler() ; just updates the thing
+				}
+				else if (RegExMatch(fileP, ".*\\ffmpeg\.exe$")) {
+					this.settings.ffmpegPath := fileP
+					this.controls.editFFmpegPath.value := fileP
+					this.ytdlOptionHandler("ffmpeg-location", , fileP)
+				}
+				else if (InStr(FileExist(fileP), "D")) {
+					this.settings.outputPath := RegexReplace(fileP, "\\$")
+					this.controls.editOutputPath.value := fileP
+					this.settings.outputPattern := this.settings.outputPath . "\%(title)s.%(ext)s"
+					this.ytdlOptionHandler("output", , this.settings.outputPattern)
+				}
+			}
+			this.settingsManager("Save")
 		}
 	}
 
