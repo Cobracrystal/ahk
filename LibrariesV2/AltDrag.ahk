@@ -46,7 +46,6 @@ class AltDrag {
 		this.boolSnapping := true
 		this.monitors := Map()
 		this.blacklist := [
-			"Program Manager ahk_class Progman"
 			"ahk_class MultitaskingViewFrame ahk_exe explorer.exe",
 			"ahk_class Windows.UI.Core.CoreWindow",
 			"ahk_class WorkerW ahk_exe explorer.exe",
