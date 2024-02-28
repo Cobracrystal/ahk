@@ -42,47 +42,83 @@ class HotkeyManager {
 		this.gui := Gui("+Border", "Hotkey Manager")
 		this.gui.OnEvent("Escape", (*) => this.hotkeyManager("Close"))
 		this.gui.OnEvent("Close", (*) => this.hotkeyManager("Close"))
+		OnMessage(0x0100, this.onKeyPress.bind(this))
+		this.gui.AddEdit("vEditFilterHotkeys").OnEvent("Change", (ctrlObj, Info) => this.guiListviewCreate(this.tabObj.Value, false, false))
 		this.data.scripts := this.getFullScript(A_ScriptFullPath)
 		this.data.hotkeys := this.getHotkeys()
 		this.data.savedHotkeys := this.getSavedHotkeys()	
 		this.data.hotstrings := this.getHotstrings()	
-		tabObj := this.gui.AddTab3("w526 h500", ["AHK Hotkeys", "Other Hotkeys", "Hotstrings", "Settings"])
-		tabObj.UseTab(1)
+		this.tabObj := this.gui.AddTab3("w526 h500", ["AHK Hotkeys", "Other Hotkeys", "Hotstrings", "Settings"])
+		this.tabObj.UseTab(1)
 			this.lv[1] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Keys", "Comment", "Source"])
-			for i, e in this.data.hotkeys {
-				SplitPath(e.file, &fileName)
-				this.lv[1].Add(,e.line, e.hotkey, e.comment, fileName)
-			}
-			Loop(this.lv[1].GetCount("Col"))
-				this.lv[1].ModifyCol(A_Index,"AutoHdr")
-			this.lv[1].ModifyCol(1,"Integer")
+			this.guiListviewCreate(1, true, true)
 			this.lv[1].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' obj.GetText(rowN, 1)) : 0)
-			
-		tabObj.UseTab(2)	
+		this.tabObj.UseTab(2)	
 			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["Keys","Program","Comment"])
-			for i, e in this.data.savedHotkeys
-				this.lv[2].Add(,e.hotkey, e.program, e.comment)
-			Loop(this.lv[2].GetCount("Col"))
-				this.lv[2].ModifyCol(A_Index,"AutoHdr")
+			this.guiListviewCreate(2, true, true)
 			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile("Notepad++", this.data.savedHotkeysPath) : 0)
-		tabObj.UseTab(3)
+		this.tabObj.UseTab(3)
 			this.lv[3] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Options", "Text", "Correction", "Comment", "Source"])
-			for i, e in this.data.hotstrings {
-				SplitPath(e.file, &fileName)
-				this.lv[3].Add(,e.line, e.options, e.hotstring, e.replaceString, e.comment, fileName)
-			}
-			Loop(this.lv[3].GetCount("Col"))
-				this.lv[3].ModifyCol(A_Index,"AutoHdr")
-			this.lv[3].ModifyCol(1,"Integer")
+			this.guiListviewCreate(3, true, true)
 			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' obj.GetText(rowN, 1)) : 0)
-		tabObj.UseTab(4)
+		this.tabObj.UseTab(4)
 		this.gui.AddText(,"SETTINGS HERE LATER")
-		tabObj.UseTab()
-		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", this.onKeyPress.bind(this))
+		this.tabObj.UseTab()
+		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", this.onEnter.bind(this))
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords[1], this.data.coords[2]))
 	}
 
-	static onKeyPress(*) {
+	static guiListviewCreate(num, first := false, redraw := false) {
+		if (num < 1 || num > 3)
+			return 0
+		this.gui.Opt("+Disabled")
+		this.lv[num].Opt("-Redraw")
+		this.lv[num].Delete()
+		switch num {
+			case 1:
+				for i, e in this.data.hotkeys {
+					if (this.isIncludedInSearch(e)) {
+						SplitPath(e.file, &fileName)
+						this.lv[1].Add(,e.line, e.hotkey, e.comment, fileName)
+					}
+				}
+			case 2:
+				for i, e in this.data.savedHotkeys
+					if (this.isIncludedInSearch(e))
+						this.lv[2].Add(,e.hotkey, e.program, e.comment)
+			case 3:
+				for i, e in this.data.hotstrings {
+					if (this.isIncludedInSearch(e)) {
+						SplitPath(e.file, &fileName)
+						this.lv[3].Add(,e.line, e.options, e.hotstring, e.replaceString, e.comment, fileName)
+					}
+				}
+		}
+		if (this.lv[num].GetCount() == 0)
+			this.LV[num].Add("", "/", "Nothing Found.")
+		if (first) {
+			if (num != 2)
+				this.lv[num].ModifyCol(1,"Integer")
+		}
+		if (redraw) {
+			Loop(this.lv[num].GetCount("Col"))
+				this.lv[num].ModifyCol(A_Index,"AutoHdr")
+		}
+		this.lv[num].Opt("+Redraw")
+		this.gui.Opt("-Disabled")
+	}
+
+	static isIncludedInSearch(hkeyObj) {
+		search := this.gui["EditFilterHotkeys"].Value
+		if (search == "")
+			return true
+		for i, e in hkeyObj.OwnProps()
+			if (InStr(e, search) && i != "file")
+				return true
+		return false 
+	}
+
+	static onEnter(*) {
 		ctrl := this.gui.FocusedCtrl
 		switch ctrl {
 			case this.lv[1], this.lv[3]:
@@ -92,6 +128,23 @@ class HotkeyManager {
 			case this.lv[2]:
 				if (ctrl.GetNext())
 					tryEditTextFile("Notepad++", this.data.savedHotkeysPath)
+		}
+	}
+
+	static onKeyPress(wParam, lParam, msg, hwnd) {
+		if (ctrl := GuiCtrlFromHwnd(hwnd)) {
+			if (ctrl.gui == this.gui) {
+				switch wParam {
+					case "70": ; ctrl F
+						if (GetKeyState("Ctrl")) {
+							this.gui["EditFilterHotkeys"].Focus()
+						}
+					case "116":	;// F5 Key -> Reload
+						this.guiListviewCreate(this.tabObj.Value, false, false)
+					default:
+						return
+				}
+			}
 		}
 	}
 
