@@ -418,7 +418,7 @@ class DesktopState {
 				logString .= "Failed updating hwnd " e.hwnd ": " WinGetTitle(e.hwnd) . " with reason `"" err.Message "`" in function " err.What "`n"
 			}
 		}
-		if (logString)
+		if (IsSet(logString))
 			msgbox(logString)
 	}
 }
