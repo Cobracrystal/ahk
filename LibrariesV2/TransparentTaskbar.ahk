@@ -80,6 +80,7 @@ class TransparentTaskbar {
 	
 	static updateTaskbarTimer(override := false) {
 		static index := 0
+		static lastError := 0
 		ListLines(this.logStatus)
 		if (this.sessionIsLocked()) {
 			if (!this.isLocked) {
@@ -119,9 +120,18 @@ class TransparentTaskbar {
 			}
 		} catch Error as e {
 			ListLines(1)
-			MsgBox("Error: " e.Message " in " e.What "`nTaskbar Transparency has been turned off.")
-			this.transparentTaskbar(0)
-			this.init := 0
+			if (A_TickCount - lastError < 5500) {
+				MsgBox("Error: " e.Message " in " e.What "`nTaskbar Transparency has been turned off.")
+				try
+					this.transparentTaskbar(0)
+				this.init := 0
+			}
+			else {
+				lastError := A_TickCount
+				try
+					this.transparentTaskbar(0)
+				SetTimer(() => (this.initialize(), this.transparentTaskbar(1)), -5000)
+			}
 		}
 	}
 	
@@ -148,8 +158,8 @@ class TransparentTaskbar {
 		return maximizedMonitors
 	}
 
-	static get_window_monitor_number(window_id) {
-		WinGetPos(&xpos, &ypos, &width, &height, "ahk_id " . window_id)
+	static get_window_monitor_number(hwnd) {
+		WinGetPos(&xpos, &ypos, &width, &height, hwnd)
 		winMiddleX := xpos + width/2
 		for i, e in this.monitors
 			if (winMiddleX > e.Left && winMiddleX < e.Right)
