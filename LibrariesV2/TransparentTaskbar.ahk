@@ -7,7 +7,7 @@
 class TransparentTaskbar {
 	
 	static transparentTaskbar(mode := 0, newPeriod := -1, debug := 0, *) {
-		; mode = 0 (turn off), 1 (turn on), -1 or T[...] (toggle)
+		; mode = 0 (turn off), 1 (turn on), -1 or T... (toggle)
 		this.logStatus := debug
 		if (!this.init)
 			this.initialize()
@@ -60,13 +60,14 @@ class TransparentTaskbar {
 	static initialize() {
 		try {
 			DetectHiddenWindows(1)
-			mP := MonitorGetPrimary()
-			tHWND := WinGetID("ahk_class Shell_TrayWnd")
-			this.trayHandles[mP] := tHWND ; DllCall("user32\FindWindow", "str", "Shell_TrayWnd", "ptr", 0, "ptr")
+			this.trayHandles[MonitorGetPrimary()] := WinGetID("ahk_class Shell_TrayWnd") 
+			; DllCall("user32\FindWindow", "str", "Shell_TrayWnd", "ptr", 0, "ptr") otherwise. WinExist doesn't throw an error.
 			hSecondaryTray := WinGetList("ahk_class Shell_SecondaryTrayWnd")
-			for i, e in hSecondaryTray
-				this.trayHandles[this.get_window_monitor_number(e)] := e
-		}
+			for i, h in hSecondaryTray
+				this.trayHandles[this.get_window_monitor_number(h)] := h
+		} 
+		catch Error
+			return
 		this.init := true
 	}
 	
@@ -80,7 +81,7 @@ class TransparentTaskbar {
 	
 	static updateTaskbarTimer(override := false) {
 		static index := 0
-		static lastError := 0
+		static lastError := A_TickCount - 5500 ; so that one retry is guaranteed on startup
 		ListLines(this.logStatus)
 		if (this.sessionIsLocked()) {
 			if (!this.isLocked) {
@@ -120,18 +121,13 @@ class TransparentTaskbar {
 			}
 		} catch Error as e {
 			ListLines(1)
-			if (A_TickCount - lastError < 5500) {
+			this.transparentTaskbar(0)
+			this.init := 0
+			if (A_TickCount - lastError < 5500)
 				MsgBox("Error: " e.Message " in " e.What "`nTaskbar Transparency has been turned off.")
-				try
-					this.transparentTaskbar(0)
-				this.init := 0
-			}
-			else {
-				lastError := A_TickCount
-				try
-					this.transparentTaskbar(0)
-				SetTimer(() => (this.initialize(), this.transparentTaskbar(1)), -5000)
-			}
+			else
+				SetTimer(() => (this.transparentTaskbar(1)), -5000)
+			lastError := A_TickCount
 		}
 	}
 	
