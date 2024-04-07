@@ -5,7 +5,8 @@
 ; // if key is held down for a while, log it only once
 #Requires Autohotkey v2+
 #SingleInstance Force
-
+#Warn All, Off
+A_HotkeyInterval := 0
 ; LogKey() {
 ; 	Key := RegExReplace(asc(SubStr(A_ThisHotkey,0)),"^0x")
 ; 	FileAppend, % (StrLen(Key) == 1 ? "0" : "") . Key, Log.log

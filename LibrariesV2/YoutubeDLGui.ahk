@@ -260,7 +260,7 @@ class YoutubeDLGui {
 		settingsGui.AddCheckbox("vCheckboxResetConvertToAudio Checked" this.settings.resetConverttoAudio, "Always Start with `"Convert To Audio`" Off").OnEvent("Click", this.settingsHandler.bind(this))
 
 		settingsGui.AddText("xs 0x200 R1.45", "Output Path:")
-		this.controls.editOutputPath := settingsGui.AddEdit("yp r1 w250 -Multi Readonly", this.settings.outputPath)
+		this.controls.editOutputPath := settingsGui.AddEdit("xp+70 yp r1 w250 -Multi Readonly", this.settings.outputPath)
 		settingsGui.AddButton("vButtonOutputPath yp-1 xp+255", "Browse...").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddText("xs", "FFMpeg Path:")
 		this.controls.editFFmpegPath := settingsGui.AddEdit("yp-3 xp+70 r1 w250 -Multi Readonly", this.settings.ffmpegPath)

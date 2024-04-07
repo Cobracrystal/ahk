@@ -20,7 +20,7 @@ class TransparentTaskbar {
 		}
 		else if (mode == 0) {
 			SetTimer(this.taskbar_timer, 0)
-			this.reset()
+			this.reset(1)
 			TrayMenu.submenus["Timers"].Uncheck("Taskbar Transparency Timer")
 			this.onOffStatus := false
 		}
@@ -53,26 +53,34 @@ class TransparentTaskbar {
 		this.onOffStatus := false
 		this.taskbarTransparency := [-1,-1]
 		this.trayHandles := Map()
-		this.monitors := this.getMonitors()
 		this.initialize()
 	}
 	
 	static initialize() {
 		try {
+			this.monitors := this.getMonitors()
+			relevantMonitors := []
 			DetectHiddenWindows(1)
 			this.trayHandles[MonitorGetPrimary()] := WinGetID("ahk_class Shell_TrayWnd") 
 			; DllCall("user32\FindWindow", "str", "Shell_TrayWnd", "ptr", 0, "ptr") otherwise. WinExist doesn't throw an error.
 			hSecondaryTray := WinGetList("ahk_class Shell_SecondaryTrayWnd")
 			for i, h in hSecondaryTray
 				this.trayHandles[this.get_window_monitor_number(h)] := h
-		} 
+			for i, m in this.monitors { ; only include monitors that have a taskbar on them
+				if (this.trayHandles.Has(m.MonitorNumber))
+					relevantMonitors.push(m)
+			}
+			this.monitors := relevantMonitors
+		}
 		catch Error
 			return
 		this.init := true
 	}
 	
-	static reset() {
+	static reset(hard := false) {
 		this.taskbarTransparency := [-1,-1]
+		if (hard)
+			this.init := false
 		try for i, e in this.monitors
 			this.TaskBar_SetAttr(1, e.MonitorNumber, this.taskbar_accent_color, this.taskbar_accent_transparency)
 		catch Error

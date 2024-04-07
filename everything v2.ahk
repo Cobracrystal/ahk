@@ -57,7 +57,6 @@ youtubeDL := YoutubeDLGui()
 reminders.setPeriodicTimerOn(parseTime(, 11, 21, 8, 0, 0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
 reminders.setPeriodicTimerOn(parseTime(, , , 13, 36, 50), 1, "Days", , reminders.reminder1337)
 reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
-reminders.setPeriodicTimerOn(parseTime(,,,23,0,0), 1, "D", "Eat an apple. One Apple a day.")
 reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
 ; Launch Transparent Taskbar at 50ms frequency
@@ -113,12 +112,12 @@ return
 	WindowManager.windowManager("T")
 }
 
-^F10:: {	; Neokeyboard Layout
-	NeoKeyboardLayout.KeyboardLayoutGUI("T")
-}
+; ^F10:: {	; Neokeyboard Layout
+; 	NeoKeyboardLayout.KeyboardLayoutGUI("T")
+; }
 
 ^F9:: {	; Shows Internet Connection
-	internetConnectionLogger("T")
+	internetConnectionLogger("T") 
 }
 
 ^F8:: {	; Shows Reminder GUI
