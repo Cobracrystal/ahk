@@ -50,14 +50,16 @@ GroupAdd("instantCloseWindows", "Please purchase WinRAR license ahk_class #32770
 GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND O IS CYRILLIC
 ; GroupAdd("instantCloseWindows", "Unbenannt - Editor ahk_exe notepad.exe")
 ;// set 1337 reminder
-token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
-reminders := ReminderManager()
 youtubeDL := YoutubeDLGui()
-; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
-reminders.setPeriodicTimerOn(parseTime(, 11, 21, 8, 0, 0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
-reminders.setPeriodicTimerOn(parseTime(, , , 13, 36, 50), 1, "Days", , reminders.reminder1337)
-reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
-reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
+reminders := ReminderManager()
+try {
+	token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
+	; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
+	reminders.setPeriodicTimerOn(parseTime(, 11, 21, 8, 0, 0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
+	reminders.setPeriodicTimerOn(parseTime(, , , 13, 36, 50), 1, "Days", , reminders.reminder1337)
+	reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
+	reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
+}
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
 ; Launch Transparent Taskbar at 50ms frequency
 TransparentTaskbar.TransparentTaskbar(1, 50)
@@ -68,7 +70,7 @@ SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't in
 ; Initialize Internet Logging Script
 internetConnectionLogger("Init", A_Desktop "\programs\programming\bat\log.txt")
 ; Load LaTeX Hotstrings
-HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX")
+try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX")
 ; replace the tray menu with my own
 customTrayMenu()
 ; Synchronize nextDNS IP
