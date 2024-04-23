@@ -339,9 +339,9 @@ class YoutubeDLGui {
 			this.settings := {}
 			if (FileExist(this.data.savePath "\ahk_settings.json")) {
 				s := FileRead(this.data.savePath "\ahk_settings.json", "UTF-8")
-				try settings := jsongo.Parse(s)
+				try this.settings := jsongo.Parse(s)
 			}
-			this.settings := MapToObj(settings, true)
+			this.settings := MapToObj(this.settings, true)
 			for i, e in YoutubeDLGui.getDefaultSettings().OwnProps() {
 				if !(this.settings.HasOwnProp(i))
 					this.settings.%i% := e
