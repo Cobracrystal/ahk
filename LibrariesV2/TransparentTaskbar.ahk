@@ -57,6 +57,7 @@ class TransparentTaskbar {
 	}
 	
 	static initialize() {
+		this.init := false
 		try {
 			this.monitors := this.getMonitors()
 			relevantMonitors := []
