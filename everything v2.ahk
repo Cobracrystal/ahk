@@ -580,7 +580,8 @@ internetConnectionLogger(mode := "T", path := "") {
 		if (WinExist("INTERNET_LOGGER"))
 			internetConsolePID := WinGetPID("INTERNET_LOGGER")
 		else {
-			Run(A_ComSpec . ' /c "title INTERNET_LOGGER && mode con: cols=65 lines=10 && powershell ' A_Desktop '\programs\programming\bat\internetLogger.ps1 -path "' . logFile . '""', , "Hide", &internetConsolePID)
+			str := A_ComSpec . ' /c "title INTERNET_LOGGER && mode con: cols=65 lines=10 && powershell Set-ExecutionPolicy Bypass -Scope Process -Force; ' A_Desktop '\programs\programming\bat\internetLogger.ps1 -path "' . logFile . '""' 
+			Run(str, , "Hide" , &internetConsolePID)
 			WinWait("INTERNET_LOGGER")
 			WinSetAlwaysOnTop(1, "INTERNET_LOGGER")
 		}
