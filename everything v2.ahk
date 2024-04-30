@@ -62,7 +62,8 @@ try {
 }
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
 ; Launch Transparent Taskbar at 50ms frequency
-TransparentTaskbar.TransparentTaskbar(1, 50)
+if (StrCompare(A_OSVersion, "10.0.22000") < 0)
+	TransparentTaskbar.TransparentTaskbar(1, 50)
 ; Start keeping track of desktop window changes
 DesktopState.enable(60000)
 ; Start Loop to close winrar popups
