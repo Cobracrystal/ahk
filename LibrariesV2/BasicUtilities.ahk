@@ -75,7 +75,7 @@ modifySelectedText(method, params*) {
 		return
 	}
 	A_Clipboard := method(A_Clipboard, params*)
-	SendEvent("^v")
+	Send("^v")
 	Sleep(150)
 	A_Clipboard := ClipboardOld
 	return 1

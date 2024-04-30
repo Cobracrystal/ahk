@@ -92,8 +92,6 @@ class TextEditMenu {
 		c := ""
 		for i, e in StrSplitUTF8(text) {
 			caseFormat := Random(0, 1)
-			if (e == "ß" || e == "ẞ")
-				c := caseFormat ? "ß" : "ẞ"
 			if (caseFormat)
 				c := Format("{:U}", e)
 			else

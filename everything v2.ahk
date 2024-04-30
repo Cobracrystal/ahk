@@ -437,19 +437,27 @@ F11:: { 	; BTD6: Rebind Escape
 toggleNumpadMouseMove() {
 	static init := 0
 	if !(init) {
+		Hotkey("Numpad1", moveMousePixel.bind(-1, 1))
 		Hotkey("Numpad2", moveMousePixel.bind(0, 1))
+		Hotkey("Numpad3", moveMousePixel.bind(1, 1))
 		Hotkey("Numpad4", moveMousePixel.bind(-1, 0))
 		Hotkey("Numpad6", moveMousePixel.bind(1, 0))
+		Hotkey("Numpad7", moveMousePixel.bind(-1, -1))
 		Hotkey("Numpad8", moveMousePixel.bind(0, -1))
+		Hotkey("Numpad9", moveMousePixel.bind(1, -1))
 		Hotkey("NumpadEnter", clickMouse.Bind("L", 0))
 		Hotkey("NumpadAdd", clickMouse.Bind("L", 1))
 		init := 1
 		return
 	}
+	Hotkey("Numpad1", "Toggle")
 	Hotkey("Numpad2", "Toggle")
+	Hotkey("Numpad3", "Toggle")
 	Hotkey("Numpad4", "Toggle")
 	Hotkey("Numpad6", "Toggle")
+	Hotkey("Numpad7", "Toggle")
 	Hotkey("Numpad8", "Toggle")
+	Hotkey("Numpad9", "Toggle")
 	Hotkey("NumpadEnter", "Toggle")
 	Hotkey("NumpadAdd", "Toggle")
 }
