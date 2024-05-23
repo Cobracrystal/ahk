@@ -552,14 +552,14 @@ GetWindowPlacement(hwnd) {
 	Wo := NumGet(WP, 36, "Int") - Lo   ; Width of the window in its original restored state
 	Ho := NumGet(WP, 40, "Int") - To   ; Height of the window in its original restored state
 
-	CMD := NumGet(WP, 8, "Int") ; ShowCMD
+	mmx := NumGet(WP, 8, "Int") ; ShowCMD
 	flags := NumGet(WP, 4, "Int")  ; flags
 	MinX := NumGet(WP, 12, "Int")
 	MinY := NumGet(WP, 16, "Int")
 	MaxX := NumGet(WP, 20, "Int")
 	MaxY := NumGet(WP, 24, "Int")        
 
-	return { X: Lo, Y: to, W: Wo, H: Ho , cmd: CMD, flags: flags, MinX: MinX, MinY: MinY, MaxX: MaxX, MaxY: MaxY }
+	return { X: Lo, Y: to, W: Wo, H: Ho , mmx: mmx, flags: flags, MinX: MinX, MinY: MinY, MaxX: MaxX, MaxY: MaxY }
 }
 
 SetWindowPlacement(hwnd:="", X:="", Y:="", W:="", H:="", action := 9) {        

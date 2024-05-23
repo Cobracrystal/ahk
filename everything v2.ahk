@@ -354,7 +354,7 @@ F11:: { 	; BTD6: Rebind Escape
 }
 
 
-^NumpadMult:: {	; Show Mouse Coordinates
+^NumpadDiv:: {	; Show Mouse Coordinates
 	static toggle := false
 	if (toggle := !toggle)
 		SetTimer(showcoords, 50)
@@ -877,3 +877,25 @@ makeTextAnsiColorful(str) {
 ; 	fastPrint(text)
 ; }
 
+#HotIf WinActive('doujinshi and manga – Opera')
+Right::{
+	Send("{Right}")
+	Send("{Home}")
+}
+#HotIf
+
+^NumpadSub::{ ; Clip mouse to active windows' client area
+	static toggle := 0
+	if (toggle := !toggle)
+		clipCursor(1)
+	else
+		clipCursor(0)
+}
+
+clipCursor(mode := true, window := "A") {
+	WinGetClientPos(&wx, &wy, &ww, &wh, WinExist(window))
+	if (!mode)
+		return !DllCall("ClipCursor", "Ptr", 0)
+	NumPut("UInt", wx, "UInt", wy, "UInt", wx+ww, "UInt", wy+wh, llrectA := Buffer(16, 0), 0)
+	return DllCall("ClipCursor", "Ptr", llrectA)
+}
