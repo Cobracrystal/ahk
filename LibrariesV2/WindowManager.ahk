@@ -127,9 +127,6 @@ class WindowManager {
 				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
 				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
 			}
-			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
-				this.validValueChecker(ctrl)
-			}
 		}
 		; todo: setting to make this look like this ? 
 		; DllCall("uxtheme\SetWindowTheme", "ptr", this.LV.hwnd, "str", "Explorer", "ptr", 0)
