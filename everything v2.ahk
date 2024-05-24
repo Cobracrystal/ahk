@@ -49,18 +49,12 @@ GroupAdd("instantCloseWindows", "ahk_class RarReminder")
 GroupAdd("instantCloseWindows", "Please purchase WinRAR license ahk_class #32770")
 GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND O IS CYRILLIC
 ; GroupAdd("instantCloseWindows", "Unbenannt - Editor ahk_exe notepad.exe")
-;// set 1337 reminder
 youtubeDL := YoutubeDLGui()
-reminders := ReminderManager()
-try {
-	token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
-	; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
-	reminders.setPeriodicTimerOn(parseTime(, 11, 21, 8, 0, 0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
-	reminders.setPeriodicTimerOn(parseTime(, , , 13, 36, 50), 1, "Days", , reminders.reminder1337)
-	reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
-	reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
-}
-; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
+reminders := ReminderManager(,,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
+reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json")
+; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
+; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
+; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
 if (StrCompare(A_OSVersion, "10.0.22000") < 0)
 	TransparentTaskbar.TransparentTaskbar(1, 50)
