@@ -195,6 +195,8 @@ embedder(ByRef req, ByRef res, ByRef server) {
 	outputF := A_WorkingDir . "\embedder\" . RegExReplace(probablyUrl, "[\?<>\/\\\*""|:]", "")
 	if (!FileExist(outputF . ".*")) {
 		cmd = %ytdlPath% --ignore-config --limit-rate "5M" --no-playlist --no-overwrites --retries "0" --format "(bv+ba/b/bv*)[filesize<=?5MB]" -S "filesize:5M" --output "%outputF%.`%(ext)s" "%probablyUrl%"
+		; if (InStr(probablyUrl, "twitter.com"))
+		; 	cmd = %ytdlPath% --ignore-config --limit-rate "5M" --no-playlist --no-overwrites --retries "0" --format "bv+ba/b" -S "height:480" --output "%outputF%.`%(ext)s" "%probablyUrl%"		
 		RunWait, %cmd% ; ,, Hide
 	}
 	if (FileExist(outputF . ".*")) {
