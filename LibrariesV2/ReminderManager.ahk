@@ -20,7 +20,8 @@ class ReminderManager {
 		guiMenu.Add("Open Reminder Manager", this.reminderManagerGUI.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
 		this.data := { coords: [565, 300] }
-		this.guiVars := { 1: ["rem1Message", "rem1S", "rem1M", "rem1H", "rem1D"], 2: ["rem2Message", "rem2S", "rem2M", "rem2H", "rem2D", "rem2Mo"] }
+		this.guiVars := { 1: ["rem1Message", "rem1S", "rem1M", "rem1H", "rem1D"], 
+						  2: ["rem2Message", "rem2S", "rem2M", "rem2H", "rem2D", "rem2Mo"] }
 		this.gui := -1
 		this.LV := -1
 		this.settings := { initialized: 1, flagDebug: flagDebug, token:token}
@@ -42,7 +43,7 @@ class ReminderManager {
 		time := DateAdd(time, hours, "Hours")
 		time := DateAdd(time, minutes, "Minutes")
 		time := DateAdd(time, seconds, "Seconds")
-		return this.setTimerOn(time, message, function, fparams)
+		return this.setTimerOn(time, message, function, fparams*)
 	}
 
 	/**
@@ -169,9 +170,9 @@ class ReminderManager {
 			switch function {
 				case "discordReminder", "ReminderManager.discordReminder":
 					if (fparams.Length == 1)
-						function := this.discordReminder.bind(this, fparams[1], message)
+						function := this.discordReminder.Bind(this)
 					else
-						function := this.defaultReminder.Bind(this, message)
+						function := this.defaultReminder.Bind(this)
 				case "reminder1337", "ReminderManager.reminder1337":
 					function := this.reminder1337.bind(this)
 				default:
@@ -189,10 +190,10 @@ class ReminderManager {
 				else if (name == "")
 					name := "/ (Lambda)"
 			}
-			if (message != "")
-				function := function.bind(message)
-			function := function.bind(fparams*)
 		}
+		if (message != "")
+			function := function.bind(message)
+		function := function.bind(fparams*)
 		return [function, name]
 	}
 
@@ -400,10 +401,10 @@ class ReminderManager {
 		FileOpen(filePath, "w", "UTF-8").Write(jsonString)
 	}
 
-	defaultReminder(text := "") {
+	defaultReminder(msg := "") {
 		;	L1033 -> en-US for day name.
 		message := "It is " . FormatTime("L1033", "dddd, dd.MM.yyyy, HH:mm:ss") . "`nYou set a reminder for this point in time."
-		message .= (text == "" ? "" : "`nReminder Message: " . text)
+		message .= (msg == "" ? "" : "`nReminder Message: " . msg)
 		SoundPlay("*48")
 		MsgBox(message, "Reminder")
 		return
@@ -418,11 +419,11 @@ class ReminderManager {
 			WinActivate("ahk_exe discord.exe")
 	}
 
-	discordReminder(id, text) {
+	discordReminder(msg, id) {
 		discordBot := DiscordClient(this.settings.token, false)
 		time := FormatTime("L1033", "dddd, dd.MM.yyyy, HH:mm:ss") ; L1033 -> en-US for day name.
 		message := "It is " . time . "`nYou set a reminder for this point in time."
-		message .= (text == "" ? "" : "`nReminder Message: " . text)
+		message .= (msg == "" ? "" : "`nReminder Message: " . msg)
 		discordBot.sendMessage({content:message}, id, 1)
 	}
 }
