@@ -464,7 +464,13 @@ enumerateDay(day) {
 }
 
 ExecScript(expression, Wait := true) {
-	input := '#Warn All, Off`nFileAppend(' . expression . ', "*")'
+	input := '#Warn All, Off`n'
+	if (RegexMatch(expression, 'FileAppend\(.*,\s*\"\*\"\)'))
+		input .= expression
+	else if (RegexMatch(expression, 'print\(.*\)'))
+		input .= RegexReplace(expression, "print\((.*)?\)", 'FileAppend($1, "*")')
+	else
+		input .= 'FileAppend(' . expression . ', "*")'
 	shell := ComObject("WScript.Shell")
 	exec := shell.Exec("AutoHotkey.exe /ErrorStdOut *")
 	exec.StdIn.Write(input)
