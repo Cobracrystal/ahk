@@ -51,7 +51,7 @@ GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND
 ; GroupAdd("instantCloseWindows", "Unbenannt - Editor ahk_exe notepad.exe")
 youtubeDL := YoutubeDLGui()
 reminders := ReminderManager(,,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
-reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json")
+try	reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json")
 ; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
