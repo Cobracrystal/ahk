@@ -388,11 +388,11 @@ F11:: { 	; BTD6: Rebind Escape
 			shell.TileVertically()
 	}
 	else {
-		for i, e in windowInfo {
-			if (e.state != -1)
-				WinMove(e.xpos, e.ypos, e.width, e.height, e.hwnd)
-			if (e.state == 1)
-				WinMaximize(e.hwnd)
+		for i, win in windowInfo {
+			if (win.state != -1)
+				WinMove(win.xpos, win.ypos, win.width, win.height, win.hwnd)
+			if (win.state == 1)
+				WinMaximize(win.hwnd)
 		}
 	}
 }
