@@ -75,7 +75,7 @@ modifySelectedText(method, params*) {
 		return
 	}
 	A_Clipboard := method(A_Clipboard, params*)
-	SendEvent("^v")
+	Send("^v")
 	Sleep(150)
 	A_Clipboard := ClipboardOld
 	return 1
@@ -361,13 +361,13 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				return parseTime(years, months ?? A_MM, days ?? A_DD, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
 			return 0 ; a year in the past will never occur again
 		case 2:
-			if (months == A_MM && data[2]) {
+			if (tf(months) == A_MM && data[2]) {
 				tStamp := parseTime(,, days?, hours?, minutes?, seconds?)
-				return SubStr(tStamp, 5, 2) == months ? tStamp : DateAddW(tStamp, 1, "Y")
+				return SubStr(tStamp, 5, 2) == tf(months) ? tStamp : DateAddW(tStamp, 1, "Y")
 			}
 			tStamp := A_YYYY tf(months) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (!IsTime(tStamp)) {
-				if (months == 2 && IsSet(days) && days == 29) ; leap year
+				if (tf(months) == "02" && IsSet(days) && days == 29) ; leap year
 					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
 				if (!IsTime(tStamp))
 					throw ValueError("Invalid date specified.")
@@ -378,9 +378,9 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				return parseTime(, months, days ?? A_DD, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "Y")
 		case 3:
-			if (days == A_DD && data[2]) {
+			if (tf(days) == A_DD && data[2]) {
 				tStamp := parseTime(,,, hours?, minutes?, seconds?)
-				return (SubStr(tStamp, 7, 2) == days) ? tStamp : DateAddW(tStamp, 1, "Mo")
+				return (SubStr(tStamp, 7, 2) == tf(days)) ? tStamp : DateAddW(tStamp, 1, "Mo")
 			}
 			tStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (!IsTime(tStamp)) {
@@ -397,9 +397,9 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				return parseTime(,, days, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "Mo")
 		case 4:
-			if (hours == A_Hour && data[2]) {
+			if (tf(hours) == A_Hour && data[2]) {
 				tStamp := parseTime(,,,, minutes?, seconds?)
-				return (SubStr(tStamp, 9, 2) == hours) ? tStamp : DateAddW(tStamp, 1, "D")
+				return (SubStr(tStamp, 9, 2) == tf(hours)) ? tStamp : DateAddW(tStamp, 1, "D")
 			}
 			tStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (DateDiff(tStamp, Now, "S") >= 0)
@@ -408,9 +408,9 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				return parseTime(,,, hours, minutes ?? A_Min, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "D")
 		case 5:
-			if (minutes == A_Min) {
+			if (tf(minutes) == A_Min) {
 				tStamp := parseTime(,,,,, seconds?)
-					return SubStr(tStamp, 11, 2) == minutes ? tStamp : 0
+					return SubStr(tStamp, 11, 2) == tf(minutes) ? tStamp : 0
 			}
 			tStamp := SubStr(Now, 1, 10) . tf(minutes) . tf(seconds ?? 0)
 			if (DateDiff(tStamp, Now, "S") >= 0)
@@ -464,7 +464,13 @@ enumerateDay(day) {
 }
 
 ExecScript(expression, Wait := true) {
-	input := '#Warn All, Off`nFileAppend(' . expression . ', "*")'
+	input := '#Warn All, Off`n'
+	if (RegexMatch(expression, 'FileAppend\(.*,\s*\"\*\"\)'))
+		input .= expression
+	else if (RegexMatch(expression, 'print\(.*\)'))
+		input .= RegexReplace(expression, "print\((.*)?\)", 'FileAppend($1, "*")')
+	else
+		input .= 'FileAppend(' . expression . ', "*")'
 	shell := ComObject("WScript.Shell")
 	exec := shell.Exec("AutoHotkey.exe /ErrorStdOut *")
 	exec.StdIn.Write(input)
@@ -552,14 +558,14 @@ GetWindowPlacement(hwnd) {
 	Wo := NumGet(WP, 36, "Int") - Lo   ; Width of the window in its original restored state
 	Ho := NumGet(WP, 40, "Int") - To   ; Height of the window in its original restored state
 
-	CMD := NumGet(WP, 8, "Int") ; ShowCMD
+	mmx := NumGet(WP, 8, "Int") ; ShowCMD
 	flags := NumGet(WP, 4, "Int")  ; flags
 	MinX := NumGet(WP, 12, "Int")
 	MinY := NumGet(WP, 16, "Int")
 	MaxX := NumGet(WP, 20, "Int")
 	MaxY := NumGet(WP, 24, "Int")        
 
-	return { X: Lo, Y: to, W: Wo, H: Ho , cmd: CMD, flags: flags, MinX: MinX, MinY: MinY, MaxX: MaxX, MaxY: MaxY }
+	return { X: Lo, Y: to, W: Wo, H: Ho , mmx: mmx, flags: flags, MinX: MinX, MinY: MinY, MaxX: MaxX, MaxY: MaxY }
 }
 
 SetWindowPlacement(hwnd:="", X:="", Y:="", W:="", H:="", action := 9) {        

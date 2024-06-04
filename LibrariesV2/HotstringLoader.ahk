@@ -12,6 +12,8 @@ class HotstringLoader {
 	}
 
 	static load(filePath, name?, addMenu := true, register := true, encoding := "UTF-8") {
+		if (!FileExist(filepath))
+			throw TargetError("Nonexistent Hotstring File Given")
 		jsonStr := FileRead(filePath, encoding)
 		hotstringObj := jsongo.Parse(jsonStr)
 		index := name ?? this.hotstrings.Count + 1

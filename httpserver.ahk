@@ -3,6 +3,7 @@
 #include %A_ScriptDir%\Libraries\AHKhttp.ahk
 #include %A_ScriptDir%\Libraries\AHKsock.ahk
 #include %A_ScriptDir%\Libraries\BasicUtilities.ahk
+#include %A_ScriptDir%\Libraries\JSON.ahk
 SetWorkingDir, %A_ScriptDir%\script_files\httpserver
 SetBatchLines, -1
 
@@ -10,13 +11,15 @@ pathArr := {  "/":"mainIndex"
 			, "404":"NotFound"
 			, "/whoami":"whoami"
 			, "/iptracker": "whoami"
-			, "/redirect":"redirect"
+			, "/redirect":"redirectFlo"
 			, "/page":"page"
 			, "/calc":"calc"
+			, "/counter/*": "mediocrecounter"
 			, "/bettercounter/*":"bettercounter"
 			, "/webfiles/*":"handleWebfiles"
 			, "/music/*":"handleMusicfiles"
-			, "/ahk/*":"handleAHKfiles" }
+			, "/ahk/*":"handleAHKfiles"
+			, "/embed/*": "embedder" }
 ; paths["/index"] := Redirect
 paths := registerFunctions(pathArr)
 server := new HttpServer()
@@ -24,7 +27,7 @@ server.LoadMimes(A_WorkingDir . "\meta\mime.types")
 server.SetFavicon(A_WorkingDir . "\meta\favicon.ico")
 server.SetPaths(paths)
 server.Serve(80)
-CURRENT_PUBLIC_IP := sendRequest("https://icanhazip.com") ; SEE NOTES AT BOTTOM OF SCRIPT
+global CURRENT_PUBLIC_IP := sendRequest("https://icanhazip.com") ; SEE NOTES AT BOTTOM OF SCRIPT
 ; CURRENT_PUBLIC_IP := getIP()
 return
 
@@ -35,13 +38,15 @@ mainIndex(ByRef req, ByRef res, ByRef server) {
 	res.status := 200
 }
 
-redirect(ByRef req, ByRef res, ByRef server) {
+redirectFlo(ByRef req, ByRef res, ByRef server) {
+	redirect(req, res, server, "http://florianten.de")
+}
+
+redirect(ByRef req, ByRef res, ByRef server, to := "https://icanhazip.com/") {
 	logger(req)
-	res.headers["Location"] := "http://florianten.de"
-	res.status := 307
+	res.headers["Location"] := to
+	res.status := 301
 	return
-	server.ServeFile(res, A_WorkingDir . "\webfiles\redirectflorianten.html")
-	res.status := 200
 }
 
 NotFound(ByRef req, ByRef res, ByRef server) {
@@ -112,9 +117,8 @@ handleWebfiles(ByRef req, ByRef res, ByRef server) {
 
 handleMusicfiles(ByRef req, ByRef res, ByRef server) {
 	logger(req)
-	global CURRENT_PUBLIC_IP
 	static origin := RegexReplace(A_MyDocuments, "\\[^\\]*$", "") . "\Music\Musik\ConvertMusic\NoMetadata"
-	URLorigin := "/music/"
+	static URLorigin := "/music/"
 	vpath := StrReplace(SubStr(req.path, StrLen(URLorigin)), "/", "\")
 	if (req.headers["CF-Connecting-IP"] == CURRENT_PUBLIC_IP)
 		indexFilesGeneric(req, res, server, origin, vpath, "/music")
@@ -127,7 +131,7 @@ handleMusicfiles(ByRef req, ByRef res, ByRef server) {
 handleAHKfiles(ByRef req, ByRef res, ByRef server) {
 	logger(req)
 	origin := A_Desktop "\programs\programming\ahk"
-	URLorigin := "/ahk/"
+	static URLorigin := "/ahk/"
 	vpath := StrReplace(SubStr(req.path, StrLen(URLorigin)), "/", "\") ; since path will ALWAYS start with /ahk/, we don't have to worry about anything else.
 	indexFilesGeneric(req, res, server, origin, vpath, "/ahk", "ahk")
 }
@@ -135,22 +139,75 @@ handleAHKfiles(ByRef req, ByRef res, ByRef server) {
 bettercounter(ByRef req, ByRef res, ByRef server) {
 	logger(req)
 	origin := A_WorkingDir . "\webfiles\web"
-	URLorigin := "/bettercounter/"
+	static URLorigin := "/bettercounter/"
 	vpath := StrReplace(Substr(req.path, StrLen(URLorigin)), "/", "\")
 	if (vpath == "\" || vPath == "") {
 		server.ServeFile(res, A_WorkingDir . "\webfiles\web\index.html")
 		res.status := 200
 	} 
-	else
+	else ; THIS IS NECESSARY AS FLUTTER REQUESTS MORE FILES LIKE FontManifest.json ETC THAT ARE SERVED BY THIS.
 		indexFilesGeneric(req, res, server, origin, vpath, "/webfiles/web")
 }
 
-bettercounter2(ByRef req, ByRef res, ByRef server) {
+mediocreCounter(ByRef req, ByRef res, ByRef server) {
+	static data := ""
+	static URLorigin := "/counter/"
 	logger(req)
-	origin := A_WorkingDir . "\webfiles\web"
-	URLorigin := "/bettercounter/"
-	vpath := StrReplace(Substr(req.path, StrLen(URLorigin)), "/", "\")
-	indexFilesGeneric(req, res, server, origin, vpath, "/webfiles/web")
+	cfile := A_WorkingDir . "\countingData.json"
+	vpath := Substr(req.path, StrLen(URLorigin))
+	if (data == "")
+		data := JSON.Load(FileOpen(cfile, "r", "UTF-8").Read())
+	if (vpath == "/" || vPath == "")
+		server.ServeFile(res, A_WorkingDir . "\webfiles\button.html")
+	else if (vpath == "/fetch") {
+		res.SetBodyText(JSON.Dump(data), "application/json; charset=utf-8")
+	}
+	else if (vpath == "/increment") {
+		data.count++
+		res.status := 200
+	}
+	else
+		res.SetBodyText("Doesn't exist.")
+	res.status := 200
+	FileOpen(cfile, "w", "UTF-8").Write(JSON.Dump(data))
+}
+
+embedder(ByRef req, ByRef res, ByRef server) {
+	static URLorigin := "/embed/"
+	static ytdlPath := RegexReplace(A_MyDocuments, "\\[^\\]*$", "") . "\Music\Musik\ytdl\yt-dlp.exe"
+	static valid_user_agents := ["Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)"
+		, "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.6; rv:92.0) Gecko/20100101 Firefox/92.0" ]
+	logger(req)
+	probablyUrl := SubStr(req.path, StrLen(URLorigin) + 1)
+	probablyUrl := RegexReplace(probablyUrl, "(https?:\/)([^\/])", "$1/$2",,1)
+	probablyUrl := RegexReplace(probablyUrl, "^(?:https?:\/\/)?(?:www\.)?(?:x|twitter|fixupx|fxtwitter|vxtwitter)\.com", "https://twitter.com") ; fix x->twitter for ytdlp
+	if (req.queries && RegexMatch(probablyUrl, "^(https?:\/\/)?(www\.)?youtube\.com")) {
+		probablyUrl .= "?"
+		for i, e in req.queries
+			if (e != req.path)
+				probablyUrl .= i "=" e
+	}
+	if (req.headers["CF-Connecting-IP"] != CURRENT_PUBLIC_IP && (!arrayContains(valid_user_agents, req.headers["user-agent"]) || InStr(probablyUrl, "twitter.com"))) {
+		probablyUrl := StrReplace(probablyUrl, "twitter.com", "vxtwitter.com")
+		redirect(req, res, server, probablyUrl)
+		return
+	}
+	outputF := A_WorkingDir . "\embedder\" . RegExReplace(probablyUrl, "[\?<>\/\\\*""|:]", "")
+	if (!FileExist(outputF . ".*")) {
+		cmd = %ytdlPath% --ignore-config --limit-rate "5M" --no-playlist --no-overwrites --retries "0" --format "(bv+ba/b/bv*)[filesize<=?5MB]" -S "filesize:5M" --output "%outputF%.`%(ext)s" "%probablyUrl%"
+		; if (InStr(probablyUrl, "twitter.com"))
+		; 	cmd = %ytdlPath% --ignore-config --limit-rate "5M" --no-playlist --no-overwrites --retries "0" --format "bv+ba/b" -S "height:480" --output "%outputF%.`%(ext)s" "%probablyUrl%"		
+		RunWait, %cmd% ; ,, Hide
+	}
+	if (FileExist(outputF . ".*")) {
+		Loop, Files, % outputF . ".*" 
+			outputF := A_LoopFileFullPath
+		server.ServeFile(res, outputF)
+	}
+	else {
+		res.SetBodyText("oh nyo! something went wrong (╯°□°)╯︵ ┻━┻")
+	}
+	res.status := 200	
 }
 
 indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", title := "", ext := "*", mode := "DF") {
@@ -185,7 +242,7 @@ indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", titl
 }
 
 generateDirectoryListing(origin, vpath := "\", title := "", ext := "*", fileMode := "DF") {
-	htmlTemplate := readFileIntoVar(A_workingDir . "\meta\indexTemplate.html")
+	htmlTemplate := readFileIntoVar(A_WorkingDir . "\meta\indexTemplate.html")
 	origin := (SubStr(origin, 0) == "\" ? SubStr(origin, 1, -1) : origin)
 	fullPath := normalizePath(origin . vpath)
 	if !(InStr(fullPath, origin))

@@ -1,24 +1,20 @@
-﻿; https://github.com/cobracrystal/ahk
 /*
-todo:
-clean links from stuff
-(resolution option?)
-format option (mp3, mp4, wav, etc)
-thumbnail download?
+TODO SETTINGS:
+Add Setting: 
+- Hidden Launched Console Window
+- --quiet flag
+- worst quality option
+- format option with proper choices
 
-FORMAT -f "bestvideo+bestaudio": twitter, instagram do not have an audio file so bestaudio causes failure.
-^ that is native ytdlp stuff, fix by just using better -f option
 
-only show finished + launch explorer if successful
-add option to clean part files
-add option to abort (modify cmdret potentially?)
+USE A LISTVIEW FOR [URL][TITLE][ARTIST][ALBUM][GENRE][IMAGEYESNO]
 */
 
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
-class YoutubeDLGui {
-	youtubeDLGui(mode := "O") {
+class YoutubeDLGuiv2 {
+	ytdlGui(mode := "O") {
 		mode := SubStr(mode, 1, 1)
 		if (mode == "T")
 			mode := (this.data.guiVisibility ? "H" : "O")
@@ -44,19 +40,14 @@ class YoutubeDLGui {
 
 	__New(flagDebug := 0) {
 		guiMenu := TrayMenu.submenus["GUIs"]
-		guiMenu.Add("Open YoutubeDL Gui", (*) => this.youtubeDLGui())
+		guiMenu.Add("Open YoutubeDL Gui", (*) => this.ytdlGui())
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; establish basic data necessary for handling
 		this.data := {
 			coords: [750, 425],
-			savePath: A_Appdata . "\Autohotkey\YTDL",
-			output: "",
-			outputLastLine: "",
-			outputLastLineCFlag: 0,
-			separator: "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
-			separatorSmall: "══════════════════════════════════════════════════════════════════════════════",
+			savePath: A_Appdata . "\Autohotkey\YTDL"
 		}
-		this.settingsManager("Load")
+		this.settingsManager(1)
 		this.settings.debug := flagDebug
 		this.controls := {}
 		this.resetGUI()
@@ -64,49 +55,21 @@ class YoutubeDLGui {
 
 	guiCreate() {
 		this.gui := Gui("+Border +OwnDialogs", "YoutubeDL Manager")
-		this.gui.OnEvent("Escape", (*) => this.youtubeDLGui("Hide"))
-		this.gui.OnEvent("Close", (*) => this.youtubeDLGui("Close"))
+		this.gui.OnEvent("Escape", (*) => this.ytdlGui("Hide"))
+		this.gui.OnEvent("Close", (*) => this.ytdlGui("Close"))
 		this.gui.AddText("Center Section", "Enter Link(s) to download")
-		this.controls.editInput := this.gui.AddEdit("ys+17 xs r7 w373")
+		this.controls.editInput := this.gui.AddEdit("ys+17 xs r3 w375")
 		this.gui.AddCheckbox("vCheckboxConvertToAudio yp xs+383 Checked" . (this.settings.resetConverttoAudio ? 0 : this.options["extract-audio"].selected), "Convert to Audio?").OnEvent("Click", this.settingsHandler.bind(this))
 		this.gui.AddCheckbox("vCheckboxUpdate Checked" this.options["update"].selected, "Update YoutubeDL Gui").OnEvent("Click", this.settingsHandler.bind(this))
 		this.gui.AddButton("", "Settings").OnEvent("Click", this.settingsGUI.bind(this))
-		this.gui.AddButton("xs-1 h35 w375 Default", "Launch yt-dlp").OnEvent("Click", (*) => this.mainButton())
+		this.gui.AddButton("", "Get Data").OnEvent("Click", (*) => this.getMetadata())
+		this.gui.AddButton("", "Launch yt-dlp").OnEvent("Click", (*) => this.mainButton())
+		this.controls.audioLV := this.gui.AddListview("")
 		this.controls.editCmdConfig := this.gui.AddEdit("xs+1 r1 w500 -Multi Readonly", "")
 		this.controls.editOutput := this.gui.AddEdit("xs+1 r13 w500 Multi Readonly")
 		this.ytdlOptionHandler()
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords[1], this.data.coords[2]))
 		this.data.guiVisibility := 1
-	}
-
-	updateGuiOutput(cmdLine) {
-		lineArray := StrSplit(Rtrim(StrReplace(cmdLine, "`r`n", "`n"), "`n"), "`n")
-		for i, newLine in lineArray {
-			if (Instr(newLine, "https://") || Instr(newLine, "http://")) && !(Instr(this.data.outputLastLine, "[redirect]") || Instr(newLine, "[redirect]")) && (this.data.outputLastLine != "") && (this.data.outputLastLine != this.data.separator . "`n") {
-				this.data.outputLastLine .= this.data.separatorSmall . "`n"
-				this.data.outputLastLineCFlag := 0
-			}
-			; if not the last line, then there might be `r`n for the end, so remove that. StrSplit Trims on *both* sides, so it does not work (since `r at the start is necessary for overwriting lines)
-			if (i != lineArray.Length)
-				newLine := RTrim(newLine, "`r")
-			StrReplace(newLine, "`r", "`r", , &carriageCount)
-			if (carriageCount) { ; if `r in string, only take the last string part.
-				tArr := StrSplit(newLine, "`r")
-				newLine := tArr[tArr.Length]
-			}
-			; if current line AND previous line have `r, then overwrite prev line, otherwise save the line.
-			if !(carriageCount && this.data.outputLastLineCFlag)
-				this.data.output .= this.data.outputLastLine
-			this.data.outputLastLine := newLine . "`n"
-			this.data.outputLastLineCFlag := carriageCount
-			; write saved output and current line to gui
-			this.controls.editOutput.value := this.data.output . this.data.outputLastLine
-			; if !(flagC && this.data.outputLastLineCFlag && WinActive(this.gui)) {
-			; 	this.controls.editOutput.Focus()
-			; 	Send("^{end}")
-			; }
-			; NEEDS BETTER SCROLLING. https://www.autohotkey.com/board/topic/63325-updating-editscroll-down-after-adding-text/
-		}
 	}
 
 	ytdlOptionHandler(option := 0, select := -1, param := -1, updateGui := true) {
@@ -180,7 +143,7 @@ class YoutubeDLGui {
 					this.ytdlOptionHandler("ffmpeg-location", , fileP)
 				}
 			case "ButtonYTDLPath":
-				fileP := FileSelect(3, this.settings.ytdlPath, "Choose youtube DL .exe file", "Executables (*.exe)")
+				fileP := FileSelect(3, this.settings.ytdlPath, "Choose youtube-dl .exe file", "Executables (*.exe)")
 				if (fileP != "") {
 					this.settings.ytdlPath := fileP
 					this.controls.editYTDLPath.Value := fileP
@@ -189,7 +152,7 @@ class YoutubeDLGui {
 			default:
 				return
 		}
-		this.settingsManager("Save")
+		this.settingsManager()
 	}
 
 	mainButton() {
@@ -201,49 +164,20 @@ class YoutubeDLGui {
 		}
 		this.ytdlOptionHandler()
 		fullRuncmd := this.controls.editCmdConfig.value . StrReplace(links, "`n", A_Space)
-		output := cmdRet(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8")
-		fullOutput := this.controls.editOutput.value
-		this.updateGuiOutput(this.data.separator)
-		if (!WinActive(this.gui))
-			this.YoutubeDLGui("Hide")
-		if (links == "" || !this.settings.openExplorer)
-			return
-		if (this.settings.trySelectFile) {
-			arrLong := StrSplit(fullOutput, this.data.separator)
-			responseArr := StrSplit(arrLong[arrLong.Length], this.data.separatorSmall)
-			fileNames := []
-			for i, e in responseArr
-			{
-				lineArr := StrSplit(RTrim(e, "`n"), "`n")
-				regexM := StrReplace(this.settings.outputPath, "\", "\\") . "\\([[:ascii:]]*?\." . (this.options["extract-audio"].selected ? "mp3" : "mp4") . ")"
-				for i, e in reverseArray(lineArr)
-					if !(Instr(e, "Deleting")) && (RegexMatch(e, regexM, &o))
-						break
-				if (o != "")
-					fileNames.push(o[1])
+		for i, link in StrSplitUTF8(links, "`n") {
+			fullRuncmd := this.controls.editCmdConfig.value . '"' link '"'
+			if (this.settings.runHidden) {
+				output := cmdRet(fullRuncmd, , "UTF-8")
+				this.controls.editOutput.value .= output "`n"
 			}
-			if (this.settings.debug)
-				for i, e in fileNames
-					this.updateGuiOutput(e)
-			if (fileNames.Length == 0)
-				return
-			for oWin in ComObject("Shell.Application").Windows
-				if (oWin.Name == "Explorer") && (this.settings.outputPath = oWin.Document.Folder.Self.Path) {
-					WinActivate("ahk_id " . oWin.HWND)
-					PostMessage(0x111, 28931, , , "ahk_id " . oWin.HWND) ; forcibly refresh ?
-					oItems := oWin.Document.Folder.Items
-					oWin.Document.SelectItem(oItems.Item(fileNames[fileNames.Length]), 29)
-					for i, e in fileNames
-						oWin.Document.SelectItem(oItems.Item(e), 1)
-					oWin := oItems := ""
-					return
-				}
+			else
+				RunWait(fullRuncmd)
 		}
-		if (WinExist(this.settings.outputPath . " ahk_exe explorer.exe"))
-			WinActivate()
-		else
-			Run('explorer "' . this.settings.outputPath . (fileName ?? "") . (ext ?? "") '"')
-		;	Run, % "explorer /select, """ . this.settings.outputPath . "\" . o.Value(1) . """" ; THIS IF THE INPUT IS ONLY ONE LINE (AKA ONE FILE)
+		Msgbox("pog downloaded")
+	}
+
+	getMetadata() {
+		return
 	}
 
 	settingsGUI(*) {
@@ -274,15 +208,15 @@ class YoutubeDLGui {
 		resetSettings(*) {
 			if (MsgBox("Are you sure? This will reset all settings to their default values.", "Reset Settings", "0x1") == "Cancel")
 				return
-			this.settings := YoutubeDLGui.getDefaultSettings()
-			this.options := YoutubeDLGui.getOptions()
+			this.settings := YoutubeDLGuiv2.getDefaultSettings()
+			this.options := YoutubeDLGuiv2.getOptions()
 			this.settings.options := this.options
 			this.ytdlOptionHandler()
 			settingsGUIClose()
 			this.settingsGUI()
 			this.gui["CheckboxConvertToAudio"].Value := 0
 			this.gui["CheckboxUpdate"].Value := 0
-			this.settingsManager("Save")
+			this.settingsManager()
 		}
 
 		settingsGUIClose(*) {
@@ -309,7 +243,7 @@ class YoutubeDLGui {
 					this.ytdlOptionHandler("output", , this.settings.outputPattern)
 				}
 			}
-			this.settingsManager("Save")
+			this.settingsManager()
 		}
 	}
 
@@ -319,9 +253,6 @@ class YoutubeDLGui {
 			this.ytdlOptionHandler("format", , "bestvideo[height<=1080]+bestaudio/best", false)
 		}
 		this.data.guiVisibility := 0
-		this.data.output := ""
-		this.data.outputLastLine := ""
-		this.data.outputLastLineCFlag := 0
 		this.gui := 0
 	}
 
@@ -342,12 +273,12 @@ class YoutubeDLGui {
 				try this.settings := jsongo.Parse(s)
 			}
 			this.settings := MapToObj(this.settings, true)
-			for i, e in YoutubeDLGui.getDefaultSettings().OwnProps() {
+			for i, e in YoutubeDLGuiv2.getDefaultSettings().OwnProps() {
 				if !(this.settings.HasOwnProp(i))
 					this.settings.%i% := e
 			}
 			this.options := Map()
-			for i, e in YoutubeDLGui.getOptions() {
+			for i, e in YoutubeDLGuiv2.getOptions() {
 				this.options[i] := (this.settings.options.HasOwnProp(i) ? this.settings.options.%i% : e)
 			}
 			this.settings.options := this.options
@@ -357,13 +288,14 @@ class YoutubeDLGui {
 		return 0
 	}
 
-	; these functions exist to get the first-time default values.
 	static getDefaultSettings() {
 		settings := {
 			resetConverttoAudio: 1,
 			useAliases: 0,
 			openExplorer: 1,
 			trySelectFile: 0,
+			runHidden: 0,
+			runQuiet: 0,
 			outputPath: A_ScriptDir,
 			outputPattern: A_ScriptDir . "\%(title)s.%(ext)s",
 			ffmpegPath: "",
@@ -383,6 +315,8 @@ class YoutubeDLGui {
 		youtubeDLOptions["list-formats"] := { alias: "-F" }
 		youtubeDLOptions["print-traffic"] := {}
 		youtubeDLOptions["newline"] := {}
+		youtubeDLOptions["print"] := { param: "after_move:filepath" }
+		youtubeDLOptions["no-warning"] := {}
 		; Downloading Options
 		youtubeDLOptions["output"] := { alias: "-o", param: A_ScriptDir . "\%(title)s.%(ext)s" }
 		youtubeDLOptions["no-overwrites"] := { alias: "-w" }
@@ -414,12 +348,11 @@ class YoutubeDLGui {
 		youtubeDLOptions["embed-metadata"] := {}
 		youtubeDLOptions["parse-metadata"] := { param: "" }
 		youtubeDLOptions["convert-thumbnails"] := { param: "jpg" }
-		youtubeDLOptions["no-warning"] := {}
-		youtubeDLOptions["print"] := { param: "after_move:filepath" }
 		for i, e in youtubeDLOptions
 			youtubeDLOptions[i].selected := false
 		for i, e in ["ignore-config", "output", "no-overwrites", "no-playlist", "retries", "limit-rate", "format", "ffmpeg-location", "merge-output-format", "no-warning", "print"]
 			youtubeDLOptions[e].selected := true
 		return youtubeDLOptions
 	}
+
 }

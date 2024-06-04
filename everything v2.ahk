@@ -49,20 +49,12 @@ GroupAdd("instantCloseWindows", "ahk_class RarReminder")
 GroupAdd("instantCloseWindows", "Please purchase WinRAR license ahk_class #32770")
 GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND O IS CYRILLIC
 ; GroupAdd("instantCloseWindows", "Unbenannt - Editor ahk_exe notepad.exe")
-;// set 1337 reminder
 youtubeDL := YoutubeDLGui()
-reminders := ReminderManager()
-if (A_UserName != "Cobracrystal") {
-	try {
-		token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
-		; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
-		reminders.setPeriodicTimerOn(parseTime(, 11, 21, 8, 0, 0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
-		reminders.setPeriodicTimerOn(parseTime(, , , 13, 36, 50), 1, "Days", , reminders.reminder1337)
-		reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
-		reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
-	}
-}
-; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
+reminders := ReminderManager(,,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
+reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json")
+; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
+; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
+; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
 if (StrCompare(A_OSVersion, "10.0.22000") < 0)
 	TransparentTaskbar.TransparentTaskbar(1, 50)
@@ -356,7 +348,7 @@ F11:: { 	; BTD6: Rebind Escape
 }
 
 
-^NumpadMult:: {	; Show Mouse Coordinates
+^NumpadDiv:: {	; Show Mouse Coordinates
 	static toggle := false
 	if (toggle := !toggle)
 		SetTimer(showcoords, 50)
@@ -440,19 +432,27 @@ F11:: { 	; BTD6: Rebind Escape
 toggleNumpadMouseMove() {
 	static init := 0
 	if !(init) {
+		Hotkey("Numpad1", moveMousePixel.bind(-1, 1))
 		Hotkey("Numpad2", moveMousePixel.bind(0, 1))
+		Hotkey("Numpad3", moveMousePixel.bind(1, 1))
 		Hotkey("Numpad4", moveMousePixel.bind(-1, 0))
 		Hotkey("Numpad6", moveMousePixel.bind(1, 0))
+		Hotkey("Numpad7", moveMousePixel.bind(-1, -1))
 		Hotkey("Numpad8", moveMousePixel.bind(0, -1))
+		Hotkey("Numpad9", moveMousePixel.bind(1, -1))
 		Hotkey("NumpadEnter", clickMouse.Bind("L", 0))
 		Hotkey("NumpadAdd", clickMouse.Bind("L", 1))
 		init := 1
 		return
 	}
+	Hotkey("Numpad1", "Toggle")
 	Hotkey("Numpad2", "Toggle")
+	Hotkey("Numpad3", "Toggle")
 	Hotkey("Numpad4", "Toggle")
 	Hotkey("Numpad6", "Toggle")
+	Hotkey("Numpad7", "Toggle")
 	Hotkey("Numpad8", "Toggle")
+	Hotkey("Numpad9", "Toggle")
 	Hotkey("NumpadEnter", "Toggle")
 	Hotkey("NumpadAdd", "Toggle")
 }
@@ -897,3 +897,19 @@ d::{
 	Send("{Home}")
 }
 #HotIf
+
+^NumpadSub::{ ; Clip mouse to active windows' client area
+	static toggle := 0
+	if (toggle := !toggle)
+		clipCursor(1)
+	else
+		clipCursor(0)
+}
+
+clipCursor(mode := true, window := "A") {
+	WinGetClientPos(&wx, &wy, &ww, &wh, WinExist(window))
+	if (!mode)
+		return !DllCall("ClipCursor", "Ptr", 0)
+	NumPut("UInt", wx, "UInt", wy, "UInt", wx+ww, "UInt", wy+wh, llrectA := Buffer(16, 0), 0)
+	return DllCall("ClipCursor", "Ptr", llrectA)
+}
