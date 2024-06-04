@@ -52,13 +52,15 @@ GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND
 ;// set 1337 reminder
 youtubeDL := YoutubeDLGui()
 reminders := ReminderManager()
-try {
-	token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
-	; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
-	reminders.setPeriodicTimerOn(parseTime(, 11, 21, 8, 0, 0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
-	reminders.setPeriodicTimerOn(parseTime(, , , 13, 36, 50), 1, "Days", , reminders.reminder1337)
-	reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
-	reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
+if (A_UserName != "Cobracrystal") {
+	try {
+		token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8"))
+		; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
+		reminders.setPeriodicTimerOn(parseTime(, 11, 21, 8, 0, 0), 1, "Y", "Henri Birthday", reminders.discordReminder.bind(0, token, "245189840470147072"))
+		reminders.setPeriodicTimerOn(parseTime(, , , 13, 36, 50), 1, "Days", , reminders.reminder1337)
+		reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
+		reminders.setPeriodicTimerOn(parseTime(,11,13), 1, "Y", "Hendrik Geburtstag.")
+	}
 }
 ; ReminderManager.setSpecificTimer(func, msg, multi, period, h,m,s,d,mo, target)
 ; Launch Transparent Taskbar at 50ms frequency
@@ -115,9 +117,9 @@ return
 	WindowManager.windowManager("T")
 }
 
-; ^F10:: {	; Neokeyboard Layout
-; 	NeoKeyboardLayout.KeyboardLayoutGUI("T")
-; }
+^F10:: {	; Neokeyboard Layout
+	NeoKeyboardLayout.KeyboardLayoutGUI("T")
+}
 
 ^F9:: {	; Shows Internet Connection
 	internetConnectionLogger("T") 
@@ -869,3 +871,29 @@ makeTextAnsiColorful(str) {
 ; 	fastPrint(text)
 ; }
 
+#HotIf WinActive("nhentai: hentai doujinshi and manga - Vivaldi")
+Right::{
+	Send("{Right}")
+	Send("{Home}")
+}
+ß::{
+	Hotkey("w", "Toggle")
+	Hotkey("a", "Toggle")
+	Hotkey("s", "Toggle")
+	Hotkey("d", "Toggle")
+	Hotkey("Right", "Toggle")
+}
+w::{
+	Send("{PgUp}")
+}
+a::{
+	Send("{Left}")
+}
+s::{
+	Send("{PgDn}")
+}
+d::{
+	Send("{Right}")
+	Send("{Home}")
+}
+#HotIf

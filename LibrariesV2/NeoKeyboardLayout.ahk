@@ -19,7 +19,7 @@ class NeoKeyboardLayout {
 			}
 		}
 		else if (mode != "C")
-			this.guiCreateActiveX() 
+			this.guiCreate() 
 	}
 	
 	static __New() {
@@ -35,8 +35,9 @@ class NeoKeyboardLayout {
 		this.gui.obj := Gui("+LastFound +ToolWindow +AlwaysOnTop -SysMenu -Caption", this.gui.text)
 		this.gui.obj.BackColor := 0xFFFFFF
 		WinSetTransColor(0xFFFFFF, this.gui.obj)
-		this.gui.obj.AddPicture("w905 h240 +backgroundTrans", this.path . "\bone1.png")
-		this.gui.obj.Show(Format("x{1}y{2}w{3}h{4} NoActivate", this.gui.coords[1], this.gui.coords[2], 920, 240))
+		scale := 0.32
+		this.gui.obj.AddPicture(Format("w{1} h{2} +backgroundTrans", Integer(4525 * scale), Integer(1200 * scale)), this.path . "\bone1.png")
+		this.gui.obj.Show(Format("x{1}y{2} AutoSize NoActivate", this.gui.coords[1], this.gui.coords[2]))
 		this.gui.hidden := false
 	}
 	
