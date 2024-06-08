@@ -100,6 +100,10 @@ class DiscordClient {
 	modifyChannel(channelID, content) {
 		return this.callApi("PATCH", "/channels/" channelID, content)
 	}
+
+	deleteMessage(channelID, messageID) {
+		return this.callApi("DELETE", "/channels/" channelID "/messages/" messageID)
+	}
 	
 	isInGuild(serverID) {
 		for i, e in this.getCurrentUserGuilds()
