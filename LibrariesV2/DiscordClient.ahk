@@ -72,6 +72,10 @@ class DiscordClient {
 	getGuildChannels(serverID) {
 		return this.callApi("GET", "/guilds/" serverID "/channels")
 	}
+
+	getGuildRoles(serverID) {
+		return this.callApi("GET", "/guilds/" serverID "/roles")
+	}
 	
 	getMembers(serverID, limit := "1", after := "0") {
 		return this.callAPI("GET", "/guilds/" serverID . "/members?limit=" limit . (after ? "&after=" after : ""))
