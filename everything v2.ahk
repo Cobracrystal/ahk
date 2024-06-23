@@ -871,28 +871,28 @@ makeTextAnsiColorful(str) {
 ; 	fastPrint(text)
 ; }
 
-#HotIf WinActive("nhentai: hentai doujinshi and manga - Vivaldi")
-Right::{
-	Send("{Right}")
-	Send("{Home}")
-}
-ß::{
+#HotIf WinActive("doujinshi and manga - Vivaldi")
+ß::{ ; Vivaldi: Toggle Website Override 
 	Hotkey("w", "Toggle")
 	Hotkey("a", "Toggle")
 	Hotkey("s", "Toggle")
 	Hotkey("d", "Toggle")
 	Hotkey("Right", "Toggle")
 }
-w::{
+Right::{	; Vivaldi: Website Override Right
+	Send("{Right}")
+	Send("{Home}")
+}
+w::{	; Vivaldi: Website Override Up
 	Send("{PgUp}")
 }
-a::{
+a::{	; Vivaldi: Website Override Left
 	Send("{Left}")
 }
-s::{
+s::{	; Vivaldi: Website Override Down
 	Send("{PgDn}")
 }
-d::{
+d::{	; Vivaldi: Website Override Right
 	Send("{Right}")
 	Send("{Home}")
 }
@@ -913,3 +913,16 @@ clipCursor(mode := true, window := "A") {
 	NumPut("UInt", wx, "UInt", wy, "UInt", wx+ww, "UInt", wy+wh, llrectA := Buffer(16, 0), 0)
 	return DllCall("ClipCursor", "Ptr", llrectA)
 }
+
+
+
+#HotIf WinActive("ahk_exe javaw.exe")
+^ö::{	; Spam shift Key
+	static toggle := 0
+	static timer := ( (*) => (Send("{Shift Down}"), Sleep(10), Send("{Shift Up}")))
+	if (toggle := !toggle)
+		SetTimer(timer, 20)
+	else
+		SetTimer(timer, 0)
+}
+#HotIf
