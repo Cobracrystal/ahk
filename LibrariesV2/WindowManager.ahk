@@ -87,11 +87,11 @@ class WindowManager {
 		this.gui.AddCheckbox("ys vCheckboxGetCommandLine Checked" . this.settings.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false))
 		this.gui.AddText("ys xs+890 w110 vWindowCount", "Window Count: 0")
-		this.LV := this.gui.AddListView("xs R20 w1000 -Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "PID", "Process Path", "Command Line"])
+		this.LV := this.gui.AddListView("xs R20 w1000 +Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "PID", "Process Path", "Command Line"])
 		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
 		this.LV.OnEvent("DoubleClick", (obj, rowN) => rowN == 0 ? 0 : WinActivate(Integer(obj.GetText(rowN, 1))))
-		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", (*) => (this.LV.Focused && (rowN := this.LV.GetNext()) != 0 ? WinActivate(Integer(this.LV.GetText(rowN, 1))) : 0))
+		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", this.activateButton.bind(this))
 		;	this.LV.OnEvent("ColClick", this.onColClick.bind(this)) ; store sorting state for refresh?
 		this.guiListviewCreate(true, true)
 		if (this.settings.darkMode)
@@ -265,42 +265,85 @@ class WindowManager {
 		}
 	}
 
-
 	static onKeyPress(ctrlObj, lParam) {
 		vKey := NumGet(lParam, 24, "ushort")
-		rowN := this.LV.GetNext()
+		rowNFocused := this.LV.GetNext(0,"F")
+		rowNums := []
+		wHandles := []
+		Loop {
+			nextRow := this.LV.GetNext(A_Index == 1 ? 0 : rowNums[rowNums.Length])
+			if (nextRow == 0)
+				break
+			rowNums.push(nextRow)
+		}
+		if (rowNums.Length == 0 && vKey != "65")
+			return
+		for i, e in rowNums
+			wHandles.push(Integer(this.LV.GetText(e, 1)))
 		DetectHiddenWindows(this.settings.detectHiddenWindows)
 		switch vKey {
 			case "46": 	;// Del/Entf Key -> Close that window
-				if (!rowN)
+				if (GetKeyState("Shift"))
+					flagKill := true
+				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
 					return
-				wHandle := Integer(this.LV.GetText(rowN, 1))
-				if GetKeyState("Shift") 
-					WinKill(wHandle)
-				else
-					WinClose(wHandle)
-				if WinWaitClose(wHandle, , 0.5)
-					this.LV.Delete(rowN)
+				for i, wHandle in reverseArray(wHandles) {
+					if (flagKill ?? false)
+						WinKill(wHandle)
+					else
+						WinClose(wHandle)
+					if WinWaitClose(wHandle, , 0.5)
+						this.LV.Delete(rowNums[rowNums.Length - i + 1])
+				}
+			case "65": ; ctrl A
+				if (!GetKeyState("Ctrl"))
+					return
+				offset := GetKeyState("Shift") ? 0 : 1
+				if (offset)
+					this.LV.Modify(1, "-Select")
+				Loop this.LV.GetCount() - offset
+					this.LV.Modify(A_Index + offset, "+Select")
 			case "67": ; ctrl C
-				if (!rowN)
+				if (!GetKeyState("Ctrl"))
 					return
-				wHandle := Integer(this.LV.GetText(rowN, 1))
-				if (GetKeyState("Ctrl")) {
-					if !GetKeyState("Shift")
-						A_Clipboard := WinGetTitle(wHandle)
-					else {
-						info := this.getWindowInfo(wHandle)
+				if !GetKeyState("Shift") {
+					for i, wHandle in wHandles
+						str .= WinGetTitle(wHandle) . (i == wHandles.Length ? "" : "`n")
+					A_Clipboard := str
+				}
+				else {
+					wInfoArray := []
+					for i, wHandle in wHandles {
+						wInfo := this.getWindowInfo(wHandle)
 						if !(this.settings.getCommandLine)
-							info.DeleteProp("commandLine")
-						A_Clipboard := jsongo.Stringify(info, , "`t")
-						; Loop(this.LV.GetCount("Col"))
-						; 	str .= this.LV.GetText(rowN, A_Index) "`t"
+							wInfo.DeleteProp("commandLine")
+						wInfoArray.push(wInfo)
 					}
+					A_Clipboard := jsongo.Stringify(wInfoArray, , "`t")
+					; Loop(this.LV.GetCount("Col"))
+					; 	str .= this.LV.GetText(rowN, A_Index) "`t"
 				}
 			default:
 				return
 		}
 	}
+
+	static activateButton(*) {
+		if (!this.LV.Focused)
+			return
+		wHandles := [], lastRow := 0
+		Loop {
+			lastRow := this.LV.GetNext(lastRow)
+			if (lastRow == 0)
+				break
+			wHandles.push(Integer(this.LV.GetText(lastRow, 1)))
+		}
+		if (wHandles.Length == 0)
+			return
+		for i, wHandle in reverseArray(wHandles)
+			WinActivate(wHandle)
+	}
+	
 
 	static settingCheckboxHandler(guiCtrlObj, *) {
 		switch guiCtrlObj.Name {
@@ -321,59 +364,89 @@ class WindowManager {
 	; ------------------------- MENU FUNCTIONS -------------------------
 
 	static menuHandler(itemName, itemPos, menuObj) {
-		rowN := this.LV.GetNext()
-		wHandle := Integer(this.LV.GetText(rowN, 1))
+		rowNFocused := this.LV.GetNext(0,"F")
+		rowNums := []
+		wHandles := []
+		Loop {
+			nextRow := this.LV.GetNext(A_Index == 1 ? 0 : rowNums[rowNums.Length])
+			if (nextRow == 0)
+				break
+			rowNums.push(nextRow)
+		}
+		for i, e in rowNums
+			wHandles.push(Integer(this.LV.GetText(e, 1)))
 		switch itemName {
 			case "Activate Window":
-				WinActivate(wHandle)
+				for i, wHandle in reverseArray(wHandles)
+					WinActivate(wHandle)
 			case "Reset Window Position":
-				mmx := WinGetMinMax(wHandle)
-				WinGetPos(, , &w, &h, wHandle)
-				if (mmx != 0)
+				for i, wHandle in wHandles {
+					mmx := WinGetMinMax(wHandle)
+					WinGetPos(, , &w, &h, wHandle)
 					WinRestore(wHandle)
-				WinMove(A_ScreenWidth / 2 - w / 2, A_ScreenHeight / 2 - h / 2, , , wHandle)
-				WinActivate(wHandle)
+					WinMove(A_ScreenWidth / 2 - w / 2, A_ScreenHeight / 2 - h / 2, , , wHandle)
+					WinActivate(wHandle)
+				}
 			case "Minimize Window":
-				WinMinimize(wHandle)
+				for i, wHandle in wHandles
+					WinMinimize(wHandle)
 			case "Maximize Window":
-				WinMaximize(wHandle)
+				for i, wHandle in wHandles
+					WinMaximize(wHandle)
 			case "Restore Window":
-				WinRestore(wHandle)
+				for i, wHandle in wHandles
+					WinRestore(wHandle)
 			case "Close Window":
-				WinClose(wHandle) ;// needs a check via WinExist & question whether winkill or not.
-				if WinWaitClose(wHandle, , 0.5)
-					this.LV.Delete(rowN)
+				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
+					return
+				for i, wHandle in reverseArray(wHandles) {
+					WinClose(wHandle) ;// needs a check via WinExist & question whether winkill or not.
+					if WinWaitClose(wHandle, , 0.5)
+						this.LV.Delete(rowNums[rowNums.Length - i + 1])
+				}
 			case "Toggle Lock Status":
-				tStyle := WinGetExStyle(wHandle)
-				WinSetAlwaysOnTop(tStyle & 0x8 ? 0 : 1, wHandle) ; 0x8 is WS_EX_TOPMOST
+				for i, wHandle in reverseArray(wHandles) {
+					tStyle := WinGetExStyle(wHandle)
+					WinSetAlwaysOnTop(tStyle & 0x8 ? 0 : 1, wHandle) ; 0x8 is WS_EX_TOPMOST
+				}
 			case "Change Window Transparency":
-				this.transparencyGUI(wHandle)
+				this.transparencyGUI(wHandles)
 			case "Copy Window Title":
-				A_Clipboard := WinGetTitle(wHandle)
+				for i, wHandle in wHandles
+					str .= WinGetTitle(wHandle) . (i == wHandles.Length ? "" : "`n")
+				A_Clipboard := str
 			case "View Properties":
-				Run('properties "' WinGetProcessPath(wHandle) '"')
+				for i, wHandle in wHandles
+					Run('properties "' WinGetProcessPath(wHandle) '"')
 			case "View Program Folder":
-				run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"')
+				for i, wHandle in wHandles
+					Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"')
 			default:
 				return
 		}
 	}
 
-	static transparencyGUI(wHandle) {
-		tp := WinGetTransparent(wHandle)
+	static transparencyGUI(wHandles) {
+		tp := WinGetTransparent(wHandles[1])
 		tp := (tp == "" ? 255 : tp)
 		transparencyGUI := Gui("Border -SysMenu +Owner" this.gui.hwnd, "Transparency Menu")
 		transparencyGUI.AddText("x32", "Change Transparency")
-		transparencyGUI.AddSlider("x10 yp+20 AltSubmit Range0-255 NoTicks Page16 ToolTip", tp).OnEvent("Change", (obj, *) => WinSetTransparent(obj.Value, Integer(this.LV.GetText(this.LV.GetNext(), 1))))
+		transparencyGUI.AddSlider("x10 yp+20 AltSubmit Range0-255 NoTicks Page16 ToolTip", tp).OnEvent("Change", (obj, *) => (changeTransparency(obj.Value)))
 		transparencyGUI.AddButton("w80 yp+30 xp+20 Default", "OK").OnEvent("Click", transparencyGUIClose)
 		transparencyGUI.OnEvent("Escape", transparencyGUIClose)
 		transparencyGUI.OnEvent("Close", transparencyGUIClose)
 		this.gui.Opt("+Disabled")
 		transparencyGUI.Show()
 
+		changeTransparency(n) {
+			for i, e in wHandles
+				WinSetTransparent(n, e)
+		}
+
 		transparencyGUIClose(*) {
-			if (WinGetTransparent(wHandle := Integer(this.LV.GetText(this.LV.GetNext(), 1))) == 255)
-				WinSetTransparent("Off", wHandle)
+			for i, e in wHandles
+			if (WinGetTransparent(e) == 255)
+				WinSetTransparent("Off", e)
 			this.gui.Opt("-Disabled")
 			transparencyGUI.Destroy()
 		}
