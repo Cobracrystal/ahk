@@ -193,18 +193,18 @@ class WindowManager {
 
 	static getWindowInfo(wHandle) {
 		x := "", y := "", w := "", h := "", winTItle := "", winClass := "", mmx := "", processName := "", processPath := "", pid := "", cmdLine := ""
-		try {
-			WinGetPos(&x, &y, &w, &h, wHandle)
-			winTitle := WinGetTitle(wHandle)
-			winClass := WinGetClass(wHandle)
-			mmx := WinGetMinMax(wHandle)
-			processName := WinGetProcessName(wHandle)
-			processPath := WinGetProcessPath(wHandle)
-			pid := WinGetPID(wHandle)
+		if !WinExist(wHandle)
+			return {}
+		try	WinGetPos(&x, &y, &w, &h, wHandle)
+		try	winTitle := WinGetTitle(wHandle)
+		try	winClass := WinGetClass(wHandle)
+		try	mmx := WinGetMinMax(wHandle)
+		try	processName := WinGetProcessName(wHandle)
+		try	processPath := WinGetProcessPath(wHandle)
+		try	pid := WinGetPID(wHandle)
 			if (this.settings.getCommandLine)
-				cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
+				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
 			; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
-		}
 		return {
 			hwnd: wHandle,
 			title: winTitle,
@@ -239,6 +239,10 @@ class WindowManager {
 		if (rowN == 0)
 			return
 		wHandle := Integer(ctrlObj.GetText(rowN, 1))
+		if (!WinExist(wHandle)) {
+			this.LV.Delete(rowN)
+			return
+		}
 		if (WinGetExStyle(wHandle) & 0x8)
 			this.menu.Check("Toggle Lock Status")
 		else
@@ -288,10 +292,12 @@ class WindowManager {
 				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
 					return
 				for i, wHandle in reverseArray(wHandles) {
-					if (flagKill ?? false)
-						WinKill(wHandle)
-					else
-						WinClose(wHandle)
+					try {
+						if (flagKill ?? false)
+							WinKill(wHandle)
+						else
+							WinClose(wHandle)
+					}
 					if WinWaitClose(wHandle, , 0.5)
 						this.LV.Delete(rowNums[rowNums.Length - i + 1])
 				}
@@ -308,7 +314,7 @@ class WindowManager {
 					return
 				if !GetKeyState("Shift") {
 					for i, wHandle in wHandles
-						str .= WinGetTitle(wHandle) . (i == wHandles.Length ? "" : "`n")
+						str .= (WinExist(wHandle) ? WinGetTitle(wHandle) : "") . (i == wHandles.Length ? "" : "`n")
 					A_Clipboard := str
 				}
 				else {
@@ -341,7 +347,7 @@ class WindowManager {
 		if (wHandles.Length == 0)
 			return
 		for i, wHandle in reverseArray(wHandles)
-			WinActivate(wHandle)
+			try WinActivate(wHandle)
 	}
 	
 
@@ -378,49 +384,53 @@ class WindowManager {
 		switch itemName {
 			case "Activate Window":
 				for i, wHandle in reverseArray(wHandles)
-					WinActivate(wHandle)
+					try WinActivate(wHandle)
 			case "Reset Window Position":
 				for i, wHandle in wHandles {
-					mmx := WinGetMinMax(wHandle)
-					WinGetPos(, , &w, &h, wHandle)
-					WinRestore(wHandle)
-					WinMove(A_ScreenWidth / 2 - w / 2, A_ScreenHeight / 2 - h / 2, , , wHandle)
-					WinActivate(wHandle)
+					try {
+						mmx := WinGetMinMax(wHandle)
+						WinGetPos(, , &w, &h, wHandle)
+						WinRestore(wHandle)
+						WinMove(A_ScreenWidth / 2 - w / 2, A_ScreenHeight / 2 - h / 2, , , wHandle)
+						WinActivate(wHandle)
+					}
 				}
 			case "Minimize Window":
 				for i, wHandle in wHandles
-					WinMinimize(wHandle)
+					try WinMinimize(wHandle)
 			case "Maximize Window":
 				for i, wHandle in wHandles
-					WinMaximize(wHandle)
+					try WinMaximize(wHandle)
 			case "Restore Window":
 				for i, wHandle in wHandles
-					WinRestore(wHandle)
+					try WinRestore(wHandle)
 			case "Close Window":
 				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
 					return
 				for i, wHandle in reverseArray(wHandles) {
-					WinClose(wHandle) ;// needs a check via WinExist & question whether winkill or not.
+					try WinClose(wHandle)
 					if WinWaitClose(wHandle, , 0.5)
 						this.LV.Delete(rowNums[rowNums.Length - i + 1])
 				}
 			case "Toggle Lock Status":
 				for i, wHandle in reverseArray(wHandles) {
-					tStyle := WinGetExStyle(wHandle)
-					WinSetAlwaysOnTop(tStyle & 0x8 ? 0 : 1, wHandle) ; 0x8 is WS_EX_TOPMOST
+					try {
+						tStyle := WinGetExStyle(wHandle)
+						WinSetAlwaysOnTop(tStyle & 0x8 ? 0 : 1, wHandle) ; 0x8 is WS_EX_TOPMOST
+					}
 				}
 			case "Change Window Transparency":
 				this.transparencyGUI(wHandles)
 			case "Copy Window Title":
 				for i, wHandle in wHandles
-					str .= WinGetTitle(wHandle) . (i == wHandles.Length ? "" : "`n")
+					str .= (WinExist(wHandle) ? WinGetTitle(wHandle) : "") . (i == wHandles.Length ? "" : "`n")
 				A_Clipboard := str
 			case "View Properties":
 				for i, wHandle in wHandles
-					Run('properties "' WinGetProcessPath(wHandle) '"')
+					try Run('properties "' WinGetProcessPath(wHandle) '"')
 			case "View Program Folder":
 				for i, wHandle in wHandles
-					Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"')
+					try Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"')
 			default:
 				return
 		}
