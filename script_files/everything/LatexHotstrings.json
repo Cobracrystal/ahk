@@ -1,0 +1,3462 @@
+[
+	{
+		"options": "o?",
+		"replacement": "¬",
+		"string": "\\neg"
+	},
+	{
+		"options": "o?",
+		"replacement": "±",
+		"string": "\\pm"
+	},
+	{
+		"options": "o?",
+		"replacement": "×",
+		"string": "\\times"
+	},
+	{
+		"options": "o?",
+		"replacement": "÷",
+		"string": "\\div"
+	},
+	{
+		"options": "o?",
+		"replacement": "̀",
+		"string": "\\grave"
+	},
+	{
+		"options": "o?",
+		"replacement": "́",
+		"string": "\\acute"
+	},
+	{
+		"options": "o?",
+		"replacement": "̂",
+		"string": "\\hat"
+	},
+	{
+		"options": "o?",
+		"replacement": "̃",
+		"string": "\\tilde"
+	},
+	{
+		"options": "o?",
+		"replacement": "̄",
+		"string": "\\bar"
+	},
+	{
+		"options": "o?",
+		"replacement": "̅",
+		"string": "\\overline"
+	},
+	{
+		"options": "o?",
+		"replacement": "̆",
+		"string": "\\breve"
+	},
+	{
+		"options": "o?",
+		"replacement": "̇",
+		"string": "\\dot"
+	},
+	{
+		"options": "o?",
+		"replacement": "̈",
+		"string": "\\ddot"
+	},
+	{
+		"options": "o?",
+		"replacement": "̉",
+		"string": "\\ovhook"
+	},
+	{
+		"options": "o?",
+		"replacement": "̊",
+		"string": "\\mathring"
+	},
+	{
+		"options": "o?",
+		"replacement": "̌",
+		"string": "\\check"
+	},
+	{
+		"options": "o?",
+		"replacement": "x̐",
+		"string": "\\candra"
+	},
+	{
+		"options": "o?",
+		"replacement": "x̰",
+		"string": "\\utilde"
+	},
+	{
+		"options": "o?",
+		"replacement": "x̱",
+		"string": "\\underbar"
+	},
+	{
+		"options": "o?",
+		"replacement": "x̲",
+		"string": "\\underline"
+	},
+	{
+		"options": "o?",
+		"replacement": "α",
+		"string": "\\alpha"
+	},
+	{
+		"options": "o?",
+		"replacement": "β",
+		"string": "\\beta"
+	},
+	{
+		"options": "o?",
+		"replacement": "γ",
+		"string": "\\gamma"
+	},
+	{
+		"options": "o?",
+		"replacement": "δ",
+		"string": "\\delta"
+	},
+	{
+		"options": "o?",
+		"replacement": "ε",
+		"string": "\\epsilon"
+	},
+	{
+		"options": "o?",
+		"replacement": "ζ",
+		"string": "\\zeta"
+	},
+	{
+		"options": "o?",
+		"replacement": "η",
+		"string": "\\eta"
+	},
+	{
+		"options": "o?",
+		"replacement": "θ",
+		"string": "\\theta"
+	},
+	{
+		"options": "o?",
+		"replacement": "ι",
+		"string": "\\iota"
+	},
+	{
+		"options": "o?",
+		"replacement": "κ",
+		"string": "\\kappa"
+	},
+	{
+		"options": "o?",
+		"replacement": "λ",
+		"string": "\\lambda"
+	},
+	{
+		"options": "o?",
+		"replacement": "μ",
+		"string": "\\mu"
+	},
+	{
+		"options": "o?",
+		"replacement": "ν",
+		"string": "\\nu"
+	},
+	{
+		"options": "o?",
+		"replacement": "ξ",
+		"string": "\\xi"
+	},
+	{
+		"options": "o?",
+		"replacement": "π",
+		"string": "\\pi"
+	},
+	{
+		"options": "o?",
+		"replacement": "ο",
+		"string": "\\omicron"
+	},
+	{
+		"options": "o?",
+		"replacement": "ρ",
+		"string": "\\rho"
+	},
+	{
+		"options": "o?",
+		"replacement": "σ",
+		"string": "\\sigma"
+	},
+	{
+		"options": "o?",
+		"replacement": "τ",
+		"string": "\\tau"
+	},
+	{
+		"options": "o?",
+		"replacement": "υ",
+		"string": "\\upsilon"
+	},
+	{
+		"options": "o?",
+		"replacement": "φ",
+		"string": "\\phi"
+	},
+	{
+		"options": "o?",
+		"replacement": "χ",
+		"string": "\\chi"
+	},
+	{
+		"options": "o?",
+		"replacement": "ψ",
+		"string": "\\psi"
+	},
+	{
+		"options": "o?",
+		"replacement": "ω",
+		"string": "\\omega"
+	},
+	{
+		"options": "o?",
+		"replacement": "ϐ",
+		"string": "\\varbeta"
+	},
+	{
+		"options": "o?",
+		"replacement": "ϑ",
+		"string": "\\vartheta"
+	},
+	{
+		"options": "o?",
+		"replacement": "ς",
+		"string": "\\varsigma"
+	},
+	{
+		"options": "o?",
+		"replacement": "ϖ",
+		"string": "\\varpi"
+	},
+	{
+		"options": "o?",
+		"replacement": "ϰ",
+		"string": "\\varkappa"
+	},
+	{
+		"options": "o?",
+		"replacement": "ϱ",
+		"string": "\\varrho"
+	},
+	{
+		"options": "o?",
+		"replacement": "℧",
+		"string": "\\mho"
+	},
+	{
+		"options": "o?",
+		"replacement": "‖",
+		"string": "\\|"
+	},
+	{
+		"options": "o?",
+		"replacement": "†",
+		"string": "\\dagger"
+	},
+	{
+		"options": "o?",
+		"replacement": "‡",
+		"string": "\\ddagger"
+	},
+	{
+		"options": "o?",
+		"replacement": "–",
+		"string": "\\longdash"
+	},
+	{
+		"options": "o?",
+		"replacement": "ℏ",
+		"string": "\\hslash"
+	},
+	{
+		"options": "o?",
+		"replacement": "ℓ",
+		"string": "\\ell"
+	},
+	{
+		"options": "o?",
+		"replacement": "Å",
+		"string": "\\Angstroem"
+	},
+	{
+		"options": "o?",
+		"replacement": "Ⅎ",
+		"string": "\\Finv"
+	},
+	{
+		"options": "o?",
+		"replacement": "ℵ",
+		"string": "\\aleph"
+	},
+	{
+		"options": "o?",
+		"replacement": "ℶ",
+		"string": "\\beth"
+	},
+	{
+		"options": "o?",
+		"replacement": "ℷ",
+		"string": "\\gimel"
+	},
+	{
+		"options": "o?",
+		"replacement": "ℸ",
+		"string": "\\daleth"
+	},
+	{
+		"options": "o?",
+		"replacement": "⅁",
+		"string": "\\Game"
+	},
+	{
+		"options": "o?",
+		"replacement": "⅄",
+		"string": "\\Yup"
+	},
+	{
+		"options": "o?",
+		"replacement": "ℇ",
+		"string": "\\Euler"
+	},
+	{
+		"options": "co?",
+		"replacement": "←",
+		"string": "\\leftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↑",
+		"string": "\\uparrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "→",
+		"string": "\\rightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↓",
+		"string": "\\downarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↔",
+		"string": "\\leftrightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↕",
+		"string": "\\updownarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↖",
+		"string": "\\nwarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↗",
+		"string": "\\nearrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↘",
+		"string": "\\searrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↙",
+		"string": "\\swarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↚",
+		"string": "\\nleftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↛",
+		"string": "\\nrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↜",
+		"string": "\\leftwavearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↝",
+		"string": "\\rightwavearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↞",
+		"string": "\\twoheadleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↟",
+		"string": "\\twoheaduparrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↠",
+		"string": "\\twoheadrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↡",
+		"string": "\\twoheaddownarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↢",
+		"string": "\\leftarrowtail"
+	},
+	{
+		"options": "o?",
+		"replacement": "↣",
+		"string": "\\rightarrowtail"
+	},
+	{
+		"options": "co?",
+		"replacement": "↤",
+		"string": "\\mapsfrom"
+	},
+	{
+		"options": "o?",
+		"replacement": "↥",
+		"string": "\\MapsUp"
+	},
+	{
+		"options": "co?",
+		"replacement": "↦",
+		"string": "\\mapsto"
+	},
+	{
+		"options": "o?",
+		"replacement": "↧",
+		"string": "\\MapsDown"
+	},
+	{
+		"options": "o?",
+		"replacement": "↨",
+		"string": "\\updownarrowbar"
+	},
+	{
+		"options": "o?",
+		"replacement": "↩",
+		"string": "\\hookleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↪",
+		"string": "\\hookrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↫",
+		"string": "\\looparrowleft"
+	},
+	{
+		"options": "o?",
+		"replacement": "↬",
+		"string": "\\looparrowright"
+	},
+	{
+		"options": "o?",
+		"replacement": "↭",
+		"string": "\\leftrightsquigarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "↮",
+		"string": "\\nleftrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↰",
+		"string": "\\Lsh"
+	},
+	{
+		"options": "o?",
+		"replacement": "↱",
+		"string": "\\Rsh"
+	},
+	{
+		"options": "o?",
+		"replacement": "↲",
+		"string": "\\dlsh"
+	},
+	{
+		"options": "o?",
+		"replacement": "↳",
+		"string": "\\drsh"
+	},
+	{
+		"options": "o?",
+		"replacement": "↴",
+		"string": "\\linefeed"
+	},
+	{
+		"options": "o?",
+		"replacement": "↵",
+		"string": "\\carriagereturn"
+	},
+	{
+		"options": "o?",
+		"replacement": "↶",
+		"string": "\\curvearrowleft"
+	},
+	{
+		"options": "o?",
+		"replacement": "↷",
+		"string": "\\curvearrowright"
+	},
+	{
+		"options": "o?",
+		"replacement": "↸",
+		"string": "\\barovernorthwestarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "↹",
+		"string": "\\barleftarrowrightarrowba"
+	},
+	{
+		"options": "o?",
+		"replacement": "↺",
+		"string": "\\circlearrowleft"
+	},
+	{
+		"options": "o?",
+		"replacement": "↻",
+		"string": "\\circlearrowright"
+	},
+	{
+		"options": "o?",
+		"replacement": "↼",
+		"string": "\\leftharpoonup"
+	},
+	{
+		"options": "o?",
+		"replacement": "↽",
+		"string": "\\leftharpoondown"
+	},
+	{
+		"options": "o?",
+		"replacement": "↾",
+		"string": "\\upharpoonright"
+	},
+	{
+		"options": "o?",
+		"replacement": "↿",
+		"string": "\\upharpoonleft"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇀",
+		"string": "\\rightharpoonup"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇁",
+		"string": "\\rightharpoondown"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇂",
+		"string": "\\downharpoonright"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇃",
+		"string": "\\downharpoonleft"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇄",
+		"string": "\\rightleftarrows"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇅",
+		"string": "\\updownarrows"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇆",
+		"string": "\\leftrightarrows"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇇",
+		"string": "\\leftleftarrows"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇈",
+		"string": "\\upuparrows"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇉",
+		"string": "\\rightrightarrows"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇊",
+		"string": "\\downdownarrows"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇋",
+		"string": "\\leftrightharpoons"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇌",
+		"string": "\\rightleftharpoons"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇍",
+		"string": "\\nLeftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇎",
+		"string": "\\nLeftrightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇏",
+		"string": "\\nRightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇐",
+		"string": "\\Leftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇑",
+		"string": "\\Uparrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇒",
+		"string": "\\Rightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇓",
+		"string": "\\Downarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇔",
+		"string": "\\Leftrightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇕",
+		"string": "\\Updownarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇖",
+		"string": "\\Nwarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇗",
+		"string": "\\Nearrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇘",
+		"string": "\\Searrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇙",
+		"string": "\\Swarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇚",
+		"string": "\\Lleftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇛",
+		"string": "\\Rrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇜",
+		"string": "\\leftsquigarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇝",
+		"string": "\\rightsquigarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇞",
+		"string": "\\nHuparrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇟",
+		"string": "\\nHdownarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇠",
+		"string": "\\dashleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇡",
+		"string": "\\updasharrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇢",
+		"string": "\\dashrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇣",
+		"string": "\\downdasharrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇤",
+		"string": "\\LeftArrowBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇥",
+		"string": "\\RightArrowBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇦",
+		"string": "\\leftwhitearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇧",
+		"string": "\\upwhitearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇨",
+		"string": "\\rightwhitearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇩",
+		"string": "\\downwhitearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇪",
+		"string": "\\whitearrowupfrombar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇴",
+		"string": "\\circleonrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇵",
+		"string": "\\downuparrows"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇶",
+		"string": "\\rightthreearrows"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇷",
+		"string": "\\nvleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇸",
+		"string": "\\pfun"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇹",
+		"string": "\\nvleftrightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇺",
+		"string": "\\nVleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇻",
+		"string": "\\ffun"
+	},
+	{
+		"options": "co?",
+		"replacement": "⇼",
+		"string": "\\nVleftrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇽",
+		"string": "\\leftarrowtriangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇾",
+		"string": "\\rightarrowtriangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "⇿",
+		"string": "\\leftrightarrowtriangle"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟰",
+		"string": "\\UUparrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟱",
+		"string": "\\DDownarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⟲",
+		"string": "\\acwgapcirclearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⟳",
+		"string": "\\cwgapcirclearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⟴",
+		"string": "\\rightarrowonoplus"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟵",
+		"string": "\\longleftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟶",
+		"string": "\\longrightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟷",
+		"string": "\\longleftrightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟸",
+		"string": "\\Longleftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟹",
+		"string": "\\Longrightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟺",
+		"string": "\\Longleftrightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟻",
+		"string": "\\longmapsfrom"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟼",
+		"string": "\\longmapsto"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟽",
+		"string": "\\Longmapsfrom"
+	},
+	{
+		"options": "co?",
+		"replacement": "⟾",
+		"string": "\\Longmapsto"
+	},
+	{
+		"options": "o?",
+		"replacement": "⟿",
+		"string": "\\longrightsquigarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤀",
+		"string": "\\psur"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤁",
+		"string": "\\nVtwoheadrightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⤂",
+		"string": "\\nvLeftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⤃",
+		"string": "\\nvRightarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⤄",
+		"string": "\\nvLeftrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤅",
+		"string": "\\twoheadmapsto"
+	},
+	{
+		"options": "co?",
+		"replacement": "⤆",
+		"string": "\\Mapsfrom"
+	},
+	{
+		"options": "co?",
+		"replacement": "⤇",
+		"string": "\\Mapsto"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤈",
+		"string": "\\downarrowbarred"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤉",
+		"string": "\\uparrowbarred"
+	},
+	{
+		"options": "co?",
+		"replacement": "⤊",
+		"string": "\\Uuparrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⤋",
+		"string": "\\Ddownarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤌",
+		"string": "\\leftbkarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤍",
+		"string": "\\rightbkarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤎",
+		"string": "\\leftdbkarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤏",
+		"string": "\\dbkarow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤐",
+		"string": "\\drbkarow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤑",
+		"string": "\\rightdotarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤒",
+		"string": "\\UpArrowBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤓",
+		"string": "\\DownArrowBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤔",
+		"string": "\\pinj"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤕",
+		"string": "\\finj"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤖",
+		"string": "\\bij"
+	},
+	{
+		"options": "co?",
+		"replacement": "⤗",
+		"string": "\\nvtwoheadrightarrowtail"
+	},
+	{
+		"options": "co?",
+		"replacement": "⤘",
+		"string": "\\nVtwoheadrightarrowtail"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤙",
+		"string": "\\lefttail"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤚",
+		"string": "\\righttail"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤛",
+		"string": "\\leftdbltail"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤜",
+		"string": "\\rightdbltail"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤝",
+		"string": "\\diamondleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤞",
+		"string": "\\rightarrowdiamond"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤟",
+		"string": "\\diamondleftarrowbar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤠",
+		"string": "\\barrightarrowdiamond"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤡",
+		"string": "\\nwsearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤢",
+		"string": "\\neswarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤣",
+		"string": "\\hknwarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤤",
+		"string": "\\hknearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤥",
+		"string": "\\hksearow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤦",
+		"string": "\\hkswarow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤧",
+		"string": "\\tona"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤨",
+		"string": "\\toea"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤩",
+		"string": "\\tosa"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤪",
+		"string": "\\towa"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤫",
+		"string": "\\rdiagovfdiag"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤬",
+		"string": "\\fdiagovrdiag"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤭",
+		"string": "\\seovnearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤮",
+		"string": "\\neovsearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤯",
+		"string": "\\fdiagovnearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤰",
+		"string": "\\rdiagovsearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤱",
+		"string": "\\neovnwarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤲",
+		"string": "\\nwovnearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤳",
+		"string": "\\leadsto"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤴",
+		"string": "\\uprightcurvearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤵",
+		"string": "\\downrightcurvedarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤶",
+		"string": "\\leftdowncurvedarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤷",
+		"string": "\\rightdowncurvedarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤸",
+		"string": "\\cwrightarcarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤹",
+		"string": "\\acwleftarcarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤺",
+		"string": "\\acwoverarcarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤻",
+		"string": "\\acwunderarcarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤼",
+		"string": "\\curvearrowrightminus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤽",
+		"string": "\\curvearrowleftplus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤾",
+		"string": "\\cwundercurvearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⤿",
+		"string": "\\ccwundercurvearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥀",
+		"string": "\\acwcirclearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥁",
+		"string": "\\cwcirclearrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥂",
+		"string": "\\rightarrowshortleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥃",
+		"string": "\\leftarrowshortrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥄",
+		"string": "\\shortrightarrowleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥅",
+		"string": "\\rightarrowplus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥆",
+		"string": "\\leftarrowplus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥇",
+		"string": "\\rightarrowx"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥈",
+		"string": "\\leftrightarrowcircle"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥉",
+		"string": "\\twoheaduparrowcircle"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥊",
+		"string": "\\leftrightharpoon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥋",
+		"string": "\\rightleftharpoon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥌",
+		"string": "\\updownharpoonrightleft"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥍",
+		"string": "\\updownharpoonleftright"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥎",
+		"string": "\\leftrightharpoonup"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥏",
+		"string": "\\rightupdownharpoon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥐",
+		"string": "\\leftrightharpoondown"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥑",
+		"string": "\\leftupdownharpoon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥒",
+		"string": "\\LeftVectorBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥓",
+		"string": "\\RightVectorBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥔",
+		"string": "\\RightUpVectorBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥕",
+		"string": "\\RightDownVectorBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥖",
+		"string": "\\DownLeftVectorBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥗",
+		"string": "\\DownRightVectorBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥘",
+		"string": "\\LeftUpVectorBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥙",
+		"string": "\\LeftDownVectorBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥚",
+		"string": "\\LeftTeeVector"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥛",
+		"string": "\\RightTeeVector"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥜",
+		"string": "\\RightUpTeeVector"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥝",
+		"string": "\\RightDownTeeVector"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥞",
+		"string": "\\DownLeftTeeVector"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥟",
+		"string": "\\DownRightTeeVector"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥠",
+		"string": "\\LeftUpTeeVector"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥡",
+		"string": "\\LeftDownTeeVector"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥢",
+		"string": "\\leftleftharpoons"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥣",
+		"string": "\\upupharpoons"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥤",
+		"string": "\\rightrightharpoons"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥥",
+		"string": "\\downdownharpoons"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥦",
+		"string": "\\leftrightharpoonsup"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥧",
+		"string": "\\leftrightharpoonsdown"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥨",
+		"string": "\\rightleftharpoonsup"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥩",
+		"string": "\\rightleftharpoonsdown"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥪",
+		"string": "\\leftbarharpoon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥫",
+		"string": "\\barleftharpoon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥬",
+		"string": "\\rightbarharpoon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥭",
+		"string": "\\barrightharpoon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥮",
+		"string": "\\updownharpoons"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥯",
+		"string": "\\downupharpoons"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥰",
+		"string": "\\rightimply"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥱",
+		"string": "\\equalrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥲",
+		"string": "\\similarrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥳",
+		"string": "\\leftarrowsimilar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥴",
+		"string": "\\rightarrowsimilar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⥵",
+		"string": "\\rightarrowapprox"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬰",
+		"string": "\\circleonleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬱",
+		"string": "\\leftthreearrows"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬲",
+		"string": "\\leftarrowonoplus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬳",
+		"string": "\\longleftsquigarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⬴",
+		"string": "\\nvtwoheadleftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⬵",
+		"string": "\\nVtwoheadleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬶",
+		"string": "\\twoheadmapsfrom"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬷",
+		"string": "\\twoheadleftdbkarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬸",
+		"string": "\\leftdotarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⬹",
+		"string": "\\nvleftarrowtail"
+	},
+	{
+		"options": "co?",
+		"replacement": "⬺",
+		"string": "\\nVleftarrowtail"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬻",
+		"string": "\\twoheadleftarrowtail"
+	},
+	{
+		"options": "co?",
+		"replacement": "⬼",
+		"string": "\\nvtwoheadleftarrowtail"
+	},
+	{
+		"options": "co?",
+		"replacement": "⬽",
+		"string": "\\nVtwoheadleftarrowtail"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬾",
+		"string": "\\leftarrowx"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬿",
+		"string": "\\leftcurvedarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭀",
+		"string": "\\equalleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭁",
+		"string": "\\bsimilarleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭂",
+		"string": "\\leftarrowbackapprox"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭃",
+		"string": "\\rightarrowgtr"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭄",
+		"string": "\\rightarrowsupset"
+	},
+	{
+		"options": "co?",
+		"replacement": "⭅",
+		"string": "\\LLeftarrow"
+	},
+	{
+		"options": "co?",
+		"replacement": "⭆",
+		"string": "\\RRightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭇",
+		"string": "\\bsimilarrightarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭈",
+		"string": "\\rightarrowbackapprox"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭉",
+		"string": "\\similarleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭊",
+		"string": "\\leftarrowapprox"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭋",
+		"string": "\\leftarrowbsimilar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭌",
+		"string": "\\rightarrowbsimilar"
+	},
+	{
+		"options": "o?",
+		"replacement": "𝜕",
+		"string": "\\partial"
+	},
+	{
+		"options": "o?",
+		"replacement": "∀",
+		"string": "\\forall"
+	},
+	{
+		"options": "o?",
+		"replacement": "∃",
+		"string": "\\exists"
+	},
+	{
+		"options": "o?",
+		"replacement": "∄",
+		"string": "\\nexists"
+	},
+	{
+		"options": "o?",
+		"replacement": "∇",
+		"string": "\\nabla"
+	},
+	{
+		"options": "o?",
+		"replacement": "∈",
+		"string": "\\in"
+	},
+	{
+		"options": "o?",
+		"replacement": "∉",
+		"string": "\\notin"
+	},
+	{
+		"options": "o?",
+		"replacement": "∊",
+		"string": "\\smallin"
+	},
+	{
+		"options": "o?",
+		"replacement": "∋",
+		"string": "\\ni"
+	},
+	{
+		"options": "o?",
+		"replacement": "∌",
+		"string": "\\nni"
+	},
+	{
+		"options": "o?",
+		"replacement": "∍",
+		"string": "\\smallni"
+	},
+	{
+		"options": "o?",
+		"replacement": "↯",
+		"string": "\\lightning"
+	},
+	{
+		"options": "o?",
+		"replacement": "∎",
+		"string": "\\QED"
+	},
+	{
+		"options": "o?",
+		"replacement": "∴",
+		"string": "\\therefore"
+	},
+	{
+		"options": "o?",
+		"replacement": "∵",
+		"string": "\\because"
+	},
+	{
+		"options": "o?",
+		"replacement": "∷",
+		"string": "\\Proportion"
+	},
+	{
+		"options": "o?",
+		"replacement": "∧",
+		"string": "\\wedge"
+	},
+	{
+		"options": "o?",
+		"replacement": "∨",
+		"string": "\\vee"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋀",
+		"string": "\\bigwedge"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋁",
+		"string": "\\bigvee"
+	},
+	{
+		"options": "co?",
+		"replacement": "⊢",
+		"string": "\\vdash"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊣",
+		"string": "\\dashv"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊤",
+		"string": "\\top"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊥",
+		"string": "\\bot"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊦",
+		"string": "\\assert"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊧",
+		"string": "\\models"
+	},
+	{
+		"options": "co?",
+		"replacement": "⊨",
+		"string": "\\vDash"
+	},
+	{
+		"options": "co?",
+		"replacement": "⊩",
+		"string": "\\Vdash"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊪",
+		"string": "\\Vvdash"
+	},
+	{
+		"options": "co?",
+		"replacement": "⊫",
+		"string": "\\VDash"
+	},
+	{
+		"options": "co?",
+		"replacement": "⊬",
+		"string": "\\nvdash"
+	},
+	{
+		"options": "co?",
+		"replacement": "⊭",
+		"string": "\\nvDash"
+	},
+	{
+		"options": "co?",
+		"replacement": "⊮",
+		"string": "\\nVdash"
+	},
+	{
+		"options": "co?",
+		"replacement": "⊯",
+		"string": "\\nVDash"
+	},
+	{
+		"options": "o?",
+		"replacement": "∏",
+		"string": "\\prod"
+	},
+	{
+		"options": "o?",
+		"replacement": "∐",
+		"string": "\\coprod"
+	},
+	{
+		"options": "o?",
+		"replacement": "∑",
+		"string": "\\sum"
+	},
+	{
+		"options": "o?",
+		"replacement": "∘",
+		"string": "\\circ"
+	},
+	{
+		"options": "o?",
+		"replacement": "∙",
+		"string": "\\bullet"
+	},
+	{
+		"options": "o?",
+		"replacement": "√",
+		"string": "\\sqrt"
+	},
+	{
+		"options": "o?",
+		"replacement": "∛",
+		"string": "\\sqrt3"
+	},
+	{
+		"options": "o?",
+		"replacement": "∜",
+		"string": "\\sqrt4"
+	},
+	{
+		"options": "o?",
+		"replacement": "∝",
+		"string": "\\propto"
+	},
+	{
+		"options": "o?",
+		"replacement": "∞",
+		"string": "\\infty"
+	},
+	{
+		"options": "o?",
+		"replacement": "∟",
+		"string": "\\rightangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "∠",
+		"string": "\\angle"
+	},
+	{
+		"options": "o?",
+		"replacement": "∡",
+		"string": "\\measuredangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "∢",
+		"string": "\\sphericalangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "∣",
+		"string": "\\mid"
+	},
+	{
+		"options": "o?",
+		"replacement": "∤",
+		"string": "\\nmid"
+	},
+	{
+		"options": "o?",
+		"replacement": "∥",
+		"string": "\\parallel"
+	},
+	{
+		"options": "o?",
+		"replacement": "∦",
+		"string": "\\nparallel"
+	},
+	{
+		"options": "o?",
+		"replacement": "∅",
+		"string": "\\emptyset"
+	},
+	{
+		"options": "o?",
+		"replacement": "∩",
+		"string": "\\cap"
+	},
+	{
+		"options": "o?",
+		"replacement": "∪",
+		"string": "\\cup"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋂",
+		"string": "\\bigcap"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋃",
+		"string": "\\bigcup"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊂",
+		"string": "\\subset"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊃",
+		"string": "\\supset"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊄",
+		"string": "\\nsubset"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊅",
+		"string": "\\nsupset"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊆",
+		"string": "\\subseteq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊇",
+		"string": "\\supseteq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊈",
+		"string": "\\nsubseteq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊉",
+		"string": "\\nsupseteq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊊",
+		"string": "\\subsetneq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊋",
+		"string": "\\supsetneq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊌",
+		"string": "\\cupleftarrow"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊍",
+		"string": "\\cupdot"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊎",
+		"string": "\\uplus"
+	},
+	{
+		"options": "o?",
+		"replacement": "∫",
+		"string": "\\int"
+	},
+	{
+		"options": "o?",
+		"replacement": "∬",
+		"string": "\\iint"
+	},
+	{
+		"options": "o?",
+		"replacement": "∭",
+		"string": "\\iiint"
+	},
+	{
+		"options": "o?",
+		"replacement": "∮",
+		"string": "\\oint"
+	},
+	{
+		"options": "o?",
+		"replacement": "∯",
+		"string": "\\oiint"
+	},
+	{
+		"options": "o?",
+		"replacement": "∰",
+		"string": "\\oiiint"
+	},
+	{
+		"options": "o?",
+		"replacement": "∱",
+		"string": "\\intclockwise"
+	},
+	{
+		"options": "o?",
+		"replacement": "∲",
+		"string": "\\varointclockwise"
+	},
+	{
+		"options": "o?",
+		"replacement": "∳",
+		"string": "\\ointctrclockwise"
+	},
+	{
+		"options": "o?",
+		"replacement": "∸",
+		"string": "\\dotminus"
+	},
+	{
+		"options": "o?",
+		"replacement": "≕",
+		"string": "\\eqcolon"
+	},
+	{
+		"options": "o?",
+		"replacement": "∺",
+		"string": "\\dotsminusdots"
+	},
+	{
+		"options": "o?",
+		"replacement": "∻",
+		"string": "\\kernelcontraction"
+	},
+	{
+		"options": "o?",
+		"replacement": "∼",
+		"string": "\\sim"
+	},
+	{
+		"options": "o?",
+		"replacement": "∽",
+		"string": "\\backsim"
+	},
+	{
+		"options": "o?",
+		"replacement": "∾",
+		"string": "\\invlazys"
+	},
+	{
+		"options": "o?",
+		"replacement": "∿",
+		"string": "\\AC"
+	},
+	{
+		"options": "o?",
+		"replacement": "≀",
+		"string": "\\wr"
+	},
+	{
+		"options": "o?",
+		"replacement": "≁",
+		"string": "\\nsim"
+	},
+	{
+		"options": "o?",
+		"replacement": "≂",
+		"string": "\\eqsim"
+	},
+	{
+		"options": "o?",
+		"replacement": "≃",
+		"string": "\\simeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≄",
+		"string": "\\nsimeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≅",
+		"string": "\\cong"
+	},
+	{
+		"options": "o?",
+		"replacement": "≆",
+		"string": "\\simneqq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≇",
+		"string": "\\ncong"
+	},
+	{
+		"options": "o?",
+		"replacement": "≈",
+		"string": "\\approx"
+	},
+	{
+		"options": "o?",
+		"replacement": "≉",
+		"string": "\\napprox"
+	},
+	{
+		"options": "o?",
+		"replacement": "≊",
+		"string": "\\approxeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≋",
+		"string": "\\approxident"
+	},
+	{
+		"options": "o?",
+		"replacement": "≌",
+		"string": "\\backcong"
+	},
+	{
+		"options": "o?",
+		"replacement": "≍",
+		"string": "\\asymp"
+	},
+	{
+		"options": "co?",
+		"replacement": "≎",
+		"string": "\\Bumpeq"
+	},
+	{
+		"options": "co?",
+		"replacement": "≏",
+		"string": "\\bumpeq"
+	},
+	{
+		"options": "co?",
+		"replacement": "≐",
+		"string": "\\doteq"
+	},
+	{
+		"options": "co?",
+		"replacement": "≑",
+		"string": "\\Doteq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≒",
+		"string": "\\fallingdotseq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≓",
+		"string": "\\risingdotseq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≔",
+		"string": "\\coloneq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≖",
+		"string": "\\eqcirc"
+	},
+	{
+		"options": "o?",
+		"replacement": "≗",
+		"string": "\\circeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≘",
+		"string": "\\arceq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≙",
+		"string": "\\corresponds"
+	},
+	{
+		"options": "o?",
+		"replacement": "≚",
+		"string": "\\veeeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≛",
+		"string": "\\stareq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≜",
+		"string": "\\triangleq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≝",
+		"string": "\\eqdef"
+	},
+	{
+		"options": "o?",
+		"replacement": "≞",
+		"string": "\\measeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≟",
+		"string": "\\questeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≠",
+		"string": "\\neq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≡",
+		"string": "\\equiv"
+	},
+	{
+		"options": "o?",
+		"replacement": "≢",
+		"string": "\\nequiv"
+	},
+	{
+		"options": "o?",
+		"replacement": "≤",
+		"string": "\\leq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≥",
+		"string": "\\geq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≦",
+		"string": "\\leqq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≧",
+		"string": "\\geqq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≨",
+		"string": "\\lneqq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≩",
+		"string": "\\gneqq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≪",
+		"string": "\\ll"
+	},
+	{
+		"options": "o?",
+		"replacement": "≫",
+		"string": "\\gg"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋘",
+		"string": "\\lll"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋙",
+		"string": "\\ggg"
+	},
+	{
+		"options": "o?",
+		"replacement": "≬",
+		"string": "\\between"
+	},
+	{
+		"options": "o?",
+		"replacement": "≭",
+		"string": "\\notasymp"
+	},
+	{
+		"options": "o?",
+		"replacement": "≮",
+		"string": "\\nless"
+	},
+	{
+		"options": "o?",
+		"replacement": "≯",
+		"string": "\\ngtr"
+	},
+	{
+		"options": "o?",
+		"replacement": "≰",
+		"string": "\\nleq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≱",
+		"string": "\\ngeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≲",
+		"string": "\\lesssim"
+	},
+	{
+		"options": "o?",
+		"replacement": "≳",
+		"string": "\\gtrsim"
+	},
+	{
+		"options": "o?",
+		"replacement": "≴",
+		"string": "\\NotLessTilde"
+	},
+	{
+		"options": "o?",
+		"replacement": "≵",
+		"string": "\\NotGreaterTilde"
+	},
+	{
+		"options": "o?",
+		"replacement": "≶",
+		"string": "\\lessgtr"
+	},
+	{
+		"options": "o?",
+		"replacement": "≷",
+		"string": "\\gtrless"
+	},
+	{
+		"options": "o?",
+		"replacement": "≸",
+		"string": "\\nlessgtr"
+	},
+	{
+		"options": "o?",
+		"replacement": "≹",
+		"string": "\\NotGreaterLess"
+	},
+	{
+		"options": "o?",
+		"replacement": "≺",
+		"string": "\\prec"
+	},
+	{
+		"options": "o?",
+		"replacement": "≻",
+		"string": "\\succ"
+	},
+	{
+		"options": "o?",
+		"replacement": "≼",
+		"string": "\\preccurlyeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≽",
+		"string": "\\succcurlyeq"
+	},
+	{
+		"options": "o?",
+		"replacement": "≾",
+		"string": "\\precsim"
+	},
+	{
+		"options": "o?",
+		"replacement": "≿",
+		"string": "\\succsim"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊀",
+		"string": "\\nprec"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊁",
+		"string": "\\nsucc"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋚",
+		"string": "\\lesseqgtr"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋛",
+		"string": "\\gtreqless"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋜",
+		"string": "\\eqless"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋝",
+		"string": "\\eqgtr"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋞",
+		"string": "\\curlyeqprec"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋟",
+		"string": "\\curlyeqsucc"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋠",
+		"string": "\\npreceq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋡",
+		"string": "\\nsucceq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊏",
+		"string": "\\sqsubset"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊐",
+		"string": "\\sqsupset"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊑",
+		"string": "\\sqsubseteq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊒",
+		"string": "\\sqsupseteq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊓",
+		"string": "\\sqcap"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊔",
+		"string": "\\sqcup"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋢",
+		"string": "\\nsqsubseteq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋣",
+		"string": "\\nsqsupseteq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋤",
+		"string": "\\sqsubsetneq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋥",
+		"string": "\\sqsupsetneq"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊕",
+		"string": "\\oplus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊖",
+		"string": "\\ominus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊗",
+		"string": "\\otimes"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊘",
+		"string": "\\oslash"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊙",
+		"string": "\\odot"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊚",
+		"string": "\\circledcirc"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊛",
+		"string": "\\circledast"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊜",
+		"string": "\\circledequal"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊝",
+		"string": "\\circleddash"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊞",
+		"string": "\\boxplus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊟",
+		"string": "\\boxminus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊠",
+		"string": "\\boxtimes"
+	},
+	{
+		"options": "o?",
+		"replacement": "⊡",
+		"string": "\\boxdot"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋅",
+		"string": "\\cdot"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋈",
+		"string": "\\bowtie"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋉",
+		"string": "\\ltimes"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋊",
+		"string": "\\rtimes"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋋",
+		"string": "\\leftthreetimes"
+	},
+	{
+		"options": "o?",
+		"replacement": "⋌",
+		"string": "\\rightthreetimes"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭓",
+		"string": "\\rightpentagonblack"
+	},
+	{
+		"options": "o?",
+		"replacement": "⭔",
+		"string": "\\rightpentagon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬟",
+		"string": "\\pentagonblack"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬠",
+		"string": "\\pentagon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬡",
+		"string": "\\varhexagon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⎔",
+		"string": "\\hexagon"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬣",
+		"string": "\\hexagonblack"
+	},
+	{
+		"options": "o?",
+		"replacement": "⌬",
+		"string": "\\varhexagonlrbonds"
+	},
+	{
+		"options": "o?",
+		"replacement": "⏣",
+		"string": "\\benzenr"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬬",
+		"string": "\\blkhorzoval"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬭",
+		"string": "\\whthorzoval"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬮",
+		"string": "\\blkvertoval"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬯",
+		"string": "\\whtvertoval"
+	},
+	{
+		"options": "o?",
+		"replacement": "⌽",
+		"string": "\\obar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⌿",
+		"string": "\\notslash"
+	},
+	{
+		"options": "o?",
+		"replacement": "⍀",
+		"string": "\\notbackslash"
+	},
+	{
+		"options": "o?",
+		"replacement": "⍇",
+		"string": "\\APLleftarrowbox"
+	},
+	{
+		"options": "o?",
+		"replacement": "⍈",
+		"string": "\\APLrightarrowbox"
+	},
+	{
+		"options": "o?",
+		"replacement": "⍐",
+		"string": "\\APLuparrowbox"
+	},
+	{
+		"options": "o?",
+		"replacement": "⍓",
+		"string": "\\APLboxupcaret"
+	},
+	{
+		"options": "o?",
+		"replacement": "⍗",
+		"string": "\\APLdownarrowbox"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬜",
+		"string": "\\square"
+	},
+	{
+		"options": "o?",
+		"replacement": "⬛",
+		"string": "\\blacksquare"
+	},
+	{
+		"options": "o?",
+		"replacement": "▀",
+		"string": "\\blockuphalf"
+	},
+	{
+		"options": "o?",
+		"replacement": "▄",
+		"string": "\\blocklowhalf"
+	},
+	{
+		"options": "o?",
+		"replacement": "█",
+		"string": "\\blockfull"
+	},
+	{
+		"options": "o?",
+		"replacement": "▌",
+		"string": "\\blocklefthalf"
+	},
+	{
+		"options": "o?",
+		"replacement": "▐",
+		"string": "\\blockrighthalf"
+	},
+	{
+		"options": "o?",
+		"replacement": "░",
+		"string": "\\blockqtrshaded"
+	},
+	{
+		"options": "o?",
+		"replacement": "▒",
+		"string": "\\blockhalfshaded"
+	},
+	{
+		"options": "o?",
+		"replacement": "▓",
+		"string": "\\blockthreeqtrshaded"
+	},
+	{
+		"options": "o?",
+		"replacement": "■",
+		"string": "\\mdlgblksquare"
+	},
+	{
+		"options": "o?",
+		"replacement": "□",
+		"string": "\\mdlgwhtsquare"
+	},
+	{
+		"options": "o?",
+		"replacement": "▢",
+		"string": "\\squoval"
+	},
+	{
+		"options": "o?",
+		"replacement": "▣",
+		"string": "\\blackinwhitesquare"
+	},
+	{
+		"options": "o?",
+		"replacement": "▤",
+		"string": "\\squarehfill"
+	},
+	{
+		"options": "o?",
+		"replacement": "▥",
+		"string": "\\squarevfill"
+	},
+	{
+		"options": "o?",
+		"replacement": "▦",
+		"string": "\\squarehvfill"
+	},
+	{
+		"options": "o?",
+		"replacement": "▧",
+		"string": "\\squarenwsefill"
+	},
+	{
+		"options": "o?",
+		"replacement": "▨",
+		"string": "\\squareneswfill"
+	},
+	{
+		"options": "o?",
+		"replacement": "▩",
+		"string": "\\squarecrossfill"
+	},
+	{
+		"options": "o?",
+		"replacement": "▪",
+		"string": "\\smblksquare"
+	},
+	{
+		"options": "o?",
+		"replacement": "▫",
+		"string": "\\smwhtsquare"
+	},
+	{
+		"options": "o?",
+		"replacement": "▬",
+		"string": "\\hrectangleblack"
+	},
+	{
+		"options": "o?",
+		"replacement": "▭",
+		"string": "\\hrectangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "▮",
+		"string": "\\vrectangleblack"
+	},
+	{
+		"options": "o?",
+		"replacement": "▯",
+		"string": "\\vrectangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "▰",
+		"string": "\\parallelogramblack"
+	},
+	{
+		"options": "o?",
+		"replacement": "▱",
+		"string": "\\parallelogram"
+	},
+	{
+		"options": "o?",
+		"replacement": "▲",
+		"string": "\\bigblacktriangleup"
+	},
+	{
+		"options": "o?",
+		"replacement": "△",
+		"string": "\\bigtriangleup"
+	},
+	{
+		"options": "o?",
+		"replacement": "▴",
+		"string": "\\blacktriangleup"
+	},
+	{
+		"options": "o?",
+		"replacement": "▵",
+		"string": "\\smalltriangleup"
+	},
+	{
+		"options": "co?",
+		"replacement": "▶",
+		"string": "\\RHD"
+	},
+	{
+		"options": "co?",
+		"replacement": "▷",
+		"string": "\\rhd"
+	},
+	{
+		"options": "co?",
+		"replacement": "◀",
+		"string": "\\LHD"
+	},
+	{
+		"options": "co?",
+		"replacement": "◁",
+		"string": "\\lhd"
+	},
+	{
+		"options": "o?",
+		"replacement": "◢",
+		"string": "\\lrblacktriangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "◣",
+		"string": "\\llblacktriangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "◤",
+		"string": "\\ulblacktriangle"
+	},
+	{
+		"options": "o?",
+		"replacement": "◥",
+		"string": "\\urblacktriangle"
+	},
+	{
+		"options": "co?",
+		"replacement": "○",
+		"string": "\\Circle"
+	},
+	{
+		"options": "co?",
+		"replacement": "●",
+		"string": "\\CIRCLE"
+	},
+	{
+		"options": "o?",
+		"replacement": "◉",
+		"string": "\\fisheye"
+	},
+	{
+		"options": "o?",
+		"replacement": "◯",
+		"string": "\\lgwhtcircle"
+	},
+	{
+		"options": "o?",
+		"replacement": "⚪",
+		"string": "\\medcirc"
+	},
+	{
+		"options": "o?",
+		"replacement": "⚫",
+		"string": "\\medbullet"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨀",
+		"string": "\\bigodot"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨁",
+		"string": "\\bigoplus"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨂",
+		"string": "\\bigotimes"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨌",
+		"string": "\\iiiint"
+	},
+	{
+		"options": "co?",
+		"replacement": "⨍",
+		"string": "\\intbar"
+	},
+	{
+		"options": "co?",
+		"replacement": "⨎",
+		"string": "\\intBar"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨏",
+		"string": "\\fint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨐",
+		"string": "\\cirfnint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨑",
+		"string": "\\awint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨒",
+		"string": "\\rppolint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨓",
+		"string": "\\scpolint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨔",
+		"string": "\\npolint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨕",
+		"string": "\\pointint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨖",
+		"string": "\\sqint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨗",
+		"string": "\\intlarhk"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨘",
+		"string": "\\intx"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨙",
+		"string": "\\intcap"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨚",
+		"string": "\\intcup"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨛",
+		"string": "\\upint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⨜",
+		"string": "\\lowint"
+	},
+	{
+		"options": "o?",
+		"replacement": "⩵",
+		"string": "\\Equal"
+	},
+	{
+		"options": "o?",
+		"replacement": "⩶",
+		"string": "\\Same"
+	},
+	{
+		"options": "co?",
+		"replacement": "ℾ",
+		"string": "\\bbGamma"
+	},
+	{
+		"options": "co?",
+		"replacement": "ℿ",
+		"string": "\\bbPi"
+	},
+	{
+		"options": "o?",
+		"replacement": "⅀",
+		"string": "\\bbSigma}"
+	},
+	{
+		"options": "co?",
+		"replacement": "ℽ",
+		"string": "\\bbgamma"
+	},
+	{
+		"options": "co?",
+		"replacement": "ℼ",
+		"string": "\\bbpi"
+	},
+	{
+		"options": "o?",
+		"replacement": "ⅅ",
+		"string": "\\CapitalDifferentialD"
+	},
+	{
+		"options": "o?",
+		"replacement": "ⅈ",
+		"string": "\\ComplexI"
+	},
+	{
+		"options": "o?",
+		"replacement": "ⅉ",
+		"string": "\\ComplexJ"
+	},
+	{
+		"options": "o?",
+		"replacement": "ⅆ",
+		"string": "\\DifferentialD"
+	},
+	{
+		"options": "o?",
+		"replacement": "ⅇ",
+		"string": "\\ExponetialE"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁰",
+		"string": "^0"
+	},
+	{
+		"options": "o?",
+		"replacement": "¹",
+		"string": "^1"
+	},
+	{
+		"options": "o?",
+		"replacement": "²",
+		"string": "^2"
+	},
+	{
+		"options": "o?",
+		"replacement": "³",
+		"string": "^3"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁴",
+		"string": "^4"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁵",
+		"string": "^5"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁶",
+		"string": "^6"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁷",
+		"string": "^7"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁸",
+		"string": "^8"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁹",
+		"string": "^9"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁺",
+		"string": "^+"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁻",
+		"string": "^-"
+	},
+	{
+		"options": "o?",
+		"replacement": "⁼",
+		"string": "^="
+	},
+	{
+		"options": "o?",
+		"replacement": "⁽",
+		"string": "^("
+	},
+	{
+		"options": "o?",
+		"replacement": "⁾",
+		"string": "^)"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵃ",
+		"string": "^a"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵇ",
+		"string": "^b"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᶜ",
+		"string": "^c"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵈ",
+		"string": "^d"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵉ",
+		"string": "^e"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᶠ",
+		"string": "^f"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵍ",
+		"string": "^g"
+	},
+	{
+		"options": "o?",
+		"replacement": "ʰ",
+		"string": "^h"
+	},
+	{
+		"options": "o?",
+		"replacement": "ⁱ",
+		"string": "^i"
+	},
+	{
+		"options": "o?",
+		"replacement": "ʲ",
+		"string": "^j"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵏ",
+		"string": "^k"
+	},
+	{
+		"options": "o?",
+		"replacement": "ˡ",
+		"string": "^l"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵐ",
+		"string": "^m"
+	},
+	{
+		"options": "o?",
+		"replacement": "ⁿ",
+		"string": "^n"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵒ",
+		"string": "^o"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵖ",
+		"string": "^p"
+	},
+	{
+		"options": "o?",
+		"replacement": "ʳ",
+		"string": "^r"
+	},
+	{
+		"options": "o?",
+		"replacement": "ˢ",
+		"string": "^s"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵗ",
+		"string": "^t"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵘ",
+		"string": "^u"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵛ",
+		"string": "^v"
+	},
+	{
+		"options": "o?",
+		"replacement": "ʷ",
+		"string": "^w"
+	},
+	{
+		"options": "o?",
+		"replacement": "ˣ",
+		"string": "^x"
+	},
+	{
+		"options": "o?",
+		"replacement": "ʸ",
+		"string": "^y"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᶻ",
+		"string": "^z"
+	},
+	{
+		"options": "o?",
+		"replacement": "₀",
+		"string": "_0"
+	},
+	{
+		"options": "o?",
+		"replacement": "₁",
+		"string": "_1"
+	},
+	{
+		"options": "o?",
+		"replacement": "₂",
+		"string": "_2"
+	},
+	{
+		"options": "o?",
+		"replacement": "₃",
+		"string": "_3"
+	},
+	{
+		"options": "o?",
+		"replacement": "₄",
+		"string": "_4"
+	},
+	{
+		"options": "o?",
+		"replacement": "₅",
+		"string": "_5"
+	},
+	{
+		"options": "o?",
+		"replacement": "₆",
+		"string": "_6"
+	},
+	{
+		"options": "o?",
+		"replacement": "₇",
+		"string": "_7"
+	},
+	{
+		"options": "o?",
+		"replacement": "₈",
+		"string": "_8"
+	},
+	{
+		"options": "o?",
+		"replacement": "₉",
+		"string": "_9"
+	},
+	{
+		"options": "o?",
+		"replacement": "₊",
+		"string": "_+"
+	},
+	{
+		"options": "o?",
+		"replacement": "₋",
+		"string": "_-"
+	},
+	{
+		"options": "o?",
+		"replacement": "₌",
+		"string": "_="
+	},
+	{
+		"options": "o?",
+		"replacement": "₍",
+		"string": "_("
+	},
+	{
+		"options": "o?",
+		"replacement": "₎",
+		"string": "_)"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₐ",
+		"string": "_a"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₑ",
+		"string": "_e"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₕ",
+		"string": "_h"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵢ",
+		"string": "_i"
+	},
+	{
+		"options": "o?",
+		"replacement": "ⱼ",
+		"string": "_j"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₖ",
+		"string": "_k"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₗ",
+		"string": "_l"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₘ",
+		"string": "_m"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₙ",
+		"string": "_n"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₒ",
+		"string": "_o"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₚ",
+		"string": "_p"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵣ",
+		"string": "_r"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₛ",
+		"string": "_s"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₜ",
+		"string": "_t"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵤ",
+		"string": "_u"
+	},
+	{
+		"options": "o?",
+		"replacement": "ᵥ",
+		"string": "_v"
+	},
+	{
+		"options": "o?",
+		"replacement": "ₓ",
+		"string": "_x"
+	}
+]
