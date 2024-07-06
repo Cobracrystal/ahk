@@ -63,7 +63,7 @@ DesktopState.enable(60000)
 ; Start Loop to close winrar popups
 SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't interrupt
 ; Initialize Internet Logging Script
-internetConnectionLogger("Init", A_Desktop "\programs\programming\bat\log.txt")
+internetConnectionLogger("Init")
 ; Load LaTeX Hotstrings
 try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX")
 ; replace the tray menu with my own
@@ -572,35 +572,36 @@ connectNextDNS() {
 	return whr.ResponseText
 }
 
-internetConnectionLogger(mode := "T", path := "") {
+internetConnectionLogger(mode := "T") {
 	static internetConsolePID
-	static logFile
+	static logfile := A_WorkingDir "\everything\connectionlog.txt"
+	DetectHiddenWindows(1)
+	flagExist := WinExist("INTERNET_LOGGER ahk_exe cmd.exe")
+	DetectHiddenWindows(0)
+	flagVisible := WinExist("INTERNET_LOGGER ahk_exe cmd.exe")
 	mode := SubStr(mode, 1, 1)
-	if (mode == "I") {
-		if (path)
-			logFile := path
-		DetectHiddenWindows(1)
-		if (WinExist("INTERNET_LOGGER"))
-			internetConsolePID := WinGetPID("INTERNET_LOGGER")
-		else {
-			str := A_ComSpec . ' /c "title INTERNET_LOGGER && mode con: cols=65 lines=10 && powershell Set-ExecutionPolicy Bypass -Scope Process -Force; ' A_Desktop '\programs\programming\bat\internetLogger.ps1 -path "' . logFile . '""' 
-			Run(str, , "Hide" , &internetConsolePID)
-			WinWait("INTERNET_LOGGER")
-			WinSetAlwaysOnTop(1, "INTERNET_LOGGER")
-		}
-		DetectHiddenWindows(0)
-		fileMenu := TrayMenu.submenus["Files"]
-		fileMenu.Add("Open Internet Log", tryEditTextFile.bind("notepad++", '"' logFile '"'))
-		A_TrayMenu.Add("Files", fileMenu)
+	if (mode == "T")
+		mode := (flagVisible ? "C" : "O")
+	if (mode == "C" && flagExist) {
+		WinHide("ahk_pid " . internetConsolePID)
+		return
 	}
+	DetectHiddenWindows(1)
+	if (flagExist)
+		internetConsolePID := WinGetPID("ahk_id " flagExist)
 	else {
-		if (mode == "T")
-			mode := (WinExist("INTERNET_LOGGER") ? "C" : "O")
-		if (mode == "C")
-			WinHide("ahk_pid " . internetConsolePID)
-		else if (mode == "O")
-			WinShow("ahk_pid " . internetConsolePID)
+		str := A_ComSpec . ' /c "pwsh ' A_WorkingDir '\everything\internetLogger.ps1 -path "' . logFile . '""' 
+		Run(str, , "Hide" , &internetConsolePID)
+		WinWait("ahk_pid " internetConsolePID)
+		WinSetAlwaysOnTop(1, "ahk_pid " internetConsolePID)
+		WinSetStyle(-0x70000, "ahk_pid " internetConsolePID)
 	}
+	fileMenu := TrayMenu.submenus["Files"]
+	fileMenu.Add("Open Internet Log", tryEditTextFile.bind("notepad++", '"' logFile '"'))
+	A_TrayMenu.Add("Files", fileMenu)
+	DetectHiddenWindows(0)
+	if (mode == "O")
+		WinShow("ahk_pid " . internetConsolePID)
 	return
 }
 
