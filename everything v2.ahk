@@ -606,12 +606,12 @@ internetConnectionLogger(mode := "T") {
 }
 
 ; ^j:: { ; this doesn't work
-; 	static init := false
-; 	if (!init) {
-; 		SystemCursor("I")
-; 		init := true
-; 	}
-; 	SystemCursor(-1)
+;	static init := false
+;	if (!init) {
+;		SystemCursor("I")
+;		init := true
+;	}
+;	SystemCursor(-1)
 ; }
 
 ; doesn't work right now
@@ -863,13 +863,13 @@ makeTextAnsiColorful(str) {
  
 
 ; ^m:: { ; Get Permutations
-; 	A_Clipboard := getAllPermutations("12345", "abcde")
+;	A_Clipboard := getAllPermutations("12345", "abcde")
 ; }
 
 ; ^l:: { ; Make colorful Text
-; 	text := fastCopy()
-; 	text := makeTextAnsiColorful(text)
-; 	fastPrint(text)
+;	text := fastCopy()
+;	text := makeTextAnsiColorful(text)
+;	fastPrint(text)
 ; }
 
 #HotIf WinActive("doujinshi and manga - Vivaldi")
