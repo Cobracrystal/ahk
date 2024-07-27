@@ -152,13 +152,15 @@ bettercounter(ByRef req, ByRef res, ByRef server) {
 mediocreCounter(ByRef req, ByRef res, ByRef server) {
 	static data := ""
 	static URLorigin := "/counter/"
-	logger(req)
+	
 	cfile := A_WorkingDir . "\countingData.json"
 	vpath := Substr(req.path, StrLen(URLorigin))
 	if (data == "")
 		data := JSON.Load(FileOpen(cfile, "r", "UTF-8").Read())
-	if (vpath == "/" || vPath == "")
+	if (vpath == "/" || vPath == "") {
 		server.ServeFile(res, A_WorkingDir . "\webfiles\button.html")
+		logger(req)
+	}
 	else if (vpath == "/fetch") {
 		res.SetBodyText(JSON.Dump(data), "application/json; charset=utf-8")
 	}

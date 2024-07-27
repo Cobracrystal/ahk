@@ -85,7 +85,7 @@ $code = @"
 }
 "@
 
-mode con: cols=65 lines=10
+mode con: cols=70 lines=10
 $Host.UI.RawUI.WindowTitle = "INTERNET_LOGGER"
 [console]::CursorVisible = $false
 
@@ -125,6 +125,9 @@ do {
 	$currentTimestamp = Get-Date
 	if ($ping) {
 		if ($previousStatus -ne "Connected") {
+			if (!(test-connection -comp www.google.com -Quiet -Count 1)) {
+				continue
+			}
 			$connectedSince = Get-Date
 			[PowershellExitLogger.LoggerClass]::updateLastEventTime()
 			if ($previousStatus -eq "Disconnected") {
@@ -141,6 +144,9 @@ do {
 		$previousStatus = "Connected"
 	} else {
 		if ($previousStatus -ne "Disconnected") {
+			if (test-connection -comp www.google.com -Quiet -Count 1) {
+				continue
+			}
 			$disconnectedSince = Get-Date
 			[PowershellExitLogger.LoggerClass]::updateLastEventTime()
 			if ($previousStatus -eq "Connected") {

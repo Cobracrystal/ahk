@@ -40,6 +40,7 @@ class DiscordClient {
 		return this.callApi("POST", "/channels/" channelID . "/messages", content)
 	}
 	
+	; THIS SHOULD FILTER FOR MULTIPLE mTypeS AND NOT JUST ONE. ?limit=100&after=ID&before=ID IS POSSIBLE AHHHHHH
 	getMessages(channelID, limit := 100, mType := "", mID := 0) {
 		switch mType {
 			case "","after","before","around":
