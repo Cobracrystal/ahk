@@ -5,6 +5,7 @@ class MacroRecorder {
 	static createMacro(startEndKey) {	; Generating Function. Call this from the hotkey.
 		this.macro := []
 		this.prevticks := 0
+		this.startWindow := WinGetTitle(WinGetID("A"))
 		this.recordMacro(startEndKey)	; this records everything. stops as soon as startEndKey is pressed
 		this.genMacroCode()	; this takes the recording object and creates functional code out of it
 		this.createMacroGenGUI()		; this takes the given code and displays it to edit it. Further Code all Happens via Buttons within the GUI.
@@ -59,9 +60,11 @@ class MacroRecorder {
 		for i, e in this.macro
 			code .= this.createCodeAction(e)
 		t := FormatTime(, "dd.MM.yyyy, HH:mm:ss")
+		fcode := "#HotIf WinActive(`"" this.startWindow "`")`n"
+		fcode .= "^Insert::{	`; Automatic Hotkey generated " . t . "`n" 
+		fcode .= "Loop(1) {`n" . code . "}}`n#HotIf"
 		code := "^Insert::{	`; Automatic Hotkey generated " . t . "`n" . "Loop(1) {`n" . code . "}}`n"
-		this.prevticks := 0
-		this.macroCode := code
+		this.macroCode := fcode
 	}
 
 	static createCodeAction(action, mode := 0) {	; Keeps track of ticks for "Sleep, x" for timing.
