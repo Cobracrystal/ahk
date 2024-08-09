@@ -2,6 +2,7 @@
 #SingleInstance Force
 #Persistent
 SendMode Input
+StringCaseSense, Locale
 filterGuiArray := []	;// this is to manage all GUI windows correctly
 appDataPath := A_Appdata . "\Autohotkey\TableFilter"
 if !(FileExist(appDataPath))
@@ -20,7 +21,7 @@ duplicateFilter := "Deutsch" ;// default value to search in duplicateList for
 saveHotkeyAsString := "^s" ;// hotkey for quicksaving. default ^s
 reloadHotkeyAsString := "^+f" ;// hotkey for reloading script. default ^+r
 openWindowHotkeyAsString := "^p"
-iconPath := "E:\OneDrive\Auto HotKey Scripts\icons\a-runic.ico"
+iconPath := "G:\OneDrive\Auto HotKey Scripts\icons\a-runic.ico"
 ; ##################################
 
 ;// MENU
@@ -51,35 +52,32 @@ return
 createMainGUI() {
 	global keyArray, guiName, filterGuiArray
 	global flagLoaded, darkModeToggle, flagDebug
-	Gui, New, +Border +hwndGuiHwnd
+	global AddButton1
+	Gui, New, +Border +hwndGuiHwnd +Resize
 	filterGuiArray.push(GuiHwnd)
 	if (flagLoaded) {
 		GroupAdd, tableFilterGUIGroup, ahk_id %GuiHwnd%
-		s := "DATAINDEX"
+		s := "ID"
 		for index, key in keyArray
 			s .= "|" . key
 		createSearchBoxesinGUI(keyArray)
 		Gui, Add, ListView, vLV AltSubmit gLVEvent xs R35 w950, % s
 		createAddLineBoxesinGUI(keyArray)
-		Gui, Add, Button, yp-1 xp+37 gAddLineToData r1 w100, Add Row to List
+		Gui, Add, Button, yp-1 xp+115 vAddButton1 gAddLineToData r1 w100, Eintrag hinzufügen
 		createFileButtonsinGUI()
-		if !(flagDebug)
-			LV_ModifyCol(1, 0)
+		; if !(flagDebug)
+			; LV_ModifyCol(1, 0)	;// setzt die ID-Zeile auf Breite 0, sodass sie versteckt wird
 		createFilteredList()
-	;//	LV_ModifyCol(2, 100)	; Wortart
-		LV_ModifyCol(3, 200)	; Deutsch
-		LV_ModifyCol(4, 150)	; Kayoogis
-		LV_ModifyCol(5, 150)	; Runen
-		LV_ModifyCol(6, 180)	; Anmerkung
-		LV_ModifyCol(7, 100)	; Kategorie
-		LV_ModifyCol(8, 50)		; Tema'i
+		LV_ModifyCol(1, "Integer")
+		for i, e in keyArray
+			LV_ModifyCol(i, "AutoHdr")
 	}
 	else {
-		Gui, Add, Button, x200 Default gLoadData r1 w100, Load XML File
-		Gui, Add, ListView, vLV x7 R20 w500, % "No File Selected"
+		Gui, Add, Button, x200 Default gLoadData r1 w100, XML-Datei laden
+		Gui, Add, ListView, vLV x7 R20 w500, % "Keine Datei gewählt"
 		GuiControl, Disable, LV
-		GuiControl, Focus, Load XML File
-		guiName := "No File selected."
+		GuiControl, Focus, XML-Datei laden
+		guiName := "Keine Datei gewählt."
 	}
 	if (darkModeToggle)
 		toggleGuiDarkMode(GuiHwnd)
@@ -96,14 +94,15 @@ createSearchBoxesinGUI(keyArray) {
 		if (e == "Wortart" || e == "Tema'i")
 			boxWidthArray[i] := 30
 		else
-			boxWidthArray[i] := 60
+			boxWidthArray[i] := 75
 	}
+	Gui, Add, Button, % "Section w30 R1 gClearSearchBoxes", % "Clear"
 	for i, e in keyArray
 	{
-		Gui, Add, Text, % (i==1?"Section":"ys"), % (i==1?"Filter ":" ") . keyArray[i]
+		Gui, Add, Text, % "ys", % (i==1?"Filter: ":" ") . keyArray[i]
 		Gui, Add, Edit, % "vFilterColumn" . i . " gcreateFilteredList ys r1 w" . boxWidthArray[i]
 	}
-	Gui, Add, Text, ys+3, % "Duplicate Filter:"
+	Gui, Add, Text, ys+3, % "Dupes:"
 	Gui, Add, Checkbox, gduplicateList vCheckboxDuplicates ys+3 r1 w50
 }
 
@@ -112,21 +111,15 @@ createAddLineBoxesinGUI(keyArray, row := "") {
 	local boxWidthArray := []
 	for i, e in keyArray
 	{
-		if (e == "Wortart" || e == "Tema'i")
-			boxWidthArray[i] := 30
-		else
-			boxWidthArray[i] := 100
-	}
-	for i, e in keyArray
-	{
-		Gui, Add, Text, % (i==1?"Section":"ys"), % e
-		Gui, Add, Edit, % "vNewRow" . i . " gAddLineBoxChecker r1 w" . boxWidthArray[i], % row[e]
+		Gui, Add, Text, % "vNewRowText" . i . " " . (i==1?"Section":"ys"), % e
+		Gui, Add, Edit, % "vNewRow" . i . " gAddLineBoxChecker r1 w100", % row[e]
 	}
 }
 
 createFileButtonsinGUI() {
-	Gui, Add, Button, ys 	xp+165  gLoadData 		 r1 w100, Load XML File
-	Gui, Add, Button, ys+25 xp 		gExportToFileGUI r1 w100, Export to XML File
+	global
+	Gui, Add, Button, % "ys xp+165 vFileButton1 gLoadData Default r1 w140", XML-Datei laden
+	Gui, Add, Button, % "ys+25 xp vFileButton2 gExportToFileGUI r1 w140", Export als XML-Datei
 }
 
 createGUIRowMenu() {
@@ -141,9 +134,10 @@ createGUIRowMenu() {
 	Menu, tableFilterAddCategoryMenu, Add, % "🖐️ Körper", tableFilterCategoryMenuHandler
 	Menu, tableFilterAddCategoryMenu, Add, % "🏘️ Orte", tableFilterCategoryMenuHandler
 	Menu, tableFilterAddCategoryMenu, Add, % "🌲 Pflanzen", tableFilterCategoryMenuHandler
-	Menu, tableFilterAddCategoryMenu, Add, % "🐕 Tiere ", tableFilterCategoryMenuHandler
+	Menu, tableFilterAddCategoryMenu, Add, % "🐕 Tiere", tableFilterCategoryMenuHandler
 	Menu, tableFilterAddCategoryMenu, Add, % "🌧️ Wetter", tableFilterCategoryMenuHandler
 	Menu, tableFilterAddCategoryMenu, Add, % "🔢 Zahl", tableFilterCategoryMenuHandler
+	Menu, tableFilterRemoveCategoryMenu, Add, % "[ALL]", tableFilterCategoryMenuHandler
 	Menu, tableFilterRemoveCategoryMenu, Add, % "👨‍👩‍👧 Familie", tableFilterCategoryMenuHandler
 	Menu, tableFilterRemoveCategoryMenu, Add, % "🖌️ Farbe", tableFilterCategoryMenuHandler
 	Menu, tableFilterRemoveCategoryMenu, Add, % "⛰️ Geographie", tableFilterCategoryMenuHandler
@@ -155,14 +149,13 @@ createGUIRowMenu() {
 	Menu, tableFilterRemoveCategoryMenu, Add, % "🖐️ Körper", tableFilterCategoryMenuHandler
 	Menu, tableFilterRemoveCategoryMenu, Add, % "🏘️ Orte", tableFilterCategoryMenuHandler
 	Menu, tableFilterRemoveCategoryMenu, Add, % "🌲 Pflanzen", tableFilterCategoryMenuHandler
-	Menu, tableFilterRemoveCategoryMenu, Add, % "🐕 Tiere ", tableFilterCategoryMenuHandler
+	Menu, tableFilterRemoveCategoryMenu, Add, % "🐕 Tiere", tableFilterCategoryMenuHandler
 	Menu, tableFilterRemoveCategoryMenu, Add, % "🌧️ Wetter", tableFilterCategoryMenuHandler
-	Menu, tableFilterRemoveCategoryMenu, Add, % "All", tableFilterCategoryMenuHandler
 	Menu, tableFilterRemoveCategoryMenu, Add, % "🔢 Zahl", tableFilterCategoryMenuHandler
-	Menu, tableFilterSelectMenu, Add, % "Edit Selected Row", tableFilterSelectMenuHandler
-	Menu, tableFilterSelectMenu, Add, % "Delete Selected Row(s)", tableFilterSelectMenuHandler
-	Menu, tableFilterSelectMenu, Add, % "Add Category to Selected Row(s)", :tableFilterAddCategoryMenu
-	Menu, tableFilterSelectMenu, Add, % "Remove Category from Selected Row(s)", :tableFilterRemoveCategoryMenu
+	Menu, tableFilterSelectMenu, Add, % "[F2]   🖊️ Edit", tableFilterSelectMenuHandler
+	Menu, tableFilterSelectMenu, Add, % "[Entf] 🗑️ Delete", tableFilterSelectMenuHandler
+	Menu, tableFilterSelectMenu, Add, % "➕ Add Category", :tableFilterAddCategoryMenu
+	Menu, tableFilterSelectMenu, Add, % "➖ Remove Category", :tableFilterRemoveCategoryMenu
 }
 
 ;// GUI manipulation
@@ -177,7 +170,7 @@ createFilteredList() {
 		if (filterTableRow(row, keyArray))
 			listViewAddRow(row, keyArray)
 	if (LV_GetCount() == 0)
-		LV_Add("Col2", "/", "No Results Found.")
+		LV_Add("Col2", "/", "Nichts gefunden.")
 	GuiControl, +Redraw, LV
 	Gui, -Disabled
 }
@@ -260,7 +253,7 @@ addLineToData() {
 	newRow := trimRowValues(data.Count()+1, newRowArr, flagUseDefaultValues, 1, keyArray)
 	dataBaseItemInsert(data.Count()+1,newRow)
 	if (flagDebug)
-		debugShowDataBaseEntry(data.Count(), keyArray)
+		debugShowDataBaseEntry()
 	tGuiHwnd := A_Gui
 	updateGUIsettings(,true, false)
 	for i, h in filterGuiArray
@@ -280,22 +273,20 @@ trimRowValues(index, valArr, flagUseDefault, flagUseRunic, keyArray) {
 	r["index"] := index
 	for i, e in valArr
 	{
-		if (flagUseDefault && e == "")
-			switch keyArray[i] {
-				case "Wortart":
+		if (e == "" && flagUseDefault)
+			switch i {
+				case 1:
 					e := "?"
-				case "Deutsch":
+				case 2,3:
 					e := "-"
-				case "Kayoogis":
-					e := "-"
-				case "Runen":
+				case 4:
 					if (flagUseRunic)
-						e := ReplaceChars(r["Kayoogis"], "abdefghiklmnoprstuvyz", "ᚫᛒᛞᛖᚠᚷᚻᛁᚲᛚᛗᚾᛟᛈᚱᛋᛏᚢᚹᛃᛉ")
-				case "Tema'i":
+						e := ReplaceChars(r[keyArray[3]], "abdefghiklmnoprstuvyz", "ᚫᛒᛞᛖᚠᚷᚻᛁᚲᛚᛗᚾᛟᛈᚱᛋᛏᚢᚹᛃᛉ")
+				case 6:
 					e := "0"
 				default:
 			}
-		if (keyArray[i] == "Wortart")	;// make first column be uppercase
+		if (i == 1)	;// make first column be uppercase
 			e := Format("{:U}", e)
 		r[keyArray[i]] := Trim(e)
 	}
@@ -339,6 +330,7 @@ editRow(trueIndex, newRow) {
 editRowFromMenu(mainWinHwnd, editLineHWND, trueIndex) {
 	global
 	local newRowArr, newRow
+	Gui, %editLineHWND%:Default
 	Gui, %editLineHWND%:Submit, NoHide
 	newRowArr := []
 	for i, e in keyArray
@@ -441,14 +433,15 @@ editSelectedRow(launchedFromMenu := 0) {
 	LV_GetText(trueIndex, rowN, 1)
 	r := data[trueIndex]
 	Gui, New, -Border -SysMenu +Owner%hw% +HwndeditLineHWND
+	Gui, %editLineHWND%:Default
 	createAddLineBoxesinGUI(keyArray, r)
-	Gui, Add, Button, r2 w100 ys+5, Confirm Edit
+	Gui, Add, Button, r2 w100 ys+5, Speichern
 	fObj := Func("editRowFromMenu").Bind(hw, editLineHWND, trueIndex)
-	GuiControl, +g, Confirm Edit, % fObj
+	GuiControl, +g, Speichern, % fObj
 	WinGetPos, x, y, w, h, ahk_id %hw%
 	if (darkModeToggle)
 		toggleGuiDarkMode(editLineHWND)
-	Gui, Show, % "x" . x + 50 . " y" . y + h/2-50, EditLineGUITitleThatIsInvisibleSoNooneWillSeeThatILikeJobot
+	Gui, Show, % "x" . x + 50 . " y" . y + h/2-50, hiddenEditLineGUITitle
 	if (darkModeToggle)
 		toggleGuiDarkMode(editLineHWND)
 	for i, e in keyArray
@@ -468,7 +461,7 @@ ExportToFileGUI() {
 	newDefaultFile := fileName . A_Now . ".xml"
 	for i, e in filterGuiArray
 		Gui, %e%:+Disabled
-	FileSelectFile, exportPath, S24, % folderPath . "\\" . newDefaultFile, % "Export Table as XML File", *.xml
+	FileSelectFile, exportPath, S24, % folderPath . "\\" . newDefaultFile, % "Tabelle als XML-Datei exportieren", *.xml
 	for i, e in filterGuiArray
 		Gui, %e%:-Disabled
 	if !(exportPath)
@@ -502,9 +495,9 @@ updateGUIsettings(filePath := -1, unsaved := -1, backupped := -1) {
 		flagHasUnsavedChanges := unsaved
 		title := guiName
 		if (unsaved)
-			title .= "* - Unsaved Changes"
+			title .= "* - Ungespeicherte Änderungen"
 		for i, guiHwnd in filterGuiArray
-			Gui, %guiHwnd%:Show, NoActivate, % title
+			Gui, %guiHwnd%:Show, NA, % title
 	}
 	if (backupped != -1)
 		flagHasBackup := backupped
@@ -517,7 +510,7 @@ updateGUIColors(dark) {
 		Gui, %e%:Default
 		toggleGuiDarkMode(e, dark)
 	}
-	hw := WinExist("EditLineGUITitleThatIsInvisibleSoNooneWillSeeThatILikeJobot")
+	hw := WinExist("hiddenEditLineGUITitle")
 	if (hw) {
 		Gui, %hw%:Default
 		toggleGuiDarkMode(hw, dark)
@@ -569,11 +562,37 @@ toggleGuiDarkMode(hwnd, dark := 1) {
 	}
 }
 
+GuiSize(GuiHwnd) {
+	global
+;	global filterGuiArray, keyArray
+	WinGetTitle, t, % "ahk_id " GuiHwnd
+	if (t == "hiddenEditLineGUITitle")
+		return
+	Gui, %GuiHwnd%:Default
+	GuiControlGet, lvArr, Pos, LV 
+	GuiControl, Move, LV, % "w" A_GuiWidth-20 "h" A_GuiHeight -100
+	GuiControlGet, lvArrA, Pos, LV 
+	delta := lvArrAH - lvArrH
+	GuiControlGet, fb1, Pos, % "FileButton1" 
+	GuiControlGet, fb2, Pos, % "FileButton2"
+	GuiControl, Move, % "FileButton1", % "y" fb1Y + delta
+	GuiControl, Move, % "FileButton2", % "y" fb2Y + delta
+	for i, e in keyArray
+	{
+		GuiControlGet, NR, Pos, % "NewRowText" i
+		GuiControl, Move, % "NewRowText" i, % "y" NRY + delta
+		GuiControlGet, NR, Pos, % "NewRow" i 
+		GuiControl, Move, % "NewRow" i, % "y" NRY + delta
+	}
+	GuiControlGet, AB, Pos, % "AddButton1"
+	GuiControl, Move, % "AddButton1", % "y" ABY + delta
+}
+
 GuiEscape(GuiHwnd) {
 	global filterGuiArray, editLineGUIOwnerHwnd
 	Gui, %GuiHwnd%:Submit, NoHide
 	WinGetTitle, t, ahk_id %GuiHwnd%
-	if (t == "EditLineGUITitleThatIsInvisibleSoNooneWillSeeThatILikeJobot") {
+	if (t == "hiddenEditLineGUITitle") {
 		Gui, %editLineGUIOwnerHwnd%:-Disabled
 		Gui, %GuiHwnd%:Destroy
 		return
@@ -585,14 +604,15 @@ GuiClose(GuiHwnd) {	;// note, this is in decimal, not hexadecimal.
 	global filterGuiArray, flagAutoSaving, flagHasUnsavedChanges
 	arrayDeleteValue(filterGuiArray, Format("0x{:x}", GuiHwnd))
 	if (flagAutoSaving && flagHasUnsavedChanges) {
-		ToolTip % "Saving..."
+		ToolTip % "Speichern..."
 		directSave()
-		ToolTip % "Saving finished."
+		ToolTip % "Gespeichert."
 	}
 	Gui, %GuiHwnd%:Destroy
 	SetTimer, timedToolTip, -700
 	return
 }
+
 
 AddLineBoxChecker(guiControlHwnd, guiEvent, eventInfo, errLevel := "") {
 	global
@@ -602,24 +622,36 @@ AddLineBoxChecker(guiControlHwnd, guiEvent, eventInfo, errLevel := "") {
 		guiControlVar := guiControlHwnd
 	else
 		guiControlVar := A_GuiControl
-	switch keyArray[SubStr(guiControlVar, 7)] {	;// switches based on keyArray words.
-		case "Wortart":
-			if (!RegexMatch(%guiControlVar%, "^[?NnVvAaSsPpGg]?$"))
+	switch guiControlVar {
+		case "NewRow1":
+			if (!RegexMatch(NewRow1, "^[?NnVvAaSsPpGg]?$"))
 				Gui, Font, % "cRed Bold"
-		case "Kayoogis":
-			if (RegexMatch(%guiControlVar%, "[cjqwx]"))
+		case "NewRow3":
+			if (RegexMatch(NewRow3, "[cjqwxöäüß]"))
 				Gui, Font, % "cRed Bold"
-		case "Runen":
-			if (RegexMatch(%guiControlVar%, "[A-Za-z]"))
+		case "NewRow4":
+			;// if (!RegexMatch(NewRow4, "[ᚫᛒᛞᛖᚠᚷᚻᛁᚲᛚᛗᚾᛟᛈᚱᛋᛏᚢᚹᛃᛉᛝᛜᚳᛄᚦᛣᛪᛨᛇ]")) : i dont have all runes, and special symbols, so no
+			if (RegexMatch(NewRow4, "[A-Za-z]"))
 				Gui, Font, % "cRed Bold"
-		case "Tema'i":
-			if !(RegexMatch(%guiControlVar%, "^[01]?$"))
+		case "NewRow6":
+			if !(RegexMatch(NewRow6, "^[01]?$"))
 				Gui, Font, % "cRed Bold"
 		default:
 			return
 	}
 	GuiControl, Font, %guiControlVar%
 	Gui, Font, % (darkModeToggle?"c0xFFFFFF":"cDefault") . " Norm"
+}
+
+clearSearchBoxes() {
+	global
+	for i, e in keyArray {
+		GuiControl, -g, % "FilterColumn" i
+		GuiControl, , % "FilterColumn" i, % "" 
+		gHandle := Func("createFilteredList")
+		GuiControl, +g, % "FilterColumn" i, % gHandle
+	}
+	createFilteredList()
 }
 
 ;// menu functions
@@ -640,6 +672,8 @@ LVEvent() {
 					editSelectedRow()
 				case "116":	;// F5 -> Reload
 					createFilteredList()
+				case "220": ;// Ü -> Debug
+					debugShowDataBaseEntry()
 				default: return
 			}
 		default: return
@@ -648,9 +682,9 @@ LVEvent() {
 
 tableFilterSelectMenuHandler(ItemName) {
 	switch ItemName {
-		case "Edit Selected Row":
+		case "[F2]   🖊️ Edit":
 			editSelectedRow(1)
-		case "Delete Selected Row(s)":
+		case "[Entf] 🗑️ Delete":
 			removeSelectedRows(1)
 	}
 }
@@ -674,7 +708,7 @@ tableFilterCategoryMenuHandler(ItemName, ItemPos, MenuName) {
 		return
 	for index, trueN in selectedDataRows
 	{
-		r := data[trueN].clone() ; NECESSARY, ELSE IT ALREADY AFFECTS DATAINDEX
+		r := data[trueN].clone() ; NECESSARY, ELSE IT ALREADY AFFECTS ID
 		curCategories := r["Kategorie"]
 		if (MenuName == "tableFilterAddCategoryMenu") {
 			if (curCategories) {
@@ -707,7 +741,7 @@ toggleSettingDarkmode() {
 		darkModeToggle := 0
 	else
 		darkModeToggle := 1
-	Menu, Tray, ToggleCheck, Use Darkmode
+	Menu, Tray, ToggleCheck, Darkmode nutzen
 	IniWrite, % darkModeToggle, % appDataPath . "\TableFilter.ini", Settings, DarkMode
 	updateGUIColors(darkModeToggle)
 }
@@ -724,7 +758,7 @@ getDataPath(filterGuiArray) {
 		defaultPath := A_ScriptDir
 	for i, e in filterGuiArray
 		Gui, %e%:+Disabled
-	FileSelectFile, path, 3, % defaultPath, % "Load File", *.xml
+	FileSelectFile, path, 3, % defaultPath, % "Datei laden", *.xml
 	for i, e in filterGuiArray
 		Gui, %e%:-Disabled
 	if (path)
@@ -737,18 +771,19 @@ loadfile(dataPath) {
 		return 0
 	dataFile := FileOpen(dataPath, "r", "UTF-8")
 	rawData := dataFile.Read()
-    database := {}
+	database := {}
 	xmlString := ""
 	rawData := StrReplace(rawData, "&apos;", "'")
 	rawData := StrReplace(rawData, "&quot;", """")
 	rawData := StrReplace(rawData, "&gt;", ">")
 	rawData := StrReplace(rawData, "&lt;", "<")
+	rawData := StrReplace(rawData, "&amp;", "&")
 	rawData := StrReplace(rawData, "_x0027_", "'")
-    Loop, Parse, rawData, `n, `r
+	Loop, Parse, rawData, `n, `r
 	{
         if (A_Index == 1) {
 			if !RegExMatch(A_LoopField,"xml") {
-				MsgBox, % "Specified File does not seem to be xml file."
+				MsgBox, % "Diese Datei scheint keine XML-Datei zu sein."
 				return 0
 			}
 			xmlString := A_LoopField . "`r`n"
@@ -758,7 +793,7 @@ loadfile(dataPath) {
 				name := m.Value(1)
 			else
 				name := "Database"
-			xmlString .= A_LoopField . "`r`n"
+			xmlStringOffice := A_LoopField . "`r`n"
 		}
 		if (A_Index == 3) {
 			RegexMatch(A_LoopField, "O)<(.*?)>", m)
@@ -803,14 +838,15 @@ loadfile(dataPath) {
 	database.Push(keyArray)
 	database.Push({"Name":name, "RowName":rowName})
 	database.Push(xmlString)
+	database.Push(xmlStringOffice)
     return database
 }
 
 loadData() {
-	global data, xmlString, metaData, keyArray, loadedFilePath, guiName, filterGuiArray
+	global data, xmlString, xmlStringOffice, metaData, keyArray, loadedFilePath, guiName, filterGuiArray
 	global flagLoaded, flagHasUnsavedChanges, flagSimpleSaving, flagUseBackups, settingBackupInterval
 	if (flagHasUnsavedChanges) {
-		MsgBox, 1,, % "You have unsaved Changes. Do you still want to load a new file?"
+		MsgBox, 1,, % "Ungespeicherte Änderungen. Trotzdem neue Datei laden?"
 		IfMsgBox, Cancel
 			return
 	}
@@ -818,10 +854,11 @@ loadData() {
 	if !(loadedFilePath) 	;// if user exits, its blank. then don't do anything.
 		return
 	if !(FileExist(loadedFilePath)) {
-		msgbox % "File could not be found."
+		msgbox % "Datei nicht gefunden."
 		return
 	}
 	data := loadfile(loadedFilePath)
+	xmlStringOffice := data.Pop()
 	xmlString := data.Pop()
 	metaData := data.Pop()
 	keyArrLenOld := keyArray.Count()
@@ -841,7 +878,7 @@ loadData() {
 	if (flagLoaded) && (keyArrLenOld == keyArray.Count()) {	;// true only if we have GUI windows and a database already + new & old have same key lengths.
 		tHwnd := A_Gui
 		if (filterGuiArray.Count() > 3) {
-			Msgbox, 4, % "Open File", % "You have " . filterGuiArray.Count() . "GUI Windows Open. Loading a new file now will take some time to update. Close windows?"
+			Msgbox, 4, % "Datei öffnen?", % "Es sind " . filterGuiArray.Count() . " Fenster geöffnet. Das Laden einer neuen Datei wird etwas Zeit brauchen. Fenster vorher schließen?"
 			IfMsgBox No
 			{
 				updateGUIs(filterGuiArray)
@@ -883,7 +920,8 @@ directSave() {
 
 exportAsXMLFile(filePath, localFlagUpdateLastUsedFile := 1, localFlagUpdateUnsaved := 1, localFlagUpdateBackupped := 0) {
 	global data, xmlString, metaData, keyArray
-	xmlFileAsString := xmlString
+	FormatTime, ftime, , yyyy-MM-ddTHH:mm:ss
+	xmlFileAsString .= xmlString . "<dataroot generated=""" ftime """>`r`n"
 	keyArrAlphanum := []
 	for i, e in keyArray
 		keyArrAlphanum[i] := StrReplace(e, "'", "_x0027_")
@@ -894,6 +932,7 @@ exportAsXMLFile(filePath, localFlagUpdateLastUsedFile := 1, localFlagUpdateUnsav
 		{
 			if (Element[elm] != ""||Index=1) {
 				t := Element[elm]
+				t := StrReplace(t, "&", "&amp;")
 				t := StrReplace(t, "'", "&apos;")
 				t := StrReplace(t, """", "&quot;")
 				t := StrReplace(t, ">", "&gt;")
@@ -1009,24 +1048,24 @@ ReplaceChars(Text, Chars, ReplaceChars) {
 ;// ahk script functions
 createTrayMenu(darkModeToggle, iconPath) {
 	global openWindowHotkeyAsString
-	Menu, Tray, Add, % "Open GUI: " . openWindowHotkeyAsString, trayMenuHandler ;// a button to create another window
-	Menu, Tray, Add, Use Darkmode, trayMenuHandler
-	Menu, Tray, Add, Open Backup Folder, trayMenuHandler
+	Menu, Tray, Add, % "GUI öffnen: " . openWindowHotkeyAsString, trayMenuHandler ;// a button to create another window
+	Menu, Tray, Add, % "Darkmode nutzen", trayMenuHandler
+	Menu, Tray, Add, % "Backup-Ordner öffnen", trayMenuHandler
 	Menu, Tray, Add 
-	Menu, Tray, Add, Open Recent Lines, trayMenuHandler
-	Menu, Tray, Add, Help, trayMenuHandler
+	Menu, Tray, Add, % "Letzte Zeilen öffnen", trayMenuHandler
+	Menu, Tray, Add, % "Hilfe", trayMenuHandler
 	Menu, Tray, Add
-	Menu, Tray, Add, Reload, trayMenuHandler
-	Menu, Tray, Add, Edit Script, trayMenuHandler
+	Menu, Tray, Add, % "Neu laden", trayMenuHandler
+	Menu, Tray, Add, % "Script bearbeiten", trayMenuHandler
 	Menu, Tray, Add
 	Menu, pauseSuspendMenu, Add, Suspend Hotkeys, trayMenuHandler
 	Menu, pauseSuspendMenu, Add, Suspend Reload, trayMenuHandler
 	Menu, Tray, Add, Suspend/Stop, :pauseSuspendMenu 
-	Menu, Tray, Add, Exit, trayMenuHandler
+	Menu, Tray, Add, % "Beenden", trayMenuHandler
 	Menu, Tray, NoStandard
-	Menu, Tray, Default, % "Open GUI: " . openWindowHotkeyAsString
+	Menu, Tray, Default, % "GUI öffnen: " . openWindowHotkeyAsString
 	if (darkModeToggle)
-		Menu, Tray, Check, Use Darkmode
+		Menu, Tray, Check, % "Darkmode nutzen"
 	try	;// we dont want an error on icon loading.
 		Menu, Tray, Icon, %iconPath%,,1
 }
@@ -1034,22 +1073,22 @@ createTrayMenu(darkModeToggle, iconPath) {
 trayMenuHandler(menuLabel) {
 	global darkModeToggle, appDataPath, reloadHotkeyAsString, openWindowHotkeyAsString
 	switch menuLabel {
-		case "Open GUI: " . openWindowHotkeyAsString:
+		case "GUI öffnen: " . openWindowHotkeyAsString:
 			createMainGUI()
-		case "Use Darkmode":
+		case "Darkmode nutzen":
 			darkModeToggle := !darkModeToggle
-			Menu, Tray, ToggleCheck, Use Darkmode
+			Menu, Tray, ToggleCheck, Darkmode nutzen
 			IniWrite, % darkModeToggle, % appDataPath . "\TableFilter.ini", Settings, DarkMode
 			updateGUIColors(darkModeToggle)
-		case "Open Backup Folder":
+		case "Backup-Ordner öffnen":
 			run, explorer.exe "%appDataPath%"
-		case "Open Recent Lines":
+		case "Letzte Zeilen öffnen":
 			ListLines
-		case "Help":
+		case "Hilfe":
 			Run, % RegexReplace(A_AhkPath, "AutoHotkey.exe$", "AutoHotkey.chm")
-		case "Reload":
+		case "Neu laden":
 			Reload
-		case "Edit Script":
+		case "Script bearbeiten":
 			try
 				Run, % A_ProgramFiles . "\Notepad++\notepad++.exe """ . A_ScriptFullPath . """"
 			catch e
@@ -1060,7 +1099,7 @@ trayMenuHandler(menuLabel) {
 		case "Suspend Reload":
 			Menu, pauseSuspendMenu, ToggleCheck, Suspend Reload
 			Hotkey, %reloadHotkeyAsString%, Toggle
-		case "Exit":
+		case "Beenden":
 			ExitApp
 		default:
 	}
@@ -1073,7 +1112,7 @@ CustomExit(ExitReason, ExitCode) {
 			if (flagAutoSaving)
 				directSave()
 			else if (ExitReason != Reload) {
-				MsgBox, 1,, % "You have unsaved Changes. Do you still want to exit?"
+				MsgBox, 1,, % "Es gibt ungespeicherte Änderungen. Trotzdem beenden?"
 				IfMsgBox, Cancel
 					return 1
 			}
@@ -1083,10 +1122,16 @@ CustomExit(ExitReason, ExitCode) {
 
 ;// debug functions
 
-debugShowDataBaseEntry(n, keyArray) {
-	global data
-	row := data[n]
-	s := "n: " . n . "`n" . keyArray[1] . ": " . row[keyArray[1]] . "`n" . keyArray[2] . ": " . row[keyArray[2]] . "`n" . keyArray[3] . ": " . row[keyArray[3]] . "`n" . keyArray[4] . ": " . row[keyArray[4]] . "`n" . keyArray[5] . ": " . row[keyArray[5]] . "`n" . keyArray[6] . ": " . row[keyArray[6]] . "`n" . keyArray[7] . ": " . row[keyArray[7]] . "`n" . "Index: " . row["index"]
+debugShowDataBaseEntry() {
+	global
+	hw := menuCreatingGUIHwnd
+	Gui, %hw%:Default
+	rowN := LV_GetNext(0,"F")
+	if !(rowN)
+		return
+	LV_GetText(trueIndex, rowN, 1)
+	row := data[trueIndex]
+	s := "n: " . trueIndex . "`n" . keyArray[1] . ": " . row[keyArray[1]] . "`n" . keyArray[2] . ": " . row[keyArray[2]] . "`n" . keyArray[3] . ": " . row[keyArray[3]] . "`n" . keyArray[4] . ": " . row[keyArray[4]] . "`n" . keyArray[5] . ": " . row[keyArray[5]] . "`n" . keyArray[6] . ": " . row[keyArray[6]] . "`n" . keyArray[7] . ": " . row[keyArray[7]] . "`n" . "Index: " . row["index"]
 	msgbox % s
 }
 
