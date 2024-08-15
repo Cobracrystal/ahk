@@ -153,7 +153,7 @@ return
 }
 
 ^!K:: {	; Evaluate Shell Expression in-text
-	calculateExpression("c")
+	calculateExpression("p")
 }
 
 ; ###########################################################################
@@ -935,19 +935,5 @@ clipCursor(mode := true, window := "A") {
 	static sTimer := Send.Bind("l")
 	static toggle := false
 	SetTimer(sTimer, toggle := !toggle ? 50 : 0)
-}
-#HotIf
-
-#HotIf WinActive("NGU INDUSTRIES")
-^Insert::{	; Automatic Hotkey generated 03.08.2024, 19:22:15
-	Loop(300) {
-		MouseClick("L", 1551, 139)
-		Sleep(50)
-		Loop(40) {
-			MouseClick("L", 924, 562)
-			Sleep(5)
-		}
-		Sleep(30)
-	}
 }
 #HotIf
