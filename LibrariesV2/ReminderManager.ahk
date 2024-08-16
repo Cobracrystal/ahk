@@ -247,7 +247,7 @@ class ReminderManager {
 		this.gui.AddText("Center ys+22 x+5", "with the message:")
 		this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.2[1]
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderOnFromGUI.bind(this))
-		this.LV := this.gui.AddListView("xs R10 w500 -Multi Sort", ["Next Occurence", "Period", "Function/Message", "Index"])
+		this.LV := this.gui.AddListView("xs R10 w500 -Multi Sort", ["Next Occurence", "Period", "Message", "Function", "Index"])
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
 		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
 		this.createListView()
@@ -271,15 +271,19 @@ class ReminderManager {
 
 	createListView() {
 		this.LV.Delete()
-		this.LV.ModifyCol(4, 0)
+		this.LV.ModifyCol(5, 0)
 		for i, e in this.timerList
 			if (IsSet(e))
 				this.LV.Add(, FormatTime(e.nextTime, "yyyy-MM-dd, HH:mm:ss"),
 					HasProp(e, "period") ? e.period " " (e.period == 1 ? SubStr(e.periodUnit, 1, -1) : e.periodUnit) : "/",
-					e.function (e.message != "" ? ', "' e.message '"' : ""), i
+					e.message, 
+					e.function,
+					i
 				)
-		Loop (3)
+		Loop (2)
 			this.LV.ModifyCol(A_Index, "+AutoHdr")
+		this.LV.ModifyCol(3, 225)
+		this.LV.ModifyCol(4, "+AutoHdr")
 	}
 
 	; operation values: 0 = Delete, 1 = Modify Column Content
@@ -287,7 +291,7 @@ class ReminderManager {
 		if !(WinExist(this.gui))
 			return
 		Loop (this.LV.GetCount()) {
-			if (this.LV.GetText(A_Index, 4) == index) {
+			if (this.LV.GetText(A_Index, 5) == index) {
 				if (operation == 0)
 					this.LV.delete(A_Index)
 				else if (operation == 1) {
@@ -300,7 +304,7 @@ class ReminderManager {
 	}
 
 	onContextMenu(ctrlObj, rowN, isRightclick, x, y) {
-		return
+		return ; todo
 	}
 
 	onKeyPress(ctrlObj, lParam) {
@@ -309,7 +313,7 @@ class ReminderManager {
 			case "46": 	;// Del/Entf Key -> Delete Reminder
 				if ((rowN := this.LV.GetNext()) == 0)
 					return
-				index := Integer(this.LV.GetText(rowN, 4))
+				index := Integer(this.LV.GetText(rowN, 5))
 				try SetTimer(this.timerList[index].timer, 0)
 				this.timerList.delete(index)
 				this.LV.delete(rowN)
