@@ -323,7 +323,8 @@ DateAddW(dateTime, value, timeUnit) {
 	}
 }
 /*
-* Given a set of time units, returns a YYYYMMDDHH24MISS timestamp of the earlist possible time in the future when all given parts match
+* Given a set of time units, returns a YYYYMMDDHH24MISS timestamp
+; of the earliest possible time in the future when all given parts match
 * Examples: The current time is 27th December, 2023, 17:16:34
 * parseTime() => A_Now
 * parseTime(2023,12) => A_Now.
