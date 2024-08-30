@@ -466,9 +466,9 @@ enumerateDay(day) {
 
 ExecScript(expression, Wait := true) {
 	input := '#Warn All, Off`n'
-	if (RegexMatch(expression, 'FileAppend\(.*,\s*\"\*\"\)'))
+	if (RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox\(.+\)'))
 		input .= expression
-	else if (RegexMatch(expression, 'print\(.*\)'))
+	else if (RegexMatch(expression, 'i)print\(.*\)'))
 		input .= RegexReplace(expression, "print\((.*)?\)", 'FileAppend($1, "*")')
 	else
 		input .= 'FileAppend(' . expression . ', "*")'
