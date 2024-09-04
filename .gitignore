@@ -7,3 +7,4 @@ discordBotTest.ahk
 LibrariesV2/weeklyColor.ahk
 \!ETERNAL_TODO.txt
 script_files/
+!script_files/httpserver/meta/*

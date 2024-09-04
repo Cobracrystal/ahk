@@ -34,7 +34,7 @@ return
 
 mainIndex(ByRef req, ByRef res, ByRef server) {
 	logger(req)
-	server.ServeFile(res, A_WorkingDir . "\mainIndex.html")
+	server.ServeFile(res, A_WorkingDir . "\meta\mainIndex.html")
 	res.status := 200
 }
 
@@ -158,7 +158,7 @@ mediocreCounter(ByRef req, ByRef res, ByRef server) {
 	if (data == "")
 		data := JSON.Load(FileOpen(cfile, "r", "UTF-8").Read())
 	if (vpath == "/" || vPath == "") {
-		server.ServeFile(res, A_WorkingDir . "\webfiles\button.html")
+		server.ServeFile(res, A_WorkingDir . "\meta\button.html")
 		logger(req)
 	}
 	else if (vpath == "/fetch") {

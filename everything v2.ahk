@@ -52,7 +52,6 @@ GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND
 youtubeDL := YoutubeDLGui()
 reminders := ReminderManager(,,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
 try	reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json")
-reminders.setPeriodicTimerOn(parseTime(,,,20,),1,"D","BUY THE SHONDO FUMO (SHUMO) YOU COWARD. (and also the chibi stickers)")
 ; reminders.setPeriodicTimerOn(DateAdd(A_Now, 5, "S"), 5, "S", A_Now, reminders.discordReminder.bind(0, token, "245189840470147072"))
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "245189840470147072"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
@@ -223,8 +222,8 @@ return
 #HotIf
 
 #HotIf WinActive("Minecraft ahk_exe javaw.exe")
-^z::y 
-^y::z
+^z::y ; MC: ctrl z -> y
+^y::z ; MC: ctrl y -> z
 #HotIf
 
 /*
