@@ -83,7 +83,7 @@ modifySelectedText(method, params*) {
 
 objContainsValue(obj, value) {
 	if !(obj is Array || obj is Map)
-		throw Error("objContains does not handle type " . obj.base.__Class)
+		throw Error("objContains does not handle type " . Type(obj))
 	for i, e in obj
 		if (e = value)
 			return i
@@ -92,7 +92,7 @@ objContainsValue(obj, value) {
 
 objRemoveValue(obj, value) {
 	if !(obj is Array || obj is Map)
-		throw Error("objRemoveValue does not handle type " . obj.base.__Class)
+		throw Error("objRemoveValue does not handle type " . Type(obj))
 	for i, e in obj {
 		if (e = value) {
 			if (obj is Array)
@@ -107,7 +107,7 @@ objRemoveValue(obj, value) {
 
 objRemoveValues(obj, removeAll := 1, values*) {
 	if !(obj is Array || obj is Map)
-		throw Error("objRemoveValues does not handle type " . obj.base.__Class)
+		throw Error("objRemoveValues does not handle type " . Type(obj))
 	toRemove := []
 	for i, e in obj {
 		for j, f in values {
@@ -189,8 +189,8 @@ sortObjectByKey(tmap, key, mode := "") {
 
 reverseString(str) {
 	result := ""
-	Loop Parse, str
-		result := A_LoopField . result
+	for i, e in StrSplitUTF8(str)
+		result := e . result
 	return result
 }
 
@@ -232,11 +232,11 @@ replaceCharacters(text, alphMap) {
 	if !(alphMap is Map)
 		return text
 	result := ""
-	Loop Parse, text {
-		if (alphMap.Has(A_LoopField))
-			result .= alphMap[A_LoopField]
+	for i, e in StrSplitUTF8(text) {
+		if (alphMap.Has(e))
+			result .= alphMap[e]
 		else
-			result .= A_Loopfield
+			result .= e
 	}
 	return result
 }
@@ -249,23 +249,75 @@ replaceCharacters(text, alphMap) {
 RegExEscape(str) => "\Q" StrReplace(str, "\E", "\E\\E\Q") "\E"
 
 /**
- * 
+ * Replaces Strings in [string] from strings in [from] into strings in [to], in strict order of appearance in [from]
  * @param string String in which to replace the strings
  * @param from Array containing strings that are to be replaced in decreasing priority order
  * @param to Array containing strings that are the replacements for values in @from, in same order
- * @param {number} index Internally used only
  * @returns {string} 
  */
-recursiveReplaceMap(string, &from, to, __index := 1) {
-	replacedString := ""
-	if (__index == from.Count)
-		return StrReplace(string, from[__index], to[__index])
-	strArr := StrSplit(string, from[__index])
-	for i, e in strArr
-		replacedString .= recursiveReplaceMap(e, &from, to, __index + 1) . (i == strArr.Count ? "" : to[__index])
-	return replacedString
+recursiveReplaceMap(string, from, to) {
+	return __recursiveReplaceMap(string, from, to)
+
+	__recursiveReplaceMap(string, from, to, __index := 1) {
+		replacedString := ""
+		if (__index == from.Length)
+			return StrReplace(string, from[__index], to[__index])
+		strArr := StrSplit(string, from[__index])
+		for i, e in strArr
+			replacedString .= __recursiveReplaceMap(e, from, to, __index + 1) . (i == strArr.Length ? "" : to[__index])
+		return replacedString
+	}
 }
 
+/**
+ * Creates a map from two given arrays, the first one becoming the keys of the other
+ * @param keyArray 
+ * @param valueArray 
+ * @returns {Map} 
+ */
+mapFromArrays(keyArray, valueArray) {
+	if (keyArray.Length != valueArray.Length || !(keyArray is Array) || !(valueArray is Array))
+		throw Error("Expected Arrays of equal Length, got " Type(keyArray) ", " Type(valueArray))
+	newMap := Map()
+	for i, e in keyArray
+		newMap[e] := valueArray[i]
+	return newMap
+}
+
+/**
+ * Given a Map, returns an Array of Length 2 containing two Arrays, the first one containing Keys and the second containing Values. Ordering WILL be random, as Maps are not ordered.
+ * @param mapObject 
+ * @returns {Array}
+ */
+mapToArrays(mapObject) {
+	if !(mapObject is Map)
+		throw TypeError("Expected Map, got " Type(mapObject))
+	arr1 := []
+	arr2 := []
+	for i, e in mapObject {
+		arr1.Push(i)
+		arr2.Push(e)
+	}
+	return [arr1, arr2]
+}
+/**
+ * Given a Map, returns new Map where keys are the values of original map and vice verse
+ * @param {Map} mapObject 
+ * @returns {Map} 
+ */
+mapFlip(mapObject) {
+	flippedMap := Map()
+	for i, e in mapObject
+		flippedMap[e] := i
+	return flippedMap
+}
+
+/**
+ * Given a Map, returns an equivalent Object
+ * @param mapInput 
+ * @param {Integer} recursive 
+ * @returns {Map | Array} 
+ */
 MapToObj(mapInput, recursive := true) {
 	flag := mapInput is Map
 	flagObj := !(mapInput is Map || mapInput is Array)
@@ -644,97 +696,97 @@ doNothing(*) {
 	return
 }
 
-class ExGui {
+; class ExGui {
 
-	__New(debug := 0, useTrayMenu := 0, name := "ExGUI") {
+; 	__New(debug := 0, useTrayMenu := 0, name := "ExGUI") {
 
-		this.settingsManager("Load")
-		this.settings.debug := debug
+; 		this.settingsManager("Load")
+; 		this.settings.debug := debug
 
-		this.menu := this.createMenu()
-		if (useTrayMenu) {
-			tableFilterMenu := TrayMenu.submenus["tablefilter"]
-			tableFilterMenu.Add("Open GUI", (*) => this.guiCreate())
-			tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => this.settingsHandler("Darkmode", -1, true, menuObj, iName))
-			if (this.settings.darkMode)
-				tableFilterMenu.Check("Use Dark Mode")
-		}
-		A_TrayMenu.Add("ExGUI", tableFilterMenu)
-	}
+; 		this.menu := this.createMenu()
+; 		if (useTrayMenu) {
+; 			tableFilterMenu := TrayMenu.submenus["tablefilter"]
+; 			tableFilterMenu.Add("Open GUI", (*) => this.guiCreate())
+; 			tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => this.settingsHandler("Darkmode", -1, true, menuObj, iName))
+; 			if (this.settings.darkMode)
+; 				tableFilterMenu.Check("Use Dark Mode")
+; 		}
+; 		A_TrayMenu.Add("ExGUI", tableFilterMenu)
+; 	}
 
-	guiCreate() {
-		newGui := Gui("+Border")
-		newGui.OnEvent("Close", this.guiClose.bind(this))
-		newGui.OnEvent("Escape", this.guiClose.bind(this))
-		newGui.OnEvent("DropFiles", this.dropFiles.bind(this))
-		newGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
-		newGui.Show("AutoSize")
-	}
+; 	guiCreate() {
+; 		newGui := Gui("+Border")
+; 		newGui.OnEvent("Close", this.guiClose.bind(this))
+; 		newGui.OnEvent("Escape", this.guiClose.bind(this))
+; 		newGui.OnEvent("DropFiles", this.dropFiles.bind(this))
+; 		newGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
+; 		newGui.Show("AutoSize")
+; 	}
 		
-	toggleGuiDarkMode(_gui, dark) {
-		static WM_THEMECHANGED := 0x031A
-		;// title bar dark
-		if (VerCompare(A_OSVersion, "10.0.17763")) {
-			attr := 19
-			if (VerCompare(A_OSVersion, "10.0.18985")) {
-				attr := 20
-			}
-			if (dark)
-				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", true, "int", 4)
-			else
-				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", false, "int", 4)
-		}
-		_gui.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
-		font := (dark ? "c" this.settings.darkThemeFontColor : "cDefault")
-		_gui.SetFont(font)
-		for cHandle, ctrl in _gui {
-			ctrl.Opt(dark ? "+Background" this.settings.darkThemeColor : "-Background")
-			ctrl.SetFont(font)
-			if (ctrl is Gui.Button || ctrl is Gui.ListView) {
-				; todo: listview headers dark -> https://www.autohotkey.com/boards/viewtopic.php?t=115952
-				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
-				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
-				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
-			}
-			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
-				this.validValueChecker(ctrl)
-			}
-		}
-		; todo: setting to make this look like this ? 
-		; DllCall("uxtheme\SetWindowTheme", "ptr", _gui.LV.hwnd, "str", "Explorer", "ptr", 0)
-	}
+; 	toggleGuiDarkMode(_gui, dark) {
+; 		static WM_THEMECHANGED := 0x031A
+; 		;// title bar dark
+; 		if (VerCompare(A_OSVersion, "10.0.17763")) {
+; 			attr := 19
+; 			if (VerCompare(A_OSVersion, "10.0.18985")) {
+; 				attr := 20
+; 			}
+; 			if (dark)
+; 				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", true, "int", 4)
+; 			else
+; 				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", false, "int", 4)
+; 		}
+; 		_gui.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
+; 		font := (dark ? "c" this.settings.darkThemeFontColor : "cDefault")
+; 		_gui.SetFont(font)
+; 		for cHandle, ctrl in _gui {
+; 			ctrl.Opt(dark ? "+Background" this.settings.darkThemeColor : "-Background")
+; 			ctrl.SetFont(font)
+; 			if (ctrl is Gui.Button || ctrl is Gui.ListView) {
+; 				; todo: listview headers dark -> https://www.autohotkey.com/boards/viewtopic.php?t=115952
+; 				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
+; 				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
+; 				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
+; 			}
+; 			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
+; 				this.validValueChecker(ctrl)
+; 			}
+; 		}
+; 		; todo: setting to make this look like this ? 
+; 		; DllCall("uxtheme\SetWindowTheme", "ptr", _gui.LV.hwnd, "str", "Explorer", "ptr", 0)
+; 	}
 
-	guiClose(guiObj) {
-		objRemoveValue(this.guis, guiObj)
-		guiObj.Destroy()
-	}
+; 	guiClose(guiObj) {
+; 		objRemoveValue(this.guis, guiObj)
+; 		guiObj.Destroy()
+; 	}
 
-	dropFiles(gui, ctrlObj, fileArr, x, y) {
-		if (fileArr.Length > 1)
-			return
-		this.loadData(fileArr[1], gui)
-	}
+; 	dropFiles(gui, ctrlObj, fileArr, x, y) {
+; 		if (fileArr.Length > 1)
+; 			return
+; 		this.loadData(fileArr[1], gui)
+; 	}
 
-	settingsHandler(setting := "", value := "", save := true, extra*) {
-		switch setting, 0 {
-			case "darkmode":
-				this.settings.darkMode := (value == -1 ? !this.settings.darkMode : value)
-				this.toggleDarkMode(this.settings.darkMode, extra*)
-			default:
-				throw Error("uhhh setting: " . setting)
-		}
-		if (save)
-			this.settingsManager("Save")
-	}
+; 	settingsHandler(setting := "", value := "", save := true, extra*) {
+; 		switch setting, 0 {
+; 			case "darkmode":
+; 				this.settings.darkMode := (value == -1 ? !this.settings.darkMode : value)
+; 				this.toggleDarkMode(this.settings.darkMode, extra*)
+; 			default:
+; 				throw Error("uhhh setting: " . setting)
+; 		}
+; 		if (save)
+; 			this.settingsManager("Save")
+; 	}
 
 
-	static getDefaultSettings() {
-		settings := {
-			debug: false,
-			darkMode: true,
-			darkThemeColor: "0x1E1E1E",
-			darkThemeFontColor: "0xFFFFFF"
-		}
-		return settings
-	}
-}
+; 	static getDefaultSettings() {
+; 		settings := {
+; 			debug: false,
+; 			darkMode: true,
+; 			darkThemeColor: "0x1E1E1E",
+; 			darkThemeFontColor: "0xFFFFFF"
+; 		}
+; 		return settings
+; 	}
+; }
