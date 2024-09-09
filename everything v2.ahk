@@ -126,7 +126,8 @@ return
 
 ^+F11:: { ; Gives Key History
 	DetectHiddenWindows(1)
-	PostMessage(0x111, 65409,,, A_ScriptHwnd)
+	KeyHistory()
+;	PostMessage(0x111, 65409,,, A_ScriptHwnd) ; this works too???
 }
 
 ^+F10:: {	; YTDL GUI
@@ -150,9 +151,8 @@ return
 	BlockInput(0)
 }
 
-^!K:: {	; Evaluate Shell Expression in-text
-	calculateExpression("p")
-}
+; Evaluate Shell Expression in-text
+^!K::calculateExpression("p")
 
 ; ###########################################################################
 ; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################
@@ -935,3 +935,4 @@ clipCursor(mode := true, window := "A") {
 	SetTimer(sTimer, toggle := !toggle ? 50 : 0)
 }
 #HotIf
+
