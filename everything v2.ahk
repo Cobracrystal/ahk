@@ -69,7 +69,7 @@ try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX
 customTrayMenu()
 ; Synchronize nextDNS IP
 if (!SCRIPTVAR_WASRELOADED)
-	timedTooltip(connectNextDNS(), 4000)
+	connectNextDNS()
 return
 
 ; ###########################################################################
