@@ -240,7 +240,7 @@ class TextEditMenu {
 		runesExtra := ["ᚠ","ᚡ","ᚢ","ᚣ","ᚤ","ᚥ","ᚧ","ᚨ","ᚩ","ᚪ","ᚫ","ᚬ","ᚭ","ᚮ","ᚯ","ᚰ","ᚱ","ᚲ","ᚳ","ᚴ","ᚵ","ᚶ","ᚷ","ᚸ","ᚹ","ᚺ","ᚻ","ᚼ","ᚽ","ᚾ","ᚿ","ᛀ","ᛁ","ᛂ","ᛃ","ᛄ","ᛅ","ᛆ","ᛇ","ᛈ","ᛉ","ᛊ","ᛋ","ᛌ","ᛍ","ᛎ","ᛏ","ᛐ","ᛑ","ᛒ","ᛓ","ᛔ","ᛕ","ᛖ","ᛗ","ᛘ","ᛙ","ᛚ","ᛛ","ᛜ","ᛝ","ᛞ","ᛟ","ᛠ","ᛡ","ᛢ","ᛣ","ᛤ","ᛥ","ᛦ","ᛧ","ᛨ","ᛩ","ᛪ"]
 		latinExtra := ["f","v","u","y","y","w","th","a","o","a","a","o","o","o","ö","o","r","k","ch","k","g","eng","g","g","v","h","h","h","h","n","n","n","i","e","y","j","a","a","ei","p","z","s","s","s","c","z","t","t","d","b","b","p","p","e","m","m","m","l","l","ng","ng","d","o","ea","io","qu","ch","k","st","r","y","rr","qu","sch"]
 		for i, e in runesExtra {
-			runes["from"]["EXTRA"]["singlechar"][e] := latinExtra[i]
+			runes["from"]["extra"]["singlechar"][e] := latinExtra[i]
 		}
 		otherAlphabet["runes"] := runes
 		dictionary := Map("toAlphabet", toAlphabet, "fromAlphabet", fromAlphabet, "otherAlphabet", otherAlphabet)
