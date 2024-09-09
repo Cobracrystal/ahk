@@ -106,6 +106,9 @@ class YoutubeDLGui {
 			; 	Send("^{end}")
 			; }
 			; NEEDS BETTER SCROLLING. https://www.autohotkey.com/board/topic/63325-updating-editscroll-down-after-adding-text/
+			SendMessage(0x115, 7, 0, this.controls.editOutput)
+			;0x115 is WM_VSCROLL
+			;7 is SB_BOTTOM
 		}
 	}
 
@@ -201,7 +204,10 @@ class YoutubeDLGui {
 		}
 		this.ytdlOptionHandler()
 		fullRuncmd := this.controls.editCmdConfig.value . StrReplace(links, "`n", A_Space)
-		output := cmdRet(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8")
+		cmdRetAsync(fullRuncmd, &output, this.updateGuiOutput.bind(this), 200, this.__done.bind(this, links), "UTF-8")
+	}
+
+	__done(links) {
 		fullOutput := this.controls.editOutput.value
 		this.updateGuiOutput(this.data.separator)
 		if (!WinActive(this.gui))
@@ -244,6 +250,7 @@ class YoutubeDLGui {
 		else
 			Run('explorer "' . this.settings.outputPath . (fileName ?? "") . (ext ?? "") '"')
 		;	Run, % "explorer /select, """ . this.settings.outputPath . "\" . o.Value(1) . """" ; THIS IF THE INPUT IS ONLY ONE LINE (AKA ONE FILE)
+	
 	}
 
 	settingsGUI(*) {

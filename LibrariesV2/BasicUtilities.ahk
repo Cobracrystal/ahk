@@ -565,6 +565,52 @@ cmdRet(sCmd, callBackFuncObj := "", encoding := '') {
 	return sOutput
 }
 
+cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finishCallBackFuncObj := "", encoding := '') {
+	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
+	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100
+    if (encoding == '')
+		encoding := "CP" . DllCall('GetOEMCP', 'UInt')
+	DllCall("CreatePipe", "PtrP", &hPipeRead := 0, "PtrP", &hPipeWrite := 0, "Ptr", 0, "UInt", 0)
+	DllCall("SetHandleInformation", "Ptr", hPipeWrite, "UInt", HANDLE_FLAG_INHERIT, "UInt", HANDLE_FLAG_INHERIT)
+
+	STARTUPINFO := Buffer(size := A_PtrSize * 4 + 4 * 8 + A_PtrSize * 5, 0)
+	NumPut("UInt", size, STARTUPINFO)
+	NumPut("UInt", STARTF_USESTDHANDLES, STARTUPINFO, A_PtrSize * 4 + 4 * 7)
+	NumPut("Ptr", hPipeWrite, "Ptr", hPipeWrite, STARTUPINFO, A_PtrSize * 4 + 4 * 8 + A_PtrSize * 3)
+
+	PROCESS_INFORMATION := Buffer(A_PtrSize * 2 + 4 * 2, 0)
+	if !DllCall("CreateProcess", "Ptr", 0, "Str", sCmd, "Ptr", 0, "Ptr", 0, "UInt", true, "UInt", CREATE_NO_WINDOW,
+		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
+		DllCall("CloseHandle", "Ptr", hPipeRead)
+		DllCall("CloseHandle", "Ptr", hPipeWrite)
+		throw OSError("CreateProcess has failed")
+	}
+	DllCall("CloseHandle", "Ptr", hPipeWrite)
+	sTemp := Buffer(4096)
+	SetTimer(readFileCheck, timePerCheck)
+	return 1
+
+	readFileCheck() {
+		if (DllCall("ReadFile", "Ptr", hPipeRead, "Ptr", sTemp, "UInt", 4096, "UIntP", &nSize := 0, "UInt", 0)) {
+			returnValue .= stdOut := StrGet(sTemp, nSize, encoding)
+			if (callBackFuncObj)
+				callBackFuncObj(stdOut)
+		}
+		else {
+			SetTimer(readFileCheck, 0)
+			closeHandle()
+		}
+	}
+
+	closeHandle() {
+		DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, "Ptr"))
+		DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, A_PtrSize, "Ptr"))
+		DllCall("CloseHandle", "Ptr", hPipeRead)
+		if (finishCallBackFuncObj)
+			finishCallBackFuncObj()
+	}
+}
+
 execShell(command) {
 	shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_Comspec " /C " command)

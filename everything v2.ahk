@@ -936,3 +936,18 @@ clipCursor(mode := true, window := "A") {
 }
 #HotIf
 
+; Numpad5::{
+; 	newGui := Gui()
+; 	retValue := ""
+; 	editControl := newGui.AddEdit("ReadOnly w500 R30")
+; 	newGui.Show("AutoSize")
+; 	cmdRetAsync("ping 8.8.8.8", &retValue, intermediate, finished)
+; 	return 0
+; 	intermediate(curValue) {
+; 		editControl.Value := editControl.Value . "`n" . curValue
+; 	}
+
+; 	finished() {
+; 		editControl.Value := editControl.Value . "`nPOGGERS WE ARE DONE"
+; 	}
+; }
