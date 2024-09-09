@@ -118,7 +118,7 @@ class TextEditMenu {
 			serif := text
 		if !(this.dictionary["toAlphabet"].Has(alphnameTo))
 			return serif
-		replaceCharacters(serif, this.dictionary["toAlphabet"][alphnameTo])
+		return replaceCharacters(serif, this.dictionary["toAlphabet"][alphnameTo])
 	}
 
 	static spreadString(text, delimiter) {
