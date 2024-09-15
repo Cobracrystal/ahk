@@ -57,6 +57,14 @@ class AltDrag {
 		A_TrayMenu.ToggleCheck("Enable Snapping")
 	}
 
+	static addBlacklist(arr) {
+		if arr is Array
+			for i, e in arr
+				this.blacklist.Push(e)
+		else
+			this.blacklist.Push(arr)
+	}
+
 	static moveWindow(hotkey := "LButton") {
 		SetWinDelay(3)
 		CoordMode("Mouse", "Screen")
@@ -131,7 +139,7 @@ class AltDrag {
 		CoordMode("Mouse", "Screen")
 		wHandle := WinExist("A")
 		mmx := WinGetMinMax("ahk_id " . wHandle)
-		if (this.winInBlacklist(wHandle) || mmx == -1) {
+		if (this.winInBlacklist(wHandle) || mmx != 0) {
 			return
 		}
 		WinGetPos(&winX, &winY, &winW, &winH, "ahk_id " . wHandle)

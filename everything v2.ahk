@@ -59,6 +59,10 @@ if (StrCompare(A_OSVersion, "10.0.22000") < 0)
 	TransparentTaskbar.TransparentTaskbar(1, 50)
 ; Start keeping track of desktop window changes
 DesktopState.enable(60000)
+; import custom blacklist into AltDrag
+AltDrag.addBlacklist([
+	"Satisfactory ahk_class UnrealWindow"
+])
 ; Start Loop to close winrar popups
 SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't interrupt
 ; Initialize Internet Logging Script

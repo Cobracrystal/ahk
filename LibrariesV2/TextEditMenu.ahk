@@ -61,9 +61,7 @@ class TextEditMenu {
 		this.menu := textModifyMenu
 	}
 
-	static showMenu() {
-		this.menu.show()
-	}
+	static showMenu() => this.menu.show()
 
 	static randomCase(text) {
 		result := ""
