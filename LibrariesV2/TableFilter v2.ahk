@@ -14,7 +14,7 @@
 ; do above ^, check in docs > gui > setfont > note at the end dialog box to pick font/color/icon
 ; add setting to reset to default setting
 ; when searching, the LV flickers. To avoid this, on typing disable redraw and set timer to -100ms to reenable it.
-
+; todo: hotkeys, automatic backups etc.
 #SingleInstance Force
 ; temporary
 tableInstance := TableFilter(1)
@@ -675,28 +675,26 @@ class TableFilter {
 	}
 
 	saveFile(overwrite := 0) {
-		if (overwrite) { ; overwrites loaded file.
-			msgbox("no")
-		} else {
-			path := this.data.openFile
+		filePath := this.data.openFile
+		if (!overwrite) { ; overwrites loaded file.
 			for i, g in this.guis
 				g.Opt("+Disabled")
-			savePath := FileSelect("16", path, "Save File", "Data (*.xml; *.json)")
+			filePath := FileSelect("16", this.data.openFile, "Save File", "Data (*.xml; *.json)")
 			for i, g in this.guis
 				g.Opt("-Disabled")
-			if (!savePath)
+			if (!filePath)
 				return
-			SplitPath(savePath, &fName, &fDir, &fExt)
-			if (fExt == "json") {
-				fObj := FileOpen(savePath, "w", "UTF-8")
-				fObj.Write(jsongo.Stringify(this.data.data))
-				fObj.Close()
-			}
-			else 
-				exportAsXML() 
-		}
+		} 
+		SplitPath(filePath, &fName, &fDir, &fExt)
+		if (fExt == "json")
+			fileAsStr := jsongo.Stringify(this.data.data)
+		else 
+			fileAsStr := exportAsXML()
+		fObj := FileOpen(filePath, "w", "UTF-8") 
+		fObj.Write(fileAsStr)
+		fObj.Close()
 		this.settingsHandler("isSaved", true)
-		this.settingsHandler("lastUsedFile", savePath)
+		this.settingsHandler("lastUsedFile", filePath)
 		; THIS SHOULD COMBINE directsave AND exportFile AND exportToFileGUI
 
 		exportAsXML() {
@@ -715,9 +713,8 @@ class TableFilter {
 				xmlFileAsString .= s
 			}
 			xmlFileAsString .= "</dataroot>"
-			fObj := FileOpen(savePath, "w", "UTF-8")
-			fObj.Write(xmlFileAsString)
-			fObj.Close()
+			return xmlFileAsString
+
 			replacer(t) {
 				t := StrReplace(t, "&", "&amp;")
 				t := StrReplace(t, "'", "&apos;")
