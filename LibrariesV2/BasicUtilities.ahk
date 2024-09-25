@@ -301,7 +301,7 @@ mapToArrays(mapObject) {
 	return [arr1, arr2]
 }
 /**
- * Given a Map, returns new Map where keys are the values of original map and vice verse
+ * Given a Map, returns new Map where keys are the values of original map and vice versa
  * @param {Map} mapObject 
  * @returns {Map} 
  */
