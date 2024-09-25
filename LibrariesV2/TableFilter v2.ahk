@@ -661,7 +661,7 @@ class TableFilter {
 		}
 		this.data.keys := keys
 		this.data.data := data
-		this.data.rowName := rowName
+		this.data.rowName := rowName ?? "Table"
 
 		encode(t) {
 			t := StrReplace(t, "&apos;", "'")
