@@ -350,6 +350,10 @@ F11:: { 	; BTD6: Rebind Escape
 	AltDrag.minimizeWindow()
 }
 
+^!XButton1:: {	; Minimize Window (no blacklist)
+	WinMinimize(WinExist("A"))
+}
+
 
 ^NumpadDiv:: {	; Show Mouse Coordinates
 	static toggle := false
@@ -955,3 +959,17 @@ clipCursor(mode := true, window := "A") {
 ; 		editControl.Value := editControl.Value . "`nPOGGERS WE ARE DONE"
 ; 	}
 ; }
+
+
+#HotIf WinActive("Satisfactory")
+Numpad5::{
+	static toggle := 0 
+	toggle := !toggle
+	if (toggle) {
+		Send("{Space Down}")
+	}
+	else 
+		Send("{Space Up}")
+}
+
+#HotIf
