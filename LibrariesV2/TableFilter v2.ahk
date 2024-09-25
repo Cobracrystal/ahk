@@ -30,10 +30,6 @@ tableInstance.loadData()
 ; tab control for multiple files in one window?
 class TableFilter {
 
-	static __New() {
-
-	}
-
 	__New(debug := 0) {
 		this.data := {
 			savePath: A_AppData "\Autohotkey\Tablefilter", 
@@ -62,7 +58,7 @@ class TableFilter {
 		tableFilterMenu.Default := "Open GUI: (" this.settings.guiHotkey ")"
 		A_TrayMenu.Add("Tablefilter", tableFilterMenu)
 		HotIfWinactive("ahk_group TableFilterGUIs")
-		;	Hotkey(this.settings.saveHotkey, (*) => this.directSave())
+		Hotkey(this.settings.saveHotkey, (*) => this.saveFile(1))
 		HotIfWinactive()
 		Hotkey(this.settings.guiHotkey, (*) => this.guiCreate())
 		OnExit(this.exit.bind(this), 1)
