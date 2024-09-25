@@ -19,10 +19,10 @@ flagDebug := 0 ;// debug, duh
 flagUseDefaultValues := 1 ;// replace newly added empty entries with ?,-,etc
 duplicateFilter := "Deutsch" ;// default value to search in duplicateList for
 saveHotkeyAsString := "^s" ;// hotkey for quicksaving. default ^s
-reloadHotkeyAsString := "^+f" ;// hotkey for reloading script. default ^+r
-openWindowHotkeyAsString := "^p"
+reloadHotkeyAsString := "^+g" ;// hotkey for reloading script. default ^+r
+openWindowHotkeyAsString := "#o" ;// hotkey for opening new GUI. default #o
 iconPath := "G:\OneDrive\Auto HotKey Scripts\icons\a-runic.ico"
-; ##################################
+; ################################## F2 = Edit / F5 = Reload / Del = Löschen
 
 ;// MENU
 createTrayMenu(darkModeToggle, iconPath)
@@ -34,7 +34,8 @@ Suspend ;// enable hotkeys again
 Hotkey, IfWinActive, ahk_group tableFilterGUIGroup
 Hotkey, %saveHotkeyAsString%, directSave
 Hotkey, IfWinActive
-Hotkey, %reloadHotkeyAsString%, reloadScript
+if (reloadHotkeyAsString)
+	Hotkey, %reloadHotkeyAsString%, reloadScript
 Hotkey, %openWindowHotkeyAsString%, createMainGUI
 createGUIRowMenu()
 return
@@ -63,7 +64,7 @@ createMainGUI() {
 		createSearchBoxesinGUI(keyArray)
 		Gui, Add, ListView, vLV AltSubmit gLVEvent xs R35 w950, % s
 		createAddLineBoxesinGUI(keyArray)
-		Gui, Add, Button, yp-1 xp+115 vAddButton1 gAddLineToData r1 w100, Eintrag hinzufügen
+		Gui, Add, Button, yp-1 xp+115 vAddButton1 Default gAddLineToData r1 w100, Eintrag hinzufügen
 		createFileButtonsinGUI()
 		; if !(flagDebug)
 			; LV_ModifyCol(1, 0)	;// setzt die ID-Zeile auf Breite 0, sodass sie versteckt wird
@@ -731,7 +732,7 @@ tableFilterCategoryMenuHandler(ItemName, ItemPos, MenuName) {
 			}
 			r["Kategorie"] := curCategories
 		}
-		editrow(trueN, r) something like this
+		editrow(trueN, r) ; something like this
 	}
 }
 
