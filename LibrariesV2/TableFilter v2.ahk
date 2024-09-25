@@ -14,7 +14,8 @@
 ; do above ^, check in docs > gui > setfont > note at the end dialog box to pick font/color/icon
 ; add setting to reset to default setting
 ; when searching, the LV flickers. To avoid this, on typing disable redraw and set timer to -100ms to reenable it.
-; todo: hotkeys, automatic backups etc.
+; todo: hotkeys, automatic backups, categoryhandler
+; generalize the column formatting and value checker
 #SingleInstance Force
 ; temporary
 tableInstance := TableFilter(1)
@@ -370,7 +371,7 @@ class TableFilter {
 						row[e] := this.data.defaultValues[e]
 				}
 			}
-			if (i == 1)
+			if (e == "Wortart")
 				row[e] := Format("{:U}", row[e])
 			row[e] := Trim(row[e])
 		}
