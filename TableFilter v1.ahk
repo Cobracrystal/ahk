@@ -634,8 +634,8 @@ AddLineBoxChecker(guiControlHwnd, guiEvent, eventInfo, errLevel := "") {
 			;// if (!RegexMatch(NewRow4, "[ᚫᛒᛞᛖᚠᚷᚻᛁᚲᛚᛗᚾᛟᛈᚱᛋᛏᚢᚹᛃᛉᛝᛜᚳᛄᚦᛣᛪᛨᛇ]")) : i dont have all runes, and special symbols, so no
 			if (RegexMatch(NewRow4, "[A-Za-z]"))
 				Gui, Font, % "cRed Bold"
-		case "NewRow6":
-			if !(RegexMatch(NewRow6, "^[01]?$"))
+		case "NewRow7":
+			if !(RegexMatch(NewRow7, "^[01]?$"))
 				Gui, Font, % "cRed Bold"
 		default:
 			return
