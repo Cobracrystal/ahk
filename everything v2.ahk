@@ -70,8 +70,6 @@ SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't in
 internetConnectionLogger("Init")
 ; Load LaTeX Hotstrings
 try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX")
-; Tablefilter (temporary)
-tableInstance := TableFilter(1)
 ; replace the tray menu with my own
 customTrayMenu()
 ; Synchronize nextDNS IP
