@@ -4,33 +4,31 @@
 ; in settings option to delete all backups (or restore them)
 ; the option to open backup folder should also be in there (?)
 ; add checkbox to filter empty values next to duplicates
+; duplicates dropdown for which value? or in settings?
 ; figure out how to use icon for settings
 ; limit autohdr for columns to fixed max width (eg autohdr if < 200, else 200)
 ; settings usedefaultrunic -> needs runic translator function.
-; queue for deletion instead of instantly deleting, then next filteredlist operation should do that
-; listview headers
+; listview headers dark
 ; option to change backcolor, font color
-; font size??? adjust the controls accordingly?? (maybe with ctrl +?)
 ; do above ^, check in docs > gui > setfont > note at the end dialog box to pick font/color/icon
 ; add setting to reset to default setting
 ; when searching, the LV flickers. To avoid this, on typing disable redraw and set timer to -100ms to reenable it.
-; todo: hotkeys, automatic backups, categoryhandler
+; todo: categoryhandler
 ; generalize the column formatting and value checker
 #SingleInstance Force
-; temporary
-tableInstance := TableFilter(1)
-; tableInstance.guiCreate()
-tableInstance.loadData()
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\TextEditMenu.ahk"
 
+; ONLY start if this script is not used as a library
+if (A_ScriptFullPath == A_LineFile) {
+	tableInstance := TableFilter(1)
+	tableInstance.loadData()
+}
 
-; idea -> tablefilter handles all the actual file stuff for a database
-; guiInstance is one gui instance
-; tab control for multiple files in one window?
 class TableFilter {
 
-	__New(debug := 0) {
+	__New(debug := 0, useConfig := 1) {
 		this.data := {
 			savePath: A_AppData "\Autohotkey\Tablefilter", 
 			openFile: "", 
@@ -38,15 +36,15 @@ class TableFilter {
 			keys: [],
 			rowName: "",
 			defaultValues: Map(),
-			isSaved: true, 
-			isInBackup: true 
+			isSaved: true
 		}
 		this.data.defaultValues.CaseSense := false
 		this.data.defaultValues.Set("Wortart", "?", "Deutsch", "-", "Kayoogis", "-", "Tema'i", "0")
 		this.guis := []
 
-		this.settingsManager("Load")
+		this.settingsManager("Load", !useConfig)
 		this.settings.debug := debug
+		this.settings.useConfig := useConfig
 
 		this.menu := this.createMenu()
 		tableFilterMenu := TrayMenu.submenus["tablefilter"]
@@ -58,7 +56,7 @@ class TableFilter {
 		tableFilterMenu.Default := "Open GUI: (" this.settings.guiHotkey ")"
 		A_TrayMenu.Add("Tablefilter", tableFilterMenu)
 		HotIfWinactive("ahk_group TableFilterGUIs")
-		Hotkey(this.settings.saveHotkey, (*) => this.saveFile(1))
+		Hotkey(this.settings.saveHotkey, (*) => this.saveFile(this.data.openFile, false))
 		HotIfWinactive()
 		Hotkey(this.settings.guiHotkey, (*) => this.guiCreate())
 		OnExit(this.exit.bind(this), 1)
@@ -78,7 +76,7 @@ class TableFilter {
 		GroupAdd("TableFilterGUIs", "ahk_id " newGui.hwnd)
 		if (this.data.openFile) {
 			SplitPath(this.data.openFile, &name)
-			newGui.Title := (this.data.isSaved ? "" : "*") . this.base.__Class " - " name 
+			newGui.Title := (this.data.isSaved ? "" : "*") . this.base.__Class " - " name
 			gbox := newGui.AddGroupBox("Section w745 h42", "Search")
 			newGui.AddButton("ys+13 xp+8 w30 h22", "Clear").OnEvent("Click", this.clearSearchBoxes.bind(this))
 			for i, key in this.data.keys {
@@ -114,14 +112,14 @@ class TableFilter {
 			(btn := newGui.AddButton("Default ys+15 xs+" 10+95*this.data.keys.Length " h40 w65", "Add Row to List")).OnEvent("Click", this.addEntry.bind(this))
 			newGui.addRowControls.Push(btn)
 			newGui.LV.GetPos(,,&lvw)
-			(btn := newGui.AddButton("ys+9 xs+" lvw-100 " w100", "Load json/xml File")).OnEvent("Click", this.loadData.bind(this, ""))
+			(btn := newGui.AddButton("ys+9 xs+" lvw-100 " w100", "Load json/xml File")).OnEvent("Click", this.loadData.bind(this))
 			newGui.fileControls.Push(btn)
-			(btn := newGui.AddButton("w100", "Export to File")).OnEvent("Click", (*) => this.saveFile())
+			(btn := newGui.AddButton("w100", "Export to File")).OnEvent("Click", (*) => this.saveFile(this.data.openFile, true))
 			newGui.fileControls.Push(btn)
 			showString := "Center Autosize"
 		} else {
 			newGui.Title := this.base.__Class " - No File Selected" 
-			newGui.AddButton("x200 y190 r1 w100", "Load File").OnEvent("Click", this.loadData.bind(this, ""))
+			newGui.AddButton("x125 y100 w250 h200", "Load File").OnEvent("Click", this.loadData.bind(this))
 			showString := "Center w500 h400"
 		}
 		if (this.settings.darkMode)
@@ -218,7 +216,6 @@ class TableFilter {
 		this.cleanRowData(newRow)		
 		this.data.data.push(newRow)
 		this.settingsHandler("isSaved", false, false)
-		this.settingsHandler("isInBackup", false, false)
 		for _, g in this.guis
 			if (this.rowIncludeFromSearch(g, newRow))
 				this.addRow(g, newRow, this.data.data.Length)
@@ -238,7 +235,7 @@ class TableFilter {
 						if (flagNewRowVisible) {
 							rowAsArray := []
 							for i, e in this.data.keys
-								rowAsArray.Push(newRow[e])
+								rowAsArray.Push(newRow.Has(e) ? newRow[e] : "")
 							rowAsArray.Push(n)
 							g.LV.Modify(A_Index,,rowAsArray*)
 						} else {
@@ -253,7 +250,6 @@ class TableFilter {
 			g.Opt("-Disabled")
 		}
 		this.settingsHandler("isSaved", false, false)
-		this.settingsHandler("isInBackup", false, false)
 	}
 
 
@@ -308,17 +304,17 @@ class TableFilter {
 			rowN := gui.LV.GetNext(rowN ?? 0) ;// next row
 			if !(rowN)
 				break
-			rows.push({ rowIndex: rowN, dataIndex: gui.LV.GetText(rowN, this.data.keys.Length + 1)})
+			rows.push(gui.LV.GetText(rowN, this.data.keys.Length + 1))
 		}
 		if (!rows.Length)
 			return
-		sortedRows := sortObjectByKey(rows, "dataIndex", "R N")
+		sortedRows := sortArray(rows, "R N")
 		for _, g in this.guis {
 			g.Opt("+Disabled")
 			rowsInLV := [], indexToRemove := []
 			for j, n in sortedRows
-				if (this.rowIncludeFromSearch(g, this.data.data[n.value.dataIndex]))
-					rowsInLV.push(n.value.dataIndex)
+				if (this.rowIncludeFromSearch(g, this.data.data[n]))
+					rowsInLV.push(n)
 			Loop(g.LV.GetCount()) {
 				rowN := A_Index
 				dataIndex := g.LV.GetText(rowN, this.data.keys.Length + 1)
@@ -331,7 +327,7 @@ class TableFilter {
 				}
 				offset := 0
 				for j, n in sortedRows {
-					if (dataIndex > n.value.dataIndex) {
+					if (dataIndex > n) {
 						offset := sortedRows.Length - j + 1
 						break
 					}
@@ -339,30 +335,30 @@ class TableFilter {
 				if (offset)
 					g.LV.Modify(rowN, "Col" . this.data.keys.Length + 1, dataIndex - offset)
 			}
+			; we don't need to queue them if we do -Redraw at the start.
+			g.LV.Opt("-Redraw")
 			for k, rowN in indexToRemove
 				g.LV.Delete(indexToRemove[indexToRemove.Length - k + 1]) ; backwards to avoid fucking up the list
-			; instead of queueing deletions and doing them backwards, 
-			; we could also shift the index backwards in the big loop everytime we delete a line.
-			; LV.Delete() is slow as fuck and we want to replace it. But thats not possible. Oh well.
+			g.LV.Opt("+Redraw")
 			g.Opt("-Disabled")
 		}
 		for i, e in sortedRows
-			this.data.data.RemoveAt(e.value.dataIndex)
+			this.data.data.RemoveAt(e)
 		this.settingsHandler("isSaved", false, false)
-		this.settingsHandler("isInBackup", false, false)
 	}
 
 	cleanRowData(row) { ; row is a map and thus operates onto the object
 		for i, e in this.data.keys {
-			if (this.settings.useDefaultValues && (!row.Has(e) || row[e] == "")) {
+			if (this.settings.useDefaultValues && (row[e] == "")) {
 				switch e, 0 {
 					case "Wortart": ; 1 -> Wortart
 						row[e] := this.data.defaultValues[e]
 					case "Deutsch", "Kayoogis": ; 2,3 -> Deutsch, Kayoogis
 						row[e] := this.data.defaultValues[e]
 					case "Runen": ; Runen
-						if (this.settings.useDefaultRunic)
-							row[e] := "" ; todo
+						if (this.settings.useDefaultRunic && IsSet(TextEditMenu) && IsObject(TextEditMenu) && TextEditMenu.HasMethod("runify"))
+							row[e] := TextEditMenu.runify(row["Kayoogis"], "DE")
+						else row[e] := ""
 					case "Tema'i": ; Tema'i
 						row[e] := this.data.defaultValues[e]
 				}
@@ -373,6 +369,7 @@ class TableFilter {
 		}
 	}
 	
+
 	validValueChecker(ctrlObj, *) {
 		newFont := (this.settings.darkMode ? "c0xFFFFFF Norm" : "cDefault Norm")
 		switch this.data.keys[Integer(SubStr(ctrlObj.Name, -1))] {
@@ -479,64 +476,75 @@ class TableFilter {
 
 	createMenu() {
 		aMenu := Menu()
-		aMenu.Add("👨‍👩‍👧 Familie", this.cMenuHandler.bind(this))
-		aMenu.Add("🖌️ Farbe", this.cMenuHandler.bind(this))
-		aMenu.Add("⛰️ Geographie", this.cMenuHandler.bind(this))
-		aMenu.Add("💎 Geologie", this.cMenuHandler.bind(this))
-		aMenu.Add("🌟 Gestirne", this.cMenuHandler.bind(this))
-		aMenu.Add("💥 Magie", this.cMenuHandler.bind(this))
-		aMenu.Add("🍗 Nahrung", this.cMenuHandler.bind(this))
-		aMenu.Add("👕 Kleidung", this.cMenuHandler.bind(this))
-		aMenu.Add("🖐️ Körper", this.cMenuHandler.bind(this))
-		aMenu.Add("🏘️ Orte", this.cMenuHandler.bind(this))
-		aMenu.Add("🌲 Pflanzen", this.cMenuHandler.bind(this))
-		aMenu.Add("🐕 Tiere ", this.cMenuHandler.bind(this))
-		aMenu.Add("🌧️ Wetter", this.cMenuHandler.bind(this))
-		aMenu.Add("🔢 Zahl", this.cMenuHandler.bind(this))
+		for i, c in TableFilter.wordCategories
+			aMenu.Add(c, this.cMenuHandler.bind(this,,,,1))
 		rMenu := Menu()
-		rMenu.Add("👨‍👩‍👧 Familie", this.cMenuHandler.bind(this))
-		rMenu.Add("🖌️ Farbe", this.cMenuHandler.bind(this))
-		rMenu.Add("⛰️ Geographie", this.cMenuHandler.bind(this))
-		rMenu.Add("💎 Geologie", this.cMenuHandler.bind(this))
-		rMenu.Add("🌟 Gestirne", this.cMenuHandler.bind(this))
-		rMenu.Add("💥 Magie", this.cMenuHandler.bind(this))
-		rMenu.Add("🍗 Nahrung", this.cMenuHandler.bind(this))
-		rMenu.Add("👕 Kleidung", this.cMenuHandler.bind(this))
-		rMenu.Add("🖐️ Körper", this.cMenuHandler.bind(this))
-		rMenu.Add("🏘️ Orte", this.cMenuHandler.bind(this))
-		rMenu.Add("🌲 Pflanzen", this.cMenuHandler.bind(this))
-		rMenu.Add("🐕 Tiere ", this.cMenuHandler.bind(this))
-		rMenu.Add("🌧️ Wetter", this.cMenuHandler.bind(this))
-		rMenu.Add("🔢 Zahl", this.cMenuHandler.bind(this))
-		rMenu.Add("All", this.cMenuHandler.bind(this))
+		for i, c in TableFilter.wordCategories
+			rMenu.Add(c, this.cMenuHandler.bind(this,,,,0))
+		rMenu.Add("All", this.cMenuHandler.bind(this,,,,0))
 		tMenu := Menu()
-		tMenu.Add("Edit Selected Row", this.cMenuHandler.bind(this))
-		tMenu.Add("Delete Selected Row(s)", this.cMenuHandler.bind(this))
-		tMenu.Add("Add Category to Selected Row(s)", aMenu)
-		tMenu.Add("Remove Category from Selected Row(s)", rMenu)
+		tMenu.Add("[F2] 🖊️ Edit Selected Row", this.cMenuHandler.bind(this))
+		tMenu.Add("[Del] 🗑️ Delete Selected Row(s)", this.cMenuHandler.bind(this))
+		if (this.settings.taggingColumn) {
+			tMenu.Add("➕ Add Category to Selected Row(s)", aMenu)
+			tMenu.Add("➖ Remove Category from Selected Row(s)", rMenu)
+		}
 		if (this.settings.debug)
 			tMenu.Add("Show Debug Entry", this.cMenuHandler.bind(this))
 		return tMenu
 	}
 
-
-	cMenuHandler(itemName, itemPos, menuObj) {
-		; this should handle both menus
-		if ((rowN := this.menu.launcherGuiObj.LV.GetNext()) == 0)
+	cMenuHandler(itemName, itemPos, menuObj, extra?) {
+		g := this.menu.launcherGuiObj
+		if ((rowN := g.LV.GetNext()) == 0)
 			return
-		n := this.menu.launcherGuiObj.LV.GetText(rowN, this.data.keys.Length + 1)
 		switch itemName {
-			case "Edit Selected Row":
-				this.editRowGui(this.menu.launcherGuiObj)
+			case "[F2] 🖊️ Edit Selected Row":
+				this.editRowGui(g)
+			case "[Del] 🗑️ Delete Selected Row(s)":
+				this.removeSelectedRows(g)
 			case "Show Debug Entry":
+				n := g.LV.GetText(rowN, this.data.keys.Length + 1)
 				this.debugShowDatabaseEntry(n, rowN)
-			case "Delete Selected Row(s)":
-				this.removeSelectedRows(this.menu.launcherGuiObj)
+			default:
+				if (IsSet(extra))
+					this.rowTagger(itemName, g, extra)
+		}
+	}
+
+	rowTagger(tag, guiObj, tagState) {
+		rows := []
+		guiObj.Opt("+Disabled")
+		Loop {
+			rowN := guiObj.LV.GetNext(rowN ?? 0) ;// next row
+			if !(rowN)
+				break
+			rows.push(guiObj.LV.GetText(rowN, this.data.keys.Length + 1))
+		}
+		if (!rows.Length)
+			return
+		c := TableFilter.wordCategories
+		for i, index in rows {
+			row := this.data.data[index].Clone()
+			curCategories := row.Has(this.settings.taggingColumn) ? row[this.settings.taggingColumn] : ""
+			if (tagState)
+				curCategories .= "," tag
+			else
+				curCategories := (tag == "All" ? "" : StrReplace(curCategories, tag))
+			row[this.settings.taggingColumn] := Trim(Sort(curCategories, "P3 U D,"), ", ")
+			this.editRow(index,row)
 		}
 	}
 
 	guiResize(guiObj, minMax, nw, nh) {
 		Critical("Off")
+		if !(this.data.openFile) {
+			for i, ctrl in guiObj {
+				ctrl.Move(nw//4,nh//4,nw//2,nh//2)
+				ctrl.Redraw()
+			}
+			return
+		}
 		guiObj.LV.GetPos(,,&lvw, &lvh)
 		guiObj.LV.Move(,,nw-20, nh-131)
 		guiObj.LV.GetPos(,,&lvnw, &lvnh)
@@ -559,33 +567,34 @@ class TableFilter {
 		guiObj.Destroy()
 	}
 
-	dropFiles(gui, ctrlObj, fileArr, x, y) {
+	dropFiles(_gui, ctrlObj, fileArr, x, y) {
 		if (fileArr.Length > 1)
 			return
-		this.loadData(fileArr[1], gui)
+		this.loadData(_gui,,fileArr[1])
 	}
 
-	loadData(file := "", guiObj := {}, *) {
+	loadData(guiObj := {}, eventInfo := 0, filePath := "", *) {
 		if (guiObj.HasProp("Gui"))
 			guiObj := guiObj.gui
 		if (!this.data.isSaved) {
-			res := MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes before loading " (file ? file : "a new File") "?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
+			res := MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes before loading " (filePath ? filePath : "a new File") "?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
 			if (res == "Cancel")
 				return
 			else if (res == "Yes")
-				this.saveFile(true)
+				this.saveFile(this.data.openFile, false)
 		}
-		if (file == "") {
+		if (filePath == "") {
 			path := this.settings.lastUsedFile ? this.settings.lastUsedFile : A_ScriptDir
 			for i, g in this.guis
 				g.Opt("+Disabled")
-			file := FileSelect("3", path, "Load File", "Data (*.xml; *.json)")
+			filePath := FileSelect("3", path, "Load File", "Data (*.xml; *.json)")
 			for i, g in this.guis
 				g.Opt("-Disabled")
-			if (!file)
+			if (!filePath)
 				return
 		}
-		this.loadFile(file)
+		loadFile(filePath)
+		this.settingsHandler("openFile", filePath, false)
 		; add option for tab controls here (aka supporting multiple files)
 
 		while(this.guis.Length > 0)
@@ -593,126 +602,141 @@ class TableFilter {
 		; now, update gui or all guis with the new data. ????
 		if (this.settings.useBackups) {
 			; update backup function
+			SetTimer(this.backupIterator.bind(this), 0)
+			this.backupIterator(1)
+			SetTimer(this.backupIterator.bind(this), this.settings.backupInterval * 60000)
 		}
 		this.guiCreate()
-		this.settingsHandler("lastUsedFile", file)
+		this.settingsHandler("lastUsedFile", filePath)
 		this.settingsHandler("isSaved", true, false)
-	}
 
-	loadFile(path) {
-		SplitPath(path, , , &ext, &fileName)
-		this.data.openFile := path
-		fileAsStr := FileRead(path, "UTF-8")
-		lastSeenKey := ""
-		if (ext = "json") {
-			data := jsongo.Parse(fileAsStr)
-			keys := []
-			for i, e in data {
-				for j, f in e { ; todo: this messes up the order of the keys btw in case of json. custom parse??
-					if !(objContainsValue(keys, j)) {
-						keys.InsertAt(objContainsValue(keys, lastSeenKey) + 1, j)
-					}
-					lastSeenKey := j
-				}
-			}
-		}
-		else if (ext = "xml") {
-			Loop Parse, fileAsStr, "`n", "`r" {
-				if (RegexMatch(A_Loopfield, "^\s*<\?") || RegexMatch(A_LoopField, "^\s*<dataroot"))
-					continue
-				if(RegexMatch(A_LoopField, "^\s*<(.*?)>\s*$", &m)) {
-					rowName := m[1]
-					break
-				}
-			}
-			rawData := []
-			data := []
-			keys := []
-			count := 1
-			fileAsStr := StrReplace(fileAsStr, "<" rowName ">", "¶")
-			Loop Parse, fileAsStr, "¶" {
-				row := Map()
-				flag := 0
-				Loop Parse, A_LoopField, "`n", "`r" {
-					if RegexMatch(A_LoopField, "<(.*?)>([\s\S]*?)<\/\1>", &m) {
-						key := m[1]
-						row[key] := m[2]
-						if !(objContainsValue(keys, key)) {
-							keys.InsertAt(objContainsValue(keys, lastSeenKey)+1, key)
+		loadFile(path) {
+			SplitPath(path, , , &ext)
+			fileAsStr := FileRead(path, "UTF-8")
+			lastSeenKey := ""
+			if (ext = "json") {
+				data := jsongo.Parse(fileAsStr)
+				keys := []
+				for i, e in data {
+					for j, f in e { ; todo: this messes up the order of the keys btw in case of json. custom parse??
+						if !(objContainsValue(keys, j)) {
+							keys.InsertAt(objContainsValue(keys, lastSeenKey) + 1, j)
 						}
-						lastSeenKey := key
+						lastSeenKey := j
 					}
 				}
-				if (row.Count > 0)
-					rawData.Push(row)
 			}
-			data.Length := rawData.Length
-			for i, e in rawData {
-				t := Map()
-				for j, f in e
-					t[encode(j)] := encode(f)
-				data[i] := t
+			else if (ext = "xml") {
+				Loop Parse, fileAsStr, "`n", "`r" {
+					if (RegexMatch(A_Loopfield, "^\s*<\?") || RegexMatch(A_LoopField, "^\s*<dataroot"))
+						continue
+					if(RegexMatch(A_LoopField, "^\s*<(.*?)>\s*$", &m)) {
+						rowName := m[1]
+						break
+					}
+				}
+				rawData := []
+				data := []
+				keys := []
+				count := 1
+				fileAsStr := StrReplace(fileAsStr, "<" rowName ">", "¶")
+				Loop Parse, fileAsStr, "¶" {
+					row := Map()
+					flag := 0
+					field := A_LoopField
+					Loop Parse, field, "`n", "`r" {
+						if RegexMatch(A_LoopField, "<(.*?)>([\s\S]*?)<\/\1>", &m) {
+							key := m[1]
+							row[key] := m[2]
+							if !(objContainsValue(keys, key)) {
+								keys.InsertAt(objContainsValue(keys, lastSeenKey)+1, key)
+							}
+							lastSeenKey := key
+						}
+					}
+					if (row.Count > 0 || InStr(field, "</" rowName ">"))
+						rawData.Push(row)
+				}
+				data.Length := rawData.Length
+				for i, e in rawData {
+					t := Map()
+					for j, f in e
+						t[unescape(j)] := unescape(f)
+					data[i] := t
+				}
+				for i, e in keys
+					keys[i] := nameUnescape(e)
 			}
-			for i, e in keys
-				keys[i] := encode(e)
-		}
-		this.data.keys := keys
-		this.data.data := data
-		this.data.rowName := rowName ?? "Table"
-
-		encode(t) {
-			t := StrReplace(t, "&apos;", "'")
-			t := StrReplace(t, "&quot;", '"')
-			t := StrReplace(t, "&gt;", ">")
-			t := StrReplace(t, "&lt;", "<")
-			t := StrReplace(t, "&amp;", "&")
-			t := StrReplace(t, "_x0027_", "'")
-			return t
+			this.data.keys := keys
+			this.data.data := data
+			this.data.rowName := rowName ?? "Table"
+	
+			unescape(t) { ; ORDER NECESSARY, AMP LAST.
+				t := StrReplace(t, "&apos;", "'")
+				t := StrReplace(t, "&quot;", '"')
+				t := StrReplace(t, "&gt;", ">")
+				t := StrReplace(t, "&lt;", "<")
+				t := StrReplace(t, "&amp;", "&")
+				return t
+			}
+	
+			nameUnescape(t) {
+				for i, e in TableFilter.sharepointEscapeCodes
+					t := StrReplace(t, e, i)
+				return t
+			}
 		}
 	}
 
-	saveFile(overwrite := 0) {
-		filePath := this.data.openFile
-		if (!overwrite) { ; overwrites loaded file.
+	saveFile(filePath := "", dialog := 0) {
+		if (filePath == "" || dialog) { ; overwrites loaded file.
+			dialog := true
 			for i, g in this.guis
 				g.Opt("+Disabled")
-			filePath := FileSelect("16", this.data.openFile, "Save File", "Data (*.xml; *.json)")
+			filePath := FileSelect("16", filePath == "" ? A_ScriptDir : filePath, "Save File", "Data (*.xml; *.json)")
 			for i, g in this.guis
 				g.Opt("-Disabled")
 			if (!filePath)
 				return
-		} 
+		}
 		SplitPath(filePath, &fName, &fDir, &fExt)
 		if (fExt == "json")
 			fileAsStr := jsongo.Stringify(this.data.data)
 		else 
 			fileAsStr := exportAsXML()
-		fObj := FileOpen(filePath, "w", "UTF-8") 
+		fObj := FileOpen(filePath, "w", "UTF-8")
 		fObj.Write(fileAsStr)
 		fObj.Close()
-		this.settingsHandler("isSaved", true)
-		this.settingsHandler("lastUsedFile", filePath)
-		; THIS SHOULD COMBINE directsave AND exportFile AND exportToFileGUI
+		this.settingsHandler("isSaved", true, false)
+		if (dialog) {
+			this.settingsHandler("lastUsedFile", filePath)
+			this.settingsHandler("openFile", filePath)
+		}
+		return
 
 		exportAsXML() {
 			xmlFileAsString := '<?xml version="1.0" encoding="UTF-8"?>`n<dataroot generated="' FormatTime(,"yyyy-MM-ddTHH:mm:ss") '">`n'
-			keyArrAlphanum := []
+			keysEsc := []
 			for i, k in this.data.keys
-				keyArrAlphanum.Push(replacer(k))
-			for dataIndex, row in this.data.data {
-				s := "<" . this.data.rowName . ">`n"
-				for i, key in this.data.keys {
-					if (row.Has(key) || dataIndex == 1) {
-						s .= '<' keyArrAlphanum[i] '>' replacer(row[key]) '</' keyArrAlphanum[i] '>`n'
-					}
-				}
-				s .= "</" this.data.rowName ">`n"
+				keysEsc.Push(escapeName(k))
+			xmlFileAsString .= Format("<{1}>`n", this.data.rowName)
+			for i, key in this.data.keys ; first entry should contain all keys in order
+				xmlFileAsString .= Format("<{1}>{2}</{3}>`n", keysEsc[i], this.data.data[1].has(key)?escape(this.data.data[1][key]):"",keysEsc[i])
+			xmlFileAsString .= Format("</{1}>`n", this.data.rowName)
+			Loop(this.data.data.Length - 1) {
+				dataIndex := A_Index + 1
+				row := this.data.data[dataIndex]
+				s := Format("<{1}>`n", this.data.rowName)
+				for i, key in this.data.keys
+					if (row.Has(key))
+						s .= Format("<{1}>{2}</{3}>`n", keysEsc[i], escape(row[key]), keysEsc[i])
+				s .= Format("</{1}>`n", this.data.rowName)
 				xmlFileAsString .= s
 			}
 			xmlFileAsString .= "</dataroot>"
 			return xmlFileAsString
 
-			replacer(t) {
+			escape(t) {
 				t := StrReplace(t, "&", "&amp;")
 				t := StrReplace(t, "'", "&apos;")
 				t := StrReplace(t, '"', "&quot;")
@@ -720,15 +744,47 @@ class TableFilter {
 				t := StrReplace(t, "<", "&lt;")
 				return t
 			}
+
+			escapeName(t) {
+				for i, e in TableFilter.sharepointEscapeCodes
+					t := StrReplace(t, i, e)
+				return t
+			}
 		}
 	}
 
-	backupIterator() {
+	backupIterator(doInitialBackup := 0) {
 		; instead of a timer or something, this should save the current time once and on every change this gets called, and if enough time has passed -> backup is made
+		SplitPath(this.data.openFile,,,&fExt,&fName)
+		backupPath := Format("{1}\Backup_{2}_{3}.{4}", 
+			this.data.savePath, 
+			fName, 
+			doInitialBackup ? "Original" : FormatTime(A_Now, "yyyy.MM.dd-HH.mm.ss"), 
+			fExt
+		)
+		this.saveFile(backupPath, false)
+		this.deleteExcessBackups()
 	}
 
-	deleteExtraBackups() {
-
+	deleteExcessBackups(filePath := "") {
+		if (!filePath)
+			filePath := this.data.openFile
+		SplitPath(filePath,,,&fExt,&fName)
+		backupPath := this.data.savePath "\Backup_" fName "_*." fExt
+		i := 0, oldestBackupTime := 0
+		Loop Files backupPath {
+			if !(InStr(A_LoopFileName, "Original")) {
+				i++
+				if (!oldestBackupTime || oldestBackupTime > A_LoopFileTimeCreated) {
+					oldestBackupTime := A_LoopFileTimeCreated
+					oldestBackup := A_LoopFileFullPath
+				}
+			}
+		}
+		if (i > this.settings.backupAmount) {
+			FileDelete(oldestBackup)
+			this.deleteExcessBackups() ; in the event that there's multiple excess backups.
+		}
 	}
 
 	debugShowDatabaseEntry(n, rowN) {
@@ -742,6 +798,11 @@ class TableFilter {
 			case "darkmode":
 				this.settings.darkMode := (value == -1 ? !this.settings.darkMode : value)
 				this.toggleDarkMode(this.settings.darkMode, extra*)
+			case "openFile":
+				this.data.openFile := value
+				SplitPath(this.data.openFile, &name)
+				for _, g in this.guis
+					g.Title := (this.data.isSaved ? "" : "*") . this.base.__Class " - " name
 			case "lastUsedFile":
 				this.settings.lastUsedFile := value
 			case "isSaved":
@@ -753,17 +814,14 @@ class TableFilter {
 						g.Title := "*" . g.Title
 				}
 				save := false
-			case "isInBackup":
-				this.data.isInBackup := (value == -1 ? !this.data.isInBackup : value)
-				save := false
 			default:
 				throw Error("uhhh setting: " . setting)
 		}
-		if (save)
+		if (save && this.settings.useConfig)
 			this.settingsManager("Save")
 	}
 
-	settingsManager(mode := "Save") {
+	settingsManager(mode := "Save", reset := false) {
 		mode := Substr(mode, 1, 1)
 		if (!Instr(FileExist(this.data.savePath), "D"))
 			DirCreate(this.data.savePath)
@@ -775,13 +833,13 @@ class TableFilter {
 		}
 		else if (mode == "L") {
 			this.settings := {}, settings := Map()
-			if (FileExist(this.data.savePath "\settings.json")) {
+			if (FileExist(this.data.savePath "\settings.json") && !reset) {
 				try settings := jsongo.Parse(FileRead(this.data.savePath "\settings.json", "UTF-8"))
 			}
 			for i, e in settings
 				this.settings.%i% := e
 			; populate remaining settings with default values
-			for i, e in Tablefilter.getDefaultSettings().OwnProps() {
+			for i, e in Tablefilter.defaultSettings.OwnProps() {
 				if !(this.settings.HasOwnProp(i))
 					this.settings.%i% := e
 			}
@@ -801,31 +859,80 @@ class TableFilter {
 				else if (res == "No")
 					return 0
 				else if (res == "Yes") {
-					this.saveFile(true)
+					this.saveFile(this.data.openFile, false)
 				}
 			}
 		}
 	}
 
-	static getDefaultSettings() {
-		settings := {
-			debug: false,
-			darkMode: true,
-			darkThemeColor: "0x1E1E1E",
-			simpleSaving: true,
-			autoSaving: true,
-			useBackups: true,
-			backupAmount: 4, ; amount of files to be kept
-			backupInterval: 15, ; in minutes
-			useDefaultValues: true,
-			useDefaultRunic: true,
-			duplicateColumn: "Deutsch",
-			copyColumn: "Runen",
-			filterCaseSense: "Locale",
-			saveHotkey: "^s", ; IS THIS NECESSARY THO?????
-			guiHotkey: "^p",
-			lastUsedFile: ""
-		}
-		return settings
+	static defaultSettings => {
+		debug: false,
+		useConfig: true,
+		darkMode: true,
+		darkThemeColor: "0x1E1E1E",
+		autoSaving: true,
+		useBackups: true,
+		backupAmount: 4, ; amount of files to be kept
+		backupInterval: 15, ; in minutes
+		useDefaultValues: true,
+		useDefaultRunic: true,
+		duplicateColumn: "Deutsch",
+		copyColumn: "Runen",
+		taggingColumn: "Kategorie",
+		filterCaseSense: "Locale",
+		saveHotkey: "^s",
+		guiHotkey: "^p",
+		lastUsedFile: ""
 	}
+
+	static sharepointEscapeCodes => Map(
+		"~", "_x007e_",
+		"!", "_x0021_",
+		"@", "_x0040_",
+		"#", "_x0023_",
+		"$", "_x0024_",
+		"%", "_x0025_",
+		"^", "_x005e_",
+		"&", "_x0026_",
+		"*", "_x002a_",
+		"(", "_x0028_",
+		")", "_x0029_",
+		"+", "_x002b_",
+		"-", "_x002d_",
+		"=", "_x003d_",
+		"{", "_x007b_",
+		"}", "_x007d_",
+		":", "_x003a_",
+		"`"", "_x0022_",
+		"|", "_x007c_",
+		";", "_x003b_",
+		"'", "_x0027_",
+		"\", "_x005c_",
+		"<", "_x003c_",
+		">", "_x003e_",
+		"?", "_x003f_",
+		",", "_x002c_",
+		".", "_x002e_",
+		"/", "_x002f_",
+		"``", "_x0060_",
+		" ", "_x0020_"
+	)
+
+	static wordCategories => [
+		"👨‍👩‍👧 Familie",
+		"🖌️ Farbe",
+		"⛰️ Geographie",
+		"💎 Geologie",
+		"🌟 Gestirne",
+		"💥 Magie",
+		"🍗 Nahrung",
+		"👕 Kleidung",
+		"🖐️ Körper",
+		"🏘️ Orte",
+		"🌲 Pflanzen",
+		"🐕 Tiere",
+		"🌧️ Wetter",
+		"🔢 Zahl"
+	]
+
 }
