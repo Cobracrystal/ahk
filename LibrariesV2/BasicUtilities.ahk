@@ -3,7 +3,7 @@
 #Requires Autohotkey v2+
 
 class TrayMenu {
-
+	; ADD TRACKING FOR CHILD MENUS
 	static __New() {
 		this.menus := Map()
 		this.menus.CaseSense := 0
