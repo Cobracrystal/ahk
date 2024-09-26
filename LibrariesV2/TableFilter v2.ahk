@@ -1,20 +1,14 @@
-﻿; still todo
-; listview that lists last used files when opening anew
-; or menubar that lists them
-; in settings option to delete all backups (or restore them)
-; the option to open backup folder should also be in there (?)
-; add checkbox to filter empty values next to duplicates
-; duplicates dropdown for which value? or in settings?
-; figure out how to use icon for settings
-; limit autohdr for columns to fixed max width (eg autohdr if < 200, else 200)
-; settings usedefaultrunic -> needs runic translator function.
-; listview headers dark
-; option to change backcolor, font color
-; do above ^, check in docs > gui > setfont > note at the end dialog box to pick font/color/icon
-; add setting to reset to default setting
-; when searching, the LV flickers. To avoid this, on typing disable redraw and set timer to -100ms to reenable it.
-; todo: categoryhandler
-; generalize the column formatting and value checker
+﻿/*
+todo
+- on gui without loaded files, have menubar showing last used files
+- settings window
+	- delete / restore backups, move open backup folder option there
+	- all settings as per default values should be in there
+	- option to reset
+	- font color, background color (specifically: check docs>gui>setfont note at bottom, https://github.com/majkinetor/mm-autohotkey/tree/master/Dlg)
+- autohdr should have max. also always use max width of lv
+- listview headers dark (aka font white)
+*/
 #SingleInstance Force
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
@@ -38,8 +32,7 @@ class TableFilter {
 			defaultValues: Map(),
 			isSaved: true
 		}
-		this.data.defaultValues.CaseSense := false
-		this.data.defaultValues.Set("Wortart", "?", "Deutsch", "-", "Kayoogis", "-", "Tema'i", "0")
+		this.data.defaultValues := TableFilter.entryPlaceholderValues
 		this.guis := []
 
 		this.settingsManager("Load", !useConfig)
@@ -130,48 +123,52 @@ class TableFilter {
 			newGui.AddButton("x125 y100 w250 h200", "Load File").OnEvent("Click", this.loadData.bind(this))
 			showString := "Center w500 h400"
 		}
-		if (this.settings.darkMode)
-			this.toggleGuiDarkMode(newGui, 1)
+		this.toggleGuiDarkMode(newGui, this.settings.darkMode)
 		this.guis.push(newGui)
 		newGui.Show(showString)
 	}
 
-	createFilteredList(gui, *) {
+	createFilteredList(guiObj, *) {
 		if (InStr(Type(this), "Gui"))
-			gui := this
-		if (gui.HasProp("Gui"))
-			gui := gui.Gui
-		if (gui.CBDuplicates.Value) {
-			this.searchDuplicates(gui.CBDuplicates)
+			guiObj := this
+		if (guiObj.HasProp("Gui"))
+			guiObj := guiObj.Gui
+		if (guiObj.CBDuplicates.Value) {
+			this.searchDuplicates(guiObj.CBDuplicates)
 			return
 		}
-		gui.Opt("+Disabled")
-		gui.LV.Opt("-Redraw")
-		gui.LV.Delete()
+		guiObj.Opt("+Disabled")
+		guiObj.LV.Opt("-Redraw")
+		guiObj.LV.Delete()
 		for i, e in this.data.data {
-			if (this.rowIncludeFromSearch(gui, e))
-				this.addRow(gui, e, i)
+			if (this.rowIncludeFromSearch(guiObj, e))
+				this.addRow(guiObj, e, i)
 		}
-		if (gui.LV.GetCount() == 0)
-			gui.LV.Add("", "/", "Nothing Found.")
-		gui.LV.Opt("+Redraw")
-		gui.Opt("-Disabled")
+		if (guiObj.LV.GetCount() == 0)
+			this.addRow(guiObj, Map(this.data.keys[1], "/", this.data.keys[2], "Nothing Found"), -1)
+		guiObj.LV.Opt("+Redraw")
+		guiObj.Opt("-Disabled")
 	}
 
 	searchDuplicates(ctrlObj, *) {
-		local gui := ctrlObj.Gui
+		guiObj := ctrlObj.Gui
 		if !(ctrlObj.Value) {
-			this.createFilteredList(gui)
+			this.createFilteredList(guiObj)
 			return
 		}
-		gui.Opt("+Disabled")
-		gui.LV.Opt("-Redraw")
-		gui.LV.Delete()
-		filterKey := this.settings.duplicateColumn
+		guiObj.Opt("+Disabled")
+		guiObj.LV.Opt("-Redraw")
+		guiObj.LV.Delete()
+		if (objContainsValue(this.data.keys, this.settings.duplicateColumn))
+			filterKey := this.settings.duplicateColumn
+		else 
+			filterKey := this.data.keys[1]
 		default := (this.data.defaultValues.Has(filterKey) ? this.data.defaultValues[filterKey] : "")
 		duplicateMap := Map()
 		duplicateMap.CaseSense := this.settings.filterCaseSense
 		for i, row in this.data.data {
+			if (!row.Has(filterKey))
+				continue
 			v := row[filterKey]
 			if (duplicateMap.has(v))
 				duplicateMap[v].push([row, i])
@@ -179,26 +176,25 @@ class TableFilter {
 				duplicateMap[v] := [[row, i]]
 		}
 		for i, row in this.data.data {
-			v := row[filterKey]
-			if (v == "" || v == default)
+			if (!row.Has(filterKey) || (v := row[filterKey]) == "" || v == default)
 				continue
 			if (duplicateMap[v].Length > 1) {
 				for _, arr in duplicateMap[v] {
-					if (this.rowIncludeFromSearch(gui, arr[1]))
-						this.addRow(gui, arr[1], arr[2])
+					if (this.rowIncludeFromSearch(guiObj, arr[1]))
+						this.addRow(guiObj, arr[1], arr[2])
 				}
 				duplicateMap[v] := []
 			}
 		}
-		if (gui.LV.GetCount() == 0)
-			gui.LV.Add("", "/", "Nothing Found.")
-		gui.LV.Opt("+Redraw")
-		gui.Opt("-Disabled")
+		if (guiObj.LV.GetCount() == 0)
+			this.addRow(guiObj, Map(this.data.keys[1], "/", this.data.keys[2], "Nothing Found"), -1)
+		guiObj.LV.Opt("+Redraw")
+		guiObj.Opt("-Disabled")
 	}
 
-	rowIncludeFromSearch(gui, row) {
+	rowIncludeFromSearch(guiObj, row) {
 		for i, e in this.data.keys {
-			v := gui["EditSearchCol" . i].Value
+			v := guiObj["EditSearchCol" . i].Value
 			if (v != "" && (!row.Has(e) || !InStr(row[e], v, this.settings.filterCaseSense))) {
 				return false
 			}
@@ -206,12 +202,18 @@ class TableFilter {
 		return true
 	}
 
-	addRow(gui, row, index) {
+	/**
+	 * Adds given row object with specified dataIndex to specified GUI. 
+	 */
+	addRow(gui, row, dataIndex, LVIndex?) {
 		rowArr := []
 		for _, key in this.data.keys
 			rowArr.push(row.Has(key) ? row[key] : "")
-		rowArr.push(index)
-		gui.LV.Add("",rowArr*)
+		rowArr.push(dataIndex)
+		if (IsSet(LVIndex))
+			gui.LV.Insert(LVIndex, "", rowArr*)
+		else
+			gui.LV.Add("",rowArr*)
 	}
 
 	addEntry(ctrlObj, *) {
@@ -271,6 +273,7 @@ class TableFilter {
 		editorGui := Gui("-Border -SysMenu +Owner" guiObj.Hwnd)
 		editorGui.dataIndex := dataIndex
 		editorGui.parent := guiObj
+		guiObj.child := editorGui
 		editorGui.OnEvent("Escape", editRowGuiEscape)
 		editorGui.OnEvent("Close", editRowGuiEscape)
 		editorGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
@@ -280,8 +283,7 @@ class TableFilter {
 			editorGui.AddEdit("r1 w85 vEditAddRow" i, row.Has(e) ? row[e] : "").OnEvent("Change", this.validValueChecker.bind(this))
 		}
 		editorGui.AddButton("Default ys+15 xs+" 10+95*this.data.keys.Length " h40 w65", "Save Row").OnEvent("Click", editRowGuiFinish.bind(this))
-		if (this.settings.darkMode)
-			this.toggleGuiDarkMode(editorGui, 1)
+		this.toggleGuiDarkMode(editorGui, this.settings.darkMode)
 		editorGui.Show()
 		return
 		
@@ -294,6 +296,7 @@ class TableFilter {
 			this.cleanRowData(newRow)
 			this.editRow(guiObj.dataIndex, newRow)
 			p := guiObj.parent
+			p.child := ""
 			p.Opt("-Disabled")
 			guiObj.Destroy()
 			WinActivate(p)
@@ -357,22 +360,21 @@ class TableFilter {
 
 	cleanRowData(row) { ; row is a map and thus operates onto the object
 		for i, e in this.data.keys {
-			if (this.settings.useDefaultValues && (row[e] == "")) {
-				switch e, 0 {
-					case "Wortart": ; 1 -> Wortart
-						row[e] := this.data.defaultValues[e]
-					case "Deutsch", "Kayoogis": ; 2,3 -> Deutsch, Kayoogis
-						row[e] := this.data.defaultValues[e]
+			if (this.settings.useDefaultValues && (row[e] == "") && this.data.defaultValues.Has(e)) {
+				row[e] := this.data.defaultValues[e]
+				switch e { ; yea this isn't generic but who cares. Just edit these whenever.
 					case "Runen": ; Runen
-						if (this.settings.useDefaultRunic && IsSet(TextEditMenu) && IsObject(TextEditMenu) && TextEditMenu.HasMethod("runify"))
+						if (this.settings.autoTranslateRunic && IsSet(TextEditMenu) && IsObject(TextEditMenu) && TextEditMenu.HasMethod("runify"))
 							row[e] := TextEditMenu.runify(row["Kayoogis"], "DE")
 						else row[e] := ""
-					case "Tema'i": ; Tema'i
-						row[e] := this.data.defaultValues[e]
 				}
 			}
-			if (e == "Wortart")
-				row[e] := Format("{:U}", row[e])
+			if (this.settings.formatValues) {
+				switch e {
+					case "Wortart":
+						row[e] := Format("{:U}", row[e])
+				}
+			}
 			row[e] := Trim(row[e])
 		}
 	}
@@ -407,11 +409,9 @@ class TableFilter {
 		for _, g in this.guis {
 			this.toggleGuiDarkMode(g, newValue)
 		}
-		; todo: if editline or settings gui exists, those also need to be darkmoded
 	}
 		
-	toggleGuiDarkMode(_gui, dark) {
-		static WM_THEMECHANGED := 0x031A
+	toggleGuiDarkMode(guiObj, dark) {
 		;// title bar dark
 		if (VerCompare(A_OSVersion, "10.0.17763")) {
 			attr := 19
@@ -419,28 +419,89 @@ class TableFilter {
 				attr := 20
 			}
 			if (dark)
-				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", true, "int", 4)
+				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", guiObj.hwnd, "int", attr, "int*", true, "int", 4)
 			else
-				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", false, "int", 4)
+				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", guiObj.hwnd, "int", attr, "int*", false, "int", 4)
 		}
-		_gui.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
+		guiObj.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
 		font := (dark ? "c0xFFFFFF" : "cDefault")
-		_gui.SetFont(font)
-		for cHandle, ctrl in _gui {
-			ctrl.Opt(dark ? "+Background" this.settings.darkThemeColor : "-Background")
-			ctrl.SetFont(font)
-			if (ctrl is Gui.Button || ctrl is Gui.ListView) {
-				; todo: listview headers dark -> https://www.autohotkey.com/boards/viewtopic.php?t=115952
+		guiObj.SetFont(font)
+		for cHandle, lv in guiObj {
+			lv.Opt(dark ? "+Background" this.settings.darkThemeColor : "-Background")
+			lv.SetFont(font)
+			if (lv is Gui.Button)
+				DllCall("uxtheme\SetWindowTheme", "ptr", lv.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
+			if (lv is Gui.ListView) {
+				listviewDarkmode(lv, dark)
 				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
 				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
-				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
-			}
-			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
-				this.validValueChecker(ctrl)
+				; full customization control: https://www.autohotkey.com/boards/viewtopic.php?t=115952
+        	}
+			if (lv.Name && SubStr(lv.Name, 1, 10) == "EditAddRow") {
+				this.validValueChecker(lv)
 			}
 		}
-		; todo: setting to make this look like this ? 
-		; DllCall("uxtheme\SetWindowTheme", "ptr", _gui.LV.hwnd, "str", "Explorer", "ptr", 0)
+		if (guiObj.HasOwnProp("child") && guiObj.child is Gui)
+			this.toggleGuiDarkMode(guiObj.child, dark)
+		return
+
+		listviewDarkmode(lv, dark) {
+			static LVM_GETHEADER := 0x101F
+			static LVS_EX_DOUBLEBUFFER := 0x10000
+			static WM_NOTIFY           := 0x4E
+			static WM_THEMECHANGED     := 0x031A
+			; prevent other changes to UI on darkmode
+			OnMessage(WM_THEMECHANGED, themechangeIntercept.bind(lv.hwnd))
+			; header dark (CURRENTLY DOESN'T WORK)
+			lv.header := SendMessage(LVM_GETHEADER, 0, 0, lv.hwnd)
+		;	OnMessage(WM_NOTIFY, On_NM_CUSTOMDRAW.bind(lv)) ; header text white
+			; reduce flickering
+			lv.Opt("+LV" LVS_EX_DOUBLEBUFFER)
+		;	DllCall("uxtheme\SetWindowTheme", "ptr", lv.header, "str", (dark ? "DarkMode_ItemsView" : ""), "ptr", 0)
+			; hide focus dots
+			; SendMessage(WM_CHANGEUISTATE, (UIS_SET << 8) | UISF_HIDEFOCUS, 0, ctrl.hwnd)
+			DllCall("uxtheme\SetWindowTheme", "ptr", lv.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
+			return
+
+			themechangeIntercept(checkHWND, wParam, lParam, msg, hwnd) {
+				if (hwnd == checkHWND)
+					return 0
+			}
+
+			On_NM_CUSTOMDRAW(LV, wParam, lParam, msg, hwnd) {
+				static NM_CUSTOMDRAW          := -12
+				static CDRF_DODEFAULT         := 0x00000
+				static CDRF_NEWFONT           := 0x00002
+				static CDRF_NOTIFYITEMDRAW    := 0x00020
+				static CDRF_NOTIFYSUBITEMDRAW := 0x00020
+				static CDDS_PREPAINT          := 0x00001
+				static CDDS_ITEMPREPAINT      := 0x10001
+				static CDDS_SUBITEM           := 0x20000
+				static offsetHWND      := 0
+				static offsetMsgCode   := (2 * A_PtrSize)
+				static offsetDrawstage := offsetMsgCode + A_PtrSize
+				static offsetHDC       := offsetDrawstage + 8
+				static offsetItemspec  := offsetHDC + 16 + A_PtrSize
+	
+				; Get sending control's HWND
+				ctrlHwnd := NumGet(lParam, offsetHWND, "Ptr")
+				if (LV.Header == ctrlHwnd && (NumGet(lParam + 0, offsetMsgCode, "Int") == NM_CUSTOMDRAW)) {
+					drawStage := NumGet(lParam, offsetDrawstage, "Int")
+					; -------------------------------------------------------------------------------------------------------------					
+					item := NumGet(lParam, offsetItemspec, "Ptr") ; for testing
+					LV.Modify(LV.Add("", NumGet(lParam + 0, offsetMsgCode, "Int"), drawStage, item), "Vis")     ; for testing; -------------------------------------------------------------------------------------------------------------
+					switch drawStage {
+						case CDDS_PREPAINT:
+							return CDRF_NOTIFYITEMDRAW
+						case CDDS_ITEMPREPAINT:
+							HDC := NumGet(lParam, offsetHDC, "UPtr")
+							DllCall("SetTextColor", "Ptr", HDC, "UInt", 0xFFFFFF)
+							return CDRF_NEWFONT
+					}
+					return CDRF_DODEFAULT
+				}
+			}
+		}
 	}
 
 	clearSearchBoxes(guiCtrl, *) {
@@ -479,6 +540,8 @@ class TableFilter {
 				this.menu.Show()
 			case "DoubleClick":
 				this.editRowGui(gui)
+			default:
+				return
 		}
 	}
 
@@ -497,8 +560,11 @@ class TableFilter {
 			tMenu.Add("➕ Add Category to Selected Row(s)", aMenu)
 			tMenu.Add("➖ Remove Category from Selected Row(s)", rMenu)
 		}
-		if (this.settings.debug)
-			tMenu.Add("Show Debug Entry", this.cMenuHandler.bind(this))
+		if (this.settings.debug) {
+			tMenu.Add("Show Data Entry", this.cMenuHandler.bind(this))
+			tMenu.Add("Show Settings", this.cMenuHandler.bind(this))
+			tMenu.Add("Show Internal Data", this.cMenuHandler.bind(this))
+		}
 		return tMenu
 	}
 
@@ -511,9 +577,16 @@ class TableFilter {
 				this.editRowGui(g)
 			case "[Del] 🗑️ Delete Selected Row(s)":
 				this.removeSelectedRows(g)
-			case "Show Debug Entry":
+			case "Show Data Entry":
 				n := g.LV.GetText(rowN, this.data.keys.Length + 1)
 				this.debugShowDatabaseEntry(n, rowN)
+			case "Show Settings":
+				MsgBox(jsongo.Stringify(this.settings,,A_Tab))
+			case "Show Internal Data":
+				smallData := {}
+				for i, e in this.data.OwnProps()
+					smallData.%i% := (i == "data" ? "NOT SHOWN" : e)
+				MsgBox(jsongo.Stringify(smallData,,A_Tab))
 			default:
 				if (IsSet(extra))
 					this.rowTagger(itemName, g, extra)
@@ -844,10 +917,13 @@ class TableFilter {
 			if (FileExist(this.data.savePath "\settings.json") && !reset) {
 				try settings := jsongo.Parse(FileRead(this.data.savePath "\settings.json", "UTF-8"))
 			}
-			for i, e in settings
-				this.settings.%i% := e
+			defaults := TableFilter.defaultSettings
+			for i, e in settings {
+				if (defaults.HasOwnProp(i))
+					this.settings.%i% := e
+			}
 			; populate remaining settings with default values
-			for i, e in Tablefilter.defaultSettings.OwnProps() {
+			for i, e in defaults.OwnProps() {
 				if !(this.settings.HasOwnProp(i))
 					this.settings.%i% := e
 			}
@@ -882,12 +958,13 @@ class TableFilter {
 		useBackups: true,
 		backupAmount: 4, ; amount of files to be kept
 		backupInterval: 15, ; in minutes
-		useDefaultValues: true,
-		useDefaultRunic: true,
-		duplicateColumn: "Deutsch",
-		copyColumn: "Runen",
-		taggingColumn: "Kategorie",
-		filterCaseSense: "Locale",
+		useDefaultValues: true, ; whether to insert values for empty fields
+		autoTranslateRunic: true, ; whether to autotranslate kayoogis->runic
+		formatValues: true, ; whether to format values (eg Uppercase word Type abbreviations)
+		duplicateColumn: "", ; Deutsch
+		copyColumn: "", ; Runen
+		taggingColumn: "", ; Kategorie
+		filterCaseSense: "Locale", 
 		saveHotkey: "^s",
 		guiHotkey: "^p",
 		lastUsedFile: ""
@@ -943,4 +1020,10 @@ class TableFilter {
 		"🔢 Zahl"
 	]
 
+	static entryPlaceholderValues => Map(
+		"Wortart", "?",
+		"Deutsch", "-",
+		"Kayoogis", "-",
+		"Tema'i", 0
+	)
 }
