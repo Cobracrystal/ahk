@@ -14,9 +14,10 @@ todo
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\TextEditMenu.ahk"
 
+tableInstance := TableFilter(1)
+
 ; ONLY start if this script is not used as a library
 if (A_ScriptFullPath == A_LineFile) {
-	tableInstance := TableFilter(1)
 	tableInstance.loadData()
 }
 
