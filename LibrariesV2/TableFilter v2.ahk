@@ -25,9 +25,9 @@ class TableFilter {
 
 	__New(debug := 0, useConfig := 1) {
 		this.data := {
-			savePath: A_AppData "\Autohotkey\Tablefilter", 
-			openFile: "", 
-			data: [], 
+			savePath: A_AppData "\Autohotkey\Tablefilter",
+			openFile: "",
+			data: [],
 			keys: [],
 			rowName: "",
 			defaultValues: Map(),
@@ -82,45 +82,45 @@ class TableFilter {
 			gbox := newGui.AddGroupBox("Section w745 h42", "Search")
 			newGui.AddButton("ys+13 xp+8 w30 h22", "Clear").OnEvent("Click", this.clearSearchBoxes.bind(this))
 			for i, key in this.data.keys {
-				t := newGui.AddText("ys+16 xp+" (i==1?40:55), key).GetPos(,, &w)
-				(ed := newGui.AddEdit("ys+13 xp+" w+10 " r1 w45 vEditSearchCol" i)).OnEvent("Change", this.createFilteredList.bind(this))
+				t := newGui.AddText("ys+16 xp+" (i == 1 ? 40 : 55), key).GetPos(, , &w)
+				(ed := newGui.AddEdit("ys+13 xp+" w + 10 " r1 w45 vEditSearchCol" i)).OnEvent("Change", this.createFilteredList.bind(this))
 			}
-			ed.GetPos(&ex,,&ew)
+			ed.GetPos(&ex, , &ew)
 			gbox.GetPos(&gbX)
-			gbox.Move(,,ex-gbX+ew+8)
-			(newGui.CBDuplicates := newGui.AddCheckbox("ys+13 xs+" ex-gbX+ew+18, "Find Duplicates")).OnEvent("Click", this.searchDuplicates.bind(this))
+			gbox.Move(, , ex - gbX + ew + 8)
+			(newGui.CBDuplicates := newGui.AddCheckbox("ys+13 xs+" ex - gbX + ew + 18, "Find Duplicates")).OnEvent("Click", this.searchDuplicates.bind(this))
 			rowKeys := this.data.keys.Clone()
 			rowKeys.push("DataIndex")
 			newGui.LV := newGui.AddListView("xs R35 w950 +Multi", rowKeys) ; LVEvent, Altsubmit
 			newGui.LV.OnNotify(-155, this.LV_Event.bind(this, "Key"))
 			newGui.LV.OnEvent("ContextMenu", this.LV_Event.bind(this, "ContextMenu"))
 			newGui.LV.OnEvent("DoubleClick", this.LV_Event.bind(this, "DoubleClick"))
-				this.createFilteredList(newGui)
-				; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
-				if !(this.settings.debug)
-					newGui.LV.ModifyCol(this.data.keys.Length + 1, "0 Integer")
-				else
-					newGui.LV.ModifyCol(this.data.keys.Length + 1, "100 Integer")
-				Loop (this.data.keys.Length)
-					newGui.LV.ModifyCol(A_Index, "AutoHdr")
+			this.createFilteredList(newGui)
+			; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
+			if !(this.settings.debug)
+				newGui.LV.ModifyCol(this.data.keys.Length + 1, "0 Integer")
+			else
+				newGui.LV.ModifyCol(this.data.keys.Length + 1, "100 Integer")
+			Loop (this.data.keys.Length)
+				newGui.LV.ModifyCol(A_Index, "AutoHdr")
 			newGui.addRowControls := []
 			newGui.fileControls := []
-			newGui.addRowControls.Push(newGui.AddGroupBox("Section w" 10+95*this.data.keys.Length + 75 " h65", "Add Row"))
+			newGui.addRowControls.Push(newGui.AddGroupBox("Section w" 10 + 95 * this.data.keys.Length + 75 " h65", "Add Row"))
 			for i, e in this.data.keys {
-				newGui.addRowControls.Push(newGui.AddText("ys+15 xs+" 10+((i-1) * 95), e))
+				newGui.addRowControls.Push(newGui.AddText("ys+15 xs+" 10 + ((i - 1) * 95), e))
 				(ed := newGui.AddEdit("r1 w85 vEditAddRow" i, "")).OnEvent("Change", this.validValueChecker.bind(this))
 				newGui.addRowControls.Push(ed)
 			}
-			(btn := newGui.AddButton("Default ys+15 xs+" 10+95*this.data.keys.Length " h40 w65", "Add Row to List")).OnEvent("Click", this.addEntry.bind(this))
+			(btn := newGui.AddButton("Default ys+15 xs+" 10 + 95 * this.data.keys.Length " h40 w65", "Add Row to List")).OnEvent("Click", this.addEntry.bind(this))
 			newGui.addRowControls.Push(btn)
-			newGui.LV.GetPos(,,&lvw)
-			(btn := newGui.AddButton("ys+9 xs+" lvw-100 " w100", "Load json/xml File")).OnEvent("Click", this.loadData.bind(this))
+			newGui.LV.GetPos(, , &lvw)
+			(btn := newGui.AddButton("ys+9 xs+" lvw - 100 " w100", "Load json/xml File")).OnEvent("Click", this.loadData.bind(this))
 			newGui.fileControls.Push(btn)
 			(btn := newGui.AddButton("w100", "Export to File")).OnEvent("Click", (*) => this.saveFile(this.data.openFile, true))
 			newGui.fileControls.Push(btn)
 			showString := "Center Autosize"
 		} else {
-			newGui.Title := this.base.__Class " - No File Selected" 
+			newGui.Title := this.base.__Class " - No File Selected"
 			newGui.AddButton("x125 y100 w250 h200", "Load File").OnEvent("Click", this.loadData.bind(this))
 			showString := "Center w500 h400"
 		}
@@ -162,7 +162,7 @@ class TableFilter {
 		guiObj.LV.Delete()
 		if (objContainsValue(this.data.keys, this.settings.duplicateColumn))
 			filterKey := this.settings.duplicateColumn
-		else 
+		else
 			filterKey := this.data.keys[1]
 		default := (this.data.defaultValues.Has(filterKey) ? this.data.defaultValues[filterKey] : "")
 		duplicateMap := Map()
@@ -204,7 +204,7 @@ class TableFilter {
 	}
 
 	/**
-	 * Adds given row object with specified dataIndex to specified GUI. 
+	 * Adds given row object with specified dataIndex to specified GUI.
 	 */
 	addRow(gui, row, dataIndex, LVIndex?) {
 		rowArr := []
@@ -214,7 +214,7 @@ class TableFilter {
 		if (IsSet(LVIndex))
 			gui.LV.Insert(LVIndex, "", rowArr*)
 		else
-			gui.LV.Add("",rowArr*)
+			gui.LV.Add("", rowArr*)
 	}
 
 	addEntry(ctrlObj, *) {
@@ -224,7 +224,7 @@ class TableFilter {
 			newRow[key] := aGui["EditAddRow" i].Value
 			aGui["EditAddRow" i].Value := ""
 		}
-		this.cleanRowData(newRow)		
+		this.cleanRowData(newRow)
 		this.data.data.push(newRow)
 		this.settingsHandler("isSaved", false, false)
 		for _, g in this.guis
@@ -240,7 +240,7 @@ class TableFilter {
 			g.Opt("+Disabled")
 			flagNewRowVisible := this.rowIncludeFromSearch(g, newRow)
 			if (this.rowIncludeFromSearch(g, oldRow)) {
-				Loop(g.LV.GetCount()) {
+				Loop (g.LV.GetCount()) {
 					dataIndex := g.LV.GetText(A_Index, this.data.keys.Length + 1)
 					if (dataIndex == n) {
 						if (flagNewRowVisible) {
@@ -248,7 +248,7 @@ class TableFilter {
 							for i, e in this.data.keys
 								rowAsArray.Push(newRow.Has(e) ? newRow[e] : "")
 							rowAsArray.Push(n)
-							g.LV.Modify(A_Index,,rowAsArray*)
+							g.LV.Modify(A_Index, , rowAsArray*)
 						} else {
 							g.LV.Delete(n)
 						}
@@ -278,16 +278,16 @@ class TableFilter {
 		editorGui.OnEvent("Escape", editRowGuiEscape)
 		editorGui.OnEvent("Close", editRowGuiEscape)
 		editorGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
-		editorGui.AddGroupBox("Section w" 10+95*this.data.keys.Length + 75 " h65", "Edit Row")
+		editorGui.AddGroupBox("Section w" 10 + 95 * this.data.keys.Length + 75 " h65", "Edit Row")
 		for i, e in this.data.keys {
-			editorGui.AddText("ys+15 xs+" 10+((i-1) * 95), e)
+			editorGui.AddText("ys+15 xs+" 10 + ((i - 1) * 95), e)
 			editorGui.AddEdit("r1 w85 vEditAddRow" i, row.Has(e) ? row[e] : "").OnEvent("Change", this.validValueChecker.bind(this))
 		}
-		editorGui.AddButton("Default ys+15 xs+" 10+95*this.data.keys.Length " h40 w65", "Save Row").OnEvent("Click", editRowGuiFinish.bind(this))
+		editorGui.AddButton("Default ys+15 xs+" 10 + 95 * this.data.keys.Length " h40 w65", "Save Row").OnEvent("Click", editRowGuiFinish.bind(this))
 		this.toggleGuiDarkMode(editorGui, this.settings.darkMode)
 		editorGui.Show()
 		return
-		
+
 		editRowGuiFinish(this, guiObj, *) {
 			if (guiObj.HasProp("Gui"))
 				guiObj := guiObj.gui
@@ -327,7 +327,7 @@ class TableFilter {
 			for j, n in sortedRows
 				if (this.rowIncludeFromSearch(g, this.data.data[n]))
 					rowsInLV.push(n)
-			Loop(g.LV.GetCount()) {
+			Loop (g.LV.GetCount()) {
 				rowN := A_Index
 				dataIndex := g.LV.GetText(rowN, this.data.keys.Length + 1)
 				for j, n in rowsInLV {
@@ -379,7 +379,7 @@ class TableFilter {
 			row[e] := Trim(row[e])
 		}
 	}
-	
+
 
 	validValueChecker(ctrlObj, *) {
 		newFont := (this.settings.darkMode ? "c0xFFFFFF Norm" : "cDefault Norm")
@@ -411,7 +411,7 @@ class TableFilter {
 			this.toggleGuiDarkMode(g, newValue)
 		}
 	}
-		
+
 	toggleGuiDarkMode(guiObj, dark) {
 		;// title bar dark
 		if (VerCompare(A_OSVersion, "10.0.17763")) {
@@ -437,7 +437,7 @@ class TableFilter {
 				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
 				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
 				; full customization control: https://www.autohotkey.com/boards/viewtopic.php?t=115952
-        	}
+			}
 			if (lv.Name && SubStr(lv.Name, 1, 10) == "EditAddRow") {
 				this.validValueChecker(lv)
 			}
@@ -449,16 +449,16 @@ class TableFilter {
 		listviewDarkmode(lv, dark) {
 			static LVM_GETHEADER := 0x101F
 			static LVS_EX_DOUBLEBUFFER := 0x10000
-			static WM_NOTIFY           := 0x4E
-			static WM_THEMECHANGED     := 0x031A
+			static WM_NOTIFY := 0x4E
+			static WM_THEMECHANGED := 0x031A
 			; prevent other changes to UI on darkmode
 			OnMessage(WM_THEMECHANGED, themechangeIntercept.bind(lv.hwnd))
 			; header dark (CURRENTLY DOESN'T WORK)
 			lv.header := SendMessage(LVM_GETHEADER, 0, 0, lv.hwnd)
-		;	OnMessage(WM_NOTIFY, On_NM_CUSTOMDRAW.bind(lv)) ; header text white
+			;	OnMessage(WM_NOTIFY, On_NM_CUSTOMDRAW.bind(lv)) ; header text white
 			; reduce flickering
 			lv.Opt("+LV" LVS_EX_DOUBLEBUFFER)
-		;	DllCall("uxtheme\SetWindowTheme", "ptr", lv.header, "str", (dark ? "DarkMode_ItemsView" : ""), "ptr", 0)
+			;	DllCall("uxtheme\SetWindowTheme", "ptr", lv.header, "str", (dark ? "DarkMode_ItemsView" : ""), "ptr", 0)
 			; hide focus dots
 			; SendMessage(WM_CHANGEUISTATE, (UIS_SET << 8) | UISF_HIDEFOCUS, 0, ctrl.hwnd)
 			DllCall("uxtheme\SetWindowTheme", "ptr", lv.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
@@ -470,27 +470,27 @@ class TableFilter {
 			}
 
 			On_NM_CUSTOMDRAW(LV, wParam, lParam, msg, hwnd) {
-				static NM_CUSTOMDRAW          := -12
-				static CDRF_DODEFAULT         := 0x00000
-				static CDRF_NEWFONT           := 0x00002
-				static CDRF_NOTIFYITEMDRAW    := 0x00020
+				static NM_CUSTOMDRAW := -12
+				static CDRF_DODEFAULT := 0x00000
+				static CDRF_NEWFONT := 0x00002
+				static CDRF_NOTIFYITEMDRAW := 0x00020
 				static CDRF_NOTIFYSUBITEMDRAW := 0x00020
-				static CDDS_PREPAINT          := 0x00001
-				static CDDS_ITEMPREPAINT      := 0x10001
-				static CDDS_SUBITEM           := 0x20000
-				static offsetHWND      := 0
-				static offsetMsgCode   := (2 * A_PtrSize)
+				static CDDS_PREPAINT := 0x00001
+				static CDDS_ITEMPREPAINT := 0x10001
+				static CDDS_SUBITEM := 0x20000
+				static offsetHWND := 0
+				static offsetMsgCode := (2 * A_PtrSize)
 				static offsetDrawstage := offsetMsgCode + A_PtrSize
-				static offsetHDC       := offsetDrawstage + 8
-				static offsetItemspec  := offsetHDC + 16 + A_PtrSize
-	
+				static offsetHDC := offsetDrawstage + 8
+				static offsetItemspec := offsetHDC + 16 + A_PtrSize
+
 				; Get sending control's HWND
 				ctrlHwnd := NumGet(lParam, offsetHWND, "Ptr")
 				if (LV.Header == ctrlHwnd && (NumGet(lParam + 0, offsetMsgCode, "Int") == NM_CUSTOMDRAW)) {
 					drawStage := NumGet(lParam, offsetDrawstage, "Int")
-					; -------------------------------------------------------------------------------------------------------------					
+					; -------------------------------------------------------------------------------------------------------------
 					item := NumGet(lParam, offsetItemspec, "Ptr") ; for testing
-					LV.Modify(LV.Add("", NumGet(lParam + 0, offsetMsgCode, "Int"), drawStage, item), "Vis")     ; for testing; -------------------------------------------------------------------------------------------------------------
+					LV.Modify(LV.Add("", NumGet(lParam + 0, offsetMsgCode, "Int"), drawStage, item), "Vis")	 ; for testing; -------------------------------------------------------------------------------------------------------------
 					switch drawStage {
 						case CDDS_PREPAINT:
 							return CDRF_NOTIFYITEMDRAW
@@ -549,11 +549,11 @@ class TableFilter {
 	createMenu() {
 		aMenu := Menu()
 		for i, c in TableFilter.wordCategories
-			aMenu.Add(c, this.cMenuHandler.bind(this,,,,1))
+			aMenu.Add(c, this.cMenuHandler.bind(this, , , , 1))
 		rMenu := Menu()
 		for i, c in TableFilter.wordCategories
-			rMenu.Add(c, this.cMenuHandler.bind(this,,,,0))
-		rMenu.Add("All", this.cMenuHandler.bind(this,,,,0))
+			rMenu.Add(c, this.cMenuHandler.bind(this, , , , 0))
+		rMenu.Add("All", this.cMenuHandler.bind(this, , , , 0))
 		tMenu := Menu()
 		tMenu.Add("[F2] 🖊️ Edit Selected Row", this.cMenuHandler.bind(this))
 		tMenu.Add("[Del] 🗑️ Delete Selected Row(s)", this.cMenuHandler.bind(this))
@@ -582,12 +582,12 @@ class TableFilter {
 				n := g.LV.GetText(rowN, this.data.keys.Length + 1)
 				this.debugShowDatabaseEntry(n, rowN)
 			case "Show Settings":
-				MsgBox(jsongo.Stringify(this.settings,,A_Tab))
+				MsgBox(jsongo.Stringify(this.settings, , A_Tab))
 			case "Show Internal Data":
 				smallData := {}
 				for i, e in this.data.OwnProps()
 					smallData.%i% := (i == "data" ? "NOT SHOWN" : e)
-				MsgBox(jsongo.Stringify(smallData,,A_Tab))
+				MsgBox(jsongo.Stringify(smallData, , A_Tab))
 			default:
 				if (IsSet(extra))
 					this.rowTagger(itemName, g, extra)
@@ -614,7 +614,7 @@ class TableFilter {
 			else
 				curCategories := (tag == "All" ? "" : StrReplace(curCategories, tag))
 			row[this.settings.taggingColumn] := Trim(Sort(curCategories, "P3 U D,"), ", ")
-			this.editRow(index,row)
+			this.editRow(index, row)
 		}
 	}
 
@@ -622,24 +622,24 @@ class TableFilter {
 		Critical("Off")
 		if !(this.data.openFile) {
 			for i, ctrl in guiObj {
-				ctrl.Move(nw//4,nh//4,nw//2,nh//2)
+				ctrl.Move(nw // 4, nh // 4, nw // 2, nh // 2)
 				ctrl.Redraw()
 			}
 			return
 		}
-		guiObj.LV.GetPos(,,&lvw, &lvh)
-		guiObj.LV.Move(,,nw-20, nh-131)
-		guiObj.LV.GetPos(,,&lvnw, &lvnh)
+		guiObj.LV.GetPos(, , &lvw, &lvh)
+		guiObj.LV.Move(, , nw - 20, nh - 131)
+		guiObj.LV.GetPos(, , &lvnw, &lvnh)
 		deltaW := lvnw - lvw
 		deltaH := lvnh - lvh
 		for index, ctrl in guiObj.addRowControls {
-			ctrl.GetPos(,&cy)
-			ctrl.Move(,cy+deltaH)
+			ctrl.GetPos(, &cy)
+			ctrl.Move(, cy + deltaH)
 			ctrl.Redraw()
 		}
 		for jndex, ctrl in guiObj.fileControls {
-			ctrl.GetPos(&cx,&cy)
-			ctrl.Move(cx+deltaW,cy+deltaH)
+			ctrl.GetPos(&cx, &cy)
+			ctrl.Move(cx + deltaW, cy + deltaH)
 			ctrl.Redraw()
 		}
 	}
@@ -652,7 +652,7 @@ class TableFilter {
 	dropFiles(_gui, ctrlObj, fileArr, x, y) {
 		if (fileArr.Length > 1)
 			return
-		this.loadData(_gui,,fileArr[1])
+		this.loadData(_gui, , fileArr[1])
 	}
 
 	loadData(guiObj := {}, eventInfo := 0, filePath := "", *) {
@@ -679,7 +679,7 @@ class TableFilter {
 		this.settingsHandler("openFile", filePath, false)
 		; add option for tab controls here (aka supporting multiple files)
 
-		while(this.guis.Length > 0)
+		while (this.guis.Length > 0)
 			this.guiClose(this.guis.pop())
 		; now, update gui or all guis with the new data. ????
 		if (this.settings.useBackups) {
@@ -712,7 +712,7 @@ class TableFilter {
 				Loop Parse, fileAsStr, "`n", "`r" {
 					if (RegexMatch(A_Loopfield, "^\s*<\?") || RegexMatch(A_LoopField, "^\s*<dataroot"))
 						continue
-					if(RegexMatch(A_LoopField, "^\s*<(.*?)>\s*$", &m)) {
+					if (RegexMatch(A_LoopField, "^\s*<(.*?)>\s*$", &m)) {
 						rowName := m[1]
 						break
 					}
@@ -731,7 +731,7 @@ class TableFilter {
 							key := m[1]
 							row[key] := m[2]
 							if !(objContainsValue(keys, key)) {
-								keys.InsertAt(objContainsValue(keys, lastSeenKey)+1, key)
+								keys.InsertAt(objContainsValue(keys, lastSeenKey) + 1, key)
 							}
 							lastSeenKey := key
 						}
@@ -752,7 +752,7 @@ class TableFilter {
 			this.data.keys := keys
 			this.data.data := data
 			this.data.rowName := rowName ?? "Table"
-	
+
 			unescape(t) { ; ORDER NECESSARY, AMP LAST.
 				t := StrReplace(t, "&apos;", "'")
 				t := StrReplace(t, "&quot;", '"')
@@ -761,7 +761,7 @@ class TableFilter {
 				t := StrReplace(t, "&amp;", "&")
 				return t
 			}
-	
+
 			nameUnescape(t) {
 				for i, e in TableFilter.sharepointEscapeCodes
 					t := StrReplace(t, e, i)
@@ -784,7 +784,7 @@ class TableFilter {
 		SplitPath(filePath, &fName, &fDir, &fExt)
 		if (fExt == "json")
 			fileAsStr := jsongo.Stringify(this.data.data)
-		else 
+		else
 			fileAsStr := exportAsXML()
 		fObj := FileOpen(filePath, "w", "UTF-8")
 		fObj.Write(fileAsStr)
@@ -797,15 +797,15 @@ class TableFilter {
 		return
 
 		exportAsXML() {
-			xmlFileAsString := '<?xml version="1.0" encoding="UTF-8"?>`n<dataroot generated="' FormatTime(,"yyyy-MM-ddTHH:mm:ss") '">`n'
+			xmlFileAsString := '<?xml version="1.0" encoding="UTF-8"?>`n<dataroot generated="' FormatTime(, "yyyy-MM-ddTHH:mm:ss") '">`n'
 			keysEsc := []
 			for i, k in this.data.keys
 				keysEsc.Push(escapeName(k))
 			xmlFileAsString .= Format("<{1}>`n", this.data.rowName)
 			for i, key in this.data.keys ; first entry should contain all keys in order
-				xmlFileAsString .= Format("<{1}>{2}</{3}>`n", keysEsc[i], this.data.data[1].has(key)?escape(this.data.data[1][key]):"",keysEsc[i])
+				xmlFileAsString .= Format("<{1}>{2}</{3}>`n", keysEsc[i], this.data.data[1].has(key) ? escape(this.data.data[1][key]) : "", keysEsc[i])
 			xmlFileAsString .= Format("</{1}>`n", this.data.rowName)
-			Loop(this.data.data.Length - 1) {
+			Loop (this.data.data.Length - 1) {
 				dataIndex := A_Index + 1
 				row := this.data.data[dataIndex]
 				s := Format("<{1}>`n", this.data.rowName)
@@ -837,11 +837,11 @@ class TableFilter {
 
 	backupIterator(doInitialBackup := 0) {
 		; instead of a timer or something, this should save the current time once and on every change this gets called, and if enough time has passed -> backup is made
-		SplitPath(this.data.openFile,,,&fExt,&fName)
-		backupPath := Format("{1}\Backup_{2}_{3}.{4}", 
-			this.data.savePath, 
-			fName, 
-			doInitialBackup ? "Original" : FormatTime(A_Now, "yyyy.MM.dd-HH.mm.ss"), 
+		SplitPath(this.data.openFile, , , &fExt, &fName)
+		backupPath := Format("{1}\Backup_{2}_{3}.{4}",
+			this.data.savePath,
+			fName,
+			doInitialBackup ? "Original" : FormatTime(A_Now, "yyyy.MM.dd-HH.mm.ss"),
 			fExt
 		)
 		this.saveFile(backupPath, false)
@@ -851,7 +851,7 @@ class TableFilter {
 	deleteExcessBackups(filePath := "") {
 		if (!filePath)
 			filePath := this.data.openFile
-		SplitPath(filePath,,,&fExt,&fName)
+		SplitPath(filePath, , , &fExt, &fName)
 		backupPath := this.data.savePath "\Backup_" fName "_*." fExt
 		i := 0, oldestBackupTime := 0
 		Loop Files backupPath {
@@ -871,7 +871,7 @@ class TableFilter {
 
 	debugShowDatabaseEntry(n, rowN) {
 		row := this.data.data[n]
-		s := jsongo.Stringify(this.data.data[n],,A_Tab)
+		s := jsongo.Stringify(this.data.data[n], , A_Tab)
 		msgbox(s "`nDatabase Index: " n "`nRow Number: " rowN)
 	}
 
@@ -909,7 +909,7 @@ class TableFilter {
 			DirCreate(this.data.savePath)
 		if (mode == "S") {
 			f := FileOpen(this.data.savePath . "\settings.json", "w", "UTF-8")
-			f.Write(jsongo.Stringify(this.settings,,"`t"))
+			f.Write(jsongo.Stringify(this.settings, , "`t"))
 			f.Close()
 			return 1
 		}
@@ -965,7 +965,7 @@ class TableFilter {
 		duplicateColumn: "", ; Deutsch
 		copyColumn: "", ; Runen
 		taggingColumn: "", ; Kategorie
-		filterCaseSense: "Locale", 
+		filterCaseSense: "Locale",
 		saveHotkey: "^s",
 		guiHotkey: "^p",
 		lastUsedFile: ""
