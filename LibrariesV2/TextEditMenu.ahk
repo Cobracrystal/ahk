@@ -4,7 +4,12 @@
 class TextEditMenu {
 
 	static __New() {
-		this.dictionaryPath := A_WorkingDir "\TextEditMenu\dictionary.json"
+		if (FileExist(A_WorkingDir "\TextEditMenu\dictionary.json"))
+			this.dictionaryPath := A_WorkingDir "\TextEditMenu\dictionary.json"
+		else if (FileExist(A_LineFile "\..\..\script_files\TextEditMenu\dictionary.json"))
+			this.dictionaryPath := A_LineFile "\..\..\script_files\TextEditMenu\dictionary.json"
+		else
+			this.dictionaryPath := A_ScriptFullPath . "\script_files\TextEditMenu\dictionary.json"
 		this.dictionary := Map()
 		if !(FileExist(this.dictionaryPath)) {
 			SplitPath(this.dictionaryPath, , &dir)
