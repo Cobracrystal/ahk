@@ -54,7 +54,15 @@ class TableFilter {
 			tableFilterMenu.Check("Use Dark Mode")
 		tableFilterMenu.Add("Open Backup Folder", (*) => Run('explorer.exe "' this.data.savepath '"'))
 		tableFilterMenu.Default := "Open GUI: (" this.settings.guiHotkey ")"
-		A_TrayMenu.Add("Tablefilter", tableFilterMenu)
+		if (A_ScriptFullPath == A_LineFile) {
+			A_TrayMenu.Delete()
+			A_TrayMenu.Add("TableFilter", tableFilterMenu)
+			A_TrayMenu.AddStandard()
+		}
+		else {
+			(gMenu := TrayMenu.submenus["GUIs"]).Add("Open TableFilter", tableFilterMenu)
+			A_TrayMenu.Add("GUIs", gMenu)
+		}
 		HotIfWinactive("ahk_group TableFilterGUIs")
 		Hotkey(this.settings.saveHotkey, (*) => this.saveFile(this.data.openFile, false))
 		HotIfWinactive()
