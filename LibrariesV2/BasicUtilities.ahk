@@ -83,7 +83,7 @@ modifySelectedText(method, params*) {
 
 objContainsValue(obj, value) {
 	if !(obj is Array || obj is Map)
-		throw Error("objContains does not handle type " . Type(obj))
+		throw(Error("objContains does not handle type " . Type(obj)))
 	for i, e in obj
 		if (e = value)
 			return i
@@ -92,7 +92,7 @@ objContainsValue(obj, value) {
 
 objRemoveValue(obj, value) {
 	if !(obj is Array || obj is Map)
-		throw Error("objRemoveValue does not handle type " . Type(obj))
+		throw(Error("objRemoveValue does not handle type " . Type(obj)))
 	for i, e in obj {
 		if (e = value) {
 			if (obj is Array)
@@ -107,7 +107,7 @@ objRemoveValue(obj, value) {
 
 objRemoveValues(obj, removeAll := 1, values*) {
 	if !(obj is Array || obj is Map)
-		throw Error("objRemoveValues does not handle type " . Type(obj))
+		throw(Error("objRemoveValues does not handle type " . Type(obj)))
 	toRemove := []
 	for i, e in obj {
 		for j, f in values {
@@ -154,7 +154,7 @@ sortObjectByKey(tmap, key, mode := "") {
 	isArr := tMap is Array
 	isMap := tMap is Map 
 	if !(tmap is Object)
-		throw ValueError("Expected Object, but got " tmap.Prototype.Name)
+		throw(ValueError("Expected Object, but got " tmap.Prototype.Name))
 	isObj := !(isArr || isMap)
 	arr2 := Map()
 	arr3 := []
@@ -221,6 +221,7 @@ StrSplitUTF8(str, delim := "", omit := "") {
 	return arr
 }
 
+; only works in 2.0.9
 BoundFnName(Obj) {
     Address := ObjPtr(Obj)
     n := NumGet(Address, 5 * A_PtrSize + 16, "Ptr")
@@ -277,7 +278,7 @@ recursiveReplaceMap(string, from, to) {
  */
 mapFromArrays(keyArray, valueArray) {
 	if (keyArray.Length != valueArray.Length || !(keyArray is Array) || !(valueArray is Array))
-		throw Error("Expected Arrays of equal Length, got " Type(keyArray) ", " Type(valueArray))
+		throw(Error("Expected Arrays of equal Length, got " Type(keyArray) ", " Type(valueArray)))
 	newMap := Map()
 	for i, e in keyArray
 		newMap[e] := valueArray[i]
@@ -291,7 +292,7 @@ mapFromArrays(keyArray, valueArray) {
  */
 mapToArrays(mapObject) {
 	if !(mapObject is Map)
-		throw TypeError("Expected Map, got " Type(mapObject))
+		throw(TypeError("Expected Map, got " Type(mapObject)))
 	arr1 := []
 	arr2 := []
 	for i, e in mapObject {
@@ -371,7 +372,7 @@ DateAddW(dateTime, value, timeUnit) {
 			else
 				return year . month . SubStr(dateTime, 7)
 		default:
-			throw Error("Invalid Time Unit: " timeUnit)
+			throw(Error("Invalid Time Unit: " timeUnit))
 	}
 }
 /*
@@ -384,7 +385,7 @@ DateAddW(dateTime, value, timeUnit) {
 * parseTime(2023, , 28) => 20231228000000.
 * parseTime(, 2, 29) => 20240229000000 (next leap year).
 * parseTime(2022, ...) => 0.
-* parseTime(2025, 02, 29) => throw Error: Invalid Date 
+* parseTime(2025, 02, 29) => throw Error: Invalid Date
 * parseTime(, 1, , , 19) => 20240101001900
 */
 parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
@@ -405,7 +406,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				else if (!IsSet(months) && days > 29) ; correct possible month error. no need for mod, since dec has 31 days
 					tStamp := SubStr(tStamp 1, 4) . tf(A_MM+1) . SubStr(tStamp, 7)
 				if (!IsTime(tStamp))
-					throw ValueError("Invalid date specified.")
+					throw(ValueError("Invalid date specified."))
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
@@ -423,7 +424,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				if (tf(months) == "02" && IsSet(days) && days == 29) ; leap year
 					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
 				if (!IsTime(tStamp))
-					throw ValueError("Invalid date specified.")
+					throw(ValueError("Invalid date specified."))
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
@@ -442,7 +443,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				else if (days > 29) ; correct possible month error. no need for mod, since dec has 31 days
 					tStamp := SubStr(tStamp 1, 4) . tf(A_MM+1) . SubStr(tStamp, 7)
 				if (!IsTime(tStamp))
-					throw ValueError("Invalid date specified.")
+					throw(ValueError("Invalid date specified."))
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
@@ -550,7 +551,7 @@ cmdRet(sCmd, callBackFuncObj := "", encoding := '') {
 		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		DllCall("CloseHandle", "Ptr", hPipeWrite)
-		throw OSError("CreateProcess has failed")
+		throw(OSError("CreateProcess has failed"))
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
@@ -583,7 +584,7 @@ cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finis
 		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		DllCall("CloseHandle", "Ptr", hPipeWrite)
-		throw OSError("CreateProcess has failed")
+		throw(OSError("CreateProcess has failed"))
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
@@ -819,7 +820,7 @@ doNothing(*) {
 ; 				this.settings.darkMode := (value == -1 ? !this.settings.darkMode : value)
 ; 				this.toggleDarkMode(this.settings.darkMode, extra*)
 ; 			default:
-; 				throw Error("uhhh setting: " . setting)
+; 				throw(Error("uhhh setting: " . setting))
 ; 		}
 ; 		if (save)
 ; 			this.settingsManager("Save")

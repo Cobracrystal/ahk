@@ -33,9 +33,9 @@ colorGradientArr(amount, colors*) {
 
 rainbowArr(num, intensity := 0xFF) {
 	if (num < 7)
-		throw Error("Invalid num")
+		throw(Error("Invalid num"))
 	if (intensity < 0 || intensity > 255)
-		throw Error("Invalid Intensity")
+		throw(Error("Invalid Intensity"))
 	intensity := format("{:#x}", intensity)
 	r := intensity * 0x010000
 	g := intensity * 0x000100
@@ -61,7 +61,7 @@ changeColorFormat(clr, reverse := true, alph := "") {
 		br := (clr & 0xFF)
 	}
 	else 
-		throw Error("Color provided is not in correct Format")
+		throw(Error("Color provided is not in correct Format"))
 	; if alph is given, its always prioritized.
 	if (RegExMatch(alph, "^[[:xdigit:]]{2}$"))
 		al := format("{1:02X}", "0x" . alph)
@@ -70,7 +70,7 @@ changeColorFormat(clr, reverse := true, alph := "") {
 	else if (alph == -1)
 		al := ""
 	else 
-		throw Error("Color provided is not in correct Format")
+		throw(Error("Color provided is not in correct Format"))
 	if (reverse)
 		return format("0x{4}{1:02X}{2:02X}{3:02X}", br, gg, rb, al)
 	else

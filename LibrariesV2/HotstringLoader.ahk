@@ -13,7 +13,7 @@ class HotstringLoader {
 
 	static load(filePath, name?, addMenu := true, register := true, encoding := "UTF-8") {
 		if (!FileExist(filepath))
-			throw TargetError("Nonexistent Hotstring File Given")
+			throw(TargetError("Nonexistent Hotstring File Given"))
 		jsonStr := FileRead(filePath, encoding)
 		hotstringObj := jsongo.Parse(jsonStr)
 		index := name ?? this.hotstrings.Count + 1
@@ -36,7 +36,7 @@ class HotstringLoader {
 
 	static switchHotstringState(index, newStatus := "T") {
 		if (!this.hotstrings.Has(index))
-			throw Error("Invalid Hotstring Group Index given: " index)
+			throw(Error("Invalid Hotstring Group Index given: " index))
 		if (this.hotstrings[index].status == -1)
 			this.registerHotstrings(index)
 		if (SubStr(newStatus, 1, 1) == "T")
@@ -60,7 +60,7 @@ class HotstringLoader {
 				HotString(":" e["options"] ":" e["string"], e["replacement"], 1)
 			catch
 				if (!skipError)
-					throw Error("Register Hotstring function failed:`nHotString(" . hotstring . ", " . e["replacement"] . ", " . 1 . ")")
+					throw(Error("Register Hotstring function failed:`nHotString(" . hotstring . ", " . e["replacement"] . ", " . 1 . ")"))
 		}
 	}
 }

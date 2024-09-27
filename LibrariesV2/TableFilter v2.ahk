@@ -897,7 +897,7 @@ class TableFilter {
 				}
 				save := false
 			default:
-				throw Error("uhhh setting: " . setting)
+				throw(Error("uhhh setting: " . setting))
 		}
 		if (save && this.settings.useConfig)
 			this.settingsManager("Save")

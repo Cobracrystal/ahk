@@ -175,11 +175,11 @@ class TransparentTaskbar {
 		; 0 = off, 1 = gradient (+color), 2 = transparent (+color), 3 = blur; color -> ABGR (alpha | blue | green | red) all hex: 0xffd7a78f
 		static pad := A_PtrSize == 8 ? 4 : 0, WCA_ACCENT_POLICY := 19
 		if (accent_state < 0) || (accent_state > 3)
-			throw Error("Bad state value passed in.`nValue must be 0-3.")
+			throw(Error("Bad state value passed in.`nValue must be 0-3."))
 		if (!this.trayHandles.Has(monitor))
-			throw Error("Attempted to set transparency/blur on monitor that doesn't exist.",-1)
+			throw(Error("Attempted to set transparency/blur on monitor that doesn't exist.",-1))
 		if (gradient_alpha > 0xFF || gradient_RGB > 0xFFFFFF)
-			throw Error("Bad Alpha/RGB value passed in.`nMust be between 0x00 and 0xFF`nGot: " gradient_alpha ", " gradient_RGB)
+			throw(Error("Bad Alpha/RGB value passed in.`nMust be between 0x00 and 0xFF`nGot: " gradient_alpha ", " gradient_RGB))
 		gradient_ABGR := (gradient_alpha << 24) | (gradient_RGB << 16 & 0xFF0000) | (gradient_RGB & 0xFF00) | (gradient_RGB >> 16 & 0xFF)
 		ACCENT_POLICY := Buffer(16, 0)
 		NumPut("int", (accent_state > 0 && accent_state < 4) ? 2 : 0, ACCENT_POLICY, 0)
@@ -190,7 +190,7 @@ class TransparentTaskbar {
 		NumPut("ptr", ACCENT_POLICY.Ptr, WINCOMPATTRDATA, 4 + pad)
 		NumPut("uint", ACCENT_POLICY.Size, WINCOMPATTRDATA, 4 + pad + A_PtrSize)
 		if !(DllCall("user32\SetWindowCompositionAttribute", "ptr", this.trayHandles[monitor], "ptr", WINCOMPATTRDATA))
-			throw Error("Failed to set transparency/blur", -1)
+			throw(Error("Failed to set transparency/blur", -1))
 		return true
 	}
 	

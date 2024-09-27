@@ -20,7 +20,7 @@ updateTaskbarTimer() {
 	try {
 		if !(init) {
 			if (DllCall("GetVersion") & 0xff < 10)
-				throw Error("Minimum support client: Windows 10", -1)
+				throw(Error("Minimum support client: Windows 10", -1))
 			r := color_intensity * 0x010000
 			g := color_intensity * 0x000100
 			b := color_intensity * 0x000001
@@ -50,7 +50,7 @@ TaskBar_SetAttribute(handle, gradient_ABGR := "0x01000000") {
 	NumPut("ptr", ACCENT_POLICY.Ptr, WINCOMPATTRDATA, 4 + pad)
 	NumPut("uint", ACCENT_POLICY.Size, WINCOMPATTRDATA, 4 + pad + A_PtrSize)
 	if !(DllCall("user32\SetWindowCompositionAttribute", "ptr", handle, "ptr", WINCOMPATTRDATA)) {
-		throw Error("Failed to set transparency / blur", -1)
+		throw(Error("Failed to set transparency / blur", -1))
 	}
 	return true
 }

@@ -45,7 +45,7 @@ class DiscordClient {
 		switch mType {
 			case "","after","before","around":
 			default:
-				throw Error('Bad Message Request: Requested Message with Query Type"' . mType . '"')
+				throw(Error('Bad Message Request: Requested Message with Query Type"' . mType . '"'))
 		}
 		return this.callApi("GET", "/channels/" channelID . "/messages?limit=" limit . (mType ? "&" mType . "=" mID : ""))
 	}
@@ -164,7 +164,7 @@ class DiscordClient {
 			if (http.status == 429) { ; rate limit
 				response := jsongo.Parse(http.responseText)
 				if (response["retry_after"] == "")
-					throw Error("Failed to load rate limit retry_after")
+					throw(Error("Failed to load rate limit retry_after"))
 				else
 				{
 					Sleep(response["retry_after"] * 1000 + 5)
@@ -174,7 +174,7 @@ class DiscordClient {
 			break ; only loop if rate limit, else directly continue
 		}
 		if (http.status != 200 && http.status != 204)
-			throw Error("Request failed`nStatus: " http.status "`nResponse: " jsongo.Stringify(jsongo.parse(http.responseText),,"`t") "`nendPoint: " . endPoint . "`nContent: `n" . jsongo.Stringify(content))
+			throw(Error("Request failed`nStatus: " http.status "`nResponse: " jsongo.Stringify(jsongo.parse(http.responseText),,"`t") "`nendPoint: " . endPoint . "`nContent: `n" . jsongo.Stringify(content)))
 		return jsongo.Parse(http.ResponseText)
 	}
 
@@ -235,7 +235,7 @@ class DiscordClient {
 	}
 
 	ws_OnClose(ws, status, reason) {
-		throw Error("Unhandled Discord.ahk WebSocket Close")
+		throw(Error("Unhandled Discord.ahk WebSocket Close"))
 	}
 	
 	; opcode = 10 => Hello Event in response to opening Gateway
@@ -261,7 +261,7 @@ class DiscordClient {
 	
 	ws_SendHeartbeat() {
 		if !this.wsData.HeartbeatACK {
-			throw Error("Heartbeat did not respond")
+			throw(Error("Heartbeat did not respond"))
 			/*
 				https://discord.com/developers/docs/topics/gateway#heartbeat-interval-example-heartbeat-ack
 				this needs to be handled

@@ -26,7 +26,7 @@ class ccBot {
 				roleThemes := ccBot.parseColorCSV(filepathRoles)
 			else if (ext == "json")
 				roleThemes := ccBot.readJson(filepathRoles)
-			else throw Error()
+			else throw(Error())
 		}
 		if (IsSet(filepathChannels)) {
 			SplitPath(filepathChannels, , , &ext)
@@ -34,10 +34,10 @@ class ccBot {
 				channelThemes := ccBot.parseColorCSV(filepathChannels)
 			else if (ext == "json")
 				channelThemes := ccBot.readJson(filepathChannels)
-			else throw Error()
+			else throw(Error())
 		}
 		if !(IsSet(roleThemes) || IsSet(channelThemes))
-			throw Error("Nothing given.")
+			throw(Error("Nothing given."))
 		this.themes := {roles:roleThemes??Map(), channels: channelThemes??Map()}
 		if (save) {
 			if IsSet(roleThemes)
@@ -55,7 +55,7 @@ class ccBot {
 	applyTheme(serverID, themeName, silentError := 0) {
 		; check if bot has permissions. 
 		if (!this.bot.isInGuild(serverID))
-			throw Error("Bot is not in given Server.")
+			throw(Error("Bot is not in given Server."))
 		errorlog := ""
 		userRoles := this.bot.getGuildMember(serverID, this.bot.me["id"])["roles"]
 		guildRoles := this.bot.getRoles(serverID)
@@ -63,7 +63,7 @@ class ccBot {
 			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_ROLES)) {
 				if (silentError)
 					errorlog .= "Missing permission to edit roles`n"
-				else throw Error("Missing permission to edit roles")
+				else throw(Error("Missing permission to edit roles"))
 			}
 			try {
 				rolesEditedCount := 0
@@ -95,7 +95,7 @@ class ccBot {
 			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_CHANNELS)) {
 				if (silentError)
 					errorlog .= "Missing permission to edit channels`n"
-				else throw Error("Missing permission to edit channels")
+				else throw(Error("Missing permission to edit channels"))
 			}
 			try {
 				channelsEditedCount := 0
