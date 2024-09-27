@@ -525,8 +525,8 @@ ExecScript(expression, Wait := true) {
 		input .= RegexReplace(expression, "print\((.*)?\)", 'FileAppend($1, "*")')
 	else
 		input .= 'FileAppend(' . expression . ', "*")'
-	shell := ComObject("WScript.Shell")
-	exec := shell.Exec("AutoHotkey.exe /ErrorStdOut *")
+	shell := ComObject("WScript.Shell") 
+	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
 	exec.StdIn.Write(input)
 	exec.StdIn.Close()
 	if Wait
