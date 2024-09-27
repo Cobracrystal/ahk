@@ -53,8 +53,6 @@ class YoutubeDLGui {
 			output: "",
 			outputLastLine: "",
 			outputLastLineCFlag: 0,
-			separator: "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
-			separatorSmall: "══════════════════════════════════════════════════════════════════════════════",
 		}
 		this.settingsManager("Load")
 		this.settings.debug := flagDebug
@@ -82,8 +80,8 @@ class YoutubeDLGui {
 	updateGuiOutput(cmdLine) {
 		lineArray := StrSplit(Rtrim(StrReplace(cmdLine, "`r`n", "`n"), "`n"), "`n")
 		for i, newLine in lineArray {
-			if (Instr(newLine, "https://") || Instr(newLine, "http://")) && !(Instr(this.data.outputLastLine, "[redirect]") || Instr(newLine, "[redirect]")) && (this.data.outputLastLine != "") && (this.data.outputLastLine != this.data.separator . "`n") {
-				this.data.outputLastLine .= this.data.separatorSmall . "`n"
+			if (Instr(newLine, "https://") || Instr(newLine, "http://")) && !(Instr(this.data.outputLastLine, "[redirect]") || Instr(newLine, "[redirect]")) && (this.data.outputLastLine != "") && (this.data.outputLastLine != YoutubeDLGui.UIComponents.separator . "`n") {
+				this.data.outputLastLine .= YoutubeDLGui.UIComponents.separatorSmall . "`n"
 				this.data.outputLastLineCFlag := 0
 			}
 			; if not the last line, then there might be `r`n for the end, so remove that. StrSplit Trims on *both* sides, so it does not work (since `r at the start is necessary for overwriting lines)
@@ -209,14 +207,14 @@ class YoutubeDLGui {
 
 	__done(links) {
 		fullOutput := this.controls.editOutput.value
-		this.updateGuiOutput(this.data.separator)
+		this.updateGuiOutput(YoutubeDLGui.UIComponents.separator)
 		if (!WinActive(this.gui))
 			this.YoutubeDLGui("Hide")
 		if (links == "" || !this.settings.openExplorer)
 			return
 		if (this.settings.trySelectFile) {
-			arrLong := StrSplit(fullOutput, this.data.separator)
-			responseArr := StrSplit(arrLong[arrLong.Length], this.data.separatorSmall)
+			arrLong := StrSplit(fullOutput, YoutubeDLGui.UIComponents.separator)
+			responseArr := StrSplit(arrLong[arrLong.Length], YoutubeDLGui.UIComponents.separatorSmall)
 			fileNames := []
 			for i, e in responseArr
 			{
@@ -281,7 +279,7 @@ class YoutubeDLGui {
 		resetSettings(*) {
 			if (MsgBox("Are you sure? This will reset all settings to their default values.", "Reset Settings", "0x1") == "Cancel")
 				return
-			this.settings := YoutubeDLGui.getDefaultSettings()
+			this.settings := YoutubeDLGui.defaultSettings
 			this.options := this.settings.options
 			this.ytdlOptionHandler()
 			settingsGUIClose()
@@ -348,7 +346,7 @@ class YoutubeDLGui {
 			}
 			settings := MapToObj(settings, true)
 			settings.options := ObjToMap(settings.options, false)
-			defaults := YoutubeDLGui.getDefaultSettings()
+			defaults := YoutubeDLGui.defaultSettings
 			; remove settings that dont exist
 			for i, e in settings.OwnProps()
 				if (defaults.HasOwnProp(i))
@@ -367,21 +365,22 @@ class YoutubeDLGui {
 		return 0
 	}
 
-	; these functions exist to get the first-time default values.
-	static getDefaultSettings() {
-		settings := {
-			resetConverttoAudio: 1,
-			useAliases: 0,
-			openExplorer: 1,
-			trySelectFile: 0,
-			outputPath: A_ScriptDir,
-			outputPattern: A_ScriptDir . "\%(title)s.%(ext)s",
-			ffmpegPath: "",
-			ytdlPath: "",
-			debug: 0,
-			options: YoutubeDLGui.getOptions()
-		}
-		return settings
+	static UIComponents => {
+		separator: "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
+		separatorSmall: "══════════════════════════════════════════════════════════════════════════════"
+	}
+
+	static defaultSettings => {
+		resetConverttoAudio: 1,
+		useAliases: 0,
+		openExplorer: 1,
+		trySelectFile: 0,
+		outputPath: A_ScriptDir,
+		outputPattern: A_ScriptDir . "\%(title)s.%(ext)s",
+		ffmpegPath: "",
+		ytdlPath: "",
+		debug: 0,
+		options: YoutubeDLGui.getOptions()
 	}
 
 	static getOptions() {
