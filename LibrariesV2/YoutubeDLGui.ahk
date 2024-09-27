@@ -141,7 +141,7 @@ class YoutubeDLGui {
 			this.controls.editCmdConfig.value := str
 	}
 
-	settingsHandler(ctrlObject := 0, *) {
+	settingsHandler(ctrlObject, *) {
 		switch ctrlObject.Name {
 			case "CheckboxConvertToAudio":
 				if (this.settings.ffmpegPath == "") {
@@ -274,7 +274,8 @@ class YoutubeDLGui {
 		this.controls.editYTDLPath := settingsGui.AddEdit("yp-3 xp+70 r1 w250 -Multi Readonly", this.settings.ytdlPath)
 		settingsGui.AddButton("vButtonYTDLPath yp-1 xp+255", "Browse...").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddButton("xs-1", "Reset Settings").OnEvent("Click", resetSettings)
-		settingsGui.Show(Format("x{1}y{2} Autosize", this.data.coords[1] + 20, this.data.coords[2] + 20))
+		this.gui.GetPos(&gx, &gy)
+		settingsGui.Show(Format("x{1}y{2} Autosize", gx + 20, gy + 20))
 
 		resetSettings(*) {
 			if (MsgBox("Are you sure? This will reset all settings to their default values.", "Reset Settings", "0x1") == "Cancel")
@@ -335,7 +336,7 @@ class YoutubeDLGui {
 			DirCreate(this.data.savePath)
 		if (mode == "S") {
 			f := FileOpen(this.data.savePath . "\settings.json", "w", "UTF-8")
-			f.Write(jsongo.Stringify(this.settings))
+			f.Write(jsongo.Stringify(this.settings, , "`t"))
 			f.Close()
 			return 1
 		}
@@ -346,13 +347,12 @@ class YoutubeDLGui {
 			}
 			settings := MapToObj(settings, true)
 			settings.options := ObjToMap(settings.options, false)
-			defaults := YoutubeDLGui.defaultSettings
 			; remove settings that dont exist
 			for i, e in settings.OwnProps()
-				if (defaults.HasOwnProp(i))
+				if (YoutubeDLGui.defaultSettings.HasOwnProp(i))
 					this.settings.%i% := e
 			; populate nonexisting settings with default values
-			for i, e in defaults.OwnProps()
+			for i, e in YoutubeDLGui.defaultSettings.OwnProps()
 				if !(settings.HasOwnProp(i))
 					this.settings.%i% := e
 			; populate nonexisting options with default values
