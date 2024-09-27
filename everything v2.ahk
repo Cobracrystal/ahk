@@ -75,6 +75,7 @@ customTrayMenu()
 ; Synchronize nextDNS IP
 if (!SCRIPTVAR_WASRELOADED)
 	connectNextDNS()
+; use suspendexempt for the reload hotkey. (and others) TODO!
 return
 
 ; ###########################################################################

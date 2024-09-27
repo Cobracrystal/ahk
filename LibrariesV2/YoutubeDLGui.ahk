@@ -174,14 +174,14 @@ class YoutubeDLGui {
 					this.ytdlOptionHandler("output", , this.settings.outputPattern)
 				}
 			case "ButtonFFmpegPath":
-				fileP := FileSelect(3, this.settings.ffmpegPath, "Choose ffmpeg.exe", "Executables (*.exe)")
+				fileP := FileSelect("3", this.settings.ffmpegPath, "Choose ffmpeg.exe", "Executables (*.exe)")
 				if (fileP != "") {
 					this.settings.ffmpegPath := fileP
 					this.controls.editFFmpegPath.value := fileP
 					this.ytdlOptionHandler("ffmpeg-location", , fileP)
 				}
 			case "ButtonYTDLPath":
-				fileP := FileSelect(3, this.settings.ytdlPath, "Choose youtube DL .exe file", "Executables (*.exe)")
+				fileP := FileSelect("3", this.settings.ytdlPath, "Choose youtube DL .exe file", "Executables (*.exe)")
 				if (fileP != "") {
 					this.settings.ytdlPath := fileP
 					this.controls.editYTDLPath.Value := fileP
