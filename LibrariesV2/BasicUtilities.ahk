@@ -314,31 +314,46 @@ mapFlip(mapObject) {
 }
 
 /**
- * Given a Map, returns an equivalent Object
- * @param mapInput 
+ * Given a Map, returns an equivalent Object. If given Object/Array, tries to find all Maps recursively and turns them. Does NOT convert Objects/Arrays.
+ * @param objInput 
  * @param {Integer} recursive 
- * @returns {Map | Array} 
+ * @returns {Object | Map | Array} 
  */
-MapToObj(mapInput, recursive := true) {
-	flag := mapInput is Map
-	flagObj := !(mapInput is Map || mapInput is Array)
-	flagAny := !(mapInput is Object)
-	if (flagAny)
-		return mapInput
-	objI := {}
-	objE := flagObj ? {} : flag ? Map() : Array()
-	if (objE is Array)
-		objE.Length := mapInput.Length
-	for i, e in (flagObj ? mapInput.OwnProps() : mapInput) {
-		if (recursive)
-			f := MapToObj(e, true)
-		if (flag)
-			objI.%i% := f ?? e
-		if (!flag && recursive) {
-			(flagObj ? objE.%i% := f : objE[i] := f)
-		}
+MapToObj(objInput, recursive := true) {
+	flagIsArray := objInput is Array
+	flagIsMapArray := flagIsArray || objInput is Map
+	if (!(objInput is Object))
+		return objInput
+	objOutput := flagIsArray ? Array() : {}
+	if (flagIsArray)
+		objOutput.Length := objInput.Length
+	for i, e in (flagIsMapArray ? objInput : objInput.OwnProps()) {
+		if (flagIsArray)
+			objOutput[i] := (recursive ? MapToObj(e, true) : e)
+		else
+			objOutput.%i% := (recursive ? MapToObj(e, true) : e)
 	}
-	return (flag ? objI : recursive ? objE : mapInput)
+	return (objOutput)
+}
+
+/**
+ * Given an object with enumerable (Own) Properties, returns equivalent Map. If given Map/Array and recursive is true, finds Objects in it and turns those.
+ * @param objInput 
+ * @param {Integer} recursive 
+ * @returns {Object | Map | Array} 
+ */
+ObjToMap(objInput, recursive := true) {
+	flagIsArray := objInput is Array
+	flagIsMapArray := flagIsArray || objInput is Map
+	flagIsObject := objInput is Object
+	if (!flagIsObject)
+		return objInput
+	objOutput := flagIsArray ? Array() : Map()
+	if (flagIsArray)
+		objOutput.Length := objInput.Length
+	for i, e in (flagIsMapArray ? objInput : objInput.OwnProps())
+		objOutput[i] := (recursive ? ObjToMap(e, true) : e)
+	return (objOutput)
 }
 
 /**
