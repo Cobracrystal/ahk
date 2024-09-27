@@ -282,8 +282,7 @@ class YoutubeDLGui {
 			if (MsgBox("Are you sure? This will reset all settings to their default values.", "Reset Settings", "0x1") == "Cancel")
 				return
 			this.settings := YoutubeDLGui.getDefaultSettings()
-			this.options := YoutubeDLGui.getOptions()
-			this.settings.options := this.options
+			this.options := this.settings.options
 			this.ytdlOptionHandler()
 			settingsGUIClose()
 			this.settingsGUI()
@@ -337,28 +336,32 @@ class YoutubeDLGui {
 		if (!Instr(FileExist(this.data.savePath), "D"))
 			DirCreate(this.data.savePath)
 		if (mode == "S") {
-			f := FileOpen(this.data.savePath . "\ahk_settings.json", "w", "UTF-8")
+			f := FileOpen(this.data.savePath . "\settings.json", "w", "UTF-8")
 			f.Write(jsongo.Stringify(this.settings))
 			f.Close()
 			return 1
 		}
 		else if (mode == "L") {
-			this.settings := {}
-			if (FileExist(this.data.savePath "\ahk_settings.json")) {
-				s := FileRead(this.data.savePath "\ahk_settings.json", "UTF-8")
-				try this.settings := jsongo.Parse(s)
+			this.settings := {}, settings := {}
+			if (FileExist(this.data.savePath "\settings.json")) {
+				try settings := jsongo.Parse(FileRead(this.data.savePath "\settings.json", "UTF-8"))
 			}
-			this.settings := MapToObj(this.settings, true)
-			for i, e in YoutubeDLGui.getDefaultSettings().OwnProps() {
-				if !(this.settings.HasOwnProp(i))
+			settings := MapToObj(settings, true)
+			settings.options := ObjToMap(settings.options, false)
+			defaults := YoutubeDLGui.getDefaultSettings()
+			; remove settings that dont exist
+			for i, e in settings.OwnProps()
+				if (defaults.HasOwnProp(i))
 					this.settings.%i% := e
-			}
-			this.options := Map()
-			for i, e in YoutubeDLGui.getOptions() {
-				this.options[i] := (this.settings.options.HasOwnProp(i) ? this.settings.options.%i% : e)
-			}
-			this.settings.options := this.options
-			; maybe [,"ignore-config","no-playlist","retries"]
+			; populate nonexisting settings with default values
+			for i, e in defaults.OwnProps()
+				if !(settings.HasOwnProp(i))
+					this.settings.%i% := e
+			; populate nonexisting options with default values
+			for i, e in YoutubeDLGui.getOptions()
+				if !(this.settings.options.Has(i))
+					this.settings.options[i] := e
+			this.options := this.settings.options
 			return 1
 		}
 		return 0
@@ -376,7 +379,7 @@ class YoutubeDLGui {
 			ffmpegPath: "",
 			ytdlPath: "",
 			debug: 0,
-			options: {} ; options as object since json saves and loads them as object anyway
+			options: YoutubeDLGui.getOptions()
 		}
 		return settings
 	}
