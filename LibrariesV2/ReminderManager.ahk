@@ -38,7 +38,7 @@ class ReminderManager {
 	*/
 	setTimerIn(days := 0, hours := 0, minutes := 0, seconds := 0, message := "", function := "", fparams*) {
 		if (days < 0 || hours < 0 || minutes < 0 || seconds < 0)
-			throw Error("Invalid Time specified.")
+			throw(Error("Invalid Time specified:" days " Days, " hours " hours, " minutes " minutes, " seconds " seconds"))
 		time := DateAdd(A_Now, days, "Days")
 		time := DateAdd(time, hours, "Hours")
 		time := DateAdd(time, minutes, "Minutes")
@@ -56,13 +56,13 @@ class ReminderManager {
 	setTimerOn(time, message := "", function := "", fparams*) {
 		MSec := A_MSec
 		if (!IsTime(time))
-			throw Error("Invalid Timestamp given: " . time)
+			throw(Error("Invalid Timestamp given: " . time))
 		timeDiff := DateDiff(time, A_Now, "Seconds")
 		if (timeDiff < 0)
-			throw Error("Cannot create Reminder in the Past: " time " is " timeDiff * -1 "seconds in the past.")
+			throw(Error("Cannot create Reminder in the Past: " time " is " timeDiff * -1 " seconds in the past."))
 		nextTimeMS := (timeDiff == 0 ? -1 : timeDiff * -1000 + MSec - 10)
 		if (nextTimeMS < -4294967295)
-			throw Error("Integer Limit for Timers reached.")
+			throw(Error("Integer Limit for Timers reached."))
 		fArr := this.generateFuncObj(message, function, fparams*)
 		timerObj := this._handleTimer.bind(this, 0, fArr[1], this.timerList.Length+1)
 		this.timerList.Push({ nextTime: time, multi: 0, message: message, function: fArr[2], fparams: fparams, timer: timerObj })
@@ -83,9 +83,9 @@ class ReminderManager {
 	setPeriodicTimerOn(time, period := 1, periodUnit := "Days", message := "", function := "", fparams*) {
 		MSec := A_Msec
 		if (!IsTime(String(time)))
-			throw Error("Invalid Timestamp: " . time)
+			throw(Error("Invalid Timestamp: " . time))
 		if (period <= 0)
-			throw Error("Invalid Period: " period)
+			throw(Error("Invalid Period: " period))
 		switch periodUnit, 0 {
 			case "S", "Seconds", "Second":
 				periodUnit := "Seconds"
@@ -102,7 +102,7 @@ class ReminderManager {
 			case "Y", "Years", "Year":
 				periodUnit := "Years"
 			default:
-				throw Error("Invalid Period Unit: " . periodUnit)
+				throw(Error("Invalid Period Unit: " . periodUnit))
 		}
 		timeDiff := DateDiff(time, Now := A_Now, "Seconds")
 		if (timeDiff < 0) {
@@ -123,7 +123,7 @@ class ReminderManager {
 							guessTime := A_YYYY . nextMonth . rolledOverDays . SubStr(time, 9)
 							; since all invalid dates are at the end of a month, rolling over a month means we are definitely in the future.
 							if (!IsTime(guessTime))
-								throw Error("0xD37824 - This should never happen " . guessTime)
+								throw(Error("0xD37824 - This should never happen " . guessTime))
 						}
 						else if (DateDiff(guessTime, Now, "Seconds") < 0) {
 							monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
@@ -152,7 +152,7 @@ class ReminderManager {
 		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
 		if (nextTimeMS < -4294967295)
 			return
-;			throw Error("Integer Limit for Timers reached.")
+;			throw(Error("Integer Limit for Timers reached."))
 		if (this.settings.flagDebug)
 			timedTooltip(nextTimeMS "`n" MSec)
 		fArr := this.generateFuncObj(message, function, fparams*)
@@ -170,19 +170,24 @@ class ReminderManager {
 			switch function {
 				case "discordReminder", "ReminderManager.discordReminder":
 					if (fparams.Length == 1)
-						function := this.discordReminder.Bind(this)
+						function := this.discordReminder
 					else
-						function := this.defaultReminder.Bind(this)
+						function := this.defaultReminder
 				case "reminder1337", "ReminderManager.reminder1337":
-					function := this.reminder1337.bind(this)
+					function := this.reminder1337
 				default:
-					function := this.defaultReminder.Bind(this)
+					function := this.defaultReminder
 			}
-			name := StrReplace(BoundFnName(function), ".Prototype")
+			name := StrReplace(function.Name, ".Prototype")
+			function := function.Bind(this)
 		}
 		else {
-			if (function is BoundFunc)
-				name := StrReplace(BoundFnName(function), ".Prototype")
+			if (function is BoundFunc) {
+				try 
+					name := StrReplace(BoundFnName(function), ".Prototype")
+				catch Error
+					name := "/ (Unknown)"
+			}
 			else {
 				name := StrReplace(function.Name, ".Prototype")
 				if (Instr(name, ".")) ; bind fake @this parameter for classes.
@@ -332,8 +337,8 @@ class ReminderManager {
 			return
 		try
 			res := this.setTimerIn(t[5], t[4], t[3], t[2], t[1])
-		catch Error {
-			msgbox("Problem setting the Reminder. Check if entered time is valid.")
+		catch Error as e {
+			msgbox("Problem setting the Reminder. Check if entered time is valid.`nSpecifically: " e.What " failed with`n" e.Message)
 			return 0
 		}
 		timedTooltip("Success!", 1000)
@@ -372,7 +377,7 @@ class ReminderManager {
 
 	importReminders(filePath, ignoreMissedReminders := false, encoding := "UTF-8") {
 		if (!FileExist(filepath))
-			throw TargetError("Nonexistent Reminder File Given")
+			throw(TargetError("Nonexistent Reminder File Given"))
 		jsonStr := FileRead(filePath, encoding)
 		reminderList := MapToObj(jsongo.Parse(jsonStr))
 		for i, rObj in reminderList {
