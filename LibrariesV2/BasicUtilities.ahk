@@ -81,6 +81,22 @@ modifySelectedText(method, params*) {
 	return 1
 }
 
+/**
+ * Counts how many times a given value is included in an Object
+ * @param obj array or map
+ * @param value value to check for
+ * @returns {Integer} Count of how many instances of value were encountered
+ */
+objCountValue(obj, value) {
+	if !(obj is Array || obj is Map)
+		throw(Error("objCountValue does not handle type " . Type(obj)))
+	count := 0
+	for i, e in obj
+		if (e = value)
+			count++
+	return count
+}
+
 objContainsValue(obj, value) {
 	if !(obj is Array || obj is Map)
 		throw(Error("objContains does not handle type " . Type(obj)))
@@ -90,42 +106,29 @@ objContainsValue(obj, value) {
 	return 0
 }
 
-objRemoveValue(obj, value) {
+/**
+ * Deletes given Value from Object, either on first encounter or on all encounters. Returns count of removed values
+ * @param {Array | Map} obj
+ * @param value 
+ * @param {Integer} removeAll 
+ * @returns {Integer} count
+ */
+objRemoveValue(obj, value, removeAll := true) {
 	if !(obj is Array || obj is Map)
 		throw(Error("objRemoveValue does not handle type " . Type(obj)))
-	for i, e in obj {
-		if (e = value) {
-			if (obj is Array)
-				obj.RemoveAt(i)
-			else 
-				obj.Delete(i)
-			return 1
-		}
-	}
-	return 0
-}
-
-objRemoveValues(obj, removeAll := 1, values*) {
-	if !(obj is Array || obj is Map)
-		throw(Error("objRemoveValues does not handle type " . Type(obj)))
-	toRemove := []
-	for i, e in obj {
-		for j, f in values {
-			if (e = f) {
-				toRemove.push(i)
-				if (!removeAll)
-					break
-			}
-		}
-	}
-	while (toRemove.Length > 0) {
-		nE := toRemove.Pop()
+	queue := []
+	for next, e in obj
+		if (e = value)
+			queue.push(next)
+	n := queue.Length
+	while (queue.Length != 0) {
+		next := queue.Pop()
 		if (obj is Array)
-			obj.RemoveAt(nE)
-		else
-			obj.Delete(nE)
+			obj.RemoveAt(next)
+		else 
+			obj.Delete(next)
 	}
-	return 1
+	return n
 }
 
 reverseArray(array) {
