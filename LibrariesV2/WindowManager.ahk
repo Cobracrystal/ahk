@@ -299,7 +299,7 @@ class WindowManager {
 							WinClose(wHandle)
 					}
 					if WinWaitClose(wHandle, , 0.5)
-						this.LV.Delete(rowNums[rowNums.Length - i + 1])
+						try this.LV.Delete(rowNums[rowNums.Length - i + 1])
 				}
 			case "65": ; ctrl A
 				if (!GetKeyState("Ctrl"))
