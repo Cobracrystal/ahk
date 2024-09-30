@@ -341,11 +341,11 @@ F11:: { 	; BTD6: Rebind Escape
 }
 
 !WheelDown:: {	; Scale Window Down
-	AltDrag.scaleWindow(-1)
+	AltDrag.scaleWindow(-1,, A_ThisHotkey)
 }
 
 !WheelUp:: {	; Scale Window Up
-	AltDrag.scaleWindow(1)
+	AltDrag.scaleWindow(1,, A_ThisHotkey)
 }
 
 !XButton1:: {	; Minimize Window
@@ -927,7 +927,7 @@ clipCursor(mode := true, window := "A") {
 
 
 #HotIf WinActive("ahk_exe javaw.exe")
-^ö::{	; Spam shift Key
+^ö::{	; MC: Spam shift Key 
 	static toggle := 0
 	static timer := ( (*) => (Send("{Shift Down}"), Sleep(10), Send("{Shift Up}")))
 	if (toggle := !toggle)
@@ -939,7 +939,7 @@ clipCursor(mode := true, window := "A") {
 
 
 #HotIf WinActive("ahk_exe Skul.exe")
-+::{
++::{	; Skul: Spam l
 	static sTimer := Send.Bind("l")
 	static toggle := false
 	SetTimer(sTimer, toggle := !toggle ? 50 : 0)
@@ -964,7 +964,7 @@ clipCursor(mode := true, window := "A") {
 
 
 #HotIf WinActive("Satisfactory")
-Numpad5::{
+Numpad5::{	; Satisfactory: Hold Space
 	static toggle := 0 
 	toggle := !toggle
 	if (toggle) {

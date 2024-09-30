@@ -65,10 +65,10 @@ class AltDrag {
 			this.blacklist.Push(arr)
 	}
 
-	static moveWindow(hotkey := "LButton") {
+	static moveWindow(hkey := "LButton") {
 		SetWinDelay(3)
 		CoordMode("Mouse", "Screen")
-		cleanHotkey := RegexReplace(hotkey, "#|!|\^|\+|<|>|\$|~", "")
+		cleanHotkey := RegexReplace(hkey, "#|!|\^|\+|<|>|\$|~", "")
 		MouseGetPos(&mouseX1, &mouseY1, &winID)
 		; abort if maximized/minimized or blacklist
 		if (this.winInBlacklist(winID) || WinGetMinMax(winID) != 0) {
@@ -100,15 +100,14 @@ class AltDrag {
 		}
 	}
 
-	static resizeWindow(hotkey := "RButton") {
+	static resizeWindow(hkey := "RButton") {
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
-		cleanHotkey := RegexReplace(hotkey, "#|!|\^|\+|<|>|\$|~", "")
+		cleanHotkey := RegexReplace(hkey, "#|!|\^|\+|<|>|\$|~", "")
 		; abort if max/min or on blacklist
 		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
 		if (this.winInBlacklist(wHandle) || WinGetMinMax(wHandle) != 0) {
-			this.sendKey(cleanHotkey)
-			return
+			return this.sendKey(cleanHotkey)
 		}
 		WinGetPos(&winX, &winY, &winW, &winH, wHandle)
 		WinActivate(wHandle)
@@ -132,15 +131,15 @@ class AltDrag {
 		}
 	}
 
-	static scaleWindow(direction := 1, scale_factor := 1.05) {
-		; scale factor NOT exponential, its dependant on monitor size
-		cleanHotkey := "{Middle Up}"
+	static scaleWindow(direction := 1, scale_factor := 1.05, hkey := "MButton") {
+		; scale factor NOT exponential, its dependent on monitor size
+		cleanHotkey := RegexReplace(hkey, "#|!|\^|\+|<|>|\$|~", "")
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
 		wHandle := WinExist("A")
 		mmx := WinGetMinMax("ahk_id " . wHandle)
 		if (this.winInBlacklist(wHandle) || mmx != 0) {
-			return
+			return this.sendKey(cleanHotkey)
 		}
 		WinGetPos(&winX, &winY, &winW, &winH, "ahk_id " . wHandle)
 		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
@@ -228,17 +227,18 @@ class AltDrag {
 	}
 
 	static sendKey(hkey) {
+		if (hkey = "WheelDown" || hkey = "WheelUp")
+			hkey := "{" hkey "}"
 		if (hkey = "LButton" || hkey = "RButton" || hkey = "MButton") {
 			hhL := SubStr(hkey, 1, 1)
 			Click("Down " . hhL)
-			Hotkey("*" hkey " Up", this.sendClickUp.bind(this, hhL), "On")
+			hkey("*" hkey " Up", this.sendClickUp.bind(this, hhL), "On")
 			; while(GetKeyState(hkey, "P"))
 			;	continue
 			; Click("Up " hhL)
-		}
-		else
+		} else
 			Send("{Blind}" . hkey)
-		return
+		return 0
 	}
 
 	static sendClickUp(hhL, hkey) {
