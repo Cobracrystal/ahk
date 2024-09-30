@@ -13,6 +13,7 @@ todo
 - instead of only loading, allow for creation of new empty table (-> specify columns and that's it. it should also remove defaultvalues and translate etc)
 ; missing settings:
 ; button
+~> tableFilterMenu.Add("Open Backup Folder", (*) => Run('explorer.exe "' this.data.savepath '"'))
 openbackupFolder ; Open Backup Folder
 ; hotkey
 guiHotkey ;  hotkey to open GUI (always)
@@ -28,6 +29,14 @@ duplicateColumn ;  Deutsch
 copyColumn ;  Runen
 taggingColumn ;  Kategorie
 filterCaseSense ;  for searching/filtering, 1/0/Locale
+
+useConfig: if unchecked, no longer saves
+if checked, immediately loads old config
+
+dont reset last used file!!!! (actually maybe do reset it?)
+don't reset useConfig!!!!
+
+!center edit row gui
 */
 #SingleInstance Force
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
@@ -468,7 +477,7 @@ class TableFilter {
 			;	OnMessage(WM_NOTIFY, On_NM_CUSTOMDRAW.bind(lv)) ; header text white
 			; reduce flickering
 			lv.Opt("+LV" LVS_EX_DOUBLEBUFFER)
-			;	DllCall("uxtheme\SetWindowTheme", "ptr", lv.header, "str", (dark ? "DarkMode_ItemsView" : ""), "ptr", 0)
+			DllCall("uxtheme\SetWindowTheme", "ptr", lv.header, "str", (dark ? "DarkMode_ItemsView" : ""), "ptr", 0)
 			; hide focus dots
 			; SendMessage(WM_CHANGEUISTATE, (UIS_SET << 8) | UISF_HIDEFOCUS, 0, ctrl.hwnd)
 			DllCall("uxtheme\SetWindowTheme", "ptr", lv.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
