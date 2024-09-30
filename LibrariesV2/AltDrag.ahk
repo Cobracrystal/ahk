@@ -232,7 +232,7 @@ class AltDrag {
 		if (hkey = "LButton" || hkey = "RButton" || hkey = "MButton") {
 			hhL := SubStr(hkey, 1, 1)
 			Click("Down " . hhL)
-			hkey("*" hkey " Up", this.sendClickUp.bind(this, hhL), "On")
+			Hotkey("*" hkey " Up", this.sendClickUp.bind(this, hhL), "On")
 			; while(GetKeyState(hkey, "P"))
 			;	continue
 			; Click("Up " hhL)
