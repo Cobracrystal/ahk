@@ -3,40 +3,19 @@ todo
 - on gui without loaded files, have menubar showing last used files
 - settings window
 	- delete / restore backups, move open backup folder option there
-	- all settings as per default values should be in there
-	- option to reset
 	- font color, background color (specifically: check docs>gui>setfont note at bottom, https://github.com/majkinetor/mm-autohotkey/tree/master/Dlg)
-	- disable guis while editing settings?
 	- CENTER settings window on main window (also do this for the other GUIs with settings)
 - autohdr should have max. also always use max width of lv
 - listview headers dark (aka font white)
 - instead of only loading, allow for creation of new empty table (-> specify columns and that's it. it should also remove defaultvalues and translate etc)
 ; missing settings:
-; button
-~> tableFilterMenu.Add("Open Backup Folder", (*) => Run('explorer.exe "' this.data.savepath '"'))
-openbackupFolder ; Open Backup Folder
 ; hotkey
 guiHotkey ;  hotkey to open GUI (always)
-
-; file browsing
-dialogPath ;  path
-
 ; color select
 darkThemeColor ;  Dark Mode Color
-
 ; dropdown menu
-duplicateColumn ;  Deutsch
-copyColumn ;  Runen
-taggingColumn ;  Kategorie
-filterCaseSense ;  for searching/filtering, 1/0/Locale
+taggingColumn ;  Kategorie (needs actual row name)
 
-useConfig: if unchecked, no longer saves
-if checked, immediately loads old config
-
-dont reset last used file!!!! (actually maybe do reset it?)
-don't reset useConfig!!!!
-
-!center edit row gui
 */
 #SingleInstance Force
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
@@ -54,7 +33,7 @@ class TableFilter {
 
 	__New(debug := 0, useConfig := 1) {
 		this.data := {
-			savePath: TableFilter.savePath,
+			appdataPath: TableFilter.appdataPath,
 			openFile: "",
 			data: [],
 			keys: [],
@@ -184,35 +163,36 @@ class TableFilter {
 		guiObj.Opt("+Disabled")
 		guiObj.LV.Opt("-Redraw")
 		guiObj.LV.Delete()
-		if (objContainsValue(this.data.keys, this.config.duplicateColumn))
-			filterKey := this.config.duplicateColumn
-		else
-			filterKey := this.data.keys[1]
-		default := (this.data.defaultValues.Has(filterKey) ? this.data.defaultValues[filterKey] : "")
-		duplicateMap := Map()
-		duplicateMap.CaseSense := this.config.filterCaseSense
-		for i, row in this.data.data {
-			if (!row.Has(filterKey))
-				continue
-			v := row[filterKey]
-			if (duplicateMap.has(v))
-				duplicateMap[v].push([row, i])
-			else
-				duplicateMap[v] := [[row, i]]
-		}
-		for i, row in this.data.data {
-			if (!row.Has(filterKey) || (v := row[filterKey]) == "" || v == default)
-				continue
-			if (duplicateMap[v].Length > 1) {
-				for _, arr in duplicateMap[v] {
-					if (this.rowIncludeFromSearch(guiObj, arr[1]))
-						this.addRow(guiObj, arr[1], arr[2])
-				}
-				duplicateMap[v] := []
+		try {
+			filterKey := this.data.keys[this.config.duplicateColumn > this.data.keys.Length ? 1 : this.config.duplicateColumn]
+			default := (this.data.defaultValues.Has(filterKey) ? this.data.defaultValues[filterKey] : "")
+			duplicateMap := Map()
+			duplicateMap.CaseSense := this.config.filterCaseSense ? 1 : "Locale"
+			for i, row in this.data.data {
+				if (!row.Has(filterKey))
+					continue
+				v := row[filterKey]
+				if (duplicateMap.has(v))
+					duplicateMap[v].push([row, i])
+				else
+					duplicateMap[v] := [[row, i]]
 			}
+			for i, row in this.data.data {
+				if (!row.Has(filterKey) || (v := row[filterKey]) == "" || v == default)
+					continue
+				if (duplicateMap[v].Length > 1) {
+					for _, arr in duplicateMap[v] {
+						if (this.rowIncludeFromSearch(guiObj, arr[1]))
+							this.addRow(guiObj, arr[1], arr[2])
+					}
+					duplicateMap[v] := []
+				}
+			}
+			if (guiObj.LV.GetCount() == 0)
+				this.addRow(guiObj, Map(this.data.keys[1], "/", this.data.keys[2], "Nothing Found"), -1)
+		} catch Error as e {
+			MsgBox("An unexpected Error has occured.`nSpecifically: " e.Message "`nTry Resetting your settings")
 		}
-		if (guiObj.LV.GetCount() == 0)
-			this.addRow(guiObj, Map(this.data.keys[1], "/", this.data.keys[2], "Nothing Found"), -1)
 		guiObj.LV.Opt("+Redraw")
 		guiObj.Opt("-Disabled")
 	}
@@ -220,7 +200,7 @@ class TableFilter {
 	rowIncludeFromSearch(guiObj, row) {
 		for i, e in this.data.keys {
 			v := guiObj["EditSearchCol" . i].Value
-			if (v != "" && (!row.Has(e) || !InStr(row[e], v, this.config.filterCaseSense))) {
+			if (v != "" && (!row.Has(e) || !InStr(row[e], v, this.config.filterCaseSense ? 1 : "Locale"))) {
 				return false
 			}
 		}
@@ -296,7 +276,6 @@ class TableFilter {
 		row := this.data.data[dataIndex]
 		editorGui := Gui("-Border -SysMenu +Owner" guiObj.Hwnd)
 		editorGui.dataIndex := dataIndex
-		editorGui.parent := guiObj
 		if (!guiObj.HasOwnProp("children"))
 			guiObj.children := []
 		guiObj.children.push(editorGui)
@@ -309,8 +288,10 @@ class TableFilter {
 			editorGui.AddEdit("r1 w85 vEditAddRow" i, row.Has(e) ? row[e] : "").OnEvent("Change", this.validValueChecker.bind(this))
 		}
 		editorGui.AddButton("Default ys+15 xs+" 10 + 95 * this.data.keys.Length " h40 w65", "Save Row").OnEvent("Click", editRowGuiFinish.bind(this))
+		editorGui.parent := guiObj
+		guiObj.GetPos(&gx, &gy, &gw, &gh)
 		this.toggleGuiDarkMode(editorGui, this.config.darkMode)
-		editorGui.Show()
+		editorGui.Show(Format("x{1}y{2} Autosize", gx + (gw-111-95*this.data.keys.Length)//2, gy + (gh-83)//2))
 		return
 
 		editRowGuiFinish(this, guiCtrl, *) {
@@ -336,14 +317,14 @@ class TableFilter {
 		}
 	}
 
-	removeSelectedRows(gui) {
+	removeSelectedRows(guiObj) {
 		rows := []
-		gui.Opt("+Disabled")
+		guiObj.Opt("+Disabled")
 		Loop {
-			rowN := gui.LV.GetNext(rowN ?? 0) ;// next row
+			rowN := guiObj.LV.GetNext(rowN ?? 0) ;// next row
 			if !(rowN)
 				break
-			rows.push(gui.LV.GetText(rowN, this.data.keys.Length + 1))
+			rows.push(guiObj.LV.GetText(rowN, this.data.keys.Length + 1))
 		}
 		if (!rows.Length)
 			return
@@ -477,7 +458,7 @@ class TableFilter {
 			;	OnMessage(WM_NOTIFY, On_NM_CUSTOMDRAW.bind(lv)) ; header text white
 			; reduce flickering
 			lv.Opt("+LV" LVS_EX_DOUBLEBUFFER)
-			DllCall("uxtheme\SetWindowTheme", "ptr", lv.header, "str", (dark ? "DarkMode_ItemsView" : ""), "ptr", 0)
+		;	DllCall("uxtheme\SetWindowTheme", "ptr", lv.header, "str", (dark ? "DarkMode_ItemsView" : ""), "ptr", 0)
 			; hide focus dots
 			; SendMessage(WM_CHANGEUISTATE, (UIS_SET << 8) | UISF_HIDEFOCUS, 0, ctrl.hwnd)
 			DllCall("uxtheme\SetWindowTheme", "ptr", lv.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
@@ -545,11 +526,15 @@ class TableFilter {
 					case 46: ; DEL key
 						this.removeSelectedRows(guiObj)
 					case 67: ; C key
+						if !(GetKeyState("Ctrl"))
+							return
 						if ((rowN := guiObj.LV.GetNext()) == 0)
 							return
-						if (GetKeyState("Ctrl")) {
-							col := objContainsValue(this.data.keys, this.config.copyColumn)
-							A_Clipboard := (col ? guiObj.LV.GetText(rowN, col) : guiObj.LV.GetText(0))
+						if (GetKeyState("Shift"))
+							A_Clipboard := jsongo.Stringify(this.data.data[guiObj.LV.GetText(rowN,this.data.keys.Length+1)], , A_Tab)
+						else {
+							col := this.config.copyColumn > this.data.keys.Length ? 1 : this.config.copyColumn
+							A_Clipboard := guiObj.LV.GetText(rowN, col)
 						}
 					case 113: ; F2 key
 						this.editRowGui(guiObj)
@@ -872,12 +857,14 @@ class TableFilter {
 	backupIterator(doInitialBackup := 0) {
 		; instead of a timer or something, this should save the current time once and on every change this gets called, and if enough time has passed -> backup is made
 		SplitPath(this.data.openFile, , , &fExt, &fName)
-		backupPath := Format("{1}\Backup_{2}_{3}.{4}",
-			this.data.savePath,
+		backupPath := Format("{1}\Backups\Backup_{2}_{3}.{4}",
+			this.data.appdataPath,
 			fName,
 			doInitialBackup ? "Original" : FormatTime(A_Now, "yyyy.MM.dd-HH.mm.ss"),
 			fExt
 		)
+		if (!Instr(FileExist(this.data.appdataPath "\Backups"), "D"))
+			DirCreate(this.data.appdataPath "\Backups")
 		this.saveFile(backupPath, false)
 		this.deleteExcessBackups()
 	}
@@ -886,7 +873,7 @@ class TableFilter {
 		if (!filePath)
 			filePath := this.data.openFile
 		SplitPath(filePath, , , &fExt, &fName)
-		backupPath := this.data.savePath "\Backup_" fName "_*." fExt
+		backupPath := this.data.appdataPath "\Backups\Backup_" fName "_*." fExt
 		i := 0, oldestBackupTime := 0
 		Loop Files backupPath {
 			if !(InStr(A_LoopFileName, "Original")) {
@@ -937,36 +924,44 @@ class TableFilter {
 	configGuiHandler(ctrl, *) {
 		switch ctrl.Name {
 			case "CBDebug":
-				this.config.debug := !this.config.debug
+				this.config.debug := ctrl.Value
 				this.menu := this.createMenu()
 			case "CBDarkMode":
-				this.config.darkMode := !this.config.darkMode
+				this.config.darkMode := ctrl.Value
 				for _, g in this.guis
 					this.toggleGuiDarkMode(g, this.config.darkMode)
 			case "CBAutoSaving":
-				this.config.autoSaving := !this.config.autoSaving
+				this.config.autoSaving := ctrl.Value
 			case "CBUseBackups":
 				SetTimer(this.backupIterator.bind(this), 0)
-				if (this.config.useBackups := !this.config.useBackups) {
+				if (this.config.useBackups := ctrl.Value) {
 					this.backupIterator(1)
 					SetTimer(this.backupIterator.bind(this), this.config.backupInterval * 60000)
 				}
 			case "CBUseDefaultValues":
-				this.config.useDefaultValues := !this.config.useDefaultValues
+				this.config.useDefaultValues := ctrl.Value
 			case "CBAutoTranslateRunic":
-				this.config.autoTranslateRunic := !this.config.autoTranslateRunic
+				this.config.autoTranslateRunic := ctrl.Value
 			case "CBFormatValues":
-				this.config.formatValues := !this.config.formatValues
+				this.config.formatValues := ctrl.Value
 			case "CBUseCustomDialogPath":
-				this.config.useCustomDialogPath := !this.config.useCustomDialogPath
+				this.config.useCustomDialogPath := ctrl.Value
+			case "CBFilterCaseSense":
+				this.config.filterCaseSense := ctrl.Value
 			case "ButtonDialogPath":
 				if (this.config.customDialogPath)
 					path := this.config.customDialogPath
 				else
 					SplitPath(this.config.lastUsedFile, , &path)
 				newPath := FileSelect("D3", path, "Please select a folder")
-				if (newPath != "")
+				if (newPath != "") {
 					this.config.customDialogPath := newPath
+					ctrl.gui.editDialogPath.Value := newPath
+				}
+			case "DDLCopyColumn":
+				this.config.copyColumn := ctrl.Value
+			case "DDLDuplicateColumn":
+				this.config.duplicateColumn := ctrl.Value
 			default:
 				return
 				; throw (Error("This setting doesn't exist (yet): " . ctrl.Name))
@@ -989,18 +984,29 @@ class TableFilter {
 		settingsGui.AddCheckbox("vCBDebug Checked" this.config.debug, "Debugging mode").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("vCBDarkMode Checked" this.config.darkMode, "Dark mode").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("vCBAutoSaving Checked" this.config.autoSaving, "Autosave when exiting").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("vCBUseBackups Checked" this.config.useBackups, "Backup opened files regularly in %APPDATA%\Autohotkey\Tablefilter").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("vCBUseBackups Checked" this.config.useBackups, "Backup opened files regularly in %APPDATA%\Autohotkey\Tablefilter\Backups").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("vCBUseDefaultValues Checked" this.config.useDefaultValues, "Insert placeholder values into empty fields when editing rows").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("vCBAutoTranslateRunic Checked" this.config.autoTranslateRunic, "Automatically translate Kayoogis into runes").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("vCBFormatValues Checked" this.config.formatValues, "Format values").OnEvent("Click", this.configGuiHandler.bind(this))
-
-		settingsGui.AddCheckbox("vCBUseCustomDialogPath Checked" this.config.useCustomDialogPath, "whether to always open dialogs in custom directory. Otherwise, uses Last Used File").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("vCBFormatValues Checked" this.config.formatValues, "Format first row to uppercase").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("vCBFilterCaseSense Checked" this.config.filterCaseSense, "Case-sensitive search").OnEvent("Click", this.configGuiHandler.bind(this))
+		
+		settingsGui.AddCheckbox("vCBUseCustomDialogPath Checked" this.config.useCustomDialogPath, "Always open dialogs in given custom directory. Uses last used file otherwise.").OnEvent("Click", this.configGuiHandler.bind(this))
 
 		settingsGui.AddText("xs 0x200 R1.45", "Dialog Path:")
 		settingsGui.editDialogPath := settingsGui.AddEdit("xp+70 yp r1 w250 -Multi Readonly", this.config.customDialogPath)
 		settingsGui.AddButton("vButtonDialogPath yp-1 xp+255", "Browse...").OnEvent("Click", this.configGuiHandler.bind(this))
 
-		settingsGui.AddButton("xs-1", "Reset Settings").OnEvent("Click", resetSettings)
+		settingsGui.AddText("xs 0x200 R1.45", "Column to search duplicates in:")
+		settingsGui.dropdownDuplicateColumn := settingsGui.AddDropDownList("vDDLDuplicateColumn xp+195 yp r7 w125 Choose" . this.config.duplicateColumn, this.data.keys)
+		settingsGui.dropdownDuplicateColumn.OnEvent("Change", this.configGuiHandler.bind(this))
+
+		settingsGui.AddText("xs 0x200 R1.45", "Column to copy when pressing Ctrl+C:")
+		settingsGui.dropdownCopyColumn := settingsGui.AddDropDownList("vDDLCopyColumn xp+195 yp r7 w125 Choose" . this.config.copyColumn, this.data.keys)
+		settingsGui.dropdownCopyColumn.OnEvent("Change", this.configGuiHandler.bind(this))
+		settingsGui.AddText("xs 0x200 R1.45", "(Press Ctrl+Shift+C to copy all contents of the selected row)")
+		
+		settingsGui.AddButton("xs", "Reset Settings").OnEvent("Click", resetSettings)
+		settingsGui.AddButton("xs+259 yp w125", "Open Backup Folder").OnEvent("Click", (*) => Run('explorer.exe "' this.data.appdataPath "\Backups" '"'))
 		if (!guiObj.HasOwnProp("children"))
 			guiObj.children := []
 		guiObj.children.push(settingsGui)
@@ -1013,7 +1019,12 @@ class TableFilter {
 		resetSettings(guiCtrl, *) {
 			if (MsgBox("Are you sure? This will reset all settings to their default values.", "Reset Settings", "0x1 Owner" settingsGUI.Hwnd) == "Cancel")
 				return
+			useConfig := this.config.useConfig
+			lastUsedFile := this.config.lastUsedFile
 			this.config := TableFilter.defaultConfig
+			this.config.useConfig := useConfig
+			if (FileExist(lastUsedFile))
+				this.config.lastUsedFile := lastUsedFile
 			parent := guiCtrl.Gui.Parent
 			settingsGUIClose(guiCtrl.Gui)
 			this.createSettingsGui(parent)
@@ -1023,7 +1034,8 @@ class TableFilter {
 				this.clearSearchBoxes(g)
 				this.createFilteredList(g)
 			}
-			this.configManager("Save")
+			if (this.config.useConfig)
+				this.configManager("Save")
 		}
 
 		settingsGUIClose(guiObj) {
@@ -1038,18 +1050,19 @@ class TableFilter {
 
 	configManager(mode := "Save", reset := false) {
 		mode := Substr(mode, 1, 1)
-		if (!Instr(FileExist(this.data.savePath), "D"))
-			DirCreate(this.data.savePath)
+		if (!Instr(FileExist(this.data.appdataPath), "D"))
+			DirCreate(this.data.appdataPath)
+		configPath := this.data.appdataPath "\config.json"
 		if (mode == "S") {
-			f := FileOpen(this.data.savePath . "\config.json", "w", "UTF-8")
+			f := FileOpen(configPath, "w", "UTF-8")
 			f.Write(jsongo.Stringify(this.config, , "`t"))
 			f.Close()
 			return 1
 		}
 		else if (mode == "L") {
 			this.config := {}, config := Map()
-			if (FileExist(this.data.savePath "\config.json") && !reset) {
-				try config := jsongo.Parse(FileRead(this.data.savePath "\config.json", "UTF-8"))
+			if (FileExist(configPath) && !reset) {
+				try config := jsongo.Parse(FileRead(configPath, "UTF-8"))
 			}
 			; remove unused config values
 			for i, e in config
@@ -1094,13 +1107,13 @@ class TableFilter {
 		useBackups: true, ; whether to automatically backup the open file, in conjunction with next two
 		backupAmount: 4, ; amount of files to be kept
 		backupInterval: 15, ; in minutes
-		useDefaultValues: true, ; whether to insert values for empty fields
-		autoTranslateRunic: true, ; whether to autotranslate kayoogis->runic
-		formatValues: true, ; whether to format values (eg Uppercase word Type abbreviations)
-		duplicateColumn: "", ; Deutsch
-		copyColumn: "", ; Runen
+		useDefaultValues: false, ; whether to insert values for empty fields
+		autoTranslateRunic: false, ; whether to autotranslate kayoogis->runic
+		formatValues: false, ; whether to format values (eg Uppercase word Type abbreviations)
+		filterCaseSense: true, ; for searching/filtering, 0 or 1 (where 0 == "Locale", nonlocale is more performant but pointless.)
+		duplicateColumn: 2, ; Deutsch
+		copyColumn: 4, ; Runen
 		taggingColumn: "", ; Kategorie
-		filterCaseSense: "Locale", ; for searching/filtering, 1/0/Locale
 		saveHotkey: "^s", ; hotkey to save (only inside gui)
 		guiHotkey: "^p", ; hotkey to open GUI (always)
 		useCustomDialogPath: false, ; whether to always open dialogs in custom directory. Otherwise, uses Last Used File
@@ -1166,5 +1179,5 @@ class TableFilter {
 		"Tema'i", 0
 	)
 
-	static savePath => A_AppData "\Autohotkey\Tablefilter"
+	static appdataPath => A_AppData "\Autohotkey\Tablefilter"
 }
