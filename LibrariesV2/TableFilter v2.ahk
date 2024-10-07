@@ -13,16 +13,18 @@ todo
 guiHotkey ;  hotkey to open GUI (always)
 ; color select
 darkThemeColor ;  Dark Mode Color
-; dropdown menu
-taggingColumn ;  Kategorie (needs actual row name)
+-> color selector needs to autodetermine brightness and set darkmode value correspondingly
 
+anti-todo-list
+fix window title bar not changing instantly when toggling darkmode. just click tab to another window and back to change.
+fix listview headers not being dark. requires custom font drawing so that the text in them is still readable.
 */
 #SingleInstance Force
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\TextEditMenu.ahk"
 
-tableInstance := TableFilter(1)
+tableInstance := TableFilter()
 
 ; ONLY start if this script is not used as a library
 if (A_ScriptFullPath == A_LineFile) {
@@ -31,7 +33,7 @@ if (A_ScriptFullPath == A_LineFile) {
 
 class TableFilter {
 
-	__New(debug := 0, useConfig := 1) {
+	__New(debug?, useConfig?) {
 		this.data := {
 			appdataPath: TableFilter.appdataPath,
 			openFile: "",
@@ -43,11 +45,13 @@ class TableFilter {
 		}
 		this.guis := []
 
-		this.configManager("Load", !useConfig)
-		this.config.debug := debug
-		this.config.useConfig := useConfig
+		if (IsSet(useConfig) && useConfig == 0)
+			this.config := TableFilter.defaultConfig
+		else
+			this.configManager("Load")
+		this.config.debug := debug ?? this.config.debug
+		this.config.useConfig := useConfig ?? this.config.useConfig ; if a config uses this, it will only load once and not save.
 
-		this.menu := this.createMenu()
 		if (A_ScriptFullPath == A_LineFile) {
 			A_TrayMenu.Delete()
 			A_TrayMenu.Add("TableFilter", (*) => this.guiCreate())
@@ -98,10 +102,7 @@ class TableFilter {
 			guiObj.LV.OnEvent("DoubleClick", this.LV_Event.bind(this, "DoubleClick"))
 			this.createFilteredList(guiObj)
 			; Wortart, Deutsch, Kayoogis, Runen, Anmerkung, Kategorie, Tema'i, dataIndex (possibly). At least dataindex always last.
-			if !(this.config.debug)
-				guiObj.LV.ModifyCol(this.data.keys.Length + 1, "0 Integer")
-			else
-				guiObj.LV.ModifyCol(this.data.keys.Length + 1, "100 Integer")
+			guiObj.LV.ModifyCol(this.data.keys.Length + 1, this.config.debug ? "100 Integer" : "0 Integer")
 			Loop (this.data.keys.Length)
 				guiObj.LV.ModifyCol(A_Index, "AutoHdr")
 			guiObj.topRightControls := []
@@ -113,7 +114,7 @@ class TableFilter {
 				(ed := guiObj.AddEdit("r1 w85 vEditAddRow" i, "")).OnEvent("Change", this.validValueChecker.bind(this))
 				guiObj.addRowControls.Push(ed)
 			}
-			(btn := guiObj.AddButton("Default ys+15 xs+" 10 + 95 * this.data.keys.Length " h40 w65", "Add Row to List")).OnEvent("Click", this.addEntry.bind(this))
+			(btn := guiObj.AddButton("ys+15 xs+" 10 + 95 * this.data.keys.Length " h40 w65", "Add Row to List")).OnEvent("Click", this.addEntry.bind(this))
 			guiObj.addRowControls.Push(btn)
 			guiObj.LV.GetPos(, , &lvw)
 			(btn := guiObj.AddButton("ys+9 xs+" lvw - 100 " w100", "Load json/xml File")).OnEvent("Click", this.loadData.bind(this, ""))
@@ -267,18 +268,18 @@ class TableFilter {
 		this.dataHandler("isSaved", false)
 	}
 
-	editRowGui(guiObj) {
-		rowN := guiObj.LV.GetNext(0, "F") ;// next row
+	editRowGui(editorGuiObj) {
+		rowN := editorGuiObj.LV.GetNext(0, "F") ;// next row
 		if !(rowN)
 			return
-		guiObj.Opt("+Disabled")
-		dataIndex := guiObj.LV.GetText(rowN, this.data.keys.Length + 1)
+		editorGuiObj.Opt("+Disabled")
+		dataIndex := editorGuiObj.LV.GetText(rowN, this.data.keys.Length + 1)
 		row := this.data.data[dataIndex]
-		editorGui := Gui("-Border -SysMenu +Owner" guiObj.Hwnd)
+		editorGui := Gui("-Border -SysMenu +Owner" editorGuiObj.Hwnd)
 		editorGui.dataIndex := dataIndex
-		if (!guiObj.HasOwnProp("children"))
-			guiObj.children := []
-		guiObj.children.push(editorGui)
+		if (!editorGuiObj.HasOwnProp("children"))
+			editorGuiObj.children := []
+		editorGuiObj.children.push(editorGui)
 		editorGui.OnEvent("Escape", editRowGuiEscape)
 		editorGui.OnEvent("Close", editRowGuiEscape)
 		editorGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
@@ -288,27 +289,25 @@ class TableFilter {
 			editorGui.AddEdit("r1 w85 vEditAddRow" i, row.Has(e) ? row[e] : "").OnEvent("Change", this.validValueChecker.bind(this))
 		}
 		editorGui.AddButton("Default ys+15 xs+" 10 + 95 * this.data.keys.Length " h40 w65", "Save Row").OnEvent("Click", editRowGuiFinish.bind(this))
-		editorGui.parent := guiObj
-		guiObj.GetPos(&gx, &gy, &gw, &gh)
+		editorGui.parent := editorGuiObj
+		editorGuiObj.GetPos(&gx, &gy, &gw, &gh)
 		this.toggleGuiDarkMode(editorGui, this.config.darkMode)
 		editorGui.Show(Format("x{1}y{2} Autosize", gx + (gw-111-95*this.data.keys.Length)//2, gy + (gh-83)//2))
 		return
 
 		editRowGuiFinish(this, guiCtrl, *) {
 			newRow := Map()
+			editorGuiObj := guiCtrl.gui
 			for i, key in this.data.keys
-				newRow[key] := guiCtrl.gui["EditAddRow" i].Value
+				newRow[key] := editorGuiObj["EditAddRow" i].Value
 			this.cleanRowData(newRow)
-			this.editRow(guiCtrl.gui.dataIndex, newRow)
-			parent := guiCtrl.gui.parent
-			objRemoveValue(parent.children, guiCtrl.gui)
-			parent.Opt("-Disabled")
-			guiCtrl.gui.Destroy()
-			WinActivate(parent)
+			this.editRow(editorGuiObj.dataIndex, newRow)
 			for i, g in this.guis
 				g.Opt("-Disabled")
-			objRemoveValue(guiObj.parent.children, guiObj)
-			guiObj.Destroy()
+			parentHwnd := editorGuiObj.parent.Hwnd
+			objRemoveValue(editorGuiObj.parent.children, editorGuiObj)
+			editorGuiObj.Destroy()
+			WinActivate(parentHwnd)
 		}
 
 		editRowGuiEscape(guiObj) {
@@ -328,56 +327,56 @@ class TableFilter {
 		}
 		if (!rows.Length)
 			return
+		; reverse numerical sorting
 		sortedRows := sortArray(rows, "R N")
 		for _, g in this.guis {
 			g.Opt("+Disabled")
 			rowsInLV := [], indexToRemove := []
+			; find all rows that show up in LV of g
 			for j, n in sortedRows
 				if (this.rowIncludeFromSearch(g, this.data.data[n]))
 					rowsInLV.push(n)
+			; loop over all rows in LV
 			Loop (g.LV.GetCount()) {
 				rowN := A_Index
 				dataIndex := g.LV.GetText(rowN, this.data.keys.Length + 1)
 				for j, n in rowsInLV {
+					; if current row in LV is to be deleted, mark it and remove it from rows to be checked. this ensures LV-order
 					if (dataIndex == n) {
 						indexToRemove.push(rowN)
 						rowsInLV.RemoveAt(j)
 						continue 2 ; continue outer to skip rest. its not harmful though, just break works fine (but is slower)
 					}
 				}
+				; if row is not to be removed, ensure that its dataindex is updated. 
 				offset := 0
-				for j, n in sortedRows {
-					if (dataIndex > n) {
-						offset := sortedRows.Length - j + 1
+				for j, matchIndex in sortedRows {
+					if (dataIndex > matchIndex) {
+						offset := sortedRows.Length - j + 1 ; eg sortedRows is 16 7 4 3 2 1, dataIndex is 5: offset should be 4, because 5 > (4,3,2,1). Thus offset = Length of sortedrows - (amount of indeces in sortedrows larger than 5)
 						break
 					}
 				}
 				if (offset)
 					g.LV.Modify(rowN, "Col" . this.data.keys.Length + 1, dataIndex - offset)
 			}
-			; we don't need to queue them if we do -Redraw at the start.
+			; we don't really need to queue them if we do -Redraw at the start, but this works fine.
 			g.LV.Opt("-Redraw")
 			for k, rowN in indexToRemove
 				g.LV.Delete(indexToRemove[indexToRemove.Length - k + 1]) ; backwards to avoid fucking up the list
 			g.LV.Opt("+Redraw")
 			g.Opt("-Disabled")
 		}
-		for i, e in sortedRows
-			this.data.data.RemoveAt(e)
+		for i, dataIndex in sortedRows
+			this.data.data.RemoveAt(dataIndex)
 		this.dataHandler("isSaved", false)
 	}
 
 	cleanRowData(row) { ; row is a map and thus operates onto the object
 		for i, e in this.data.keys {
-			if (this.config.useDefaultValues && (row[e] == "") && this.data.defaultValues.Has(e)) {
+			if (this.config.useDefaultValues && (row[e] == "") && this.data.defaultValues.Has(e))
 				row[e] := this.data.defaultValues[e]
-				switch e { ; yea this isn't generic but who cares. Just edit these whenever.
-					case "Runen": ; Runen
-						if (this.config.autoTranslateRunic && IsSet(TextEditMenu) && IsObject(TextEditMenu) && TextEditMenu.HasMethod("runify"))
-							row[e] := TextEditMenu.runify(row["Kayoogis"], "DE")
-						else row[e] := ""
-				}
-			}
+			if (e == "Runen" && this.config.autoTranslateRunic && IsSet(TextEditMenu) && IsObject(TextEditMenu))
+				row[e] := TextEditMenu.runify(row["Kayoogis"], "DE")
 			if (this.config.formatValues) {
 				switch e {
 					case "Wortart":
@@ -414,9 +413,8 @@ class TableFilter {
 		;// title bar dark
 		if (VerCompare(A_OSVersion, "10.0.17763")) {
 			attr := 19
-			if (VerCompare(A_OSVersion, "10.0.18985")) {
+			if (VerCompare(A_OSVersion, "10.0.18985"))
 				attr := 20
-			}
 			if (dark)
 				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", guiObj.hwnd, "int", attr, "int*", true, "int", 4)
 			else
@@ -439,6 +437,7 @@ class TableFilter {
 			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
 				this.validValueChecker(ctrl)
 			}
+			ctrl.Redraw()
 		}
 		if (guiObj.HasOwnProp("children"))
 			for i, g in guiObj.children
@@ -452,7 +451,7 @@ class TableFilter {
 			static WM_NOTIFY := 0x4E
 			static WM_THEMECHANGED := 0x031A
 			; prevent other changes to UI on darkmode
-			OnMessage(WM_THEMECHANGED, themechangeIntercept.bind(lv.hwnd))
+		;	OnMessage(WM_THEMECHANGED, themechangeIntercept.bind(lv.hwnd))
 			; header dark (CURRENTLY DOESN'T WORK)
 			lv.header := SendMessage(LVM_GETHEADER, 0, 0, lv.hwnd)
 			;	OnMessage(WM_NOTIFY, On_NM_CUSTOMDRAW.bind(lv)) ; header text white
@@ -551,7 +550,7 @@ class TableFilter {
 		}
 	}
 
-	createMenu() {
+	buildContextMenu() {
 		aMenu := Menu()
 		for i, c in TableFilter.wordCategories
 			aMenu.Add(c, this.cMenuHandler.bind(this, , , , 1))
@@ -562,7 +561,7 @@ class TableFilter {
 		tMenu := Menu()
 		tMenu.Add("[F2] 🖊️ Edit Selected Row", this.cMenuHandler.bind(this))
 		tMenu.Add("[Del] 🗑️ Delete Selected Row(s)", this.cMenuHandler.bind(this))
-		if (this.config.taggingColumn) {
+		if (objContainsValue(this.data.keys, this.config.taggingColumn)) {
 			tMenu.Add("➕ Add Category to Selected Row(s)", aMenu)
 			tMenu.Add("➖ Remove Category from Selected Row(s)", rMenu)
 		}
@@ -610,14 +609,19 @@ class TableFilter {
 		}
 		if (!rows.Length)
 			return
-		c := TableFilter.wordCategories
 		for i, index in rows {
 			row := this.data.data[index].Clone()
 			curCategories := row.Has(this.config.taggingColumn) ? row[this.config.taggingColumn] : ""
 			if (tagState)
 				curCategories .= "," tag
-			else
-				curCategories := (tag == "All" ? "" : StrReplace(curCategories, tag))
+			else {
+				if (tag == "All")
+					; why not just set as empty string? might contain other stuff (or unknown categories)
+					for i, tag in TableFilter.wordCategories
+						curCategories := StrReplace(curCategories, tag)
+				else
+					curCategories := StrReplace(curCategories, tag)
+			}
 			row[this.config.taggingColumn] := Trim(Sort(curCategories, "P3 U D,"), ", ")
 			this.editRow(index, row)
 		}
@@ -694,6 +698,7 @@ class TableFilter {
 		}
 		loadFile(filePath)
 		this.dataHandler("openFile", filePath)
+		this.menu := this.buildContextMenu()
 		; add option for tab controls here (aka supporting multiple files)
 
 		while (this.guis.Length > 0)
@@ -917,7 +922,7 @@ class TableFilter {
 				if (this.config.useConfig)
 					this.configManager("Save")
 			default:
-				throw (Error("Bad setting: " . option))
+				throw(Error("Bad setting: " . option))
 		}
 	}
 
@@ -925,11 +930,24 @@ class TableFilter {
 		switch ctrl.Name {
 			case "CBDebug":
 				this.config.debug := ctrl.Value
-				this.menu := this.createMenu()
+				this.menu := this.buildContextMenu()
+				for i, g in this.guis
+					g.LV.ModifyCol(this.data.keys.Length + 1, this.config.debug ? "100 Integer" : "0 Integer")
 			case "CBDarkMode":
 				this.config.darkMode := ctrl.Value
 				for _, g in this.guis
 					this.toggleGuiDarkMode(g, this.config.darkMode)
+			case "ButtonDarkColor":
+				color := colorDialog(this.config.darkThemeColor, ctrl.gui.hwnd, true)
+				if (color == -1)
+					return
+				this.config.darkThemeColor := Format("0x{1:06X}", color)
+				if (this.config.darkMode)
+					for _, g in this.guis
+						this.toggleGuiDarkMode(g, this.config.darkMode)
+				ctrl.Opt("+Background" this.config.darkThemeColor)
+				ctrl.SetFont(getBrightness(this.config.darkThemeColor) < 128 ? "c0xFFFFFF" : "cDefault")
+				ctrl.Text := Format("{1:06X}", this.config.darkThemeColor)
 			case "CBAutoSaving":
 				this.config.autoSaving := ctrl.Value
 			case "CBUseBackups":
@@ -962,6 +980,9 @@ class TableFilter {
 				this.config.copyColumn := ctrl.Value
 			case "DDLDuplicateColumn":
 				this.config.duplicateColumn := ctrl.Value
+			case "DDLTaggingColumn":
+				this.config.taggingColumn := ctrl.Text
+				this.menu := this.buildContextMenu()
 			default:
 				return
 				; throw (Error("This setting doesn't exist (yet): " . ctrl.Name))
@@ -981,32 +1002,40 @@ class TableFilter {
 		settingsGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 		settingsGui.AddText("Center Section", "Settings for YoutubeDL Gui")
 
-		settingsGui.AddCheckbox("vCBDebug Checked" this.config.debug, "Debugging mode").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("vCBDarkMode Checked" this.config.darkMode, "Dark mode").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("vCBAutoSaving Checked" this.config.autoSaving, "Autosave when exiting").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("vCBUseBackups Checked" this.config.useBackups, "Backup opened files regularly in %APPDATA%\Autohotkey\Tablefilter\Backups").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("vCBUseDefaultValues Checked" this.config.useDefaultValues, "Insert placeholder values into empty fields when editing rows").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("vCBAutoTranslateRunic Checked" this.config.autoTranslateRunic, "Automatically translate Kayoogis into runes").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("vCBFormatValues Checked" this.config.formatValues, "Format first row to uppercase").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("vCBFilterCaseSense Checked" this.config.filterCaseSense, "Case-sensitive search").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("xs vCBDebug Checked" this.config.debug, "Debugging mode").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("xs vCBDarkMode Checked" this.config.darkMode, "Dark mode").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddText("xs", "Dark mode color (VERY EXPERIMENTAL):")
+		settingsGui.buttonDarkColor := settingsGui.AddButton("xs+285 yp vButtonDarkColor w100 ReadOnly", Format("{1:06X}", this.config.darkThemeColor))
+		settingsGui.buttonDarkColor.OnEvent("Click", this.configGuiHandler.bind(this))
 		
-		settingsGui.AddCheckbox("vCBUseCustomDialogPath Checked" this.config.useCustomDialogPath, "Always open dialogs in given custom directory. Uses last used file otherwise.").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("xs vCBAutoSaving Checked" this.config.autoSaving, "Autosave when exiting").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("xs vCBUseBackups Checked" this.config.useBackups, "Backup opened files regularly in %APPDATA%\Autohotkey\Tablefilter\Backups").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("xs vCBUseDefaultValues Checked" this.config.useDefaultValues, "Insert placeholder values into empty fields when editing rows").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("xs vCBAutoTranslateRunic Checked" this.config.autoTranslateRunic, "Automatically translate Kayoogis into runes").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("xs vCBFormatValues Checked" this.config.formatValues, "Format first row to uppercase").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.AddCheckbox("xs vCBFilterCaseSense Checked" this.config.filterCaseSense, "Case-sensitive search").OnEvent("Click", this.configGuiHandler.bind(this))
+		
+		settingsGui.AddCheckbox("xs vCBUseCustomDialogPath Checked" this.config.useCustomDialogPath, "Always open dialogs in custom directory set below. Uses last used file otherwise.").OnEvent("Click", this.configGuiHandler.bind(this))
 
 		settingsGui.AddText("xs 0x200 R1.45", "Dialog Path:")
-		settingsGui.editDialogPath := settingsGui.AddEdit("xp+70 yp r1 w250 -Multi Readonly", this.config.customDialogPath)
-		settingsGui.AddButton("vButtonDialogPath yp-1 xp+255", "Browse...").OnEvent("Click", this.configGuiHandler.bind(this))
+		settingsGui.editDialogPath := settingsGui.AddEdit("xs+70 yp r1 w250 -Multi Readonly", this.config.customDialogPath)
+		settingsGui.AddButton("vButtonDialogPath yp-1 xs+325 w60", "Browse...").OnEvent("Click", this.configGuiHandler.bind(this))
 
 		settingsGui.AddText("xs 0x200 R1.45", "Column to search duplicates in:")
-		settingsGui.dropdownDuplicateColumn := settingsGui.AddDropDownList("vDDLDuplicateColumn xp+195 yp r7 w125 Choose" . this.config.duplicateColumn, this.data.keys)
+		settingsGui.dropdownDuplicateColumn := settingsGui.AddDropDownList("vDDLDuplicateColumn xs+260 yp r7 w125 Choose" . this.config.duplicateColumn, this.data.keys)
 		settingsGui.dropdownDuplicateColumn.OnEvent("Change", this.configGuiHandler.bind(this))
 
+		settingsGui.AddText("xs 0x200 R1.45", "Column to `"tag`" from context menu:")
+		settingsGui.dropdownTaggingColumn := settingsGui.AddDropDownList("vDDLTaggingColumn xs+260 yp r7 w125 Choose" . objContainsValue(this.data.keys, this.config.taggingColumn), this.data.keys)
+		settingsGui.dropdownTaggingColumn.OnEvent("Change", this.configGuiHandler.bind(this))
+		
 		settingsGui.AddText("xs 0x200 R1.45", "Column to copy when pressing Ctrl+C:")
-		settingsGui.dropdownCopyColumn := settingsGui.AddDropDownList("vDDLCopyColumn xp+195 yp r7 w125 Choose" . this.config.copyColumn, this.data.keys)
+		settingsGui.dropdownCopyColumn := settingsGui.AddDropDownList("vDDLCopyColumn xs+260 yp r7 w125 Choose" . this.config.copyColumn, this.data.keys)
 		settingsGui.dropdownCopyColumn.OnEvent("Change", this.configGuiHandler.bind(this))
 		settingsGui.AddText("xs 0x200 R1.45", "(Press Ctrl+Shift+C to copy all contents of the selected row)")
 		
 		settingsGui.AddButton("xs", "Reset Settings").OnEvent("Click", resetSettings)
-		settingsGui.AddButton("xs+259 yp w125", "Open Backup Folder").OnEvent("Click", (*) => Run('explorer.exe "' this.data.appdataPath "\Backups" '"'))
+		settingsGui.AddButton("xs+260 yp w125", "Open Backup Folder").OnEvent("Click", (*) => Run('explorer.exe "' this.data.appdataPath "\Backups" '"'))
 		if (!guiObj.HasOwnProp("children"))
 			guiObj.children := []
 		guiObj.children.push(settingsGui)
@@ -1048,7 +1077,7 @@ class TableFilter {
 		}
 	}
 
-	configManager(mode := "Save", reset := false) {
+	configManager(mode := "Save") {
 		mode := Substr(mode, 1, 1)
 		if (!Instr(FileExist(this.data.appdataPath), "D"))
 			DirCreate(this.data.appdataPath)
@@ -1061,9 +1090,8 @@ class TableFilter {
 		}
 		else if (mode == "L") {
 			this.config := {}, config := Map()
-			if (FileExist(configPath) && !reset) {
+			if (FileExist(configPath))
 				try config := jsongo.Parse(FileRead(configPath, "UTF-8"))
-			}
 			; remove unused config values
 			for i, e in config
 				if (TableFilter.defaultConfig.HasOwnProp(i))
@@ -1077,30 +1105,26 @@ class TableFilter {
 		return 0
 	}
 
-	;// GUI functions
-
 	exit(exitReason, exitCode, *) {
-		if (exitReason == "Logoff" || exitReason == "Shutdown") {
-			if (!this.data.isSaved) {
-				if (this.config.autoSaving)
+		if ((exitReason == "Logoff" || exitReason == "Shutdown") && !this.data.isSaved) {
+			if (this.config.autoSaving)
+				this.saveFile(this.data.openFile, false)
+			else {
+				res := MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes and shutdown?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
+				if (res == "Cancel")
+					return 1
+				if (res == "No")
+					return 0
+				if (res == "Yes")
 					this.saveFile(this.data.openFile, false)
-				else {
-					res := MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes and shutdown?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
-					if (res == "Cancel")
-						return 1
-					else if (res == "No")
-						return 0
-					else if (res == "Yes") {
-						this.saveFile(this.data.openFile, false)
-					}
-				}
 			}
 		}
 	}
 
+	; ALL OF THESE CAN BE CHANGED THROUGH THE SETTINGS GUI. DO NOT EDIT HERE.
 	static defaultConfig => {
 		debug: false, ; whether to enable various debugging options
-		useConfig: true, ; whether to load the config. do not edit this
+		useConfig: true, ; whether to load the config. do not edit this, it will disable settings from saving
 		darkMode: true, ; enable dark mode
 		darkThemeColor: "0x1E1E1E", ; dark mode color
 		autoSaving: false, ; whether to automatically save without dialog when closing/exiting
@@ -1154,6 +1178,7 @@ class TableFilter {
 		" ", "_x0020_"
 	)
 
+	; simply edit categories here. note that the config to tag columns has to be enabled for this to work.
 	static wordCategories => [
 		"👨‍👩‍👧 Familie",
 		"🖌️ Farbe",
@@ -1171,11 +1196,13 @@ class TableFilter {
 		"🔢 Zahl"
 	]
 
+	; note that these only apply to columns with the specified names in the left. to add other columns, add their names here.
+	; yes, not using column IDs / numbers is intentional.
 	static entryPlaceholderValues => Map(
 		"Wortart", "?",
 		"Deutsch", "-",
 		"Kayoogis", "-",
-		"Runen", "-", ; this is technically a placeholder placeholder value
+		"Runen", "-",
 		"Tema'i", 0
 	)
 
