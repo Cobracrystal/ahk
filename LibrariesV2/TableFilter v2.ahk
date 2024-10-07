@@ -2,18 +2,12 @@
 todo
 - on gui without loaded files, have menubar showing last used files
 - settings window
-	- delete / restore backups, move open backup folder option there
-	- font color, background color (specifically: check docs>gui>setfont note at bottom, https://github.com/majkinetor/mm-autohotkey/tree/master/Dlg)
-	- CENTER settings window on main window (also do this for the other GUIs with settings)
+	- delete / restore backups
 - autohdr should have max. also always use max width of lv
-- listview headers dark (aka font white)
 - instead of only loading, allow for creation of new empty table (-> specify columns and that's it. it should also remove defaultvalues and translate etc)
 ; missing settings:
 ; hotkey
 guiHotkey ;  hotkey to open GUI (always)
-; color select
-darkThemeColor ;  Dark Mode Color
--> color selector needs to autodetermine brightness and set darkmode value correspondingly
 
 anti-todo-list
 fix window title bar not changing instantly when toggling darkmode. just click tab to another window and back to change.
@@ -130,7 +124,7 @@ class TableFilter {
 			guiObj.AddButton("x125 y100 w250 h200 Default", "Load File").OnEvent("Click", this.loadData.bind(this, ""))
 			showString := "Center w500 h400"
 		}
-		this.toggleGuiDarkMode(guiObj, this.config.darkMode)
+		this.applyColorScheme(guiObj)
 		this.guis.push(guiObj)
 		guiObj.Show(showString)
 	}
@@ -291,7 +285,7 @@ class TableFilter {
 		editorGui.AddButton("Default ys+15 xs+" 10 + 95 * this.data.keys.Length " h40 w65", "Save Row").OnEvent("Click", editRowGuiFinish.bind(this))
 		editorGui.parent := editorGuiObj
 		editorGuiObj.GetPos(&gx, &gy, &gw, &gh)
-		this.toggleGuiDarkMode(editorGui, this.config.darkMode)
+		this.applyColorScheme(editorGui)
 		editorGui.Show(Format("x{1}y{2} Autosize", gx + (gw-111-95*this.data.keys.Length)//2, gy + (gh-83)//2))
 		return
 
@@ -389,7 +383,8 @@ class TableFilter {
 
 
 	validValueChecker(ctrlObj, *) {
-		newFont := (this.config.darkMode ? "c0xFFFFFF Norm" : "cDefault Norm")
+		color := this.config.colorTheme ? this.config.colorTheme == 2 ? this.config.customThemeColor : TableFilter.darkModeColor : 0xFFFFFF
+		newFont := (isDark(color) ? "c0xFFFFFF" : "c0x000000") . " Norm"
 		switch this.data.keys[Integer(SubStr(ctrlObj.Name, -1))] {
 			case "Wortart":
 				if (!RegexMatch(ctrlObj.Value, "i)^[?nvaspg]?$"))
@@ -409,43 +404,51 @@ class TableFilter {
 		ctrlObj.SetFont(newFont)
 	}
 
-	toggleGuiDarkMode(guiObj, dark) {
+	applyColorScheme(guiObj) {
+		color := this.config.colorTheme ? this.config.colorTheme == 2 ? this.config.customThemeColor : TableFilter.darkModeColor : "0xFFFFFF"
+		dark := isDark(color)
+		fontColor := dark ? "0xFFFFFF" : "0x000000"
+		this.toggleGuiColorScheme(guiObj, dark, color, fontColor)
+		if (guiObj.HasOwnProp("children"))
+			for i, g in guiObj.children
+				if (g is Gui)
+					this.applyColorScheme(g)
+		if (guiObj.HasOwnProp("editCustomThemeColor")) {
+			ctrl := guiObj.editCustomThemeColor
+			ctrl.Opt("+Background" this.config.customThemeColor)
+			ctrl.SetFont(isDark(this.config.customThemeColor) ? "c0xFFFFFF" : "c0x000000")
+		}
+	}
+
+	toggleGuiColorScheme(guiObj, dark, color, fontColor) {
 		;// title bar dark
 		if (VerCompare(A_OSVersion, "10.0.17763")) {
 			attr := 19
 			if (VerCompare(A_OSVersion, "10.0.18985"))
 				attr := 20
-			if (dark)
-				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", guiObj.hwnd, "int", attr, "int*", true, "int", 4)
-			else
-				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", guiObj.hwnd, "int", attr, "int*", false, "int", 4)
+			DllCall("dwmapi\DwmSetWindowAttribute", "ptr", guiObj.hwnd, "int", attr, "int*", (dark ? true : false), "int", 4)
 		}
-		guiObj.BackColor := (dark ? this.config.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
-		font := (dark ? "c0xFFFFFF" : "cDefault")
+		guiObj.BackColor := color
+		font := "c" . fontColor
 		guiObj.SetFont(font)
 		for cHandle, ctrl in guiObj {
-			ctrl.Opt(dark ? "+Background" this.config.darkThemeColor : "-Background")
+			ctrl.Opt("+Background" color)
 			ctrl.SetFont(font)
 			if (ctrl is Gui.Button)
 				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
 			if (ctrl is Gui.ListView) {
-				listviewDarkmode(ctrl, dark)
+				listviewDarkmode(ctrl, dark, color, fontColor)
 				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
 				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
 				; full customization control: https://www.autohotkey.com/boards/viewtopic.php?t=115952
 			}
-			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
+			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow")
 				this.validValueChecker(ctrl)
-			}
 			ctrl.Redraw()
 		}
-		if (guiObj.HasOwnProp("children"))
-			for i, g in guiObj.children
-				if (g is Gui)
-					this.toggleGuiDarkMode(g, dark)
 		return
 
-		listviewDarkmode(lv, dark) {
+		listviewDarkmode(lv, dark, color, fontColor) {
 			static LVM_GETHEADER := 0x101F
 			static LVS_EX_DOUBLEBUFFER := 0x10000
 			static WM_NOTIFY := 0x4E
@@ -933,21 +936,23 @@ class TableFilter {
 				this.menu := this.buildContextMenu()
 				for i, g in this.guis
 					g.LV.ModifyCol(this.data.keys.Length + 1, this.config.debug ? "100 Integer" : "0 Integer")
-			case "CBDarkMode":
-				this.config.darkMode := ctrl.Value
-				for _, g in this.guis
-					this.toggleGuiDarkMode(g, this.config.darkMode)
-			case "ButtonDarkColor":
-				color := colorDialog(this.config.darkThemeColor, ctrl.gui.hwnd, true)
+			case "DDLColorTheme":
+				this.config.colorTheme := ctrl.Value - 1 ; ctrl is 1, 2, 3, we want 0, 1, 2
+				for i, g in this.guis
+					this.applyColorScheme(g)
+			case "EditCustomThemeColor":
+				color := colorDialog(this.config.customThemeColor, ctrl.gui.hwnd, true)
 				if (color == -1)
 					return
-				this.config.darkThemeColor := Format("0x{1:06X}", color)
-				if (this.config.darkMode)
-					for _, g in this.guis
-						this.toggleGuiDarkMode(g, this.config.darkMode)
-				ctrl.Opt("+Background" this.config.darkThemeColor)
-				ctrl.SetFont(getBrightness(this.config.darkThemeColor) < 128 ? "c0xFFFFFF" : "cDefault")
-				ctrl.Text := Format("{1:06X}", this.config.darkThemeColor)
+				this.config.customThemeColor := Format("0x{1:06X}", color)
+				ctrl.Text := Format("{1:06X}", this.config.customThemeColor)
+				if (this.config.colorTheme == 2) {
+					for i, g in this.guis
+						this.applyColorScheme(g)
+				} else {
+					ctrl.Opt("+Background" this.config.customThemeColor)
+					ctrl.SetFont(isDark(this.config.customThemeColor) ? "c0xFFFFFF" : "c0x000000")
+				}
 			case "CBAutoSaving":
 				this.config.autoSaving := ctrl.Value
 			case "CBUseBackups":
@@ -1003,10 +1008,13 @@ class TableFilter {
 		settingsGui.AddText("Center Section", "Settings for YoutubeDL Gui")
 
 		settingsGui.AddCheckbox("xs vCBDebug Checked" this.config.debug, "Debugging mode").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddCheckbox("xs vCBDarkMode Checked" this.config.darkMode, "Dark mode").OnEvent("Click", this.configGuiHandler.bind(this))
-		settingsGui.AddText("xs", "Dark mode color (VERY EXPERIMENTAL):")
-		settingsGui.buttonDarkColor := settingsGui.AddButton("xs+285 yp vButtonDarkColor w100 ReadOnly", Format("{1:06X}", this.config.darkThemeColor))
-		settingsGui.buttonDarkColor.OnEvent("Click", this.configGuiHandler.bind(this))
+		
+		settingsGui.AddText("xs 0x200 R1.45", "GUI Color Theme:")
+		settingsGui.AddDropDownList("vDDLColorTheme xs+260 yp r7 w125 Choose" . this.config.colorTheme + 1, ["Light Theme", "Dark Theme", "Custom Theme"]).OnEvent("Change", this.configGuiHandler.bind(this))
+		
+		settingsGui.AddText("xs", "Custom theme color (VERY EXPERIMENTAL):")
+		settingsGui.editCustomThemeColor := settingsGui.AddEdit("xs+285 yp vEditCustomThemeColor w100 ReadOnly", Format("{1:06X}", this.config.customThemeColor))
+		settingsGui.editCustomThemeColor.OnEvent("Focus", this.configGuiHandler.bind(this))
 		
 		settingsGui.AddCheckbox("xs vCBAutoSaving Checked" this.config.autoSaving, "Autosave when exiting").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBUseBackups Checked" this.config.useBackups, "Backup opened files regularly in %APPDATA%\Autohotkey\Tablefilter\Backups").OnEvent("Click", this.configGuiHandler.bind(this))
@@ -1022,16 +1030,13 @@ class TableFilter {
 		settingsGui.AddButton("vButtonDialogPath yp-1 xs+325 w60", "Browse...").OnEvent("Click", this.configGuiHandler.bind(this))
 
 		settingsGui.AddText("xs 0x200 R1.45", "Column to search duplicates in:")
-		settingsGui.dropdownDuplicateColumn := settingsGui.AddDropDownList("vDDLDuplicateColumn xs+260 yp r7 w125 Choose" . this.config.duplicateColumn, this.data.keys)
-		settingsGui.dropdownDuplicateColumn.OnEvent("Change", this.configGuiHandler.bind(this))
-
+		settingsGui.dropdownDuplicateColumn := settingsGui.AddDropDownList("vDDLDuplicateColumn xs+260 yp r7 w125 Choose" . this.config.duplicateColumn, this.data.keys).OnEvent("Change", this.configGuiHandler.bind(this))
+		
 		settingsGui.AddText("xs 0x200 R1.45", "Column to `"tag`" from context menu:")
-		settingsGui.dropdownTaggingColumn := settingsGui.AddDropDownList("vDDLTaggingColumn xs+260 yp r7 w125 Choose" . objContainsValue(this.data.keys, this.config.taggingColumn), this.data.keys)
-		settingsGui.dropdownTaggingColumn.OnEvent("Change", this.configGuiHandler.bind(this))
+		settingsGui.AddDropDownList("vDDLTaggingColumn xs+260 yp r7 w125 Choose" . objContainsValue(this.data.keys, this.config.taggingColumn), this.data.keys).OnEvent("Change", this.configGuiHandler.bind(this))
 		
 		settingsGui.AddText("xs 0x200 R1.45", "Column to copy when pressing Ctrl+C:")
-		settingsGui.dropdownCopyColumn := settingsGui.AddDropDownList("vDDLCopyColumn xs+260 yp r7 w125 Choose" . this.config.copyColumn, this.data.keys)
-		settingsGui.dropdownCopyColumn.OnEvent("Change", this.configGuiHandler.bind(this))
+		settingsGui.AddDropDownList("vDDLCopyColumn xs+260 yp r7 w125 Choose" . this.config.copyColumn, this.data.keys).OnEvent("Change", this.configGuiHandler.bind(this))
 		settingsGui.AddText("xs 0x200 R1.45", "(Press Ctrl+Shift+C to copy all contents of the selected row)")
 		
 		settingsGui.AddButton("xs", "Reset Settings").OnEvent("Click", resetSettings)
@@ -1041,7 +1046,7 @@ class TableFilter {
 		guiObj.children.push(settingsGui)
 		settingsGui.parent := guiObj
 		guiObj.GetPos(&gx, &gy)
-		this.toggleGuiDarkMode(settingsGui, this.config.darkMode)
+		this.applyColorScheme(settingsGui)
 		settingsGui.Show(Format("x{1}y{2} Autosize", gx + 100, gy + 60))
 		return
 
@@ -1058,7 +1063,7 @@ class TableFilter {
 			settingsGUIClose(guiCtrl.Gui)
 			this.createSettingsGui(parent)
 			for i, g in this.guis {
-				this.toggleGuiDarkMode(g, this.config.darkMode)
+				this.applyColorScheme(g)
 				g.CBDuplicates.Value := 0
 				this.clearSearchBoxes(g)
 				this.createFilteredList(g)
@@ -1125,8 +1130,8 @@ class TableFilter {
 	static defaultConfig => {
 		debug: false, ; whether to enable various debugging options
 		useConfig: true, ; whether to load the config. do not edit this, it will disable settings from saving
-		darkMode: true, ; enable dark mode
-		darkThemeColor: "0x1E1E1E", ; dark mode color
+		colorTheme: 1, ; 0 = white, 1 = dark, 2 = custom
+		customThemeColor: "0x1E1E1E", ; custom Theme Color, set to dark mode by default
 		autoSaving: false, ; whether to automatically save without dialog when closing/exiting
 		useBackups: true, ; whether to automatically backup the open file, in conjunction with next two
 		backupAmount: 4, ; amount of files to be kept
@@ -1207,4 +1212,5 @@ class TableFilter {
 	)
 
 	static appdataPath => A_AppData "\Autohotkey\Tablefilter"
+	static darkModeColor => "0x1E1E1E"
 }
