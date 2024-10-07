@@ -132,7 +132,7 @@ class TransparentTaskbar {
 			this.transparentTaskbar(0)
 			this.init := 0
 			if (A_TickCount - lastError < 5500)
-				MsgBox("Error: " e.Message " in " e.What "`nTaskbar Transparency has been turned off.")
+				MsgBox("Error: " e.Message " in " e.What "`nTaskbar Transparency has been turned off.`nDebug Information:`nFile: " e.File "`nLine: " e.Line "`nExtra: " e.Extra "`nStack: " e.Stack)
 			else
 				SetTimer(() => (this.transparentTaskbar(1)), -5000)
 			lastError := A_TickCount
