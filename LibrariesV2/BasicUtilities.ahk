@@ -806,6 +806,10 @@ getBrightness(color) {
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
+isDark(color) {
+	return getBrightness(color) < 128
+}
+
 /**
  * given color in (A)RGB/(A)BGR format, reverse formats and add or remove alpha value. set alpha to -1 to remove
  * @param {Integer} clr 
