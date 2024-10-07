@@ -89,7 +89,7 @@ modifySelectedText(method, params*) {
  */
 objCountValue(obj, value) {
 	if !(obj is Array || obj is Map)
-		throw(Error("objCountValue does not handle type " . Type(obj)))
+		throw (Error("objCountValue does not handle type " . Type(obj)))
 	count := 0
 	for i, e in obj
 		if (e = value)
@@ -99,7 +99,7 @@ objCountValue(obj, value) {
 
 objContainsValue(obj, value) {
 	if !(obj is Array || obj is Map)
-		throw(Error("objContains does not handle type " . Type(obj)))
+		throw (Error("objContains does not handle type " . Type(obj)))
 	for i, e in obj
 		if (e = value)
 			return i
@@ -115,7 +115,7 @@ objContainsValue(obj, value) {
  */
 objRemoveValue(obj, value, removeAll := true) {
 	if !(obj is Array || obj is Map)
-		throw(Error("objRemoveValue does not handle type " . Type(obj)))
+		throw (Error("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
 	for next, e in obj
 		if (e = value)
@@ -125,7 +125,7 @@ objRemoveValue(obj, value, removeAll := true) {
 		next := queue.Pop()
 		if (obj is Array)
 			obj.RemoveAt(next)
-		else 
+		else
 			obj.Delete(next)
 	}
 	return n
@@ -142,8 +142,8 @@ sortArray(arr, mode := "") {
 	arr2 := []
 	for i, e in arr
 		str .= e . "`n"
-	Sort(str, mode)
-	Loop Parse, str, "`n" {
+	sortedStr := Sort(str, mode)
+	Loop Parse, sortedStr, "`n" {
 		if (A_LoopField == "")
 			continue
 		arr2.push(A_LoopField)
@@ -155,22 +155,22 @@ sortArray(arr, mode := "") {
 ; requires all contents of mapInner[key] to be of the same type (number or string)
 sortObjectByKey(tmap, key, mode := "") {
 	isArr := tMap is Array
-	isMap := tMap is Map 
+	isMap := tMap is Map
 	if !(tmap is Object)
-		throw(ValueError("Expected Object, but got " tmap.Prototype.Name))
+		throw (ValueError("Expected Object, but got " tmap.Prototype.Name))
 	isObj := !(isArr || isMap)
 	arr2 := Map()
 	arr3 := []
 	l := isArr ? tmap.Length : isMap ? tmap.Count : ObjOwnPropCount(tmap)
 	for i, e in (isObj ? tmap.OwnProps() : tmap) {
-		if (!IsSet(innerIsObj)) 
+		if (!IsSet(innerIsObj))
 			innerIsObj := !(e is Map || e is Array)
 		tv := innerIsObj ? e.%key% : e[key]
 		if (!IsSet(isString))
 			isString := (tv is String)
 		if (arr2.Has(tv))
 			arr2[tv].push(i)
-		else 
+		else
 			arr2[tv] := [i]
 		str .= tv . "`n"
 	}
@@ -178,12 +178,12 @@ sortObjectByKey(tmap, key, mode := "") {
 	strArr := StrSplit(newStr, "`n")
 	strArr.Pop()
 	counter := 1
-	Loop(strArr.Length) {
+	Loop (strArr.Length) {
 		if (counter > strArr.Length)
 			break
 		el := isString ? strArr[counter] . "" : Number(strArr[counter])
 		for j, f in arr2[el] {
-			arr3.push({index:f, value: isObj ? tmap.%f% : tmap[f]})
+			arr3.push({ index: f, value: isObj ? tmap.%f% : tmap[f] })
 		}
 		counter += arr2[el].Length
 	}
@@ -214,7 +214,7 @@ StrSplitUTF8(str, delim := "", omit := "") {
 		}
 		if (StrLen(A_LoopField) == 1 && Ord(A_LoopField) > 0xD7FF && Ord(A_LoopField) < 0xDC00) {
 			skip := true
-			arr.push(A_Loopfield . SubStr(str, count+1, 1))
+			arr.push(A_Loopfield . SubStr(str, count + 1, 1))
 			count += 2
 			continue
 		}
@@ -226,10 +226,10 @@ StrSplitUTF8(str, delim := "", omit := "") {
 
 ; only works in 2.0.9
 BoundFnName(Obj) {
-    Address := ObjPtr(Obj)
-    n := NumGet(Address, 5 * A_PtrSize + 16, "Ptr")
-    Obj := ObjFromPtrAddRef(n)
-    return Obj.Name
+	Address := ObjPtr(Obj)
+	n := NumGet(Address, 5 * A_PtrSize + 16, "Ptr")
+	Obj := ObjFromPtrAddRef(n)
+	return Obj.Name
 }
 
 replaceCharacters(text, alphMap) {
@@ -281,7 +281,7 @@ recursiveReplaceMap(string, from, to) {
  */
 mapFromArrays(keyArray, valueArray) {
 	if (keyArray.Length != valueArray.Length || !(keyArray is Array) || !(valueArray is Array))
-		throw(Error("Expected Arrays of equal Length, got " Type(keyArray) ", " Type(valueArray)))
+		throw (Error("Expected Arrays of equal Length, got " Type(keyArray) ", " Type(valueArray)))
 	newMap := Map()
 	for i, e in keyArray
 		newMap[e] := valueArray[i]
@@ -295,7 +295,7 @@ mapFromArrays(keyArray, valueArray) {
  */
 mapToArrays(mapObject) {
 	if !(mapObject is Map)
-		throw(TypeError("Expected Map, got " Type(mapObject)))
+		throw (TypeError("Expected Map, got " Type(mapObject)))
 	arr1 := []
 	arr2 := []
 	for i, e in mapObject {
@@ -373,24 +373,24 @@ DateAddW(dateTime, value, timeUnit) {
 		case "Seconds", "S", "Minutes", "M", "Hours", "H", "Days", "D":
 			return DateAdd(dateTime, value, timeUnit)
 		case "Weeks", "W":
-			return DateAdd(dateTime, value*7, "D")
+			return DateAdd(dateTime, value * 7, "D")
 		case "Years", "Y":
-			newTime := (SubStr(dateTime, 1, 4)+value) . SubStr(dateTime, 5)
+			newTime := (SubStr(dateTime, 1, 4) + value) . SubStr(dateTime, 5)
 			if !IsTime(newTime) ; leap day
 				newTime := SubStr(newTime, 1, 4) . SubStr(DateAdd(dateTime, 1, "D"), 5)
 			return newTime
 		case "Months", "Mo":
 			month := Format("{:02}", Mod(SubStr(dateTime, 5, 2) + value - 1, 12) + 1)
-			year := SubStr(dateTime, 1, 4) + (SubStr(dateTime, 5, 2) + value - 1)//12
+			year := SubStr(dateTime, 1, 4) + (SubStr(dateTime, 5, 2) + value - 1) // 12
 			nextMonth := Format("{:02}", Mod(month, 12) + 1)
-			nextYear := year + month//12 ; technically unnecessary since when the fuck do we have an invalid december date
+			nextYear := year + month // 12 ; technically unnecessary since when the fuck do we have an invalid december date
 			rolledOverDays := Format("{:02}", SubStr(dateTime, 7, 2) - DateDiff(nextYear . nextMonth, year . month, "D"))
 			if (rolledOverDays > 0)
 				return nextYear . nextMonth . rolledOverDays . SubStr(dateTime, 9)
 			else
 				return year . month . SubStr(dateTime, 7)
 		default:
-			throw(Error("Invalid Time Unit: " timeUnit))
+			throw (Error("Invalid Time Unit: " timeUnit))
 	}
 }
 /*
@@ -422,9 +422,9 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				if (!IsSet(years) && IsSet(months) && months == 2 && IsSet(days) && days == 29) ; correct leap year
 					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
 				else if (!IsSet(months) && days > 29) ; correct possible month error. no need for mod, since dec has 31 days
-					tStamp := SubStr(tStamp 1, 4) . tf(A_MM+1) . SubStr(tStamp, 7)
+					tStamp := SubStr(tStamp 1, 4) . tf(A_MM + 1) . SubStr(tStamp, 7)
 				if (!IsTime(tStamp))
-					throw(ValueError("Invalid date specified."))
+					throw (ValueError("Invalid date specified."))
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
@@ -434,7 +434,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 			return 0 ; a year in the past will never occur again
 		case 2:
 			if (tf(months) == A_MM && data[2]) {
-				tStamp := parseTime(,, days?, hours?, minutes?, seconds?)
+				tStamp := parseTime(, , days?, hours?, minutes?, seconds?)
 				return SubStr(tStamp, 5, 2) == tf(months) ? tStamp : DateAddW(tStamp, 1, "Y")
 			}
 			tStamp := A_YYYY tf(months) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
@@ -442,7 +442,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				if (tf(months) == "02" && IsSet(days) && days == 29) ; leap year
 					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
 				if (!IsTime(tStamp))
-					throw(ValueError("Invalid date specified."))
+					throw (ValueError("Invalid date specified."))
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
@@ -451,7 +451,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 			return DateAddW(tStamp, 1, "Y")
 		case 3:
 			if (tf(days) == A_DD && data[2]) {
-				tStamp := parseTime(,,, hours?, minutes?, seconds?)
+				tStamp := parseTime(, , , hours?, minutes?, seconds?)
 				return (SubStr(tStamp, 7, 2) == tf(days)) ? tStamp : DateAddW(tStamp, 1, "Mo")
 			}
 			tStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
@@ -459,36 +459,36 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				if (A_MM == 02 && days == 29) ; leap year
 					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
 				else if (days > 29) ; correct possible month error. no need for mod, since dec has 31 days
-					tStamp := SubStr(tStamp 1, 4) . tf(A_MM+1) . SubStr(tStamp, 7)
+					tStamp := SubStr(tStamp 1, 4) . tf(A_MM + 1) . SubStr(tStamp, 7)
 				if (!IsTime(tStamp))
-					throw(ValueError("Invalid date specified."))
+					throw (ValueError("Invalid date specified."))
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
 			if (data[3] < 6)
-				return parseTime(,, days, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
+				return parseTime(, , days, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "Mo")
 		case 4:
 			if (tf(hours) == A_Hour && data[2]) {
-				tStamp := parseTime(,,,, minutes?, seconds?)
+				tStamp := parseTime(, , , , minutes?, seconds?)
 				return (SubStr(tStamp, 9, 2) == tf(hours)) ? tStamp : DateAddW(tStamp, 1, "D")
 			}
 			tStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
 			if (data[3] < 6)
-				return parseTime(,,, hours, minutes ?? A_Min, seconds ?? A_Sec)
+				return parseTime(, , , hours, minutes ?? A_Min, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "D")
 		case 5:
 			if (tf(minutes) == A_Min) {
-				tStamp := parseTime(,,,,, seconds?)
-					return SubStr(tStamp, 11, 2) == tf(minutes) ? tStamp : 0
+				tStamp := parseTime(, , , , , seconds?)
+				return SubStr(tStamp, 11, 2) == tf(minutes) ? tStamp : 0
 			}
 			tStamp := SubStr(Now, 1, 10) . tf(minutes) . tf(seconds ?? 0)
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
 			if (data[3] < 6)
-				return parseTime(,,,, minutes, seconds ?? A_Sec)
+				return parseTime(, , , , minutes, seconds ?? A_Sec)
 			return DateAddW(tStamp, 1, "H")
 		case 6:
 			tStamp := SubStr(Now, 1, 12) . tf(seconds)
@@ -500,12 +500,12 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 
 	; returns first given var, last given var before the first gap and whether there is a gap at all.
 	gap(y?, mo?, d?, h?, m?, s?) {
-		mapA := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?),	first := 0, last := 0
+		mapA := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?), first := 0, last := 0
 		for i, e in mapA {
 			if (A_Index == 1)
 				first := i
 			last := i
-			if (first+A_Index-1 != i)
+			if (first + A_Index - 1 != i)
 				return [first, true, last]
 		}
 		return [first, false, last]
@@ -513,21 +513,21 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 }
 
 enumerateDay(day) {
-	d := Substr(day,1,2)
+	d := Substr(day, 1, 2)
 	switch d {
 		case "mo":
 			day := 2
-		case "di","tu":
+		case "di", "tu":
 			day := 3
-		case "mi","we":
+		case "mi", "we":
 			day := 4
-		case "do","th":
+		case "do", "th":
 			day := 5
 		case "fr":
 			day := 6
 		case "sa":
 			day := 7
-		case "so","su":
+		case "so", "su":
 			day := 1
 		default:
 			return -1
@@ -543,7 +543,7 @@ ExecScript(expression, Wait := true) {
 		input .= RegexReplace(expression, "print\((.*)?\)", 'FileAppend($1, "*")')
 	else
 		input .= 'FileAppend(' . expression . ', "*")'
-	shell := ComObject("WScript.Shell") 
+	shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
 	exec.StdIn.Write(input)
 	exec.StdIn.Close()
@@ -553,23 +553,23 @@ ExecScript(expression, Wait := true) {
 
 cmdRet(sCmd, callBackFuncObj := "", encoding := '') {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
-	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100
-    if (encoding == '')
+	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100, ptrsize := A_PtrSize
+	if (encoding == '')
 		encoding := "CP" . DllCall('GetOEMCP', 'UInt')
 	DllCall("CreatePipe", "PtrP", &hPipeRead := 0, "PtrP", &hPipeWrite := 0, "Ptr", 0, "UInt", 0)
 	DllCall("SetHandleInformation", "Ptr", hPipeWrite, "UInt", HANDLE_FLAG_INHERIT, "UInt", HANDLE_FLAG_INHERIT)
 
-	STARTUPINFO := Buffer(size := A_PtrSize * 4 + 4 * 8 + A_PtrSize * 5, 0)
+	STARTUPINFO := Buffer(size := ptrsize * 4 + 4 * 8 + ptrsize * 5, 0)
 	NumPut("UInt", size, STARTUPINFO)
-	NumPut("UInt", STARTF_USESTDHANDLES, STARTUPINFO, A_PtrSize * 4 + 4 * 7)
-	NumPut("Ptr", hPipeWrite, "Ptr", hPipeWrite, STARTUPINFO, A_PtrSize * 4 + 4 * 8 + A_PtrSize * 3)
+	NumPut("UInt", STARTF_USESTDHANDLES, STARTUPINFO, ptrsize * 4 + 4 * 7)
+	NumPut("Ptr", hPipeWrite, "Ptr", hPipeWrite, STARTUPINFO, ptrsize * 4 + 4 * 8 + ptrsize * 3)
 
-	PROCESS_INFORMATION := Buffer(A_PtrSize * 2 + 4 * 2, 0)
+	PROCESS_INFORMATION := Buffer(ptrsize * 2 + 4 * 2, 0)
 	if !DllCall("CreateProcess", "Ptr", 0, "Str", sCmd, "Ptr", 0, "Ptr", 0, "UInt", true, "UInt", CREATE_NO_WINDOW,
 		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		DllCall("CloseHandle", "Ptr", hPipeWrite)
-		throw(OSError("CreateProcess has failed"))
+		throw (OSError("CreateProcess has failed"))
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
@@ -579,30 +579,30 @@ cmdRet(sCmd, callBackFuncObj := "", encoding := '') {
 			callBackFuncObj(stdOut)
 	}
 	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, "Ptr"))
-	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, A_PtrSize, "Ptr"))
+	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, ptrsize, "Ptr"))
 	DllCall("CloseHandle", "Ptr", hPipeRead)
 	return sOutput
 }
 
 cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finishCallBackFuncObj := "", encoding := '') {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
-	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100
-    if (encoding == '')
+	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100, ptrsize := A_PtrSize
+	if (encoding == '')
 		encoding := "CP" . DllCall('GetOEMCP', 'UInt')
 	DllCall("CreatePipe", "PtrP", &hPipeRead := 0, "PtrP", &hPipeWrite := 0, "Ptr", 0, "UInt", 0)
 	DllCall("SetHandleInformation", "Ptr", hPipeWrite, "UInt", HANDLE_FLAG_INHERIT, "UInt", HANDLE_FLAG_INHERIT)
 
-	STARTUPINFO := Buffer(size := A_PtrSize * 4 + 4 * 8 + A_PtrSize * 5, 0)
+	STARTUPINFO := Buffer(size := ptrsize * 4 + 4 * 8 + ptrsize * 5, 0)
 	NumPut("UInt", size, STARTUPINFO)
-	NumPut("UInt", STARTF_USESTDHANDLES, STARTUPINFO, A_PtrSize * 4 + 4 * 7)
-	NumPut("Ptr", hPipeWrite, "Ptr", hPipeWrite, STARTUPINFO, A_PtrSize * 4 + 4 * 8 + A_PtrSize * 3)
+	NumPut("UInt", STARTF_USESTDHANDLES, STARTUPINFO, ptrsize * 4 + 4 * 7)
+	NumPut("Ptr", hPipeWrite, "Ptr", hPipeWrite, STARTUPINFO, ptrsize * 4 + 4 * 8 + ptrsize * 3)
 
-	PROCESS_INFORMATION := Buffer(A_PtrSize * 2 + 4 * 2, 0)
+	PROCESS_INFORMATION := Buffer(ptrsize * 2 + 4 * 2, 0)
 	if !DllCall("CreateProcess", "Ptr", 0, "Str", sCmd, "Ptr", 0, "Ptr", 0, "UInt", true, "UInt", CREATE_NO_WINDOW,
 		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		DllCall("CloseHandle", "Ptr", hPipeWrite)
-		throw(OSError("CreateProcess has failed"))
+		throw (OSError("CreateProcess has failed"))
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
@@ -623,7 +623,7 @@ cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finis
 
 	closeHandle() {
 		DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, "Ptr"))
-		DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, A_PtrSize, "Ptr"))
+		DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, ptrsize, "Ptr"))
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		if (finishCallBackFuncObj)
 			finishCallBackFuncObj()
@@ -681,12 +681,12 @@ GetWindowPlacement(hwnd) {
 	MinX := NumGet(WP, 12, "Int")
 	MinY := NumGet(WP, 16, "Int")
 	MaxX := NumGet(WP, 20, "Int")
-	MaxY := NumGet(WP, 24, "Int")        
+	MaxY := NumGet(WP, 24, "Int")
 
-	return { X: Lo, Y: to, W: Wo, H: Ho , mmx: mmx, flags: flags, MinX: MinX, MinY: MinY, MaxX: MaxX, MaxY: MaxY }
+	return { X: Lo, Y: to, W: Wo, H: Ho, mmx: mmx, flags: flags, MinX: MinX, MinY: MinY, MaxX: MaxX, MaxY: MaxY }
 }
 
-SetWindowPlacement(hwnd:="", X:="", Y:="", W:="", H:="", action := 9) {        
+SetWindowPlacement(hwnd := "", X := "", Y := "", W := "", H := "", action := 9) {
 	DllCall("User32.dll\GetWindowPlacement", "Ptr", hwnd, "Ptr", WP := Buffer(44))
 	Lo := NumGet(WP, 28, "Int")        ; X coordinate of the upper-left corner of the window in its original restored state
 	To := NumGet(WP, 32, "Int")        ; Y coordinate of the upper-left corner of the window in its original restored state
@@ -697,13 +697,140 @@ SetWindowPlacement(hwnd:="", X:="", Y:="", W:="", H:="", action := 9) {
 	R := L + (W = "" ? Wo : W)         ; X coordinate of the bottom-right corner of the window in its new restored state
 	B := T + (H = "" ? Ho : H)         ; Y coordinate of the bottom-right corner of the window in its new restored state
 
-	NumPut("UInt",action,WP,8)
-	NumPut("UInt",L,WP,28)
-	NumPut("UInt",T,WP,32)
-	NumPut("UInt",R,WP,36)
-	NumPut("UInt",B,WP,40)
-	
+	NumPut("UInt", action, WP, 8)
+	NumPut("UInt", L, WP, 28)
+	NumPut("UInt", T, WP, 32)
+	NumPut("UInt", R, WP, 36)
+	NumPut("UInt", B, WP, 40)
+
 	Return DllCall("User32.dll\SetWindowPlacement", "Ptr", hwnd, "Ptr", WP)
+}
+
+/**
+ * Opens Color picking Window
+ * @param Color 
+ * @param {Integer} hGui 
+ * @returns {Integer} 
+ */
+colorDialog(initialColor := 0, hwnd := 0, disp := false, startingColors*) {
+	static p := A_PtrSize
+	disp := disp ? 0x3 : 0x1 ; init disp / 0x3 = full panel / 0x1 = basic panel
+
+	if (startingColors.Length > 16)
+		throw Error("Too many custom colors.  The maximum allowed values is 16.")
+
+	Loop (16 - startingColors.Length)
+		startingColors.Push(0) ; fill out custColorObj to 16 values
+
+	CUSTOM := Buffer(16 * 4, 0) ; init custom colors obj
+	CHOOSECOLOR := Buffer((p == 4) ? 36 : 72, 0) ; init dialog
+
+	for i, e in startingColors
+		NumPut("UInt", format_argb(e), CUSTOM, (i-1) * 4)
+
+	NumPut("UInt", CHOOSECOLOR.size, CHOOSECOLOR, 0)             ; lStructSize
+	NumPut("UPtr", hwnd, CHOOSECOLOR, p)             ; hwndOwner
+	NumPut("UInt", format_argb(initialColor), CHOOSECOLOR, 3 * p)         ; rgbResult
+	NumPut("UPtr", CUSTOM.ptr, CHOOSECOLOR, 4 * p)         ; lpCustColors
+	NumPut("UInt", disp, CHOOSECOLOR, 5 * p)         ; Flags
+
+	if !DllCall("comdlg32\ChooseColor", "UPtr", CHOOSECOLOR.ptr, "UInt")
+		return -1
+	return format_argb(NumGet(CHOOSECOLOR, 3 * A_PtrSize, "UInt"))
+}
+; typedef struct tagCHOOSECOLORW {  offset      size    (x86/x64)
+; DWORD        lStructSize;       |0      |   4
+; HWND         hwndOwner;         |4 / 8  |   8 /16
+; HWND         hInstance;         |8 /16  |   12/24
+; COLORREF     rgbResult;         |12/24  |   16/28
+; COLORREF     *lpCustColors;     |16/28  |   20/32
+; DWORD        Flags;             |20/32  |   24/36
+; LPARAM       lCustData;         |24/40  |   28/48 <-- padding for x64
+; LPCCHOOKPROC lpfnHook;          |28/48  |   32/56
+; LPCWSTR      lpTemplateName;    |32/56  |   36/64
+; LPEDITMENU   lpEditInfo;        |36/64  |   40/72
+; } CHOOSECOLORW, *LPCHOOSECOLORW;
+; https://github.com/cobracrystal/ahk
+
+colorGradientArr(amount, colors*) {
+	sColors := [], gradient := []
+	if (amount < colors.Length-2)
+		return 0
+	else if (amount == colors.Length-2)
+		return colors
+	for index, color in colors
+		sColors.push({r:(color & 0xFF0000) >> 16, g: (color & 0xFF00) >> 8, b:color & 0xFF})
+	; first color given, format with 6 padded 0s in case of black
+	gradient.push(format("0x{:06X}", colors[1]))
+	; amount of color gradients to perform
+	segments := colors.Length-1
+	Loop(amount) {
+		; current gradient segment we are in
+		segment := floor((A_Index/(amount+1))*segments)+1
+		; percentage progress in the current gradient segment as decimal
+		segProgress := ((A_Index/(amount+1)*segments)-segment+1)
+		; RGB obtained via percentage * (end of gradient - start of gradient), then adding current RGB value again.
+		r := round((segProgress * (sColors[segment+1].r-sColors[segment].r))+sColors[segment].r)
+		g := round((segProgress * (sColors[segment+1].g-sColors[segment].g))+sColors[segment].g)
+		b := round((segProgress * (sColors[segment+1].b-sColors[segment].b))+sColors[segment].b)
+		gradient.Push(format("0x{1:02X}{2:02X}{3:02X}", r, g, b))
+	}
+	; last color given, same as first
+	gradient.Push(format("0x{:06X}", colors[colors.Length]))
+	; return array of amount+2 colors
+	return gradient
+}
+
+rainbowArr(num, intensity := 0xFF) {
+	if (num < 7)
+		throw(Error("Invalid num"))
+	if (intensity < 0 || intensity > 255)
+		throw(Error("Invalid Intensity"))
+	intensity := format("{:#x}", intensity)
+	r := intensity * 0x010000
+	g := intensity * 0x000100
+	b := intensity * 0x000001
+	return colorGradientArr(num-2, r, r|g//2, r|g, g, g|b, g//2|b, b, b|r, r)
+}
+
+/**
+ * calculates brightness as per Rec 709 Television coefficients.
+ * @param color standard RGB color
+ * @returns {Number} Value between 0-255. 0-127 is dark, above is bright
+ */
+getBrightness(color) {
+	color := Integer(color)
+	r := (color & 0xFF0000) >> 16
+	g := (color & 0xFF00) >> 8
+	b := (color & 0xFF)
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+/**
+ * given color in (A)RGB/(A)BGR format, reverse formats and add or remove alpha value. set alpha to -1 to remove
+ * @param {Integer} clr 
+ * @param {Integer} reverse 
+ * @param {Integer} alpha 
+ */
+format_argb(color, reverse := true, alpha?) {
+	color := Integer(color)
+	if (reverse)
+		color := (color & 0xFF) << 16 | (color & 0xFF00) | ((color & 0xFF0000) >> 16)
+	;	clr := (clr >> 16 & 0xFF) | (clr & 0xFF00) | (clr << 16 & 0xFF0000) ; equivalent to above
+	clrAlpha := IsSet(alpha) ? (alpha == -1 ? 0 : alpha): (color & 0xFF000000) >> 24
+	return (clrAlpha << 24 | color)
+}
+
+; 0xFF00F9
+colorPreviewGUI(color) {
+	if (!IsInteger(color))
+		return
+	CoordMode("Mouse")
+	MouseGetPos(&x, &y)
+	colorPreview := Gui("+AlwaysOnTop +LastFound +ToolWindow -Caption")
+	colorPreview.BackColor := color
+	colorPreview.Show("x" . x-30 . " y" . y-30 . "w50 h50 NoActivate")
+	SetTimer((*) => colorPreview.Destroy(), -1500)
 }
 
 timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
@@ -748,7 +875,7 @@ normalizePath(path) {	; ONLY ABSOLUTE PATHS
 tryEditTextFile(editor := A_WinDir . "\system32\notepad.exe", params := "", *) {
 	if (InStr(editor, A_Space) && SubStr(editor, 1, 1) != '"' && SubStr(editor, -1, 1) != '"')
 		editor := '"' editor '"'
-	try 
+	try
 		Run(editor ' ' params)
 	catch
 		try Run(A_WinDir . '\system32\notepad.exe ' . params)
@@ -787,7 +914,7 @@ doNothing(*) {
 ; 		newGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 ; 		newGui.Show("AutoSize")
 ; 	}
-		
+
 ; 	toggleGuiDarkMode(_gui, dark) {
 ; 		static WM_THEMECHANGED := 0x031A
 ; 		;// title bar dark
@@ -817,7 +944,7 @@ doNothing(*) {
 ; 				this.validValueChecker(ctrl)
 ; 			}
 ; 		}
-; 		; todo: setting to make this look like this ? 
+; 		; todo: setting to make this look like this ?
 ; 		; DllCall("uxtheme\SetWindowTheme", "ptr", _gui.LV.hwnd, "str", "Explorer", "ptr", 0)
 ; 	}
 

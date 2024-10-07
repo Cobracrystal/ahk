@@ -33,7 +33,6 @@ A_TrayMenu.Delete()
 #Include "DiscordClient.ahk"
 #Include "AltDrag.ahk"
 #Include "MathUtilities.ahk"
-#Include "ColorUtilities.ahk"
 #Include "BasicUtilities.ahk"
 #Include "HotstringLoader.ahk"
 #Include "TableFilter v2.ahk"
@@ -99,7 +98,7 @@ return
 }
 
 ^I:: {	; Show Hex code as Color
-	hexcodeColorPreview()
+	colorPreviewGUI(fastCopy())
 }
 
 ^!+NumpadSub:: {	; Record Macro
