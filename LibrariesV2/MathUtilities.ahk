@@ -209,9 +209,9 @@ roundProper(number, precision := 12) {
  * @returns {Array} 
  */
 factor(n) {
-	factors := [Abs(n) == n ? 1 : -1]
-	divisor := 2
 	num := Abs(n)
+	factors := [num == n ? 1 : -1]
+	divisor := 2
 	while (num != 1) {
 		if (Mod(num, divisor) == 0) {
 			num /= divisor
