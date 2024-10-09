@@ -11,20 +11,17 @@ class HotstringLoader {
 		this.defaultMenutext := "Enable Hotstring Group: {}"
 	}
 
-	static load(filePath, name?, addMenu := true, register := true, encoding := "UTF-8") {
-		if (!FileExist(filepath))
-			throw(TargetError("Nonexistent Hotstring File Given"))
-		jsonStr := FileRead(filePath, encoding)
-		hotstringObj := jsongo.Parse(jsonStr)
+	static load(jsonAsStr, name?, addMenu := true, register := true, startOff := true, skipError := false) {
+		hotstringObj := jsongo.Parse(jsonAsStr)
 		index := name ?? this.hotstrings.Count + 1
 		this.hotstrings[index] := {obj: hotstringObj, status: -1, hasMenu: addMenu} ; -1 = unregistered, 0 = off, 1 = on
 		if (register) {
-			this.registerHotstrings(index)
-			this.hotstrings[index].status := 1
+			this.registerHotstrings(index, startOff, skipError)
+			this.hotstrings[index].status := startOff ? 0 : 1
 		}
 		if (addMenu && IsSet(name)) {
 			A_TrayMenu.Add(Format(this.defaultMenutext, index), this.switchFromMenu.bind(this, index))
-			if (register)
+			if (!startOff)
 				A_TrayMenu.Check(Format(this.defaultMenutext, index))
 		}
 		return index
@@ -55,12 +52,22 @@ class HotstringLoader {
 	}
 	
 	static registerHotstrings(index, startOff := 1, skipError := false) {
+		queue := []
 		for i, e in this.hotstrings[index].obj {
-			try
-				HotString(":" e["options"] ":" e["string"], e["replacement"], 1)
-			catch
-				if (!skipError)
-					throw(Error("Register Hotstring function failed:`nHotString(" . hotstring . ", " . e["replacement"] . ", " . 1 . ")"))
+			tObj := Map()
+			if (e.Has("string") && e.Has("replacement")) {
+				try {
+					HotString(":" (e.Has("options") ? e["options"] : "") ":" e["string"], e["replacement"], startOff ? 0 : 1)
+				}
+				catch {
+					if (!skipError)
+						throw(Error("Register Hotstring function failed:`nHotString(" . e["string"] . ", " . e["replacement"] . ", " . 1 . ")"))	
+					queue.push(i)
+				}
+			}
+		}
+		for i, e in reverseArray(queue) {
+			this.hotstrings[index].obj.RemoveAt(e)
 		}
 	}
 }

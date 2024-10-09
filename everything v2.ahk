@@ -50,8 +50,8 @@ GroupAdd("instantCloseWindows", "Please purchase WinRAR license ahk_class #32770
 GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND O IS CYRILLIC
 ; GroupAdd("instantCloseWindows", "Unbenannt - Editor ahk_exe notepad.exe")
 youtubeDL := YoutubeDLGui()
-reminders := ReminderManager(,,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
-try	reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json")
+reminders := ReminderManager(, , token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
+try reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json")
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
@@ -68,7 +68,9 @@ SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't in
 ; Initialize Internet Logging Script
 internetConnectionLogger("Init")
 ; Load LaTeX Hotstrings
-try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX")
+
+try HotstringLoader.load(FileRead(A_WorkingDir "\everything\LatexHotstrings.json", "UTF-8"), "LaTeX",,,false)
+loadTableAsHotstrings("C:\Users\Simon\Desktop\programs\programming\ahk\script_files\TableFilter\Kayoogis.json")
 ; replace the tray menu with my own
 customTrayMenu()
 ; Synchronize nextDNS IP
@@ -118,7 +120,7 @@ return
 }
 
 ^F9:: {	; Shows Internet Connection
-	internetConnectionLogger("T") 
+	internetConnectionLogger("T")
 }
 
 ^F8:: {	; Shows Reminder GUI
@@ -132,7 +134,7 @@ return
 ^+F11:: { ; Gives Key History
 	DetectHiddenWindows(1)
 	KeyHistory()
-;	PostMessage(0x111, 65409,,, A_ScriptHwnd) ; this works too???
+	;	PostMessage(0x111, 65409,,, A_ScriptHwnd) ; this works too???
 }
 
 ^+F10:: {	; YTDL GUI
@@ -157,7 +159,7 @@ return
 }
 
 ; Evaluate Shell Expression in-text
-^!K::calculateExpression("p")
+^!K:: calculateExpression("p")
 
 ; ###########################################################################
 ; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################
@@ -340,11 +342,11 @@ F11:: { 	; BTD6: Rebind Escape
 }
 
 !WheelDown:: {	; Scale Window Down
-	AltDrag.scaleWindow(-1,, A_ThisHotkey)
+	AltDrag.scaleWindow(-1, , A_ThisHotkey)
 }
 
 !WheelUp:: {	; Scale Window Up
-	AltDrag.scaleWindow(1,, A_ThisHotkey)
+	AltDrag.scaleWindow(1, , A_ThisHotkey)
 }
 
 !XButton1:: {	; Minimize Window
@@ -375,7 +377,7 @@ F11:: { 	; BTD6: Rebind Escape
 		; yPosCircle -= 100
 		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", circleWindow)
 		;	duoRect := "200-200 1500-200 1500-900 200-900 200-550 850-200 1500-550 850-900 200-550"
-		str := sierpinskiCoords(w//2, 50, w-50, h-60, depth := Mod(depth+1, 6))
+		str := sierpinskiCoords(w // 2, 50, w - 50, h - 60, depth := Mod(depth + 1, 6))
 		WinSetStyle("-0xC00000", shapedWindow)
 		WinSetAlwaysOnTop(1, shapedWindow)
 		WinSetRegion(str, shapedWindow)
@@ -543,10 +545,10 @@ center_window_on_monitor(hwnd, size_percentage := 0.714286) {
 	workBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
 	WinRestore(hwnd)
 	WinMove(workLeft + (workRight - workLeft) * (1 - size_percentage) / 2, ; left edge of screen + half the width of it - half the width of the window, to center it.
-		workTop + (workBottom - workTop) * (1 - size_percentage) / 2,  ; same as above but with top bottom
-		(workRight - workLeft) * size_percentage,	; width
-		(workBottom - workTop) * size_percentage,	; height
-		hwnd)
+	workTop + (workBottom - workTop) * (1 - size_percentage) / 2,  ; same as above but with top bottom
+	(workRight - workLeft) * size_percentage,	; width
+	(workBottom - workTop) * size_percentage,	; height
+	hwnd)
 }
 
 ; ###########################################################################
@@ -598,8 +600,8 @@ internetConnectionLogger(mode := "T") {
 	if (flagExist)
 		internetConsolePID := WinGetPID("ahk_id " flagExist)
 	else {
-		str := A_ComSpec . ' /c "pwsh ' A_WorkingDir '\everything\internetLogger.ps1 -path "' . logFile . '""' 
-		Run(str, , "Hide" , &internetConsolePID)
+		str := A_ComSpec . ' /c "pwsh ' A_WorkingDir '\everything\internetLogger.ps1 -path "' . logFile . '""'
+		Run(str, , "Hide", &internetConsolePID)
 		WinWait("ahk_pid " internetConsolePID)
 		WinSetAlwaysOnTop(1, "ahk_pid " internetConsolePID)
 		WinSetStyle(-0x70000, "ahk_pid " internetConsolePID)
@@ -705,19 +707,19 @@ trayMenuHandler(itemName, *) {
 		case "Open Recent Lines":
 			ListLines()
 		case "Help":
-			PostMessage(0x111, 65411,,, A_ScriptHwnd)
+			PostMessage(0x111, 65411, , , A_ScriptHwnd)
 			tMM := A_TitleMatchMode
 			SetTitleMatchMode("RegEx")
 			hwnd := WinWait("AutoHotkey (?:v2)? Help ahk_exe hh\.exe")
 			SetTitleMatchMode(tMM)
 			center_window_on_monitor(hwnd, 0.8)
 		case "Window Spy":
-			PostMessage(0x111, 65402,,, A_ScriptHwnd)
+			PostMessage(0x111, 65402, , , A_ScriptHwnd)
 		case "Reload this Script":
 			Reload()
 		case "Edit Script":
 			; Edit()
-			PostMessage(0x111, 65401,,, A_ScriptHwnd)
+			PostMessage(0x111, 65401, , , A_ScriptHwnd)
 		case "Pause Script":
 			Pause(-1)
 			A_TrayMenu.ToggleCheck("Pause Script")
@@ -750,8 +752,12 @@ customExit(ExitReason, ExitCode) {
 	HotstringLoader.switchHotstringState("Latex", "T")
 }
 
+^!F11:: {
+	HotstringLoader.switchHotstringState("Kayoogis", "T")
+}
+
 ; LONG STRINGS
-#HotIf WinActive("ahk_exe Discord.exe") 
+#HotIf WinActive("ahk_exe Discord.exe")
 :X*:@potet:: fastPrint("<@245189840470147072>")
 :X*:@burny:: fastPrint("<@318350925183844355>")
 :X*:@Y:: fastPrint("<@354316862735253505>")
@@ -812,10 +818,10 @@ customExit(ExitReason, ExitCode) {
 sierpinskiCoords(x, y, width, height, depth) {
 	; height := Integer(Round(sqrt(3)/2 * width))
 	if (depth == 0)
-		return Format("{}-{} {}-{} {}-{} {}-{} ", x, y, x+width//2, y+height, x-width//2, y+height, x, y)
-	str := sierpinskiCoords(x, y, width//2, height//2, depth-1) . x "-" y " "
-	str .= sierpinskiCoords(x+width//4, y+height//2, width//2, height//2, depth-1) . x "-" y " "
-	str .= sierpinskiCoords(x-width//4, y+height//2, width//2, height//2, depth-1) . x "-" y " "
+		return Format("{}-{} {}-{} {}-{} {}-{} ", x, y, x + width // 2, y + height, x - width // 2, y + height, x, y)
+	str := sierpinskiCoords(x, y, width // 2, height // 2, depth - 1) . x "-" y " "
+	str .= sierpinskiCoords(x + width // 4, y + height // 2, width // 2, height // 2, depth - 1) . x "-" y " "
+	str .= sierpinskiCoords(x - width // 4, y + height // 2, width // 2, height // 2, depth - 1) . x "-" y " "
 	return str
 }
 
@@ -866,9 +872,9 @@ makeTextAnsiColorful(str) {
 
 ^!+Ä:: {	; Reload other script
 	DetectHiddenWindows("On")
-	PostMessage(0x111, 65303, ,, A_ScriptHwnd)
+	PostMessage(0x111, 65303, , , A_ScriptHwnd)
 }
- 
+
 
 ; ^m:: { ; Get Permutations
 ;	A_Clipboard := getAllPermutations("12345", "abcde")
@@ -881,33 +887,33 @@ makeTextAnsiColorful(str) {
 ; }
 
 #HotIf WinActive("doujinshi and manga - Vivaldi")
-ß::{ ; Vivaldi: Toggle Website Override 
+ß:: { ; Vivaldi: Toggle Website Override
 	Hotkey("w", "Toggle")
 	Hotkey("a", "Toggle")
 	Hotkey("s", "Toggle")
 	Hotkey("d", "Toggle")
 	Hotkey("Right", "Toggle")
 }
-Right::{	; Vivaldi: Website Override Right
+Right:: {	; Vivaldi: Website Override Right
 	Send("{Right}")
 	Send("{Home}")
 }
-w::{	; Vivaldi: Website Override Up
+w:: {	; Vivaldi: Website Override Up
 	Send("{PgUp}")
 }
-a::{	; Vivaldi: Website Override Left
+a:: {	; Vivaldi: Website Override Left
 	Send("{Left}")
 }
-s::{	; Vivaldi: Website Override Down
+s:: {	; Vivaldi: Website Override Down
 	Send("{PgDn}")
 }
-d::{	; Vivaldi: Website Override Right
+d:: {	; Vivaldi: Website Override Right
 	Send("{Right}")
 	Send("{Home}")
 }
 #HotIf
 
-^NumpadSub::{ ; Clip mouse to active windows' client area
+^NumpadSub:: { ; Clip mouse to active windows' client area
 	static toggle := 0
 	if (toggle := !toggle)
 		clipCursor(1)
@@ -919,16 +925,15 @@ clipCursor(mode := true, window := "A") {
 	WinGetClientPos(&wx, &wy, &ww, &wh, WinExist(window))
 	if (!mode)
 		return !DllCall("ClipCursor", "Ptr", 0)
-	NumPut("UInt", wx, "UInt", wy, "UInt", wx+ww, "UInt", wy+wh, llrectA := Buffer(16, 0), 0)
+	NumPut("UInt", wx, "UInt", wy, "UInt", wx + ww, "UInt", wy + wh, llrectA := Buffer(16, 0), 0)
 	return DllCall("ClipCursor", "Ptr", llrectA)
 }
 
 
-
 #HotIf WinActive("ahk_exe javaw.exe")
-^ö::{	; MC: Spam shift Key 
+^ö:: {	; MC: Spam shift Key
 	static toggle := 0
-	static timer := ( (*) => (Send("{Shift Down}"), Sleep(10), Send("{Shift Up}")))
+	static timer := ((*) => (Send("{Shift Down}"), Sleep(10), Send("{Shift Up}")))
 	if (toggle := !toggle)
 		SetTimer(timer, 20)
 	else
@@ -938,7 +943,7 @@ clipCursor(mode := true, window := "A") {
 
 
 #HotIf WinActive("ahk_exe Skul.exe")
-+::{	; Skul: Spam l
++:: {	; Skul: Spam l
 	static sTimer := Send.Bind("l")
 	static toggle := false
 	SetTimer(sTimer, toggle := !toggle ? 50 : 0)
@@ -963,14 +968,41 @@ clipCursor(mode := true, window := "A") {
 
 
 #HotIf WinActive("Satisfactory")
-Numpad5::{	; Satisfactory: Hold Space
-	static toggle := 0 
+Numpad5:: {	; Satisfactory: Hold Space
+	static toggle := 0
 	toggle := !toggle
 	if (toggle) {
 		Send("{Space Down}")
 	}
-	else 
+	else
 		Send("{Space Up}")
 }
 
 #HotIf
+
+loadTableAsHotstrings(filePath) {
+	static str := "Deutsch"
+	static repl := "Kayoogis"
+	static options := ""
+	SplitPath(filePath, &fname, , &ext)
+	if (ext != "json")
+		return
+
+	jsonasstr := FileRead(filePath)
+	table := jsongo.Parse(jsonasstr)
+	data := table["data"]
+	if !data.Length
+		return
+	hotstrings := []
+	for i, row in data {
+		if (row.Has(str) && row.Has(repl) && row[str] != "" && row[repl] != "" && row[str] != "-" && row[repl] != "-") {
+			hotstringasObj := Map()
+			hotstringasObj["string"] := row[str]
+			hotstringasObj["replacement"] := row[repl]
+			hotstringasObj["options"] := options
+			hotstrings.push(hotstringasObj)
+		}
+	}
+	hotstringsAsJsonStr := jsongo.Stringify(hotstrings, , "`t")
+	try HotstringLoader.load(hotstringsAsJsonStr, "Kayoogis", , , , true)
+}
