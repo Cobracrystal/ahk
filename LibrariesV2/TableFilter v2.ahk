@@ -5,7 +5,8 @@ todo
 	- delete / restore backups
 - autohdr should have max. also always use max width of lv
 - instead of only loading, allow for creation of new empty table (-> specify columns and that's it. it should also remove defaultvalues and translate etc)
-
+- add option to duplicate row, inserting it directly after
+	- alternatively, add empty row directly after
 anti-todo-list
 fix window title bar not changing instantly when toggling darkmode. just click tab to another window and back to change.
 fix listview headers not being dark. requires custom font drawing so that the text in them is still readable.
@@ -202,15 +203,15 @@ class TableFilter {
 	/**
 	 * Adds given row object with specified dataIndex to specified GUI.
 	 */
-	addRow(gui, row, dataIndex, LVIndex?) {
+	addRow(guiObj, row, dataIndex, LVIndex?) {
 		rowArr := []
 		for _, key in this.data.keys
 			rowArr.push(row.Has(key) ? row[key] : "")
 		rowArr.push(dataIndex)
 		if (IsSet(LVIndex))
-			gui.LV.Insert(LVIndex, "", rowArr*)
+			guiObj.LV.Insert(LVIndex, "", rowArr*)
 		else
-			gui.LV.Add("", rowArr*)
+			guiObj.LV.Add("", rowArr*)
 	}
 
 	addEntry(ctrlObj, *) {
@@ -229,30 +230,30 @@ class TableFilter {
 		aGui.LV.Modify(aGui.LV.GetCount(), "Select Focus Vis")
 	}
 
-	editRow(n, newRow) {
-		oldRow := this.data.data[n]
-		this.data.data[n] := newRow
+	editRow(dataIndex, newRow) {
+		oldRow := this.data.data[dataIndex]
+		this.data.data[dataIndex] := newRow
 		for _, g in this.guis {
 			g.Opt("+Disabled")
 			flagNewRowVisible := this.rowIncludeFromSearch(g, newRow)
 			if (this.rowIncludeFromSearch(g, oldRow)) {
-				Loop (g.LV.GetCount()) {
-					dataIndex := g.LV.GetText(A_Index, this.data.keys.Length + 1)
-					if (dataIndex == n) {
-						if (flagNewRowVisible) {
+				Loop (g.LV.GetCount()) { ; this looks inefficient but it really isn't.
+					n := g.LV.GetText(A_Index, this.data.keys.Length + 1)
+					if (n == dataIndex) {
+						if (flagNewRowVisible || this.config.remainIncludedOnModify) {
 							rowAsArray := []
 							for i, e in this.data.keys
 								rowAsArray.Push(newRow.Has(e) ? newRow[e] : "")
-							rowAsArray.Push(n)
+							rowAsArray.Push(dataIndex)
 							g.LV.Modify(A_Index, , rowAsArray*)
-						} else {
-							g.LV.Delete(n)
-						}
+						} else
+							g.LV.Delete(A_Index)
 						break
 					}
 				}
-			} else if (flagNewRowVisible) {
-				this.addRow(g, newRow, n)
+			}
+			else if (flagNewRowVisible) {
+				this.addRow(g, newRow, dataIndex)
 			}
 			g.Opt("-Disabled")
 		}
@@ -283,7 +284,7 @@ class TableFilter {
 		editorGui.parent := editorGuiObj
 		editorGuiObj.GetPos(&gx, &gy, &gw, &gh)
 		this.applyColorScheme(editorGui)
-		editorGui.Show(Format("x{1}y{2} Autosize", gx + (gw-111-95*this.data.keys.Length)//2, gy + (gh-83)//2))
+		editorGui.Show(Format("x{1}y{2} Autosize", gx + (gw - 111 - 95 * this.data.keys.Length) // 2, gy + (gh - 83) // 2))
 		return
 
 		editRowGuiFinish(this, guiCtrl, *) {
@@ -339,7 +340,7 @@ class TableFilter {
 						continue 2 ; continue outer to skip rest. its not harmful though, just break works fine (but is slower)
 					}
 				}
-				; if row is not to be removed, ensure that its dataindex is updated. 
+				; if row is not to be removed, ensure that its dataindex is updated.
 				offset := 0
 				for j, matchIndex in sortedRows {
 					if (dataIndex > matchIndex) {
@@ -359,6 +360,32 @@ class TableFilter {
 		}
 		for i, dataIndex in sortedRows
 			this.data.data.RemoveAt(dataIndex)
+		this.dataHandler("isSaved", false)
+	}
+
+	cloneSelectedRow(guiObj) {
+		rows := []
+		guiObj.Opt("+Disabled")
+		rowN := guiObj.LV.GetNext(0, "F")
+		dataIndex := guiObj.LV.GetText(rowN, this.data.keys.Length + 1)
+		clonedRow := this.data.data[dataIndex].Clone()
+		for _, g in this.guis {
+			g.Opt("+Disabled")
+			g.LV.Opt("-Redraw")
+			posOfRow := 0
+			Loop (g.LV.GetCount()) { ; update dataindex
+				n := g.LV.GetText(A_Index, this.data.keys.Length + 1)
+				if (dataIndex == n)
+					posOfRow := n
+				else if (n > dataIndex)
+					g.LV.Modify(A_Index, "Col" . this.data.keys.Length + 1, n + 1)
+			}
+			if (posOfRow && this.rowIncludeFromSearch(g, this.data.data[dataIndex]))
+				this.addRow(g, clonedRow, dataIndex + 1, posOfRow + 1)
+			g.LV.Opt("+Redraw")
+			g.Opt("-Disabled")
+		}
+		this.data.data.InsertAt(dataIndex + 1, clonedRow)
 		this.dataHandler("isSaved", false)
 	}
 
@@ -453,13 +480,13 @@ class TableFilter {
 			static WM_NOTIFY := 0x4E
 			static WM_THEMECHANGED := 0x031A
 			; prevent other changes to UI on darkmode
-		;	OnMessage(WM_THEMECHANGED, themechangeIntercept.bind(lv.hwnd))
+			;	OnMessage(WM_THEMECHANGED, themechangeIntercept.bind(lv.hwnd))
 			; header dark (CURRENTLY DOESN'T WORK)
 			lv.header := SendMessage(LVM_GETHEADER, 0, 0, lv.hwnd)
 			;	OnMessage(WM_NOTIFY, On_NM_CUSTOMDRAW.bind(lv)) ; header text white
 			; reduce flickering
 			lv.Opt("+LV" LVS_EX_DOUBLEBUFFER)
-		;	DllCall("uxtheme\SetWindowTheme", "ptr", lv.header, "str", (dark ? "DarkMode_ItemsView" : ""), "ptr", 0)
+			;	DllCall("uxtheme\SetWindowTheme", "ptr", lv.header, "str", (dark ? "DarkMode_ItemsView" : ""), "ptr", 0)
 			; hide focus dots
 			; SendMessage(WM_CHANGEUISTATE, (UIS_SET << 8) | UISF_HIDEFOCUS, 0, ctrl.hwnd)
 			DllCall("uxtheme\SetWindowTheme", "ptr", lv.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
@@ -532,7 +559,7 @@ class TableFilter {
 						if ((rowN := guiObj.LV.GetNext()) == 0)
 							return
 						if (GetKeyState("Shift"))
-							A_Clipboard := jsongo.Stringify(this.data.data[guiObj.LV.GetText(rowN,this.data.keys.Length+1)], , A_Tab)
+							A_Clipboard := jsongo.Stringify(this.data.data[guiObj.LV.GetText(rowN, this.data.keys.Length + 1)], , A_Tab)
 						else {
 							col := this.config.copyColumn > this.data.keys.Length ? 1 : this.config.copyColumn
 							A_Clipboard := guiObj.LV.GetText(rowN, col)
@@ -567,6 +594,7 @@ class TableFilter {
 			tMenu.Add("➕ Add Category to Selected Row(s)", aMenu)
 			tMenu.Add("➖ Remove Category from Selected Row(s)", rMenu)
 		}
+		tMenu.Add("📃 Clone Selected Row", this.cMenuHandler.bind(this))
 		if (this.config.debug) {
 			tMenu.Add("Show Data Entry", this.cMenuHandler.bind(this))
 			tMenu.Add("Show Config", this.cMenuHandler.bind(this))
@@ -584,6 +612,8 @@ class TableFilter {
 				this.editRowGui(g)
 			case "[Del] 🗑️ Delete Selected Row(s)":
 				this.removeSelectedRows(g)
+			case "📃 Clone Selected Row":
+				this.cloneSelectedRow(g)
 			case "Show Data Entry":
 				n := g.LV.GetText(rowN, this.data.keys.Length + 1)
 				this.debugShowDatabaseEntry(g, n, rowN)
@@ -618,11 +648,11 @@ class TableFilter {
 				curCategories .= "," tag
 			else {
 				if (tag == "All")
-					; why not just set as empty string? might contain other stuff (or unknown categories)
+				; why not just set as empty string? might contain other stuff (or unknown categories)
 					for i, tag in TableFilter.wordCategories
 						curCategories := StrReplace(curCategories, tag)
-				else
-					curCategories := StrReplace(curCategories, tag)
+					else
+						curCategories := StrReplace(curCategories, tag)
 			}
 			row[this.config.taggingColumn] := Trim(Sort(curCategories, "P3 U D,"), ", ")
 			this.editRow(index, row)
@@ -724,10 +754,10 @@ class TableFilter {
 				table := jsongo.Parse(fileAsStr)
 				keys := table["keys"]
 				data := table["data"]
-				  ; this is just correction
-				for i, e in data 
+				; this is just correction
+				for i, e in data
 					for j, f in e
-						if !(objContainsValue(keys, j)) 
+						if !(objContainsValue(keys, j))
 							keys.push(j)
 			}
 			else if (ext = "xml") {
@@ -791,7 +821,7 @@ class TableFilter {
 			}
 		}
 	}
-	
+
 	saveFile(filePath := "", dialog := 0) {
 		if (filePath == "" || dialog) { ; overwrites loaded file.
 			dialog := true
@@ -871,7 +901,7 @@ class TableFilter {
 			this.data.appdataPath,
 			fName,
 			doInitialBackup ? "Original" : FormatTime(A_Now, "yyyy.MM.dd-HH.mm.ss"),
-			fExt
+		fExt
 		)
 		if (!Instr(FileExist(this.data.appdataPath "\Backups"), "D"))
 			DirCreate(this.data.appdataPath "\Backups")
@@ -927,7 +957,7 @@ class TableFilter {
 				if (this.config.useConfig)
 					this.configManager("Save")
 			default:
-				throw(Error("Bad setting: " . option))
+				throw (Error("Bad setting: " . option))
 		}
 	}
 
@@ -956,6 +986,8 @@ class TableFilter {
 				this.config.useCustomDialogPath := ctrl.Value
 			case "CBFilterCaseSense":
 				this.config.filterCaseSense := ctrl.Value
+			case "CBRemainIncludedOnModify":
+				this.config.remainIncludedOnModify := ctrl.Value
 			case "ButtonDialogPath":
 				if (this.config.customDialogPath)
 					path := this.config.customDialogPath
@@ -1023,17 +1055,17 @@ class TableFilter {
 		settingsGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 		settingsGui.AddText("Center Section", "Settings for YoutubeDL Gui")
 
-		
+
 		settingsGui.AddText("xs 0x200 R1.45", "GUI Color Theme:")
 		settingsGui.AddDropDownList("vDDLColorTheme xs+260 yp r7 w125 Choose" . this.config.colorTheme + 1, ["Light Theme", "Dark Theme", "Custom Theme"]).OnEvent("Change", this.configGuiHandler.bind(this))
-		
+
 		settingsGui.AddText("xs R1.45", "Custom theme color (Experimental feature):")
 		settingsGui.editCustomThemeColor := settingsGui.AddEdit("xs+285 yp vEditCustomThemeColor w100 ReadOnly", Format("{1:06X}", this.config.customThemeColor))
 		settingsGui.editCustomThemeColor.OnEvent("Focus", this.configGuiHandler.bind(this))
-		
+
 		settingsGui.AddText("xs R1.45", "GLOBAL Hotkey to open main GUI:")
 		settingsGui.AddHotkey("xs+210 yp vHotkeyOpenGui w175", this.config.guiHotkey).OnEvent("Change", this.configGuiHandler.bind(this))
-		
+
 		settingsGui.AddCheckbox("xs vCBAutoSaving Checked" this.config.autoSaving, "Autosave when exiting").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBUseBackups Checked" this.config.useBackups, "Backup opened files in %APPDATA%\Autohotkey\Tablefilter\Backups").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBUseCustomDialogPath Checked" this.config.useCustomDialogPath, "Always open dialogs in directory set below. Uses last used file otherwise.").OnEvent("Click", this.configGuiHandler.bind(this))
@@ -1041,24 +1073,25 @@ class TableFilter {
 		settingsGui.AddText("xs 0x200 R1.45", "Dialog Path:")
 		settingsGui.editDialogPath := settingsGui.AddEdit("xs+70 yp r1 w250 -Multi Readonly", this.config.customDialogPath)
 		settingsGui.AddButton("vButtonDialogPath yp-1 xs+325 w60", "Browse...").OnEvent("Click", this.configGuiHandler.bind(this))
-		
+
 		settingsGui.AddCheckbox("xs vCBUseDefaultValues Checked" this.config.useDefaultValues, "Insert placeholder values into empty fields when editing rows").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBAutoTranslateRunic Checked" this.config.autoTranslateRunic, "Automatically translate Kayoogis into runes").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBFormatValues Checked" this.config.formatValues, "Format first row to uppercase").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBFilterCaseSense Checked" this.config.filterCaseSense, "Case-sensitive search").OnEvent("Click", this.configGuiHandler.bind(this))
-		
+		settingsGui.AddCheckbox("xs vCBRemainIncludedOnModify Checked" this.config.remainIncludedOnModify, "Always show newly edited entries in current search").OnEvent("Click", this.configGuiHandler.bind(this))
+
 		settingsGui.AddText("xs 0x200 R1.45", "Column to search duplicates in:")
 		settingsGui.dropdownDuplicateColumn := settingsGui.AddDropDownList("vDDLDuplicateColumn xs+260 yp r7 w125 Choose" . this.config.duplicateColumn, this.data.keys).OnEvent("Change", this.configGuiHandler.bind(this))
-		
+
 		settingsGui.AddText("xs 0x200 R1.45", "Column to `"tag`" from context menu:")
 		settingsGui.AddDropDownList("vDDLTaggingColumn xs+260 yp r7 w125 Choose" . objContainsValue(this.data.keys, this.config.taggingColumn), this.data.keys).OnEvent("Change", this.configGuiHandler.bind(this))
-		
+
 		settingsGui.AddText("xs 0x200 R1.45", "Column to copy when pressing Ctrl+C:")
 		settingsGui.AddDropDownList("vDDLCopyColumn xs+260 yp r7 w125 Choose" . this.config.copyColumn, this.data.keys).OnEvent("Change", this.configGuiHandler.bind(this))
 		settingsGui.AddText("xs 0x200 R1.45", "(Press Ctrl+Shift+C to copy all contents of the selected row)")
-		
+
 		settingsGui.AddCheckbox("xs vCBDebug Checked" this.config.debug, "Debugging mode").OnEvent("Click", this.configGuiHandler.bind(this))
-		
+
 		settingsGui.AddButton("xs", "Reset Settings").OnEvent("Click", resetSettings)
 		settingsGui.AddButton("xs+260 yp w125", "Open Backup Folder").OnEvent("Click", (*) => Run('explorer.exe "' this.data.appdataPath "\Backups" '"'))
 		if (!guiObj.HasOwnProp("children"))
@@ -1164,6 +1197,7 @@ class TableFilter {
 		duplicateColumn: 2, ; Deutsch
 		copyColumn: 4, ; Runen
 		taggingColumn: "", ; Kategorie
+		remainIncludedOnModify: true, ; Whether edited entries should be removed after editing if their new values are not included in the current search filter.
 		saveHotkey: "^s", ; hotkey to save (only inside gui)
 		guiHotkey: "^p", ; hotkey to open GUI (always)
 		useCustomDialogPath: false, ; whether to always open dialogs in custom directory. Otherwise, uses Last Used File
