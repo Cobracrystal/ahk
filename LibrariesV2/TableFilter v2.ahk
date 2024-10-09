@@ -721,16 +721,14 @@ class TableFilter {
 			fileAsStr := FileRead(path, "UTF-8")
 			lastSeenKey := ""
 			if (ext = "json") {
-				data := jsongo.Parse(fileAsStr)
-				keys := []
-				for i, e in data {
-					for j, f in e { ; todo: this messes up the order of the keys btw in case of json. custom parse??
-						if !(objContainsValue(keys, j)) {
-							keys.InsertAt(objContainsValue(keys, lastSeenKey) + 1, j)
-						}
-						lastSeenKey := j
-					}
-				}
+				table := jsongo.Parse(fileAsStr)
+				keys := table["keys"]
+				data := table["data"]
+				  ; this is just correction
+				for i, e in data 
+					for j, f in e
+						if !(objContainsValue(keys, j)) 
+							keys.push(j)
 			}
 			else if (ext = "xml") {
 				Loop Parse, fileAsStr, "`n", "`r" {
@@ -767,7 +765,7 @@ class TableFilter {
 				for i, e in rawData {
 					t := Map()
 					for j, f in e
-						t[unescape(j)] := unescape(f)
+						t[nameUnescape(j)] := unescape(f)
 					data[i] := t
 				}
 				for i, e in keys
@@ -808,8 +806,13 @@ class TableFilter {
 				return
 		}
 		SplitPath(filePath, &fName, &fDir, &fExt)
-		if (fExt == "json")
-			fileAsStr := jsongo.Stringify(this.data.data)
+		if (fExt == "json") {
+			tObj := {
+				keys: this.data.keys,
+				data: this.data.data
+			}
+			fileAsStr := jsongo.Stringify(tObj)
+		}
 		else
 			fileAsStr := exportAsXML()
 		fObj := FileOpen(filePath, "w", "UTF-8")
