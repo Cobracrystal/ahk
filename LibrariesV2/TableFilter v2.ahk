@@ -791,7 +791,7 @@ class TableFilter {
 			}
 		}
 	}
-
+	
 	saveFile(filePath := "", dialog := 0) {
 		if (filePath == "" || dialog) { ; overwrites loaded file.
 			dialog := true
