@@ -376,11 +376,11 @@ class TableFilter {
 			Loop (g.LV.GetCount()) { ; update dataindex
 				n := g.LV.GetText(A_Index, this.data.keys.Length + 1)
 				if (dataIndex == n)
-					posOfRow := n
+					posOfRow := A_Index
 				else if (n > dataIndex)
 					g.LV.Modify(A_Index, "Col" . this.data.keys.Length + 1, n + 1)
 			}
-			if (posOfRow && this.rowIncludeFromSearch(g, this.data.data[dataIndex]))
+			if (posOfRow && this.rowIncludeFromSearch(g, clonedRow))
 				this.addRow(g, clonedRow, dataIndex + 1, posOfRow + 1)
 			g.LV.Opt("+Redraw")
 			g.Opt("-Disabled")
