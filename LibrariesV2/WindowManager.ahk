@@ -1,7 +1,4 @@
 ﻿; https://github.com/cobracrystal/ahk
-; TODO: Refreshing with F5 should 
-; a) be available with a GUI button, 
-; c) should be toggleable to update automatically
 ; TODO 3: Add Settings for excluded windows (with editable list, like in PATH native settings), automatically form that into regex
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
 ; add rightclick menu option to show command line only for this window

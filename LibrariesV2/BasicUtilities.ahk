@@ -887,6 +887,33 @@ tryEditTextFile(editor := A_WinDir . "\system32\notepad.exe", params := "", *) {
 	; Run('Notepad++ "' . path '"')
 }
 
+loadTableAsHotstrings(filePath) {
+	static str := "Deutsch"
+	static repl := "Kayoogis"
+	static options := ""
+	SplitPath(filePath, &fname, , &ext)
+	if (ext != "json")
+		return
+
+	jsonasstr := FileRead(filePath)
+	table := jsongo.Parse(jsonasstr)
+	data := table["data"]
+	if !data.Length
+		return
+	hotstrings := []
+	for i, row in data {
+		if (row.Has(str) && row.Has(repl) && row[str] != "" && row[repl] != "" && row[str] != "-" && row[repl] != "-") {
+			hotstringasObj := Map()
+			hotstringasObj["string"] := row[str]
+			hotstringasObj["replacement"] := row[repl]
+			hotstringasObj["options"] := options
+			hotstrings.push(hotstringasObj)
+		}
+	}
+	hotstringsAsJsonStr := jsongo.Stringify(hotstrings, , "`t")
+	try HotstringLoader.load(hotstringsAsJsonStr, "Kayoogis", , , , true)
+}
+
 
 doNothing(*) {
 	return
@@ -986,3 +1013,4 @@ doNothing(*) {
 ; 		return settings
 ; 	}
 ; }
+

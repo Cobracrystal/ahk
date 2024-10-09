@@ -1,4 +1,5 @@
 ﻿#NoTrayIcon
+#Warn All, Off
 Persistent()
 #SingleInstance Force
 r := Random(1200000, 12000000)

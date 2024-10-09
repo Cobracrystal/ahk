@@ -3,12 +3,6 @@
 SendMode("Input") ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir(A_ScriptDir) ; Ensures a consistent starting directory.
 
-;MinLength is the shortest allowed name, defaulting to 4.
-;MaxLength is the longest allowed name. It defaults to 0, indicating no maximum length.
-F7 & r::{
-	RandomNameGenerator.guiCreate()
-}
-
 class RandomNameGenerator {
 
 	static __New() {

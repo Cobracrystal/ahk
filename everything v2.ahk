@@ -36,7 +36,6 @@ A_TrayMenu.Delete()
 #Include "BasicUtilities.ahk"
 #Include "HotstringLoader.ahk"
 #Include "TableFilter v2.ahk"
-
 ; #Include "jsongo.ahk"
 ; for windows in which ctrl+ should replace scrolling
 GroupAdd("zoomableWindows", "ahk_exe Mindustry.exe")
@@ -70,7 +69,7 @@ internetConnectionLogger("Init")
 ; Load LaTeX Hotstrings
 
 try HotstringLoader.load(FileRead(A_WorkingDir "\everything\LatexHotstrings.json", "UTF-8"), "LaTeX",,,false)
-loadTableAsHotstrings("C:\Users\Simon\Desktop\programs\programming\ahk\script_files\TableFilter\Kayoogis.json")
+; loadTableAsHotstrings(A_WorkingDir "\TableFilter\Kayoogis.json")
 ; replace the tray menu with my own
 customTrayMenu()
 ; Synchronize nextDNS IP
@@ -979,30 +978,3 @@ Numpad5:: {	; Satisfactory: Hold Space
 }
 
 #HotIf
-
-loadTableAsHotstrings(filePath) {
-	static str := "Deutsch"
-	static repl := "Kayoogis"
-	static options := ""
-	SplitPath(filePath, &fname, , &ext)
-	if (ext != "json")
-		return
-
-	jsonasstr := FileRead(filePath)
-	table := jsongo.Parse(jsonasstr)
-	data := table["data"]
-	if !data.Length
-		return
-	hotstrings := []
-	for i, row in data {
-		if (row.Has(str) && row.Has(repl) && row[str] != "" && row[repl] != "" && row[str] != "-" && row[repl] != "-") {
-			hotstringasObj := Map()
-			hotstringasObj["string"] := row[str]
-			hotstringasObj["replacement"] := row[repl]
-			hotstringasObj["options"] := options
-			hotstrings.push(hotstringasObj)
-		}
-	}
-	hotstringsAsJsonStr := jsongo.Stringify(hotstrings, , "`t")
-	try HotstringLoader.load(hotstringsAsJsonStr, "Kayoogis", , , , true)
-}
