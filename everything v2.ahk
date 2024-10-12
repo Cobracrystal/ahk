@@ -60,7 +60,8 @@ if (StrCompare(A_OSVersion, "10.0.22000") < 0)
 DesktopState.enable(60000)
 ; import custom blacklist into AltDrag
 AltDrag.addBlacklist([
-	"Satisfactory ahk_class UnrealWindow"
+	"Satisfactory ahk_class UnrealWindow",
+	"DriveBeyondHorizons ahk_exe DriveBeyondHorizons-Win64-Shipping.exe"
 ])
 ; Start Loop to close winrar popups
 SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't interrupt
