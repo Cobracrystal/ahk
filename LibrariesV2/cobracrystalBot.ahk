@@ -82,13 +82,13 @@ class ccBot {
 							errorlog .= "Did not edit Role " i "(" rolesbyID[i]["name"] ") because it was higher ranked than the Bot role.`n"
 					}
 					else
-						errorlog .= "Did not edit Role " i " because wasn't found.`n"
+						errorlog .= "Did not edit Role " i " because it wasn't found.`n"
 				}
 			}
 			catch as e {
 				MsgBox("Role Error: " errorlog . e.Message "`n" e.What "`n" e.Extra)
 			} finally {
-				errorlog .= rolesEditedCount . " channels edited.`n"
+				errorlog .= rolesEditedCount . " roles edited.`n"
 			}
 		}
 		if (this.themes.channels.Has(themeName)) {

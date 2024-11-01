@@ -226,31 +226,31 @@ class ReminderManager {
 		this.gui.AddGroupBox("Section w400 h90", "Add Reminder in")
 		this.gui.SetFont("s9")
 		this.gui.AddText("Center ys+22 xs+10", "Remind me in ")
-		this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[5]
-		this.gui.AddText("Center ys+22 x+5", "d")
-		this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[4]
-		this.gui.AddText("Center ys+22 x+5", "h")
-		this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[3]
-		this.gui.AddText("Center ys+22 x+5", "m ")
-		this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), 0).Name := this.guiVars.1[2]
-		this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), "s")
+			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[5]
+			this.gui.AddText("Center ys+22 x+5", "d")
+			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[4]
+			this.gui.AddText("Center ys+22 x+5", "h")
+			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[3]
+			this.gui.AddText("Center ys+22 x+5", "m ")
+			this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), 0).Name := this.guiVars.1[2]
+			this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), "s")
 		this.gui.AddText("Center ys+22 x+5", "with the message:")
-		this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.1[1]
+			this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.1[1]
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderInFromGUI.bind(this))
 		this.gui.AddGroupBox("xs Section w400 h90", "Add Reminder on")
 		this.gui.SetFont("s9")
 		this.gui.AddText("Center ys+22 xs+10", "Remind me on")
-		this.gui.AddEdit("ys+20 x+5 r1 w30", A_DD).Name := this.guiVars.2[5]
-		this.gui.AddText("Center ys+22 x+5", ".")
-		this.gui.AddEdit("ys+20 x+5 r1 w30", A_MM).Name := this.guiVars.2[6]
-		this.gui.AddText("Center ys+22 x+5", ", at")
-		this.gui.AddEdit("ys+20 x+5 r1 w30", A_Hour).Name := this.guiVars.2[4]
-		this.gui.AddText("Center ys+22 x+5", ":")
-		this.gui.AddEdit("ys+20 x+5 r1 w30", A_Min).Name := this.guiVars.2[3]
-		this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), ":")
-		this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), (this.settings.flagDebug ? A_Sec : 0)).Name := this.guiVars.2[2]
+			this.gui.AddEdit("ys+20 x+5 r1 w30", A_DD).Name := this.guiVars.2[5]
+			this.gui.AddText("Center ys+22 x+5", ".")
+			this.gui.AddEdit("ys+20 x+5 r1 w30", A_MM).Name := this.guiVars.2[6]
+			this.gui.AddText("Center ys+22 x+5", ", at")
+			this.gui.AddEdit("ys+20 x+5 r1 w30", A_Hour).Name := this.guiVars.2[4]
+			this.gui.AddText("Center ys+22 x+5", ":")
+			this.gui.AddEdit("ys+20 x+5 r1 w30", A_Min).Name := this.guiVars.2[3]
+			this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), ":")
+			this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), (this.settings.flagDebug ? A_Sec : 0)).Name := this.guiVars.2[2]
 		this.gui.AddText("Center ys+22 x+5", "with the message:")
-		this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.2[1]
+			this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.2[1]
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderOnFromGUI.bind(this))
 		this.LV := this.gui.AddListView("xs R10 w500 -Multi Sort", ["Next Occurence", "Period", "Message", "Function", "Index"])
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
@@ -379,29 +379,22 @@ class ReminderManager {
 		if (!FileExist(filepath))
 			throw(TargetError("Nonexistent Reminder File Given"))
 		jsonStr := FileRead(filePath, encoding)
-		reminderList := MapToObj(jsongo.Parse(jsonStr))
-		for i, rObj in reminderList {
-			if (rObj.toParse) {
-				y := rObj.units.HasOwnProp("years") ? rObj.units.years : unset
-				mo := rObj.units.HasOwnProp("months") ? rObj.units.months : unset
-				d := rObj.units.HasOwnProp("days") ? rObj.units.days : unset
-				h := rObj.units.HasOwnProp("hours") ? rObj.units.hours : unset
-				m := rObj.units.HasOwnProp("minutes") ? rObj.units.minutes : unset
-				s := rObj.units.HasOwnProp("seconds") ? rObj.units.seconds : unset
-			}
+		remArr := MapToObj(jsongo.Parse(jsonStr))
+		for i, rObj in remArr {
+			y := rObj.units.HasOwnProp("years") ? rObj.units.years : unset
+			mo := rObj.units.HasOwnProp("months") ? rObj.units.months : unset
+			d := rObj.units.HasOwnProp("days") ? rObj.units.days : unset
+			h := rObj.units.HasOwnProp("hours") ? rObj.units.hours : unset
+			m := rObj.units.HasOwnProp("minutes") ? rObj.units.minutes : unset
+			s := rObj.units.HasOwnProp("seconds") ? rObj.units.seconds : unset
 			fparArr := rObj.HasOwnProp("fparams") ? rObj.fparams : []
-			if (rObj.multi) {
-				if (rObj.toParse)
-					this.setPeriodicTimerOnParser(y?,mo?,d?,h?,m?,s?, rObj.period, rObj.periodUnit, rObj.message, rObj.function, fparArr*)
-				else
-					this.setPeriodicTimerOn(rObj.nextTime, rObj.period, rObj.periodUnit, rObj.message, rObj.function, fparArr*)
-			}
-			else if (rObj.toParse)
+			if (rObj.multi)
+				this.setPeriodicTimerOnParser(y?,mo?,d?,h?,m?,s?, rObj.period, rObj.periodUnit, rObj.message, rObj.function, fparArr*)
+			else
 				this.setTimerOnParser(y?,mo?,d?,h?,m?,s?,rObj.message, rObj.function, fparArr*)
-			else if (DateDiff(rObj.nextTime, A_Now, "Seconds") >= 0)
-				this.setTimerOn(rObj.nextTime, rObj.message, rObj.function, fparArr* )
-			else if (!ignoreMissedReminders)
-				this.setTimerOn(DateAddW(A_Now, 1, "Seconds"), rObj.message, rObj.function, fparArr*)
+			; WE NEED TO CHANGE PARSETIME TO GIVE BACK NEGATIVE NUMBER IF DATE WAS IN PAST. SOMEHOW.
+			; if (!ignoreMissedReminders)
+			; 	this.setTimerOn(DateAddW(A_Now, 1, "Seconds"), rObj.message, rObj.function, fparArr*)
 		}
 	}
 

@@ -21,7 +21,7 @@ pathArr := {  "/":"mainIndex"
 			, "/ahk/*":"handleAHKfiles"
 			, "/embed/*": "embedder" }
 ; paths["/index"] := Redirect
-paths := registerFunctions(pathArr)
+paths := resolveFunctions(pathArr)
 server := new HttpServer()
 server.LoadMimes(A_WorkingDir . "\meta\mime.types")
 server.SetFavicon(A_WorkingDir . "\meta\favicon.ico")
@@ -214,8 +214,8 @@ embedder(ByRef req, ByRef res, ByRef server) {
 
 indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", title := "", ext := "*", mode := "DF") {
 	normPath := normalizePath(origin . vpath)
-	t := FileExist(normPath)
-	if (t) {
+	FileAppend, % "normpath: " normPath . "`n", *
+	if (t := FileExist(normPath)) && InStr(normPath, origin) {
 		if (InStr(t, "D")) {
 			if (SubStr(vpath, 0) != "\") {
 				res.headers["Location"] := StrReplace(vpath, "\", "/") . "/"
@@ -223,10 +223,7 @@ indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", titl
 				return
 			}
 			html := generateDirectoryListing(origin, vpath, title, ext, mode)
-			if (html)
-				res.SetBodyText(html, "text/html")
-			else 
-				res.SetBodyText("Illegal File access.")
+			res.SetBodyText(html, "text/html")
 		}
 		else {
 			SplitPath, % normPath, , , fExt
@@ -239,16 +236,13 @@ indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", titl
 		}
 	}
 	else
-		res.SetBodyText("File not found.")
+		res.SetBodyText("File cannot be accessed.")
 	res.status := 200
 }
 
 generateDirectoryListing(origin, vpath := "\", title := "", ext := "*", fileMode := "DF") {
 	htmlTemplate := readFileIntoVar(A_WorkingDir . "\meta\indexTemplate.html")
 	origin := (SubStr(origin, 0) == "\" ? SubStr(origin, 1, -1) : origin)
-	fullPath := normalizePath(origin . vpath)
-	if !(InStr(fullPath, origin))
-		return ""
 	arrFiles := {}
 	arrFolders := {}
 	Loop, Files, % fullPath . "*.*", % fileMode
@@ -270,7 +264,7 @@ generateDirectoryListing(origin, vpath := "\", title := "", ext := "*", fileMode
 	return full
 }
 
-registerFunctions(array) {
+resolveFunctions(array) {
 	arr2 := {}
 	for i, e in array 
 		if (IsFunc(e))	
@@ -281,6 +275,7 @@ registerFunctions(array) {
 getIp() {
 	return cmdRet("dig @resolver4.opendns.com myip.opendns.com +short")
 }
+
 sendRequest(url := "https://icanhazip.com/", method := "GET") {
 	HttpObj := ComObjCreate("WinHttp.WinHttpRequest.5.1")
 	HttpObj.Open(method, url)

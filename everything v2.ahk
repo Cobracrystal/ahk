@@ -89,7 +89,7 @@ return
 }
 #SuspendExempt false
 
-#HotIf !WinActive("ahk_exe csgo.exe")
+#HotIf !WinActive("ahk_exe csgo.exe") && !WinActive("Satisfactory ahk_class UnrealWindow")
 ^+LButton:: {	; Text Modification Menu
 	TextEditMenu.ShowMenu()
 }

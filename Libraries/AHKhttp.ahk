@@ -179,7 +179,7 @@ class HttpServer
      */
     Handle(ByRef request) {
         response := new HttpResponse()
-		; Check specific paths, if matching we're done
+        ; Check specific paths, if matching we're done
         if (this.paths[request.path]) {
             this.paths[request.path].(request, response, this)
             return response
@@ -234,9 +234,6 @@ class HttpServer
      * path if one is found, otherwise returns false.
      */
     CheckPartialPathMatch(path, wildcardPaths) {
-        if (wildcardPaths.GetCapacity() == 0) {
-            return false
-        }
 
         requestPathParts := StrSplit(path, "/")
         requestPathLength := requestPathParts.Count()
