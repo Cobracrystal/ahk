@@ -146,8 +146,8 @@ return
 }
 
 ^!+F11:: { ; Block keyboard input until password "password123" is typed
-	if (!A_IsAdmin)
-		RunAsAdmin()
+	if !(runAsAdmin())
+		return
 	password := "password123"
 	for key in ["CTRL", "SHIFT", "ALT"]
 		KeyWait(key)
@@ -562,11 +562,14 @@ runAsAdmin() {
 	if !A_IsAdmin
 	{
 		if A_IsCompiled
-			DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_ScriptFullPath, "str", params, "str", A_WorkingDir, "int", 1)
+			v := DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_ScriptFullPath, "str", params, "str", A_WorkingDir, "int", 1)
 		else
-			DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_AhkPath, "str", '"' . A_ScriptFullPath . '"' . A_Space . params, "str", A_WorkingDir, "int", 1)
-		ExitApp()
+			v := DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_AhkPath, "str", '"' . A_ScriptFullPath . '"' . A_Space . params, "str", A_WorkingDir, "int", 1)
+		if (v <= 32)
+			return false
+		return true
 	}
+	return true
 }
 
 connectNextDNS() {

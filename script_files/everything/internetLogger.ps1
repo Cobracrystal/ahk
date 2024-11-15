@@ -18,80 +18,12 @@ $disconnectedSince = 0
 $secondsDisconnected = 0
 $totalSecondsDisconnected = 0
 $previousStatus = "None"
-$code = @"
-	using System;
-	using System.IO;
-	using System.Runtime.InteropServices;
-	using System.Management.Automation;
-	using System.Management.Automation.Runspaces;
-
-
-	namespace PowershellExitLogger
-	{
-		public static class LoggerClass
-		{
-			private static HandlerRoutine static_routine;
-
-			private static DateTime lastEventTime;
-
-			public static void SetHandler()
-			{
-				if (static_routine == null)
-				{
-					static_routine = new HandlerRoutine(ConsoleCtrlCheck);
-					SetConsoleCtrlHandler(static_routine, true);
-				}
-			}
-
-			public static void updateLastEventTime() {
-				lastEventTime = DateTime.Now;
-			}
-
-			private static bool ConsoleCtrlCheck(CtrlTypes ctrlType) {
-				string path = @"$logfile"; 
-				string message = "";
-				DateTime currentTime = DateTime.Now;
-				if (lastEventTime != DateTime.MinValue)
-					message = "\t(~" + (int)DateTime.Now.Subtract(lastEventTime).TotalSeconds + " seconds)\n";
-				message += "Exited: \t\t" + DateTime.Now.ToString("HH:mm:ss tt");
-				switch (ctrlType) {
-					case CtrlTypes.CTRL_C_EVENT:
-					case CtrlTypes.CTRL_BREAK_EVENT:
-					case CtrlTypes.CTRL_LOGOFF_EVENT:
-					case CtrlTypes.CTRL_SHUTDOWN_EVENT:
-						File.AppendAllText(path, message);
-						return false;
-					case CtrlTypes.CTRL_CLOSE_EVENT:
-						File.AppendAllText(path, message);
-						return true;
-				}
-				return false;
-			}
-
-			[DllImport("Kernel32")]
-			public static extern bool SetConsoleCtrlHandler(HandlerRoutine Handler, bool Add);
-
-			public delegate bool HandlerRoutine(CtrlTypes CtrlType);
-
-			public enum CtrlTypes
-			{
-				CTRL_C_EVENT = 0,
-				CTRL_BREAK_EVENT,
-				CTRL_CLOSE_EVENT,
-				CTRL_LOGOFF_EVENT = 5,
-				CTRL_SHUTDOWN_EVENT
-			}
-		}
-}
-"@
 
 mode con: cols=70 lines=10
 $Host.UI.RawUI.WindowTitle = "INTERNET_LOGGER"
 [console]::CursorVisible = $false
 
-Add-Type  -TypeDefinition $code -Language CSharp
 [System.Management.Automation.Runspaces.Runspace]::DefaultRunspace
-[PowershellExitLogger.LoggerClass]::SetHandler()
 
 Register-EngineEvent -SourceIdentifier PowerShell.Exiting -SupportEvent -Action {
 	"`nExited:`t`t`t" + (Get-Date).ToString('T') | Out-File $logfile -Append -NoNewline
@@ -129,7 +61,6 @@ do {
 				continue
 			}
 			$connectedSince = Get-Date
-			[PowershellExitLogger.LoggerClass]::updateLastEventTime()
 			if ($previousStatus -eq "Disconnected") {
 				"`t(~" + $secondsDisconnected + " seconds)" | Out-File $logFile -Append
 			}
@@ -148,7 +79,6 @@ do {
 				continue
 			}
 			$disconnectedSince = Get-Date
-			[PowershellExitLogger.LoggerClass]::updateLastEventTime()
 			if ($previousStatus -eq "Connected") {
 				"`t(~" + $secondsConnected + " seconds)" | Out-File $logfile -Append
 			}
