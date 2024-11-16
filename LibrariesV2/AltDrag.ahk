@@ -221,6 +221,28 @@ class AltDrag {
 			WinMaximize("ahk_id " . win_id)
 	}
 
+	static doBorderlessFullscreen() {
+		MouseGetPos(, , &wHandle)
+		WinGetPos(&x, &y, &w, &h, wHandle)
+		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+		NumPut("Uint", 40, monitorInfo := Buffer(40))
+		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
+		monitor := {
+			left: NumGet(monitorInfo, 4, "Int"),
+			top: NumGet(monitorInfo, 8, "Int"),
+			right: NumGet(monitorInfo, 12, "Int"),
+			bottom: NumGet(monitorInfo, 16, "Int")
+		}
+		WinMove(
+			monitor.left + (x - cx),
+			monitor.top + (y - cy),
+			monitor.right - monitor.left + (w - cw),
+			monitor.bottom - monitor.top + (h - ch),
+			wHandle
+		)
+	}
+
 	static snappingToggle(*) {
 		AltDrag.boolSnapping := !AltDrag.boolSnapping
 		A_TrayMenu.ToggleCheck("Enable Snapping")

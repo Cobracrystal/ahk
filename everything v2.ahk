@@ -353,6 +353,10 @@ F11:: { 	; BTD6: Rebind Escape
 	AltDrag.minimizeWindow()
 }
 
+!XButton2:: {	; Borderless Fullscreen Window
+	AltDrag.doBorderlessFullscreen()
+}
+
 ^!XButton1:: {	; Minimize Window (no blacklist)
 	WinMinimize(WinExist("A"))
 }
@@ -487,10 +491,12 @@ closeWinRarNotification() {
 
 showcoords() {
 	CoordMode("Mouse", "Screen")
-	MouseGetPos(&ttx, &tty, &ttWin)
-	ttc := PixelGetColor(ttx, tty)
-	ttWinT := WinGetTitle(ttWin)
-	Tooltip(ttx ", " tty ", " ttc "`n" ttWinT)
+	try {
+		MouseGetPos(&ttx, &tty, &ttWin)
+		ttc := PixelGetColor(ttx, tty)
+		ttWinT := WinGetTitle(ttWin)
+		Tooltip(ttx ", " tty ", " ttc "`n" ttWinT)
+	}
 }
 
 winSlowMove(hwnd, endX := "", endY := "", endW := "", endH := "", speed := 1) {
@@ -1009,3 +1015,15 @@ loadTableAsHotstrings(filePath) {
 	hotstringsAsJsonStr := jsongo.Stringify(hotstrings, , "`t")
 	try HotstringLoader.load(hotstringsAsJsonStr, "Kayoogis", , , , true)
 }
+
+#HotIf WinActive("HoloCure")
+Insert::{	; Automatic Hotkey generated 16.11.2024, 02:23:02
+	static toggle := true
+	toggle := !toggle
+	Loop {
+		if (toggle)
+			break
+		Send("{Space}")
+	}
+}
+#HotIf

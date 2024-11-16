@@ -49,6 +49,7 @@ class WindowManager {
 		winMenu.Add("Reset Window Position", this.menuHandler.Bind(this))
 		winMenu.Add("Minimize Window", this.menuHandler.Bind(this))
 		winMenu.Add("Maximize Window", this.menuHandler.Bind(this))
+		winMenu.Add("Borderless Fullscreen", this.menuHandler.Bind(this))
 		winMenu.Add("Restore Window", this.menuHandler.Bind(this))
 		winMenu.Add("Close Window", this.menuHandler.Bind(this))
 		winMenu.Add("Toggle Lock Status", this.menuHandler.Bind(this))
@@ -398,6 +399,27 @@ class WindowManager {
 			case "Maximize Window":
 				for i, wHandle in wHandles
 					try WinMaximize(wHandle)
+			case "Borderless Fullscreen":
+				for i, wHandle in wHandles {
+					WinGetPos(&x, &y, &w, &h, wHandle)
+					WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+					mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+					NumPut("Uint", 40, monitorInfo := Buffer(40))
+					DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
+					monitor := {
+						left: NumGet(monitorInfo, 4, "Int"),
+						top: NumGet(monitorInfo, 8, "Int"),
+						right: NumGet(monitorInfo, 12, "Int"),
+						bottom: NumGet(monitorInfo, 16, "Int")
+					}
+					WinMove(
+						monitor.left + (x - cx),
+						monitor.top + (y - cy),
+						monitor.right - monitor.left + (w - cw),
+						monitor.bottom - monitor.top + (h - ch),
+						wHandle
+					)
+				}
 			case "Restore Window":
 				for i, wHandle in wHandles
 					try WinRestore(wHandle)
@@ -431,6 +453,10 @@ class WindowManager {
 			default:
 				return
 		}
+	}
+
+	static borderlessFullscreen(wHandle) {
+		
 	}
 
 	static transparencyGUI(wHandles) {
