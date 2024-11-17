@@ -1016,14 +1016,13 @@ loadTableAsHotstrings(filePath) {
 	try HotstringLoader.load(hotstringsAsJsonStr, "Kayoogis", , , , true)
 }
 
-#HotIf WinActive("HoloCure")
-Insert::{	; Automatic Hotkey generated 16.11.2024, 02:23:02
-	static toggle := true
-	toggle := !toggle
-	Loop {
-		if (toggle)
-			break
-		Send("{Space}")
-	}
+#HotIf WinActive("HoloCure ahk_exe HoloCure.exe")
+^ö:: {	; Holocure: Spam shift Key
+	static toggle := 0
+	static timer := ((*) => (Send("{Space Down}"), Sleep(10), Send("{Space Up}")))
+	if (toggle := !toggle)
+		SetTimer(timer, 20)
+	else
+		SetTimer(timer, 0)
 }
 #HotIf
