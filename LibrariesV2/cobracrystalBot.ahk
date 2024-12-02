@@ -68,6 +68,7 @@ class ccBot {
 			try {
 				rolesEditedCount := 0
 				roleTheme := this.themes.roles[themeName]
+				roleThemeOriginal := this.themes.roles["Original"]
 				highestRole := this.bot.getHighestRole(userRoles, guildRoles)
 				rolesbyID := Map()
 				for i, e in guildRoles
@@ -82,7 +83,7 @@ class ccBot {
 							errorlog .= "Did not edit Role " i "(" rolesbyID[i]["name"] ") because it was higher ranked than the Bot role.`n"
 					}
 					else
-						errorlog .= "Did not edit Role " i " because it wasn't found.`n"
+						errorlog .= "Did not edit Role " i "(" ( roleThemeOriginal.Has(i) ? roleThemeOriginal[i] : "Unknown" ) ") because it wasn't found.`n"
 				}
 			}
 			catch as e {
@@ -100,6 +101,7 @@ class ccBot {
 			try {
 				channelsEditedCount := 0
 				channelTheme := this.themes.channels[themeName]
+				channelThemeOriginal := this.themes.channels["Original"]
 				guildChannels := this.bot.getGuildChannels(serverID)
 				channelIDs := []
 				for i, e in guildChannels
@@ -110,7 +112,7 @@ class ccBot {
 						channelsEditedCount++
 					}
 					else
-						errorlog .= "Channel " i " not found.`n"
+						errorlog .= "Channel " i "(" ( channelThemeOriginal.Has(i) ? channelThemeOriginal[i] : "Unknown" ) ") not found.`n"
 				}
 			}
 			catch as e {
