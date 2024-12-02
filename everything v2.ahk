@@ -87,6 +87,16 @@ return
 ^+R:: { ; Reload Script
 	Reload()
 }
+ 
+^+!s::{	; Suspend All Other Hotkeys
+	TrayMenu.submenus["SuspendMenu"].ToggleCheck("Suspend Hotkeys")
+	Suspend(-1) ; async bad, no postmessage
+	if (A_IsSuspended)
+		TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think Warn.ico", , true)
+	else
+		TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think.ico", , true)
+}
+
 #SuspendExempt false
 
 #HotIf !WinActive("ahk_exe csgo.exe") && !WinActive("Satisfactory ahk_class UnrealWindow")
