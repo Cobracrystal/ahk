@@ -299,4 +299,32 @@ selfRequest(ByRef req, ByRef res, ByRef server) {
 }
 ; HOWEVER, THIS LITERALLY CRASHES BECAUSE AHK WAITS FOR COMOBJ AND CANT HANDLE THE REQUEST AT THE SAME TIME
 ; otherwise: run wanip / dig @resolver4.opendns.com myip.opendns.com +short through cmdRet
+AAAAACTUALLY HOLD ON
+req := ComObject("Msxml2.XMLHTTP")
+; Open a request with async enabled.
+req.open("GET", "https://www.autohotkey.com/download/2.0/version.txt", true)
+; Set our callback function.
+req.onreadystatechange := Ready
+; Send the request.  Ready() will be called when it's complete.
+req.send()
+
+; If you're going to wait, there's no need for onreadystatechange.
+; Setting async=true and waiting like this allows the script to remain
+; responsive while the download is taking place, whereas async=false
+; will make the script unresponsive.
+while req.readyState != 4
+    sleep 100
+
+Persistent
+
+Ready() {
+    if (req.readyState != 4)  ; Not done yet.
+        return
+    if (req.status == 200) ; OK.
+        MsgBox "Latest AutoHotkey version: " req.responseText
+    else
+        MsgBox "Status " req.status,, 16
+    ExitApp
+} THIS SHOULD WORK
+
 */

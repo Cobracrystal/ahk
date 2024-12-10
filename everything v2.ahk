@@ -986,19 +986,6 @@ clipCursor(mode := true, window := "A") {
 ; }
 
 
-#HotIf WinActive("Satisfactory")
-Numpad5:: {	; Satisfactory: Hold Space
-	static toggle := 0
-	toggle := !toggle
-	if (toggle) {
-		Send("{Space Down}")
-	}
-	else
-		Send("{Space Up}")
-}
-
-#HotIf
-
 loadTableAsHotstrings(filePath) {
 	static str := "Deutsch"
 	static repl := "Kayoogis"
@@ -1030,6 +1017,17 @@ loadTableAsHotstrings(filePath) {
 ^ö:: {	; Holocure: Spam shift Key
 	static toggle := 0
 	static timer := ((*) => (Send("{Space Down}"), Sleep(10), Send("{Space Up}")))
+	if (toggle := !toggle)
+		SetTimer(timer, 20)
+	else
+		SetTimer(timer, 0)
+}
+#HotIf
+
+#HotIf !WinExist("ahk_exe AutoClickerPos.exe")
+Numpad5::{
+	static timer := Click.Bind("L")
+	static toggle := 0
 	if (toggle := !toggle)
 		SetTimer(timer, 20)
 	else
