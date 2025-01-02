@@ -88,7 +88,7 @@ return
 	Reload()
 }
  
-^+!s::{	; Suspend All Other Hotkeys
+^+!S::{	; Suspend All Other Hotkeys
 	TrayMenu.submenus["SuspendMenu"].ToggleCheck("Suspend Hotkeys")
 	Suspend(-1) ; async bad, no postmessage
 	if (A_IsSuspended)
@@ -678,6 +678,7 @@ getSelfIp() {
 ; ###########################################################################
 
 clipboardTracker(type) {
+	global A_Clipboard ; solely to remove the annoying vscode warning
 	try {
 		if (type == 1) {
 			if (StrLen(A_Clipboard) < 200) {
@@ -771,7 +772,7 @@ customExit(ExitReason, ExitCode) {
 	HotstringLoader.switchHotstringState("Latex", "T")
 }
 
-^!F11:: {
+^!F11:: {	; Toggle Rune Hotstrings
 	HotstringLoader.switchHotstringState("Kayoogis", "T")
 }
 
@@ -905,32 +906,32 @@ makeTextAnsiColorful(str) {
 ;	fastPrint(text)
 ; }
 
-#HotIf WinActive("doujinshi and manga - Vivaldi")
-ß:: { ; Vivaldi: Toggle Website Override
-	Hotkey("w", "Toggle")
-	Hotkey("a", "Toggle")
-	Hotkey("s", "Toggle")
-	Hotkey("d", "Toggle")
-	Hotkey("Right", "Toggle")
-}
-Right:: {	; Vivaldi: Website Override Right
-	Send("{Right}")
-	Send("{Home}")
-}
-w:: {	; Vivaldi: Website Override Up
-	Send("{PgUp}")
-}
-a:: {	; Vivaldi: Website Override Left
-	Send("{Left}")
-}
-s:: {	; Vivaldi: Website Override Down
-	Send("{PgDn}")
-}
-d:: {	; Vivaldi: Website Override Right
-	Send("{Right}")
-	Send("{Home}")
-}
-#HotIf
+; #HotIf WinActive("doujinshi and manga - Vivaldi")
+; ß:: { ; Vivaldi: Toggle Website Override
+; 	Hotkey("w", "Toggle")
+; 	Hotkey("a", "Toggle")
+; 	Hotkey("s", "Toggle")
+; 	Hotkey("d", "Toggle")
+; 	Hotkey("Right", "Toggle")
+; }
+; Right:: {	; Vivaldi: Website Override Right
+; 	Send("{Right}")
+; 	Send("{Home}")
+; }
+; w:: {	; Vivaldi: Website Override Up
+; 	Send("{PgUp}")
+; }
+; a:: {	; Vivaldi: Website Override Left
+; 	Send("{Left}")
+; }
+; s:: {	; Vivaldi: Website Override Down
+; 	Send("{PgDn}")
+; }
+; d:: {	; Vivaldi: Website Override Right
+; 	Send("{Right}")
+; 	Send("{Home}")
+; }
+; #HotIf
 
 ^NumpadSub:: { ; Clip mouse to active windows' client area
 	static toggle := 0
@@ -1032,5 +1033,14 @@ Numpad5::{
 		SetTimer(timer, 20)
 	else
 		SetTimer(timer, 0)
+}
+#HotIf
+
+#HotIf WinActive("ahk_exe Revolution Idle.exe")
+b::{
+	MouseGetPos(&x, &y)
+	Click(1432, 1013, "L")
+	Sleep(50)
+	MouseMove(x, y, 0)
 }
 #HotIf
