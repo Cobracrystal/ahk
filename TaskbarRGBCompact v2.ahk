@@ -34,7 +34,7 @@ updateTaskbarTimer() {
 			i := mod(i+1,round(rotation_length*63)+2)
 		}
 	} catch Error as e {
-		MsgBox("Error: " e.Message "`nAufgetreten in: " e.What "`nKlingt nach einem groben Fehler in RGB-Taskbar-5000™️. Tja.`nSchließ mich und öffne mich nochmal.`nOder mach halt nix. Wie auch immer.`nUnd falls du dies zum zweiten Mal liest, solltest du einen Spezialisten um Rat fragen.")
+		MsgBox("Error: " e.Message "`nIn: " e.What "`nTry restarting the program using the Tray Menu.")
 		SetTimer(updateTaskbarTimer, 0)
 		init := 0
 	}
