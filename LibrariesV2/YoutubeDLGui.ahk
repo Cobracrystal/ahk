@@ -161,6 +161,8 @@ class YoutubeDLGui {
 			case "CheckboxUseAliases":
 				this.settings.useAliases := !this.settings.useAliases
 				this.ytdlOptionHandler()
+			case "CheckboxUseInlineConsole":
+				this.settings.useInlineConsole := !this.settings.useInlineConsole
 			case "CheckboxOpenExplorer":
 				this.settings.openExplorer := !this.settings.openExplorer
 			case "CheckboxTrySelectFile":
@@ -201,8 +203,13 @@ class YoutubeDLGui {
 			return
 		}
 		this.ytdlOptionHandler()
-		fullRuncmd := this.controls.editCmdConfig.value . StrReplace(links, "`n", A_Space)
-		cmdRetAsync(fullRuncmd, &output, this.updateGuiOutput.bind(this), 200, this.__done.bind(this, links), "UTF-8")
+		fullRuncmd := this.controls.editCmdConfig.value . "`"" StrReplace(Trim(links, " `t`n`r"), "`n", "`" `"") "`""
+		if (this.settings.useInlineConsole) {
+			cmdRetAsync(fullRuncmd, &output, this.updateGuiOutput.bind(this), 200, this.__done.bind(this, links), "UTF-8")
+		} else {
+			A_Clipboard := fullRuncmd
+;			Run("cmd /k `"mode con: cols=100 lines=30 && " fullRuncmd "`"")
+		}
 	}
 
 	__done(links) {
@@ -259,6 +266,7 @@ class YoutubeDLGui {
 		settingsGui.OnEvent("DropFiles", settingsGUIDropFiles)
 		settingsGui.AddText("Center Section", "Settings for YoutubeDL Gui")
 		settingsGui.AddCheckbox("vCheckboxUseAliases Checked" this.settings.useAliases, "Use aliases for arguments").OnEvent("Click", this.settingsHandler.bind(this))
+		settingsGui.AddCheckbox("vCheckboxUseInlineConsole Checked" this.settings.useInlineConsole, "Use the inbuilt Console").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxDownloadPlaylist Checked" . !this.options["no-playlist"].selected, "Download playlist?").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxOpenExplorer Checked" this.settings.openExplorer, "Open Explorer after download").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxTrySelectFile Checked" this.settings.trySelectFile, "Try Selecting File When Opening Explorer (Experimental)").OnEvent("Click", this.settingsHandler.bind(this))
@@ -373,6 +381,7 @@ class YoutubeDLGui {
 	static defaultSettings => {
 		resetConverttoAudio: 1,
 		useAliases: 0,
+		useInlineConsole: 1,
 		openExplorer: 1,
 		trySelectFile: 0,
 		outputPath: A_ScriptDir,
