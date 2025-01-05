@@ -11,6 +11,7 @@ anti-todo-list
 fix window title bar not changing instantly when toggling darkmode. just click tab to another window and back to change.
 fix listview headers not being dark. requires custom font drawing so that the text in them is still readable.
 */
+#Requires AutoHotkey >=v2.0 
 #SingleInstance Force
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
