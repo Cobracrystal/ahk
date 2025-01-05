@@ -112,7 +112,7 @@ class ccBot {
 						channelsEditedCount++
 					}
 					else
-						errorlog .= "Channel " i "(" ( channelThemeOriginal.Has(i) ? channelThemeOriginal[i] : "Unknown" ) ") not found.`n"
+						errorlog .= "Did not edit Channel " i "(" ( channelThemeOriginal.Has(i) ? channelThemeOriginal[i] : "Unknown" ) ") because it wasn't found.`n"
 				}
 			}
 			catch as e {
@@ -153,7 +153,7 @@ class ccBot {
 			line := A_Index
 			Loop Parse, A_LoopField, "CSV" {
 				if (line == 1) { ; IF WE ARE IN THE FIRST LINE AKA THE HEADERS, THEN SAVE THOSE.
-					if (A_LoopField != "")
+					if (A_LoopField != "" && !InStr(A_LoopField, "Archived") && !InStr(A_LoopField, "Deleted"))
 						cols[A_Index] := {name: A_LoopField, rows: Map() }
 				}
 				else { ; NOT IN FIRST LINE -> SAVE [UNDER] HEADERS. if cols has index, it must have a header.
