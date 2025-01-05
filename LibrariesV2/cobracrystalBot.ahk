@@ -87,7 +87,7 @@ class ccBot {
 				}
 			}
 			catch as e {
-				MsgBox("Role Error: " errorlog . e.Message "`n" e.What "`n" e.Extra)
+				MsgBox("Role Error: " errorlog . "`n" . e.Message "`n" e.What "`n" e.Extra)
 			} finally {
 				errorlog .= rolesEditedCount . " roles edited.`n"
 			}
@@ -116,7 +116,7 @@ class ccBot {
 				}
 			}
 			catch as e {
-				MsgBox("Channel Error: " . errorlog . e.Message "`n" e.What "`n" e.Extra)
+				MsgBox("Channel Error: " . errorlog . "`n" . e.Message "`n" e.What "`n" e.Extra)
 			} finally {
 				errorlog .= channelsEditedCount . " channels edited.`n"
 			}
@@ -157,6 +157,8 @@ class ccBot {
 						cols[A_Index] := {name: A_LoopField, rows: Map() }
 				}
 				else { ; NOT IN FIRST LINE -> SAVE [UNDER] HEADERS. if cols has index, it must have a header.
+					if (A_Index == 1 && (InStr(A_LoopField, "[Deleted]") || InStr(A_LoopField, "[Archived]"))) ; if we are in first column
+						continue 2
 					if (cols.Has(A_Index) && A_LoopField != "" && Trim(A_LoopField) != "–" && Trim(A_LoopField) != "-" && !InStr(A_LoopField, "no rename") && !InStr(A_LoopField, "?"))
 						cols[A_Index].rows[line] := A_LoopField
 				}
