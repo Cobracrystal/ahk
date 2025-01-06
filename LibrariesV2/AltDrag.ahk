@@ -4,7 +4,7 @@
 ;  Alt + Left Button	: Drag to move a window.
 ;  Alt + Right Button	: Drag to resize a window.
 ;  Alt + Middle Button	: Click to switch Max/Restore state of a window.
-;--- & Semi-Traditional
+;--- & Non-Traditional
 ;  Alt + Middle Button	: Scroll to scale a window.
 ;  Alt + X4 Button		: Click to minimize a window.
 ;  Alt + X5 Button		: Click to make window enter borderless fullscreen
