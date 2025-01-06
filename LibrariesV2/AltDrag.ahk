@@ -9,20 +9,17 @@
 ;  Alt + X4 Button		: Click to minimize a window.
 ;  Alt + X5 Button		: Click to make window enter borderless fullscreen
 
-- Why do moveWindow and resizeWindow require to be given their own hotkey as a parameter? 
- 	Because they operate continuously from when the hotkey is pressed until it is released. 
-	This only works if the function knows which hotkey it is waiting for. (and the hotkey isn't hardcoded)
 */
 
 /* ; <- uncomment this if you intend to use it as a standalone script
 ; Drag Window
 !LButton::{
-	AltDrag.moveWindow(A_ThisHotkey)
+	AltDrag.moveWindow()
 }
 
 ; Resize Window
 !RButton::{
-	AltDrag.resizeWindow(A_ThisHotkey)
+	AltDrag.resizeWindow()
 }
 
 ; Toggle Max/Restore of clicked window
@@ -86,10 +83,10 @@ class AltDrag {
 			this.blacklist.Push(blacklist)
 	}
 
-	static moveWindow(hkey := "LButton", overrideBlacklist := false) {
+	static moveWindow(overrideBlacklist := false) {
+		cleanHotkey := RegexReplace(A_ThisHotkey, "#|!|\^|\+|<|>|\$|~", "")
 		SetWinDelay(3)
 		CoordMode("Mouse", "Screen")
-		cleanHotkey := RegexReplace(hkey, "#|!|\^|\+|<|>|\$|~", "")
 		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
 		if ((this.winInBlacklist(wHandle) && !overrideBlacklist) || WinGetMinMax(wHandle) != 0) {
 			this.sendKey(cleanHotkey)
@@ -120,10 +117,10 @@ class AltDrag {
 		}
 	}
 
-	static resizeWindow(hkey := "RButton", overrideBlacklist := false) {
+	static resizeWindow(overrideBlacklist := false) {
+		cleanHotkey := RegexReplace(A_ThisHotkey, "#|!|\^|\+|<|>|\$|~", "")
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
-		cleanHotkey := RegexReplace(hkey, "#|!|\^|\+|<|>|\$|~", "")
 		; abort if max/min or on blacklist
 		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
 		if ((this.winInBlacklist(wHandle) && !overrideBlacklist) || WinGetMinMax(wHandle) != 0) {
@@ -151,9 +148,14 @@ class AltDrag {
 		}
 	}
 
-	static scaleWindow(direction := 1, scale_factor := 1.05, hkey := "MButton", overrideBlacklist := false) {
-		; scale factor NOT exponential, its dependent on monitor size
-		cleanHotkey := RegexReplace(hkey, "#|!|\^|\+|<|>|\$|~", "")
+	/**
+	 * In- or decreases window size.
+	 * @param {Integer} direction Whether to scale up or down. If 1, scales the window larger, if -1 (or any other value), smaller.
+	 * @param {Float} scale_factor Amount by which to increase window size per function trigger. NOT exponential. eg if scale factor is 1.05, window increases by 5% of monitor width every function call.
+	 * @param {Integer} overrideBlacklist Whether to trigger the function regardless if the window is blacklisted or not.
+	 */
+	static scaleWindow(direction := 1, scale_factor := 1.025, overrideBlacklist := false) {
+		cleanHotkey := RegexReplace(A_ThisHotkey, "#|!|\^|\+|<|>|\$|~", "")
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
 		wHandle := WinExist("A")
@@ -168,7 +170,7 @@ class AltDrag {
 			DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", mI)
 			this.monitors[mHandle] := { left: NumGet(mI, 20, "Int"), top: NumGet(mI, 24, "Int"), right: NumGet(mI, 28, "Int"), bottom: NumGet(mI, 32, "Int") }
 		}
-		xChange := floor((this.monitors[mHandle].right - this.monitors[mHandle].left) / 2 * (scale_factor - 1))
+		xChange := floor((this.monitors[mHandle].right - this.monitors[mHandle].left) * (scale_factor - 1))
 		yChange := floor(winH * xChange / winW)
 		wLimit := this.winMinMaxSize(wHandle)
 		if (direction == 1) {
@@ -236,7 +238,7 @@ class AltDrag {
 
 	static calculateSnapping(&x, &y, w, h, mHandle) {
 		if (abs(x - this.monitors[mHandle].left) < this.snappingRadius)
-			x := this.monitors[mHandle].left - this.pixelCorrectionAmountLeft		; snap to left edge of screen + adjustment of window Client area to actual window
+			x := this.monitors[mHandle].left - this.pixelCorrectionAmountLeft			; snap to left edge of screen
 		else if (abs(x + w - this.monitors[mHandle].right) < this.snappingRadius)
 			x := this.monitors[mHandle].right - w + this.pixelCorrectionAmountRight 	; snap to right edge of screen
 		if (abs(y - this.monitors[mHandle].top) < this.snappingRadius)
