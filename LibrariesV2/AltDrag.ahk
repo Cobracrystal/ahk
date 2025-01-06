@@ -9,6 +9,12 @@
 ;  Alt + X4 Button		: Click to minimize a window.
 ;  Alt + X5 Button		: Click to make window enter borderless fullscreen
 
+- Why do moveWindow and resizeWindow require to be given their own hotkey as a parameter? 
+ 	Because they operate continuously from when the hotkey is pressed until it is released. 
+	This only works if the function knows which hotkey it is waiting for. (and the hotkey isn't hardcoded)
+*/
+
+/* ; <- uncomment this if you intend to use it as a standalone script
 ; Drag Window
 !LButton::{
 	AltDrag.moveWindow(A_ThisHotkey)
