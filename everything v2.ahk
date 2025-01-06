@@ -363,14 +363,13 @@ F11:: { 	; BTD6: Rebind Escape
 	AltDrag.minimizeWindow()
 }
 
-!XButton2:: {	; Borderless Fullscreen Window
-	AltDrag.doBorderlessFullscreen()
-}
-
 ^!XButton1:: {	; Minimize Window (no blacklist)
-	WinMinimize(WinExist("A"))
+	AltDrag.minimizeWindow(true)
 }
 
+!XButton2:: {	; Borderless Fullscreen Window
+	AltDrag.borderlessFullscreenWindow()
+}
 
 ^NumpadDiv:: {	; Show Mouse Coordinates
 	static toggle := false
@@ -678,7 +677,6 @@ getSelfIp() {
 ; ###########################################################################
 
 clipboardTracker(type) {
-	global A_Clipboard ; solely to remove the annoying vscode warning
 	try {
 		if (type == 1) {
 			if (StrLen(A_Clipboard) < 200) {
