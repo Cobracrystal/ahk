@@ -1,4 +1,4 @@
-﻿; https://github.com/cobracrystal/ahk
+; https://github.com/cobracrystal/ahk
 /*
 ;---'Traditional' Hotkeys:
 ;  Alt + Left Button	: Drag to move a window.
@@ -14,7 +14,6 @@
 	This only works if the function knows which hotkey it is waiting for. (and the hotkey isn't hardcoded)
 */
 
-/* ; <- uncomment this if you intend to use it as a standalone script
 ; Drag Window
 !LButton::{
 	AltDrag.moveWindow(A_ThisHotkey)
@@ -49,7 +48,7 @@
 !XButton2::{
 	AltDrag.borderlessFullscreenWindow()
 }
-*/
+
 
 class AltDrag {
 
