@@ -713,7 +713,7 @@ trayMenuHandler(itemName, *) {
 			SetTitleMatchMode("RegEx")
 			hwnd := WinWait("AutoHotkey (?:v2)? Help ahk_exe hh\.exe")
 			SetTitleMatchMode(tMM)
-			center_window_on_monitor(hwnd, 0.8)
+			AltDrag.resetWindowPosition(hwnd, 0.8)
 		case "Window Spy":
 			PostMessage(0x111, 65402, , , A_ScriptHwnd)
 		case "Reload this Script":
