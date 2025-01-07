@@ -352,11 +352,11 @@ F11:: { 	; BTD6: Rebind Escape
 }
 
 !WheelDown:: {	; Scale Window Down
-	AltDrag.scaleWindow(,-1)
+	AltDrag.scaleWindow(-1)
 }
 
 !WheelUp:: {	; Scale Window Up
-	AltDrag.scaleWindow(,1)
+	AltDrag.scaleWindow(1)
 }
 
 !XButton1:: {	; Minimize Window
