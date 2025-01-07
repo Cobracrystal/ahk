@@ -340,11 +340,11 @@ F11:: { 	; BTD6: Rebind Escape
 ; ###########################################################################
 
 !LButton:: {	; Drag Window
-	AltDrag.moveWindow(A_ThisHotkey)
+	AltDrag.moveWindow()
 }
 
 !RButton:: {	; Resize Window
-	AltDrag.resizeWindow(A_ThisHotkey)
+	AltDrag.resizeWindow()
 }
 
 !MButton:: {	; Toggle Max/Restore of clicked window
@@ -352,11 +352,11 @@ F11:: { 	; BTD6: Rebind Escape
 }
 
 !WheelDown:: {	; Scale Window Down
-	AltDrag.scaleWindow(-1, , A_ThisHotkey)
+	AltDrag.scaleWindow(,-1)
 }
 
 !WheelUp:: {	; Scale Window Up
-	AltDrag.scaleWindow(1, , A_ThisHotkey)
+	AltDrag.scaleWindow(,1)
 }
 
 !XButton1:: {	; Minimize Window
@@ -431,7 +431,7 @@ F11:: { 	; BTD6: Rebind Escape
 	else if WinActive("Discord ahk_exe Discord.exe")
 		WinMove(-1497, 129, 1292, 769)
 	else
-		center_window_on_monitor(WinExist("A"))
+		AltDrag.resetWindowPosition()
 }
 
 ^!+H:: { ; Make Active Window Transparent
@@ -547,23 +547,6 @@ slowClose(wHandle, HeightStep := 100, WidthStep := 100) {
 	Loop (WidthStep)
 		WinMove(x := x + (Step2 / 2), , w := w - Step2, , wHandle)
 	WinClose(wHandle)
-}
-
-center_window_on_monitor(hwnd, size_percentage := 0.714286) {
-	NumPut("Uint", 40, monitorInfo := Buffer(40))
-	monitorHandle := DllCall("MonitorFromWindow", "Ptr", hwnd, "UInt", 0x2, "Ptr")
-	DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
-
-	workLeft := NumGet(monitorInfo, 20, "Int") ; Left
-	workTop := NumGet(monitorInfo, 24, "Int") ; Top
-	workRight := NumGet(monitorInfo, 28, "Int") ; Right
-	workBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
-	WinRestore(hwnd)
-	WinMove(workLeft + (workRight - workLeft) * (1 - size_percentage) / 2, ; left edge of screen + half the width of it - half the width of the window, to center it.
-	workTop + (workBottom - workTop) * (1 - size_percentage) / 2,  ; same as above but with top bottom
-	(workRight - workLeft) * size_percentage,	; width
-	(workBottom - workTop) * size_percentage,	; height
-	hwnd)
 }
 
 ; ###########################################################################
