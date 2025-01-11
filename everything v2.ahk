@@ -48,6 +48,9 @@ GroupAdd("instantCloseWindows", "ahk_class RarReminder")
 GroupAdd("instantCloseWindows", "Please purchase WinRAR license ahk_class #32770")
 GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND O IS CYRILLIC
 ; GroupAdd("instantCloseWindows", "Unbenannt - Editor ahk_exe notepad.exe")
+GroupAdd("nonMenuWindows", "ahk_exe csgo.exe")
+GroupAdd("nonMenuWindows", "Satisfactory ahk_class UnrealWindow")
+GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
 youtubeDL := YoutubeDLGui()
 reminders := ReminderManager(, , token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
 try reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json")
@@ -99,7 +102,7 @@ return
 
 #SuspendExempt false
 
-#HotIf !WinActive("ahk_exe csgo.exe") && !WinActive("Satisfactory ahk_class UnrealWindow")
+#HotIf !WinActive("ahk_group nonMenuWindows")
 ^+LButton:: {	; Text Modification Menu
 	TextEditMenu.ShowMenu()
 }
