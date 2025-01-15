@@ -112,7 +112,7 @@ return
 	textTimestampConverter()
 }
 
-^I:: {	; Show Hex code as Color
+^!I:: {	; Show Hex code as Color
 	colorPreviewGUI(fastCopy())
 }
 
