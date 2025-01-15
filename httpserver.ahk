@@ -109,9 +109,10 @@ logger(ByRef req) {
 
 handleWebfiles(ByRef req, ByRef res, ByRef server) {
 	logger(req)
-	origin := A_WorkingDir
-	vpath := StrReplace(req.path, "/", "\")
-	indexFilesGeneric(req, res, server, origin, vpath)
+	origin := A_WorkingDir . "\webfiles"
+	static URLorigin := "/webfiles/"
+	vpath := StrReplace(SubStr(req.path, StrLen(URLorigin)), "/", "\")
+	indexFilesGeneric(req, res, server, origin, vpath, "/webfiles")
 }
 
 
@@ -214,7 +215,7 @@ embedder(ByRef req, ByRef res, ByRef server) {
 
 indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", title := "", ext := "*", mode := "DF") {
 	normPath := normalizePath(origin . vpath)
-	FileAppend, % "normpath: " normPath . "`n", *
+;	FileAppend, % "normpath: " normPath . "`n", * ; debugging purposes
 	if (t := FileExist(normPath)) && InStr(normPath, origin) {
 		if (InStr(t, "D")) {
 			if (SubStr(vpath, 0) != "\") {
@@ -222,7 +223,7 @@ indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", titl
 				res.status := 308
 				return
 			}
-			html := generateDirectoryListing(origin, vpath, title, ext, mode)
+			html := generateDirectoryListing(normPath, vpath, title, ext, mode)
 			res.SetBodyText(html, "text/html")
 		}
 		else {
@@ -240,12 +241,12 @@ indexFilesGeneric(ByRef req, ByRef res, ByRef server, origin, vpath := "\", titl
 	res.status := 200
 }
 
-generateDirectoryListing(origin, vpath := "\", title := "", ext := "*", fileMode := "DF") {
+generateDirectoryListing(folderPath, vpath := "\", title := "", ext := "*", fileMode := "DF") {
 	htmlTemplate := readFileIntoVar(A_WorkingDir . "\meta\indexTemplate.html")
-	origin := (SubStr(origin, 0) == "\" ? SubStr(origin, 1, -1) : origin)
+	folderPath := (SubStr(folderPath, 0) != "\" ? folderPath . "\" : folderPath)
 	arrFiles := {}
 	arrFolders := {}
-	Loop, Files, % fullPath . "*.*", % fileMode
+	Loop, Files, % folderPath . "*.*", % fileMode
 	{
 		if (InStr(A_LoopFileAttrib, "D"))
 			arrFolders.push({"name":A_LoopFileName, "time":A_LoopFileTimeCreated})
