@@ -163,6 +163,8 @@ class YoutubeDLGui {
 				this.ytdlOptionHandler()
 			case "CheckboxUseInlineConsole":
 				this.settings.useInlineConsole := !this.settings.useInlineConsole
+			case "CheckboxOnlyPrintFilename":
+				this.ytdlOptionHandler("print")
 			case "CheckboxOpenExplorer":
 				this.settings.openExplorer := !this.settings.openExplorer
 			case "CheckboxTrySelectFile":
@@ -268,6 +270,7 @@ class YoutubeDLGui {
 		settingsGui.AddCheckbox("vCheckboxUseAliases Checked" this.settings.useAliases, "Use aliases for arguments").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxUseInlineConsole Checked" this.settings.useInlineConsole, "Use the inbuilt Console").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxDownloadPlaylist Checked" . !this.options["no-playlist"].selected, "Download playlist?").OnEvent("Click", this.settingsHandler.bind(this))
+		settingsGui.AddCheckbox("vCheckboxOnlyPrintFilename Checked" . this.options["print"].selected, "Only print filename").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxOpenExplorer Checked" this.settings.openExplorer, "Open Explorer after download").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxTrySelectFile Checked" this.settings.trySelectFile, "Try Selecting File When Opening Explorer (Experimental)").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxResetConvertToAudio Checked" this.settings.resetConverttoAudio, "Always Start with `"Convert To Audio`" Off").OnEvent("Click", this.settingsHandler.bind(this))
