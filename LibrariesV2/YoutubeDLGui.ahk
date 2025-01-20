@@ -357,7 +357,7 @@ class YoutubeDLGui {
 				try settings := jsongo.Parse(FileRead(this.data.savePath "\settings.json", "UTF-8"))
 			}
 			settings := MapToObj(settings, true)
-			settings.options := ObjToMap(settings.options, false)
+			settings.options := ObjToMap(settings.HasOwnProp("options") ? settings.options : {}, false)
 			; remove settings that dont exist
 			for i, e in settings.OwnProps()
 				if (YoutubeDLGui.defaultSettings.HasOwnProp(i))
