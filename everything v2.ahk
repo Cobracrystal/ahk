@@ -580,8 +580,7 @@ connectNextDNS() {
 		whr.Send()
 		whr.WaitForResponse()
 	} catch as e {
-		Msgbox("Could not connect to NextDNS. Error:`n" e.What "`n" e.Extra)
-		return ""
+		return "Could not connect to NextDNS. Error:`n" e.What "`n" e.Extra
 	}
 	return whr.ResponseText
 }
@@ -606,7 +605,8 @@ internetConnectionLogger(mode := "T") {
 	else {
 		str := A_ComSpec . ' /c "pwsh ' A_WorkingDir '\everything\internetLogger.ps1 -path "' . logFile . '""'
 		Run(str, , "Hide", &internetConsolePID)
-		WinWait("ahk_pid " internetConsolePID)
+		if !(WinWait("ahk_pid " internetConsolePID, , 1))
+			return
 		WinSetAlwaysOnTop(1, "ahk_pid " internetConsolePID)
 		WinSetStyle(-0x70000, "ahk_pid " internetConsolePID)
 	}
