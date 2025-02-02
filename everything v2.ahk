@@ -49,6 +49,7 @@ GroupAdd("instantCloseWindows", "Please purchase WinRAR license ahk_class #32770
 GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND O IS CYRILLIC
 ; GroupAdd("instantCloseWindows", "Unbenannt - Editor ahk_exe notepad.exe")
 GroupAdd("nonMenuWindows", "ahk_exe csgo.exe")
+GroupAdd("nonMenuWindows", "ahk_exe cs2.exe")
 GroupAdd("nonMenuWindows", "Satisfactory ahk_class UnrealWindow")
 GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
 youtubeDL := YoutubeDLGui()
@@ -1017,14 +1018,5 @@ Numpad5::{
 		SetTimer(timer, 20)
 	else
 		SetTimer(timer, 0)
-}
-#HotIf
-
-#HotIf WinActive("ahk_exe Revolution Idle.exe")
-b::{
-	MouseGetPos(&x, &y)
-	Click(1432, 1013, "L")
-	Sleep(50)
-	MouseMove(x, y, 0)
 }
 #HotIf
