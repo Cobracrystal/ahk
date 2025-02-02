@@ -10,6 +10,7 @@ todo
 anti-todo-list
 fix window title bar not changing instantly when toggling darkmode. just click tab to another window and back to change.
 fix listview headers not being dark. requires custom font drawing so that the text in them is still readable.
+fix dark mode for DDL/Dropdownlist via custom intercept function
 */
 #Requires AutoHotkey >=v2.0 
 #SingleInstance Force
@@ -34,10 +35,11 @@ class TableFilter {
 			keys: [],
 			rowName: "",
 			defaultValues: TableFilter.entryPlaceholderValues,
+			; darkModeCallbackWindowProc: CallbackCreate(this.darkThemeWindowProcRedraw.bind(this)),
 			isSaved: true
 		}
 		this.guis := []
-
+			
 		if (IsSet(useConfig) && useConfig == 0)
 			this.config := TableFilter.defaultConfig
 		else
@@ -104,7 +106,10 @@ class TableFilter {
 			guiObj.addRowControls.Push(guiObj.AddGroupBox("Section w" 10 + 95 * this.data.keys.Length + 75 " h65", "Add Row"))
 			for i, e in this.data.keys {
 				guiObj.addRowControls.Push(guiObj.AddText("ys+15 xs+" 10 + ((i - 1) * 95), e))
-				(ed := guiObj.AddEdit("r1 w85 vEditAddRow" i, "")).OnEvent("Change", this.validValueChecker.bind(this))
+				if (e == this.config.taggingColumn)
+					ed := guiObj.AddDropDownList("w85 vDropdownTaggingColumn", TableFilter.wordCategories)
+				else
+					(ed := guiObj.AddEdit("r1 w85 vEditAddRow" i, "")).OnEvent("Change", this.validValueChecker.bind(this))
 				guiObj.addRowControls.Push(ed)
 			}
 			(btn := guiObj.AddButton("ys+15 xs+" 10 + 95 * this.data.keys.Length " h40 w65", "Add Row to List")).OnEvent("Click", this.addEntry.bind(this))
@@ -219,8 +224,14 @@ class TableFilter {
 		newRow := Map()
 		aGui := ctrlObj.Gui
 		for i, key in this.data.keys {
-			newRow[key] := aGui["EditAddRow" i].Value
-			aGui["EditAddRow" i].Value := ""
+			if (key == this.config.taggingColumn) {
+				newRow[key] := aGui["DropdownTaggingColumn"].Text
+				aGui["DropdownTaggingColumn"].Text := ""
+			}
+			else {
+				newRow[key] := aGui["EditAddRow" i].Value
+				aGui["EditAddRow" i].Value := ""
+			}
 		}
 		this.cleanRowData(newRow)
 		this.data.data.push(newRow)
@@ -463,6 +474,8 @@ class TableFilter {
 			ctrl.SetFont(font)
 			if (ctrl is Gui.Button)
 				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
+			if (ctrl is Gui.DDL)
+				DllCall("uxtheme\SetWindowTheme", "Ptr", ctrl.hWnd, "Str", (dark ? "DarkMode_CFD" : "CFD"), "Ptr", 0)
 			if (ctrl is Gui.ListView) {
 				listviewDarkmode(ctrl, dark, color, fontColor)
 				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
@@ -533,6 +546,42 @@ class TableFilter {
 			}
 		}
 	}
+
+	; darkThemeWindowProcRedraw(hwnd, uMsg, wParam, lParam) {
+	; 	Critical()
+	; 	static WM_CTLCOLOREDIT    := 0x0133
+	; 	static WM_CTLCOLORLISTBOX := 0x0134
+	; 	static WM_CTLCOLORBTN     := 0x0135
+	; 	static WM_CTLCOLORSTATIC  := 0x0138
+	; 	static DC_BRUSH           := 18
+
+	; 	color := this.config.colorTheme ? this.config.colorTheme == 2 ? this.config.customThemeColor : TableFilter.darkModeColor : "0xFFFFFF"
+	; 	dark := isDark(color)
+		
+	; 	if (dark) {
+	; 		switch uMsg{
+	; 			case WM_CTLCOLOREDIT, WM_CTLCOLORLISTBOX:
+	; 			{
+	; 				DllCall("gdi32\SetTextColor", "Ptr", wParam, "UInt", DarkColors["Font"])
+	; 				DllCall("gdi32\SetBkColor", "Ptr", wParam, "UInt", DarkColors["Controls"])
+	; 				DllCall("gdi32\SetDCBrushColor", "Ptr", wParam, "UInt", DarkColors["Controls"], "UInt")
+	; 				return DllCall("gdi32\GetStockObject", "Int", DC_BRUSH, "Ptr")
+	; 			}
+	; 			case WM_CTLCOLORBTN:
+	; 			{
+	; 				DllCall("gdi32\SetDCBrushColor", "Ptr", wParam, "UInt", DarkColors["Background"], "UInt")
+	; 				return DllCall("gdi32\GetStockObject", "Int", DC_BRUSH, "Ptr")
+	; 			}
+	; 			case WM_CTLCOLORSTATIC:
+	; 			{
+	; 				DllCall("gdi32\SetTextColor", "Ptr", wParam, "UInt", DarkColors["Font"])
+	; 				DllCall("gdi32\SetBkColor", "Ptr", wParam, "UInt", DarkColors["Background"])
+	; 				return TextBackgroundBrush
+	; 			}
+	; 		}
+	; 	}
+	; 	return DllCall("user32\CallWindowProc", "Ptr", this.data.darkModeCallbackWindowProc, "Ptr", hwnd, "UInt", uMsg, "Ptr", wParam, "Ptr", lParam)
+	; }
 
 	clearSearchBoxes(guiObj, *) {
 		if (guiObj is Gui.Control)
@@ -648,12 +697,11 @@ class TableFilter {
 			if (tagState)
 				curCategories .= "," tag
 			else {
-				if (tag == "All")
 				; why not just set as empty string? might contain other stuff (or unknown categories)
-					for i, tag in TableFilter.wordCategories
-						curCategories := StrReplace(curCategories, tag)
-					else
-						curCategories := StrReplace(curCategories, tag)
+				if (tag == "All")
+					curCategories := ""
+				else
+					curCategories := StrReplace(curCategories, tag)
 			}
 			row[this.config.taggingColumn] := Trim(Sort(curCategories, "P3 U D,"), ", ")
 			this.editRow(index, row)
@@ -669,25 +717,27 @@ class TableFilter {
 			}
 			return
 		}
-		guiObj.LV.GetPos(, , &lvw, &lvh)
-		guiObj.LV.Move(, , nw - 20, nh - 131)
-		guiObj.LV.GetPos(, , &lvnw, &lvnh)
-		deltaW := lvnw - lvw
-		deltaH := lvnh - lvh
-		for index, ctrl in guiObj.topRightControls {
-			ctrl.GetPos(&cx, &cy)
-			ctrl.Move(cx + deltaW)
-			ctrl.Redraw()
-		}
-		for jndex, ctrl in guiObj.addRowControls {
-			ctrl.GetPos(, &cy)
-			ctrl.Move(, cy + deltaH)
-			ctrl.Redraw()
-		}
-		for kndex, ctrl in guiObj.fileControls {
-			ctrl.GetPos(&cx, &cy)
-			ctrl.Move(cx + deltaW, cy + deltaH)
-			ctrl.Redraw()
+		try {
+			guiObj.LV.GetPos(, , &lvw, &lvh)
+			guiObj.LV.Move(, , nw - 20, nh - 131)
+			guiObj.LV.GetPos(, , &lvnw, &lvnh)
+			deltaW := lvnw - lvw
+			deltaH := lvnh - lvh
+			for index, ctrl in guiObj.topRightControls {
+				ctrl.GetPos(&cx, &cy)
+				ctrl.Move(cx + deltaW)
+				ctrl.Redraw()
+			}
+			for jndex, ctrl in guiObj.addRowControls {
+				ctrl.GetPos(, &cy)
+				ctrl.Move(, cy + deltaH)
+				ctrl.Redraw()
+			}
+			for kndex, ctrl in guiObj.fileControls {
+				ctrl.GetPos(&cx, &cy)
+				ctrl.Move(cx + deltaW, cy + deltaH)
+				ctrl.Redraw()
+			}
 		}
 	}
 
