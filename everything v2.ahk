@@ -179,10 +179,6 @@ return
 ; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################
 ; ###########################################################################
 
-^!+NumpadEnter:: {	; Launch Autoclicker
-	Run(A_Desktop "\Autoclicker\AutoClickerPos.exe")
-}
-
 *^LWin Up:: { ; Open Everything Search Window
 	static searchString := "Everything ahk_exe Everything.exe ahk_class EVERYTHING"
 	state := GetKeyState("Shift")
@@ -1011,7 +1007,7 @@ loadTableAsHotstrings(filePath) {
 #HotIf
 
 #HotIf !WinExist("ahk_exe AutoClickerPos.exe")
-Numpad5::{
+Numpad5::{	; Toggle Autoclicker
 	static timer := Click.Bind("L")
 	static toggle := 0
 	if (toggle := !toggle)
