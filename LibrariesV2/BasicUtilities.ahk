@@ -151,6 +151,14 @@ sortArray(arr, mode := "") {
 	return arr2
 }
 
+uniqueArray(arr) {
+	arr2 := []
+	for i, e in arr
+		if (!objContainsValue(arr2, e))
+			arr2.push(e)
+	return arr2
+}
+
 ; gets a map of maps. sorts it by a key of the submap, returns it as array
 ; requires all contents of mapInner[key] to be of the same type (number or string)
 sortObjectByKey(tmap, key, mode := "") {
@@ -827,7 +835,7 @@ format_argb(color, reverse := true, alpha?) {
 
 ; 0xFF00F9
 colorPreviewGUI(color) {
-	if (!IsInteger(color))
+	if (!RegexMatch(color, "i)(?:0x)?[0-9A-F]{6}"))
 		return
 	CoordMode("Mouse")
 	MouseGetPos(&x, &y)
