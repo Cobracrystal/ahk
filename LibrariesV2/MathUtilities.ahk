@@ -23,7 +23,6 @@ calculateExpression(mode := "print") {
 	}
 }
 
-
 createResult(expression) {
 	clean := RegExReplace(expression, "\s+", "")
 	if (RegexMatch(clean, "^factor\((\d+)\)$", &m))
@@ -34,6 +33,10 @@ createResult(expression) {
 		return gcd(StrSplit(m[1], ",")*)
 	else if (RegexMatch(clean, "^(?:lcm|kgv)\(((?:\d+(?:\.\d+)?,)*\d+(?:\.\d+)?)\)$", &m))
 		return lcm(StrSplit(m[1], ",")*)
+	else if (RegexMatch(clean, "^(?:lcd|kgt)\(((?:\d+(?:\.\d+)?,)*\d+(?:\.\d+)?)\)$", &m))
+		return lcd(StrSplit(m[1], ",")*)
+	else if (RegexMatch(clean, "^(?:gcm|ggv)\(((?:\d+(?:\.\d+)?,)*\d+(?:\.\d+)?)\)$", &m))
+		return gcm(StrSplit(m[1], ",")*)
 	; if (InStr(expression, "x")) {
 	; 	expression := RegexReplace(expression, "(\d)x", "$1*x")
 	; 	expression := RegexReplace(expression, "(\d),(\d)", "$1.$2")
@@ -197,8 +200,8 @@ extendFactorials(expression) {
 roundProper(number, precision := 12) {
 	if (!IsNumber(number) || IsSpace(number))
 		return number
-	if (isInteger(number) || Round(number) == number)
-		return Round(number)
+	if (IsInteger(number) || Round(number) == number)
+		return Integer(number)
 	else
 		return RTrim(Round(number, precision), "0.")
 }
@@ -249,8 +252,33 @@ lcm(nums*) {
 	value := 1
 	for i, e in nums
 		value *= e
-	return nums.Length == 1 ? value : value/gcd(nums*)
+	return nums.Length == 1 ? value : value//gcd(nums*)
 }
+
+/**
+ * Returns least common divisor of given numbers
+ * @param nums List of numbers
+ * @returns {Integer} 
+ */
+lcd(nums*) {
+	i := 2
+	while (i * i <= Max(nums*)) {
+		flag := true
+		for j, e in nums {
+			if (Mod(e, i) != 0)
+				flag := false
+		}
+		if (flag)
+			return i
+		i++
+	}
+}
+
+gcm(nums*) {
+	n := lcm(nums*)
+	return 2**63 - mod(2**63-1,240) - 1
+}
+
 
 /**
  * Given an Integer, returns whether it is prime.
@@ -293,4 +321,57 @@ perfectPowers(n) {
 			arr.push(A_LoopField)
 	}
 	return arr
+}
+
+streetInDice(streetLen, diceAmount, filePath) {
+	strDice := ""
+	nums := 6**diceAmount
+	dices := []
+	amount := 0
+	fullStr := ""
+	Loop(diceAmount)
+		dices.push(1)
+	Loop(nums) {
+		Loop(diceAmount) {
+			if (dices[A_Index] < 6) {
+				dices[A_Index]++
+				break
+			}
+			else
+				dices[A_Index] := 1
+		}
+		; next dice sequence
+		thing := numscontainStreet(dices, streetLen)
+		strDice .= "] " thing "`n"
+		fullStr .= strDice
+		strDice := ""
+		amount += thing
+	}
+	FileAppend(fullStr, filePath)
+	FileAppend(amount " out of " nums " contain a street of " streetLen " in them. That's " amount / nums * 100 "%", filePath)
+
+	numscontainStreet(sequence, streetLen) {
+		; LOG
+		strDice := "["
+		Loop(sequence.Length)
+			strDice .= sequence[A_Index] . ","
+		seq := sortArray(uniqueArray(sequence), "N")
+		strDice .= "] sorted ["
+		Loop(seq.Length)
+			strDice .= seq[A_Index] . ","
+		; LOG END
+		Loop(seq.Length - StreetLen + 1) {
+			isStreet := true
+			start := A_Index
+			Loop(StreetLen - 1) {
+				if (seq[start + A_Index - 1] != seq[start + A_Index] - 1) {
+					isStreet := false
+					break
+				}
+			}
+			if (isStreet)
+				return 1
+		}
+		return 0
+	}
 }
