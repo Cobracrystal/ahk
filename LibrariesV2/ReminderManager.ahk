@@ -409,7 +409,7 @@ class ReminderManager {
 		message .= (msg == "" ? "" : "`nReminder Message: " . msg)
 		SoundPlay("*48")
 		SetTimer((*) => MsgBox(message, "Reminder"), -1)
-		return 
+		return
 	}
 
 	reminder1337(*) {
