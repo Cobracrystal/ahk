@@ -78,7 +78,6 @@ class WindowManager {
 		this.gui.OnEvent("Close", (*) => this.windowManager("Close"))
 		this.gui.OnEvent("Escape", (*) => this.windowManager("Close"))
 		this.gui.OnEvent("Size", this.onResize.bind(this))
-		OnMessage(0x0100, this.guiOnKeyPress.bind(this))
 		this.gui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 		this.gui.AddCheckbox("Section vCheckboxHiddenWindows Checked" . this.settings.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . this.settings.showExcludedWindows, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
@@ -248,25 +247,6 @@ class WindowManager {
 		this.menu.show()
 	}
 
-	static guiOnKeyPress(wParam, lParam, msg, hwnd) {
-		; DetectHiddenWindows(true)
-		; gHwnd := WinExist()
-		if (ctrl := GuiCtrlFromHwnd(hwnd)) {
-			if (ctrl.gui == this.gui) {
-				switch wParam {
-					case "70": ; ctrl C
-						if (GetKeyState("Ctrl")) {
-							this.gui["EditFilterWindows"].Focus()
-						}
-					case "116":	;// F5 Key -> Reload
-						this.guiListviewCreate()
-					default:
-						return
-				}
-			}
-		}
-	}
-
 	static onKeyPress(ctrlObj, lParam) {
 		vKey := NumGet(lParam, 24, "ushort")
 		rowNFocused := this.LV.GetNext(0,"F")
@@ -278,7 +258,7 @@ class WindowManager {
 				break
 			rowNums.push(nextRow)
 		}
-		if (rowNums.Length == 0 && vKey != "65")
+		if (rowNums.Length == 0 && vKey != "65" && vKey != "116")
 			return
 		for i, e in rowNums
 			wHandles.push(Integer(this.LV.GetText(e, 1)))
@@ -327,6 +307,8 @@ class WindowManager {
 					; Loop(this.LV.GetCount("Col"))
 					; 	str .= this.LV.GetText(rowN, A_Index) "`t"
 				}
+			case "116":	;// F5 Key -> Refresh LV
+				this.guiListviewCreate()
 			default:
 				return
 		}
