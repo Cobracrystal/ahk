@@ -43,8 +43,17 @@ createResult(expression) {
 	; 	expression := extendFactorials(expression)
 	; 	return equation_solver(expression)
 	; }
-	return roundProper(ExecScript(clean_expression(expression)))
+	; return roundProper(ExecScript(clean_expression(expression)))
+	return readableFormat(ExecScript(clean_expression(expression)))
 
+}
+
+readableFormat(numStr) {
+	if (InStr(numStr, "."))
+		numStr := RTrim(numStr, "0")
+	if (SubStr(numStr, -1) = ".")
+		numStr := SubStr(numStr, 1, -1)
+	return
 }
 
 equation_transformer(equation) {
