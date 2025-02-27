@@ -34,12 +34,8 @@ ShellMessage(wParam, lParam, msg, hwnd) {
 }
 
 clickWhileAlted() {
-	; option a
-	; MouseGetPos(,,&hoverwin)
-	; WinActivate(hoverwin)
-	; option b
-	Send("{Alt Up}")
-	Click()
+	MouseGetPos(,,&hoverwin)
+	WinActivate(hoverwin)
 }
 
 clipCursor(mode := true, window := "A") {
