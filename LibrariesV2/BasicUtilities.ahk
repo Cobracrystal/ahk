@@ -1,6 +1,7 @@
 ﻿; https://github.com/cobracrystal/ahk
 
 #Requires Autohotkey v2+
+#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 class TrayMenu {
 	; ADD TRACKING FOR CHILD MENUS
@@ -81,6 +82,39 @@ modifySelectedText(method, params*) {
 	return 1
 }
 
+class Uri {
+; stolen from https://github.com/ahkscript/libcrypt.ahk/blob/master/src/URI.ahk
+	static encode(str) { ; keep ":/;?@,&=+$#."
+		return this.LC_UriEncode(str, "[0-9a-zA-Z:/;?@,&=+$#.]")
+	}
+
+	static decode(str) {
+		return this.LC_UriDecode(str)
+	}
+
+	static LC_UriEncode(uri, RE := "[0-9A-Za-z]") {
+		var := Buffer(StrPut(uri, "UTF-8"), 0)
+		StrPut(uri, var, "UTF-8")
+		while(code := NumGet(Var, A_Index - 1, "UChar"))
+			res .= RegExMatch(char := Chr(Code), RE) ? char : Format("%{:02X}", Code)
+		return Res
+	}
+
+	static LC_UriDecode(uri) {
+		pos := 1
+		while(pos := RegExMatch(uri, "i)(%[\da-f]{2})+", &code, pos)) {
+			var := Buffer(StrLen(code[1]) // 3, 0)
+			Code := SubStr(code[1], 2)
+			Loop Parse, code, "`%"
+				NumPut("UChar", "0x" A_LoopField, var, A_Index - 1)
+			decoded := StrGet(var, "UTF-8")
+			uri := SubStr(uri, 1, pos-1) . decoded . SubStr(uri, pos+StrLen(Code)+1)
+			pos += StrLen(decoded)+1
+		}
+		return uri
+	}
+}
+
 /**
  * Counts how many times a given value is included in an Object
  * @param obj array or map
@@ -151,7 +185,12 @@ sortArray(arr, mode := "") {
 	return arr2
 }
 
-uniqueArray(arr) {
+/**
+ * Given Array, returns a new Array with all duplicates removed. Order is preserved.
+ * @param arr 
+ * @returns {Array} 
+ */
+uniquesFromArray(arr) {
 	arr2 := []
 	for i, e in arr
 		if (!objContainsValue(arr2, e))
@@ -405,14 +444,14 @@ DateAddW(dateTime, value, timeUnit) {
 * Given a set of time units, returns a YYYYMMDDHH24MISS timestamp
 ; of the earliest possible time in the future when all given parts match
 * Examples: The current time is 27th December, 2023, 17:16:34
-* parseTime() => A_Now
-* parseTime(2023,12) => A_Now.
-* parseTime(2023, , 27) => A_Now.
-* parseTime(2023, , 28) => 20231228000000.
-* parseTime(, 2, 29) => 20240229000000 (next leap year).
-* parseTime(2022, ...) => 0.
-* parseTime(2025, 02, 29) => throw Error: Invalid Date
-* parseTime(, 1, , , 19) => 20240101001900
+* parseTime() -> A_Now
+* parseTime(2023,12) -> A_Now.
+* parseTime(2023, , 27) -> A_Now.
+* parseTime(2023, , 28) -> 20231228000000.
+* parseTime(, 2, 29) -> 20240229000000 (next leap year).
+* parseTime(2022, ...) -> 0.
+* parseTime(2025, 02, 29) -> throw Error: Invalid Date
+* parseTime(, 1, , , 19) -> 20240101001900
 */
 parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 	Now := A_Now
@@ -545,6 +584,8 @@ enumerateDay(day) {
 
 ExecScript(expression, Wait := true) {
 	input := '#Warn All, Off`n'
+	input .= '#Include "*i ' A_LineFile '"`n'
+	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\MathUtilities.ahk"`n'
 	if (RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox\(.+\)'))
 		input .= expression
 	else if (RegexMatch(expression, 'i)print\(.*\)'))
