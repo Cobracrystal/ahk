@@ -5,10 +5,7 @@
 ; MAIN FUNCTION
 calculateExpression(mode := "print") {
 	expression := fastCopy()
-	result := createResult(expression)
-	;	if (Instr(expression, "x"))	; bad for recognizing equations.
-	;		endSymbol := " => x = "
-	;	else
+	result := readableFormat(ExecScript(clean_expression(expression)))
 	endSymbol := " = "
 	if (result = "")
 		return
@@ -23,31 +20,6 @@ calculateExpression(mode := "print") {
 	}
 }
 
-createResult(expression) {
-	clean := RegExReplace(expression, "\s+", "")
-	if (RegexMatch(clean, "^factor\((\d+)\)$", &m))
-		return factorization(clean)
-	else if (RegexMatch(clean, "^prime\((\d+)\)$", &m))
-		return primetest(m[1])
-	else if (RegexMatch(clean, "^(?:gcd|ggt)\(((?:\d+(?:\.\d+)?,)*\d+(?:\.\d+)?)\)$", &m))
-		return gcd(StrSplit(m[1], ",")*)
-	else if (RegexMatch(clean, "^(?:lcm|kgv)\(((?:\d+(?:\.\d+)?,)*\d+(?:\.\d+)?)\)$", &m))
-		return lcm(StrSplit(m[1], ",")*)
-	else if (RegexMatch(clean, "^(?:lcd|kgt)\(((?:\d+(?:\.\d+)?,)*\d+(?:\.\d+)?)\)$", &m))
-		return lcd(StrSplit(m[1], ",")*)
-	else if (RegexMatch(clean, "^(?:gcm|ggv)\(((?:\d+(?:\.\d+)?,)*\d+(?:\.\d+)?)\)$", &m))
-		return gcm(StrSplit(m[1], ",")*)
-	; if (InStr(expression, "x")) {
-	; 	expression := RegexReplace(expression, "(\d)x", "$1*x")
-	; 	expression := RegexReplace(expression, "(\d),(\d)", "$1.$2")
-	; 	expression := extendFactorials(expression)
-	; 	return equation_solver(expression)
-	; }
-	; return roundProper(ExecScript(clean_expression(expression)))
-	return readableFormat(ExecScript(clean_expression(expression)))
-
-}
-
 readableFormat(numStr) {
 	if (InStr(numStr, "."))
 		numStr := RTrim(numStr, "0")
@@ -56,112 +28,11 @@ readableFormat(numStr) {
 	return numStr
 }
 
-equation_transformer(equation) {
-	transformed_form := equation
-	equalSignPos := InStr(equation, "=")
-	leftside := SubStr(equation, 1, equalSignPos - 1)
-	rightside := SubStr(equation, equalSignPos + 1)
-	if (!equalSignPos)
-		return
-	return transformed_form
-}
-
-factorization(expression) {
-	RegexMatch(expression, "(\d+)", &m)
-	n := m[1]
-	if (n == 0)
-		return 0
-	if (n < 0)
-		n := abs(n)
-	i := 2
-	ti := 1
-	c := 0
-	if (primetest(n))
-		return "1*" . n
-	s := ""
-	while (n != 1) {
-		if (Mod(n, i) == 0) {
-			n := n / i
-			if (ti != i && c != 0) {
-				s .= (s == "" ? "" : "*") . ti . (c > 1 ? "^" . c : "")
-				c := 1
-			}
-			else
-				c++
-			ti := i
-			if (n == 1)
-				s .= (s == "" ? "" : "*") . ti . (c > 1 ? "^" . c : "")
-			i := 1
-		}
-		i++
-	}
-	return s
-}
-
-equation_solver(equation) {
-	if (!equation)
-		return
-	if (RegexMatch(equation, "^\s*x\s*=(.*)", &m))
-		return ExecScript(m[1])
-	if (RegexMatch(equation, "^(\+|-|)(\d*\.\d*|\d*)(\*|)(x\*\*2|)(\+|-|)(\d*\.\d*|\d*)(\*|)(x|)(\+|-|)(\d*\.\d*|\d*)=(\+|-|)(\d*\.\d*|\d*)$", &m))
-		return quadratic_equation_solver(m)
-	return roundProper(ExecScript(equation))
-}
-
-quadratic_equation_solver(m) {
-	if ((m[11] && !m[12]) || (m[9] && !m[10]) || (m[8] && !m[9] && m[10]) || (m[7] && !m[8]) || (m[6] && !m[8] && m[10]) || (m[5] && !m[6] && m[7]) || (m[5] && !m[6] && !m[8] && m[9]) || (m[3] && !m[4] && (m[5] || m[6] || m[7])) || (m[2] && !m[4] && m[6]) || (m[1] && !m[2] && m[3]) || (m[1] && !m[4] && m[5]))
-		return
-	;	pos := RegexMatch(equation, "^(\+|-|)(\d*\.\d*|\d*)(\*|)(x\*\*2|)(\+|-|)(\d*\.\d*|\d*)(\*|)(x|)(\+|-|)(\d*\.\d*|\d*)=(\+|-|)(\d*\.\d*|\d*)$", m)
-	;	pos := RegexMatch(equation, "^$1     $2            $3   $4       $5     $6            $7   $8  $9     $10            $11    $12           $")
-	if (!m[4])
-		a := 0
-	else {
-		a := (m[1] = "-" ? -1 : 1)
-		if (m[2])
-			a *= m[2]
-	}
-	if (!m[8])
-		b := 0
-	else {
-		b := (m[5] = "-" ? -1 : 1)
-		if (m[6])
-			b *= m[6]
-		else {
-			if (!m[5]) {
-				b := (m[1] = "-" ? -1 : 1)
-				if (m[2])
-					b *= m[2]
-			}
-		}
-	}
-	if (m[8] = "x") {
-		c := (m[9] = "-" ? -1 : 1)
-		if (m[10])
-			c *= m[10]
-	}
-	else if (m[6])
-		c := (m[5] = "-" ? -1 : 1) * m[6]
-	if (m[12])
-		c += (m[11] = "-" ? 1 : -1) * (m[12] ? m[12] : 0)
-	;	MsgBox % "1: " . m[1] . "`n2: " . m[2] . "`n3: " . m[3] . "`n4: " . m[4] . "`n5: " . m[5] . "`n6: " . m[6] . "`n7: " m[7] . "`n8: " . m[8] . "`n9: " . m[9] . "`n10: " . m[10] . "`n11: " . m[11] . "`n12: " . m[12] . "`na: " . a . "`nb: " . b . "`nc: " . c
-	if (b ** 2 - 4 * a * c < 0) {
-		p1 := (b != 0 ? -1 * b / (2 * a) : "")
-		p2sol1 := (a > 0 && p1 ? "+" : "")
-		p2sol2 := (a < 0 && p1 ? "+" : (a > 0 ? "-" : ""))
-		p3 := roundProper(sqrt(-1 * (b ** 2 - 4 * a * c)) / (2 * a))
-		p3 := (p3 = 1 ? "" : p3)
-		sol1 := roundProper(p1) . p2sol1 . p3 . "i"
-		sol2 := roundProper(p1) . p2sol2 . p3 . "i"
-	}
-	else {
-		if (a) {
-			sol1 := roundProper((-1 * b + sqrt(b ** 2 - 4 * a * c)) / (2 * a))
-			sol2 := roundProper((-1 * b - sqrt(b ** 2 - 4 * a * c)) / (2 * a))
-		}
-		else
-			return roundProper(-c / b)
-	}
-	return "[" . sol1 . ", " . sol2 . "]"
+giveUpAndCallWolframalpha(expression) {
+	static baseURL := "https://api.wolframalpha.com/v2/query?input=" 
+	static queryParameters := "&format=plaintext&output=JSON&appid=YOUR_APP_ID"
+	
+	"https://www.wolframalpha.com/input/?i=" . StrReplace(fastCopy(), " ", "+")
 }
 
 
@@ -216,24 +87,65 @@ roundProper(number, precision := 12) {
 }
 
 /**
- * Given integer, returns array of its factors. Includes 1 and n itself
+ * Given integer, returns array of its prime factors. Includes 1 and n itself
  * @param n integer
  * @returns {Array} 
  */
-factor(n) {
+primefactor(n) {
+	if (n == 0)
+		return [0]
 	num := Abs(n)
-	factors := [num == n ? 1 : -1]
+	local factors := []
 	divisor := 2
 	while (num != 1) {
 		if (Mod(num, divisor) == 0) {
-			num /= divisor
+			num //= divisor
 			factors.push(divisor)
 			continue
 		}
 		divisor++
 	}
-	factors.push(num)
 	return factors
+}
+
+/**
+ * Given integer, returns array of all its factors. Includes 1 and n itself.
+ * @param n Integer
+ * @returns {Array} Array of factors. 
+ */
+factors(n) {
+	local pfactors := primefactor(n)
+	factorSets := powerset(pfactors)
+	local factors := []
+	for i, e in factorSets {
+		f := 1
+		for j, k in e
+			f *= k
+		factors.push(f)
+	}
+	factors := uniquesFromArray(factors)
+	return factors
+}
+
+/**
+ * Given array, returns powerset of all of its members.
+ * @param arr 
+ */
+powerset(arr) {
+	local ps := []
+	i := 0
+	while (i < 2**arr.Length) {
+		subset := []
+		j := 0
+		while (j < arr.Length) {
+			if (i & (1 << j))
+				subset.push(arr[j+1])
+			j++
+		}
+		ps.push(subset)
+		i++
+	}
+	return ps
 }
 
 /**
@@ -283,6 +195,11 @@ lcd(nums*) {
 	}
 }
 
+/**
+ * Returns greatest common multiple of given numbers.
+ * @param nums 
+ * @returns {Number} 
+ */
 gcm(nums*) {
 	n := lcm(nums*)
 	return 2**63 - mod(2**63-1,240) - 1
@@ -364,7 +281,7 @@ streetInDice(streetLen, diceAmount, filePath) {
 		strDice := "["
 		Loop(sequence.Length)
 			strDice .= sequence[A_Index] . ","
-		seq := sortArray(uniqueArray(sequence), "N")
+		seq := sortArray(uniquesFromArray(sequence), "N")
 		strDice .= "] sorted ["
 		Loop(seq.Length)
 			strDice .= seq[A_Index] . ","
@@ -384,3 +301,13 @@ streetInDice(streetLen, diceAmount, filePath) {
 		return 0
 	}
 }
+
+; ALIAS SECTION
+pfactor(n) => primefactor(n)
+pfactors(n) => primefactor(n)
+factor(n) => factors(n)
+prime(n) => primetest(n)
+ggT(n) => gcd(n)
+kgv(n) => lcm(n)
+kgt(n) => lcd(n)
+ggv(n) => gcm(n)
