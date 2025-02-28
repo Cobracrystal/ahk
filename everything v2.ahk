@@ -72,6 +72,7 @@ internetConnectionLogger("Init")
 ; Load LaTeX Hotstrings
 
 try HotstringLoader.load(FileRead(A_WorkingDir "\everything\LatexHotstrings.json", "UTF-8"), "LaTeX",,,false)
+expressionCalculator.setWolframAlphaToken(FileRead(A_WorkingDir "\everything\wolframalphaQueries.token", "UTF-8"))
 ; loadTableAsHotstrings(A_WorkingDir "\TableFilter\Kayoogis.json")
 ; replace the tray menu with my own
 customTrayMenu()
@@ -171,7 +172,7 @@ return
 }
 
 ; Evaluate Shell Expression in-text
-^!K:: calculateExpression("p")
+^!K:: expressionCalculator.calculateExpression("c")
 
 ; ###########################################################################
 ; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################

@@ -2,38 +2,59 @@
 
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 
-; MAIN FUNCTION
-calculateExpression(mode := "print") {
-	expression := fastCopy()
-	result := readableFormat(ExecScript(clean_expression(expression)))
-	endSymbol := " = "
-	if (result = "")
-		return
-	Send("{Right}")
-	switch (SubStr(mode, 1, 1)) {
-		case "p":
-			fastPrint(endSymbol . result)
-		case "c":
-			A_Clipboard := result
-		default:
-			msgbox(result)
+class expressionCalculator {
+
+	static setWolframAlphaToken(token) {
+		this.token := token
+	}
+
+	static calculateExpression(mode := "print") {
+		expression := fastCopy()
+		result := this.giveUpAndCallWolframalpha(expression)
+;		result := this.readableFormat(ExecScript(this.clean_expression(expression)))
+		endSymbol := " = "
+		if (result = "")
+			return
+		Send("{Right}")
+		switch (SubStr(mode, 1, 1)) {
+			case "p":
+				fastPrint(endSymbol . result)
+			case "c":
+				A_Clipboard := result
+			default:
+				msgbox(result)
+		}
+	}
+
+	static readableFormat(numStr) {
+		if (InStr(numStr, "."))
+			numStr := RTrim(numStr, "0")
+		if (SubStr(numStr, -1) = ".")
+			numStr := SubStr(numStr, 1, -1)
+		return numStr
+	}
+	
+	static giveUpAndCallWolframalpha(expression) {
+		static baseURL := "https://api.wolframalpha.com/v2/query?input=" 
+		static queryParameters := "&format=plaintext&output=JSON&appid="
+		if !(this.token)
+			throw Error("No token set for WolframAlpha API")
+		encoded := Uri.encode(expression)
+		url := baseURL . encoded . queryParameters . this.token
+		retObj := sendRequest(url, "GET")
+		return retObj
+	}
+
+	static clean_expression(expression) {
+		list := [{ key: "\pi", val: "3.141592653589793" }, { key: "\phi", val: "((1+sqrt(5))/2)" }, { key: "\e", val: "2.718281828459045" }
+		]
+		for i, e in list
+			expression := StrReplace(expression, e.key, e.val)
+		expression := Trim(expression, "`n`r`t ")
+		return expression
 	}
 }
-
-readableFormat(numStr) {
-	if (InStr(numStr, "."))
-		numStr := RTrim(numStr, "0")
-	if (SubStr(numStr, -1) = ".")
-		numStr := SubStr(numStr, 1, -1)
-	return numStr
-}
-
-giveUpAndCallWolframalpha(expression) {
-	static baseURL := "https://api.wolframalpha.com/v2/query?input=" 
-	static queryParameters := "&format=plaintext&output=JSON&appid=YOUR_APP_ID"
-	
-	"https://www.wolframalpha.com/input/?i=" . StrReplace(fastCopy(), " ", "+")
-}
+; MAIN FUNCTION
 
 
 /*	+5x+3=0
@@ -50,14 +71,6 @@ giveUpAndCallWolframalpha(expression) {
 	-> recursively call function until no brackets are left.
 */
 
-clean_expression(expression) {
-	list := [{ key: "\pi", val: "3.141592653589793" }, { key: "\phi", val: "((1+sqrt(5))/2)" }, { key: "\e", val: "2.718281828459045" }
-	]
-	for i, e in list
-		expression := StrReplace(expression, e.key, e.val)
-	expression := Trim(expression, "`n`r`t ")
-	return expression
-}
 
 extendFactorials(expression) {
 	Loop {

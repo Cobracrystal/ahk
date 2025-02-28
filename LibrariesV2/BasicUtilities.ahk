@@ -85,7 +85,7 @@ modifySelectedText(method, params*) {
 class Uri {
 ; stolen from https://github.com/ahkscript/libcrypt.ahk/blob/master/src/URI.ahk
 	static encode(str) { ; keep ":/;?@,&=+$#."
-		return this.LC_UriEncode(str, "[0-9a-zA-Z:/;?@,&=+$#.]")
+		return this.LC_UriEncode(str)
 	}
 
 	static decode(str) {
@@ -97,7 +97,7 @@ class Uri {
 		StrPut(uri, var, "UTF-8")
 		while(code := NumGet(Var, A_Index - 1, "UChar"))
 			res .= RegExMatch(char := Chr(Code), RE) ? char : Format("%{:02X}", Code)
-		return Res
+		return res
 	}
 
 	static LC_UriDecode(uri) {
@@ -108,7 +108,7 @@ class Uri {
 			Loop Parse, code, "`%"
 				NumPut("UChar", "0x" A_LoopField, var, A_Index - 1)
 			decoded := StrGet(var, "UTF-8")
-			uri := SubStr(uri, 1, pos-1) . decoded . SubStr(uri, pos+StrLen(Code)+1)
+			uri := SubStr(uri, 1, pos - 1) . decoded . SubStr(uri, pos+StrLen(Code)+1)
 			pos += StrLen(decoded)+1
 		}
 		return uri

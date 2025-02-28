@@ -123,7 +123,7 @@ class ReminderManager {
 							guessTime := A_YYYY . nextMonth . rolledOverDays . SubStr(time, 9)
 							; since all invalid dates are at the end of a month, rolling over a month means we are definitely in the future.
 							if (!IsTime(guessTime))
-								throw(Error("0xD37824 - This should never happen " . guessTime))
+								throw(Error("0xD37824 - This should never happen " . guessTime ". Certified to never occur, again."))
 						}
 						else if (DateDiff(guessTime, Now, "Seconds") < 0) {
 							monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
