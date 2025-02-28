@@ -15,7 +15,7 @@ OnExit(customExit)
 OnClipboardChange(clipboardTracker, 1)
 Hotstring("EndChars", "-()[]{}:;`'`"/\,.?!" . A_Space . A_Tab)
 
-SCRIPTVAR_WASRELOADED := (InStr(DllCall("GetCommandLine", "str"), "/restart") ? true : false)
+GLOBALVAR_WASRELOADED := (InStr(DllCall("GetCommandLine", "str"), "/restart") ? true : false)
 
 ; Delete Tray Menu Items before including files that may modify them
 A_TrayMenu.Delete()
@@ -47,14 +47,12 @@ GroupAdd("cornerMusicPlayers", "foobar2000 ahk_exe foobar2000.exe", , "Scratchbo
 GroupAdd("instantCloseWindows", "ahk_class RarReminder")
 GroupAdd("instantCloseWindows", "Please purchase WinRAR license ahk_class #32770")
 GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND O IS CYRILLIC
-; GroupAdd("instantCloseWindows", "Unbenannt - Editor ahk_exe notepad.exe")
-GroupAdd("nonMenuWindows", "ahk_exe csgo.exe")
 GroupAdd("nonMenuWindows", "ahk_exe cs2.exe")
 GroupAdd("nonMenuWindows", "Satisfactory ahk_class UnrealWindow")
 GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
 youtubeDL := YoutubeDLGui()
 reminders := ReminderManager(, , token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
-try reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json")
+try reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBALVAR_WASRELOADED)
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
@@ -78,7 +76,7 @@ try HotstringLoader.load(FileRead(A_WorkingDir "\everything\LatexHotstrings.json
 ; replace the tray menu with my own
 customTrayMenu()
 ; Synchronize nextDNS IP
-if (!SCRIPTVAR_WASRELOADED)
+if (!GLOBALVAR_WASRELOADED)
 	connectNextDNS()
 ; use suspendexempt for the reload hotkey. (and others) TODO!
 return
