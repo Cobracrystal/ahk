@@ -53,7 +53,7 @@ readableFormat(numStr) {
 		numStr := RTrim(numStr, "0")
 	if (SubStr(numStr, -1) = ".")
 		numStr := SubStr(numStr, 1, -1)
-	return
+	return numStr
 }
 
 equation_transformer(equation) {
