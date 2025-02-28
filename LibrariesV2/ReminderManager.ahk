@@ -388,13 +388,12 @@ class ReminderManager {
 			m := rObj.units.HasOwnProp("minutes") ? rObj.units.minutes : unset
 			s := rObj.units.HasOwnProp("seconds") ? rObj.units.seconds : unset
 			fparArr := rObj.HasOwnProp("fparams") ? rObj.fparams : []
+			if (ignoreMissedReminders && Abs(DateDiff(parseTime(y?,mo?,d?,h?,m?,s?), A_Now, "Seconds")) <= 1)
+				continue
 			if (rObj.multi)
-				this.setPeriodicTimerOnParser(y?,mo?,d?,h?,m?,s?, rObj.period, rObj.periodUnit, rObj.message, rObj.function, fparArr*)
+				this.setPeriodicTimerOnParser(y?,mo?,d?,h?,m?,s?, rObj.period, rObj.periodUnit, rObj.message, rObj.function, fparArr*)			
 			else
 				this.setTimerOnParser(y?,mo?,d?,h?,m?,s?,rObj.message, rObj.function, fparArr*)
-			; WE NEED TO CHANGE PARSETIME TO GIVE BACK NEGATIVE NUMBER IF DATE WAS IN PAST. SOMEHOW.
-			; if (!ignoreMissedReminders)
-			; 	this.setTimerOn(DateAddW(A_Now, 1, "Seconds"), rObj.message, rObj.function, fparArr*)
 		}
 	}
 
