@@ -153,7 +153,7 @@ class DiscordClient {
 	callApi(method, endPoint, content := "") {
 		http := ComObject("WinHTTP.WinHTTPRequest.5.1")
 		Loop(2) {
-			http.Open(method, this.BaseURL . endpoint)
+			http.Open(method, this.BaseURL . endpoint, true)
 			http.SetRequestHeader("Authorization", "Bot " . this.token)
 			http.SetRequestHeader("User-Agent", "DiscordBot ($https://discordapp.com, $1337)")
 			http.SetRequestHeader("Content-Type", "application/json")

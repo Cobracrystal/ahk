@@ -1461,7 +1461,7 @@ arrToString(array, separator := ",", elementConditionRegex := ".*") {
 
 sendRequest(url := "https://icanhazip.com/", method := "GET") {
 	HttpObj := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-	HttpObj.Open(method, url)
+	HttpObj.Open(method, url, true)
 	HttpObj.Send()
 	return Trim(httpobj.ResponseText, "`n`r`t ")
 }

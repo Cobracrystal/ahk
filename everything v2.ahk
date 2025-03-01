@@ -172,7 +172,7 @@ return
 }
 
 ; Evaluate Shell Expression in-text
-^!K:: expressionCalculator.calculateExpression("c")
+^!K:: expressionCalculator.calculateExpression("p")
 
 ; ###########################################################################
 ; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################
