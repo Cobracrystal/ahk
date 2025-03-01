@@ -165,6 +165,24 @@ objRemoveValue(obj, value, removeAll := true) {
 	return n
 }
 
+objToString(obj, compact := true, spacer := "`n") {
+	if !(obj is Object)
+		return obj
+	isArr := obj is Array
+	isMap := obj is Map
+	isObj := !(isArr || isMap)
+	str := ""
+	for key, val in (isObj ? obj.OwnProps() : obj) {
+		if (isArr)
+			str .= objToString(val) "," (compact ? "" : (val is Object ? spacer : " "))
+		else if (isMap)
+			str .= objToString(key) . ": " . objToString(val) . (compact ? "" : (val is Object ? spacer : " "))
+		else
+			str .= objToString(key) . ": " . objToString(val) . "," (compact ? "" : (val is Object ? spacer : " "))
+	}
+	return ( isArr ? "[" : isMap ? "(" : "{" ) . RTrim(str, " `t`n`r,") . ( isArr ? "]" : isMap ? ")" : "}" )
+}
+
 reverseArray(array) {
 	arr := []
 	for i, e in array
@@ -589,9 +607,9 @@ ExecScript(expression, Wait := true) {
 	if (RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox\(.+\)'))
 		input .= expression
 	else if (RegexMatch(expression, 'i)print\(.*\)'))
-		input .= RegexReplace(expression, "print\((.*)?\)", 'FileAppend($1, "*")')
+		input .= RegexReplace(expression, "print\((.*)?\)", 'FileAppend(objToString($1), "*")')
 	else
-		input .= 'FileAppend(' . expression . ', "*")'
+		input .= 'FileAppend(objToString(' . expression . '), "*")'
 	shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
 	exec.StdIn.Write(input)
@@ -981,11 +999,24 @@ getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
 	return true
 }
 
-sendRequest(url := "https://icanhazip.com/", method := "GET") {
-	HttpObj := ComObject("WinHttp.WinHttpRequest.5.1")
-	HttpObj.Open(method, url)
-	HttpObj.Send()
-	return Trim(httpobj.ResponseText, "`n`r`t ")
+sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8", async := false, callBackFuncObj := "") {
+	if (async) {
+		if (callBackFuncObj == "")
+			throw (ValueError("No callback function provided for async request."))
+		whr := ComObject("Msxml2.XMLHTTP")
+		whr.Open(method, url, true)
+		whr.OnReadyStateChange := callBackFuncObj
+	whr.Send()
+	}
+	else
+		whr := ComObject("WinHttp.WinHttpRequest.5.1")
+	whr.Open(method, url, true)
+	whr.Send()
+	whr.WaitForResponse()
+	arr := whr.ResponseBody
+	pData := NumGet(ComObjValue(arr) + 8 + A_PtrSize, 0, "UPtr")
+	length := (arr.MaxIndex() - arr.MinIndex()) + 1
+	return Trim(StrGet(pData, length, encoding), "`n`r`t ")
 }
 
 /**

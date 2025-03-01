@@ -7,11 +7,15 @@ class expressionCalculator {
 	static setWolframAlphaToken(token) {
 		this.token := token
 	}
-
+	
 	static calculateExpression(mode := "print") {
 		expression := fastCopy()
-		result := this.giveUpAndCallWolframalpha(expression)
-;		result := this.readableFormat(ExecScript(this.clean_expression(expression)))
+		if (SubStr(expression, 1, 2) == "w:")
+			result := this.giveUpAndCallWolframalpha(SubStr(expression, 3))
+		else
+			result := this.readableFormat(ExecScript(this.clean_expression(expression)))
+		; READ THE ERROR STREAM. IF THERE'S SOME ERROR IN THERE, ALSO GIVE IT TO WOLFRAMALPHA
+	;	result := this.giveUpAndCallWolframalpha(expression)
 		endSymbol := " = "
 		if (result = "")
 			return
@@ -42,7 +46,50 @@ class expressionCalculator {
 		encoded := Uri.encode(expression)
 		url := baseURL . encoded . queryParameters . this.token
 		retObj := sendRequest(url, "GET")
-		return retObj
+		return parseWolframAlphaResponse(retObj)
+
+		parseWolframAlphaResponse(response) {
+			response := jsongo.Parse(response)
+			result := response["queryresult"]
+			if (!result["success"] && result["error"])
+				return "Error: " . result["error"]["msg"]
+			if (!result["success"])
+				return "Error: No result found (?)"
+			if (!result["pods"])
+				return "Error: No pods found"
+			pods := result["pods"]
+			resultStr := ""
+			for i, pod in pods {
+				if (pod["id"] == "Result") {
+					if (pod["numsubpods"] == 1)
+						resultStr := pod["subpods"][1]["plaintext"]
+					else {
+						for j, subpod in pod["subpods"] {
+							if (subpod["plaintext"])
+								resultStr .= subpod["plaintext"] . ", "
+						}
+						resultStr := "[" SubStr(resultStr, 1, -2) "]"
+					}
+					break
+				}
+			}
+			if (!resultStr) {
+				resultStr := "`n"
+				for i, pod in pods {
+					tStr := ""
+					for j, subpod in pod["subpods"]
+						if (subpod["plaintext"])
+							tStr .= subpod["plaintext"] . ", "
+					if (tStr) {
+						if (pod["numsubpods"] == 1)
+							resultStr .= pod["title"] . ": " . StrReplace(SubStr(tStr, 1, -2), "`n", "`t") . "`n"
+						else
+							resultStr .= pod["title"] . ": [" StrReplace(SubStr(tStr, 1, -2), "`n", "`t") "]`n"
+					}
+				}
+			}
+			return resultStr
+		}
 	}
 
 	static clean_expression(expression) {
@@ -70,25 +117,6 @@ class expressionCalculator {
 	-> remove brackets.
 	-> recursively call function until no brackets are left.
 */
-
-
-extendFactorials(expression) {
-	Loop {
-		if (!RegexMatch(expression, "(?<!\.)(\d+?)!", &f))
-			break
-		fs := "1.0"
-		tVal := f[1]
-		if (tVal > 180)
-			expression := RegexReplace(expression, "(?<!\.)(\d+?)!", "2**1030", , 1)
-		Loop (tVal - 1)
-		{
-			fs .= "*" . A_Index + 1
-		}
-		expression := RegexReplace(expression, "(?<!\.)(\d+?)!", fs, , 1)
-	}
-	return expression
-}
-
 
 roundProper(number, precision := 12) {
 	if (!IsNumber(number) || IsSpace(number))
