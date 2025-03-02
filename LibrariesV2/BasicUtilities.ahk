@@ -999,6 +999,31 @@ getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
 	return true
 }
 
+base64Encode(str, encoding := "UTF-8") {
+	static CRYPT_STRING_BASE64 := 0x00000001
+	static CRYPT_STRING_NOCRLF := 0x40000000
+
+	binary := Buffer(StrPut(str, encoding))
+	StrPut(str, binary, encoding)
+	if !(DllCall("crypt32\CryptBinaryToStringW", "Ptr", binary, "UInt", binary.Size - 1, "UInt", (CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF), "Ptr", 0, "UInt*", &size := 0))
+		throw OSError()
+	base64 := Buffer(size << 1, 0)
+	if !(DllCall("crypt32\CryptBinaryToStringW", "Ptr", binary, "UInt", binary.Size - 1, "UInt", (CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF), "Ptr", base64, "UInt*", size))
+		throw OSError()
+	return StrGet(base64)
+}
+
+base64Decode(base64, encoding := "UTF-8") {
+	static CRYPT_STRING_BASE64 := 0x00000001
+
+	if !(DllCall("crypt32\CryptStringToBinaryW", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", 0, "UInt*", &size := 0, "Ptr", 0, "Ptr", 0))
+		throw OSError()
+	str := Buffer(size)
+	if !(DllCall("crypt32\CryptStringToBinaryW", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", str, "UInt*", size, "Ptr", 0, "Ptr", 0))
+		throw OSError()
+	return StrGet(str, "UTF-8")
+}
+
 sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8", async := false, callBackFuncObj := "") {
 	if (async) {
 		if (callBackFuncObj == "")
