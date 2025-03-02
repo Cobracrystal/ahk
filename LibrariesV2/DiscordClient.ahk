@@ -161,6 +161,7 @@ class DiscordClient {
 				http.Send(jsongo.Stringify(content))
 			else 
 				http.Send()
+			http.WaitForResponse()
 			if (http.status == 429) { ; rate limit
 				response := jsongo.Parse(http.responseText)
 				if (response["retry_after"] == "")
