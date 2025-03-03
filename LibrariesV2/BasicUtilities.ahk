@@ -115,6 +115,16 @@ class Uri {
 	}
 }
 
+parseHeaders(str) {
+	headersAsText := RTrim(str, "`r`n")
+	headers := Map()
+	Loop Parse headersAsText, "`n", "`r" {
+		arr := StrSplitUTF8(A_LoopField, ":")
+		headers[Trim(arr[1])] := Trim(arr[2])
+	}
+	return headers
+}
+
 /**
  * Counts how many times a given value is included in an Object
  * @param obj array or map
@@ -123,7 +133,7 @@ class Uri {
  */
 objCountValue(obj, value) {
 	if !(obj is Array || obj is Map)
-		throw (Error("objCountValue does not handle type " . Type(obj)))
+		throw(Error("objCountValue does not handle type " . Type(obj)))
 	count := 0
 	for i, e in obj
 		if (e = value)
@@ -133,7 +143,7 @@ objCountValue(obj, value) {
 
 objContainsValue(obj, value) {
 	if !(obj is Array || obj is Map)
-		throw (Error("objContains does not handle type " . Type(obj)))
+		throw(Error("objContains does not handle type " . Type(obj)))
 	for i, e in obj
 		if (e = value)
 			return i
@@ -149,7 +159,7 @@ objContainsValue(obj, value) {
  */
 objRemoveValue(obj, value, removeAll := true) {
 	if !(obj is Array || obj is Map)
-		throw (Error("objRemoveValue does not handle type " . Type(obj)))
+		throw(Error("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
 	for next, e in obj
 		if (e = value)
@@ -222,7 +232,7 @@ sortObjectByKey(tmap, key, mode := "") {
 	isArr := tMap is Array
 	isMap := tMap is Map
 	if !(tmap is Object)
-		throw (ValueError("Expected Object, but got " tmap.Prototype.Name))
+		throw(ValueError("Expected Object, but got " tmap.Prototype.Name))
 	isObj := !(isArr || isMap)
 	arr2 := Map()
 	arr3 := []
@@ -346,7 +356,7 @@ recursiveReplaceMap(string, from, to) {
  */
 mapFromArrays(keyArray, valueArray) {
 	if (keyArray.Length != valueArray.Length || !(keyArray is Array) || !(valueArray is Array))
-		throw (Error("Expected Arrays of equal Length, got " Type(keyArray) ", " Type(valueArray)))
+		throw(Error("Expected Arrays of equal Length, got " Type(keyArray) ", " Type(valueArray)))
 	newMap := Map()
 	for i, e in keyArray
 		newMap[e] := valueArray[i]
@@ -360,7 +370,7 @@ mapFromArrays(keyArray, valueArray) {
  */
 mapToArrays(mapObject) {
 	if !(mapObject is Map)
-		throw (TypeError("Expected Map, got " Type(mapObject)))
+		throw(TypeError("Expected Map, got " Type(mapObject)))
 	arr1 := []
 	arr2 := []
 	for i, e in mapObject {
@@ -455,7 +465,7 @@ DateAddW(dateTime, value, timeUnit) {
 			else
 				return year . month . SubStr(dateTime, 7)
 		default:
-			throw (Error("Invalid Time Unit: " timeUnit))
+			throw(Error("Invalid Time Unit: " timeUnit))
 	}
 }
 /*
@@ -489,7 +499,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				else if (!IsSet(months) && days > 29) ; correct possible month error. no need for mod, since dec has 31 days
 					tStamp := SubStr(tStamp 1, 4) . tf(A_MM + 1) . SubStr(tStamp, 7)
 				if (!IsTime(tStamp))
-					throw (ValueError("Invalid date specified."))
+					throw(ValueError("Invalid date specified."))
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
@@ -507,7 +517,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				if (tf(months) == "02" && IsSet(days) && days == 29) ; leap year
 					tStamp := (A_YYYY + 4 - Mod(A_YYYY, 4)) . SubStr(tStamp, 5)
 				if (!IsTime(tStamp))
-					throw (ValueError("Invalid date specified."))
+					throw(ValueError("Invalid date specified."))
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
@@ -526,7 +536,7 @@ parseTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				else if (days > 29) ; correct possible month error. no need for mod, since dec has 31 days
 					tStamp := SubStr(tStamp 1, 4) . tf(A_MM + 1) . SubStr(tStamp, 7)
 				if (!IsTime(tStamp))
-					throw (ValueError("Invalid date specified."))
+					throw(ValueError("Invalid date specified."))
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
@@ -636,7 +646,7 @@ cmdRet(sCmd, callBackFuncObj := "", encoding := '') {
 		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		DllCall("CloseHandle", "Ptr", hPipeWrite)
-		throw (OSError("CreateProcess has failed"))
+		throw(OSError("CreateProcess has failed"))
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
@@ -669,7 +679,7 @@ cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finis
 		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		DllCall("CloseHandle", "Ptr", hPipeWrite)
-		throw (OSError("CreateProcess has failed"))
+		throw(OSError("CreateProcess has failed"))
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
@@ -784,7 +794,7 @@ colorDialog(initialColor := 0, hwnd := 0, disp := false, startingColors*) {
 	disp := disp ? 0x3 : 0x1 ; init disp / 0x3 = full panel / 0x1 = basic panel
 
 	if (startingColors.Length > 16)
-		throw Error("Too many custom colors.  The maximum allowed values is 16.")
+		throw(Error("Too many custom colors.  The maximum allowed values is 16."))
 
 	Loop (16 - startingColors.Length)
 		startingColors.Push(0) ; fill out custColorObj to 16 values
@@ -1006,10 +1016,10 @@ base64Encode(str, encoding := "UTF-8") {
 	binary := Buffer(StrPut(str, encoding))
 	StrPut(str, binary, encoding)
 	if !(DllCall("crypt32\CryptBinaryToStringW", "Ptr", binary, "UInt", binary.Size - 1, "UInt", (CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF), "Ptr", 0, "UInt*", &size := 0))
-		throw OSError()
+		throw(OSError())
 	base64 := Buffer(size << 1, 0)
 	if !(DllCall("crypt32\CryptBinaryToStringW", "Ptr", binary, "UInt", binary.Size - 1, "UInt", (CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF), "Ptr", base64, "UInt*", size))
-		throw OSError()
+		throw(OSError())
 	return StrGet(base64)
 }
 
@@ -1017,17 +1027,17 @@ base64Decode(base64, encoding := "UTF-8") {
 	static CRYPT_STRING_BASE64 := 0x00000001
 
 	if !(DllCall("crypt32\CryptStringToBinaryW", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", 0, "UInt*", &size := 0, "Ptr", 0, "Ptr", 0))
-		throw OSError()
+		throw(OSError())
 	str := Buffer(size)
 	if !(DllCall("crypt32\CryptStringToBinaryW", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", str, "UInt*", size, "Ptr", 0, "Ptr", 0))
-		throw OSError()
+		throw(OSError())
 	return StrGet(str, "UTF-8")
 }
 
 sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8", async := false, callBackFuncObj := "") {
 	if (async) {
 		if (callBackFuncObj == "")
-			throw (ValueError("No callback function provided for async request."))
+			throw(ValueError("No callback function provided for async request."))
 		whr := ComObject("Msxml2.XMLHTTP")
 		whr.Open(method, url, true)
 		whr.OnReadyStateChange := callBackFuncObj

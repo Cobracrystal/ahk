@@ -1008,7 +1008,7 @@ class TableFilter {
 				if (this.config.useConfig)
 					this.configManager("Save")
 			default:
-				throw (Error("Bad setting: " . option))
+				throw(Error("Bad setting: " . option))
 		}
 	}
 

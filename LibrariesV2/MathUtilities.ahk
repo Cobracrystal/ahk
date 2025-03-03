@@ -43,7 +43,7 @@ class expressionCalculator {
 		static baseURL := "https://api.wolframalpha.com/v2/query?input=" 
 		static queryParameters := "&format=plaintext&output=JSON&appid="
 		if !(this.token)
-			throw Error("No token set for WolframAlpha API")
+			throw(Error("No token set for WolframAlpha API"))
 		encoded := Uri.encode(expression)
 		url := baseURL . encoded . queryParameters . this.token
 		retObj := sendRequest(url, "GET")
