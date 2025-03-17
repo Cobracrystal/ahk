@@ -236,6 +236,11 @@
 	},
 	{
 		"options": "o?",
+		"replacement": "ϕ",
+		"string": "\\varphi"
+	},
+	{
+		"options": "o?",
 		"replacement": "ϖ",
 		"string": "\\varpi"
 	},
