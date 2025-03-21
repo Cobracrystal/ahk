@@ -183,12 +183,13 @@ objToString(obj, compact := true, spacer := "`n") {
 	isObj := !(isArr || isMap)
 	str := ""
 	for key, val in (isObj ? obj.OwnProps() : obj) {
+		separator := (compact ? "" : (val is Object ? spacer : A_Space))
 		if (isArr)
-			str .= objToString(val) "," (compact ? "" : (val is Object ? spacer : " "))
+			str .= objToString(val, compact, spacer) "," . separator
 		else if (isMap)
-			str .= objToString(key) . ": " . objToString(val) . (compact ? "" : (val is Object ? spacer : " "))
+			str .= objToString(key, compact, spacer) . ": " . objToString(val, compact, spacer) . separator
 		else
-			str .= objToString(key) . ": " . objToString(val) . "," (compact ? "" : (val is Object ? spacer : " "))
+			str .= objToString(key, compact, spacer) . ": " . objToString(val, compact, spacer) . "," . separator
 	}
 	return ( isArr ? "[" : isMap ? "(" : "{" ) . RTrim(str, " `t`n`r,") . ( isArr ? "]" : isMap ? ")" : "}" )
 }
@@ -214,16 +215,39 @@ sortArray(arr, mode := "") {
 }
 
 /**
- * Given Array, returns a new Array with all duplicates removed. Order is preserved.
+ * Given Array, returns a new Array with all duplicates removed. Order is preserved. Optionally uses a key to compare with instead of the whole element.
  * @param arr 
  * @returns {Array} 
  */
-uniquesFromArray(arr) {
+uniquesFromArray(arr, key?, isMap := 0) {
 	arr2 := []
-	for i, e in arr
-		if (!objContainsValue(arr2, e))
+	uniques := Map()
+	for i, e in arr {
+		el := key ? (isMap ? e[key] : e.%key%) : e
+		if !(uniques.Has(el)) {
+			uniques[el] := true
 			arr2.push(e)
+		}
+	}
 	return arr2
+}
+
+/**
+ * Given Array, returns an Array of Arrays, where each subarray contains all instances of a unique value in the original array.
+ * @param arr 
+ * @param {Integer} objType
+ * @returns {Array} 
+ */
+duplicateIndicesFromArray(arr, key?, isMap := 0) {
+	duplicates := Map()
+	for i, e in arr {
+		el := key ? (isMap ? e[key] : e.%key%) : e
+		if (duplicates.Has(el))
+			duplicates[el].push(i)
+		else
+			duplicates[el] := [i]
+	}
+	return duplicates
 }
 
 ; gets a map of maps. sorts it by a key of the submap, returns it as array
@@ -1049,6 +1073,8 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 	whr.Send()
 	whr.WaitForResponse()
 	arr := whr.ResponseBody
+	if !(arr)
+		return ""
 	pData := NumGet(ComObjValue(arr) + 8 + A_PtrSize, 0, "UPtr")
 	length := (arr.MaxIndex() - arr.MinIndex()) + 1
 	return Trim(StrGet(pData, length, encoding), "`n`r`t ")
