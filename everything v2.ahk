@@ -90,6 +90,11 @@ return
 ^+R:: { ; Reload Script
 	Reload()
 }
+
+; ^!+Ä:: {	; Reload other script
+; 	DetectHiddenWindows("On")
+; 	PostMessage(0x111, 65303, , , A_ScriptHwnd)
+; }
  
 ^+!S::{	; Suspend All Other Hotkeys
 	TrayMenu.submenus["SuspendMenu"].ToggleCheck("Suspend Hotkeys")
@@ -175,166 +180,6 @@ return
 ^!K:: expressionCalculator.calculateExpression("p")
 
 ; ###########################################################################
-; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################
-; ###########################################################################
-
-*^LWin Up:: { ; Open Everything Search Window
-	static searchString := "Everything ahk_exe Everything.exe ahk_class EVERYTHING"
-	state := GetKeyState("Shift")
-	move := true, list := []
-	if (WinExist(searchString)) {
-		move := false
-		list := WinGetList(searchString)
-	}
-	Run('"C:\Program Files\Everything\Everything.exe" -newwindow')
-	Loop {
-		if (WinGetCount(searchString) == list.Length) {
-			Sleep(50)
-			continue
-		}
-		list2 := WinGetList(searchString)
-		for i, e in list2 {
-			if (!objContainsValue(list, e))
-				hwnd := e
-		}
-		if (IsSet(hwnd)) ; if we found the window, good
-			break
-		return 0 ; give up else, we probably interfered and closed the window or something
-	}
-	WinActivate(hwnd)
-	WinMoveTop(hwnd)
-	mmx := WinGetMinMax(hwnd)
-	if (mmx == 1 || mmx == -1)
-		WinRestore(hwnd)
-	if (move)
-		winSlowMove(hwnd, 40, 400, 784, 648, 8)
-	if (state)
-		return
-	WinWaitNotActive(hwnd)
-	try WinClose(hwnd)
-}
-
-#HotIf WinActive("ahk_exe vlc.exe")
-^D:: {		; VLC: Open/Close Media Playlist
-	SetControlDelay(-1)
-	vlcid := WinGetID("VLC media player ahk_exe vlc.exe", , "Wiedergabeliste")
-	WinGetClientPos(, , , &vlcH, vlcid)
-	controlY := vlcH - 40
-	ControlSend("{Esc}", , vlcid)
-	ControlClick("X212 Y" controlY, vlcid, , , , "Pos NA")
-}
-#HotIf
-
-#HotIf WinActive("ahk_group zoomableWindows")
-
-^+:: {	; Zoomable: Zoom in
-	Send("{WheelUp}")
-}
-
-^-:: {	; Zoomable: Zoom out
-	Send("{WheelDown}")
-}
-#HotIf
-
-#HotIf WinActive("Minecraft ahk_exe javaw.exe")
-^z::y ; MC: ctrl z -> y
-^y::z ; MC: ctrl y -> z
-#HotIf
-
-/*
-#HotIf WinActive("ahk_exe BTD5-Win.exe")
-r::w	; BTD5: Send w
-z::e	; BTD5: Send e
-w::r	; BTD5: Send r
-d::t	; BTD5: Send t
-e::y	; BTD5: Send y
-t::a	; BTD5: Send a
-y::s	; BTD5: Send s
-c::d	; BTD5: Send d
-v::f	; BTD5: Send f
-s::g	; BTD5: Send g
-a::h	; BTD5: Send h
-k::c	; BTD5: Send c
-h::v	; BTD5: Send v
-n::b	; BTD5: Send b
-m::n 	; BTD5: Send n
-j::m 	; BTD5: Send m
-b::j	; BTD5: Send j
-x::k	; BTD5: Send k
-f::;	; BTD5: Send Semicolon
-ö::z	; BTD5: Send z
-ä::x	; BTD5: Send x
-
--::.	; BTD5: Send .
-
-Left::	; BTD5: MouseLeft
-MouseMove, -1,0,,R
-return
-
-Right::	; BTD5: MouseRight
-MouseMove, 1,0,,R
-return
-
-Up::	; BTD5: MouseUp
-MouseMove, 0,-1,,R
-return
-
-Down::	; BTD5: MouseDown
-MouseMove, 0,1,,R
-return
-#HotIf
-*/
-
-
-#HotIf WinActive("ahk_exe bloonstd6.exe")
-
-F11:: { 	; BTD6: Rebind Escape
-	Send("{Escape}")
-}
-
-^,:: {	; BTD6: press comma
-	static toggle := 0
-	if !(presscomma)
-		presscomma := Send.Bind(",")
-	if (toggle := !toggle)
-		SetTimer(presscomma, 30)
-	else
-		SetTimer(presscomma, 0)
-}
-
-^.:: {	; BTD6: press dot
-	static toggle := 0
-	if !(pressdot)
-		pressdot := Send.Bind(".")
-	if (toggle := !toggle)
-		SetTimer(pressdot, 30)
-	else
-		SetTimer(pressdot, 0)
-}
-
-^-:: {	; BTD6: press minus
-	static toggle := 0
-	if !(pressminus)
-		pressminus := Send.Bind("-")
-	if (toggle := !toggle)
-		SetTimer(pressminus, 30)
-	else
-		SetTimer(pressminus, 0)
-}
-#HotIf
-
-#HotIf WinActive("ahk_class Photo_Lightweight_Viewer")
-; ----- Fotoanzeige
-^T:: {	; Fotoanzeige: StrgT->ShiftEsc
-	Send("!{Esc}")
-}
-
-^W:: {	; Fotoanzeige: StrgW->AltF4
-	Send("!{F4}")
-}
-#HotIf
-
-; ###########################################################################
 ; ######################### DESKTOP-RELATED HOTKEYS #########################
 ; ###########################################################################
 
@@ -368,6 +213,14 @@ F11:: { 	; BTD6: Rebind Escape
 
 !XButton2:: {	; Borderless Fullscreen Window
 	AltDrag.borderlessFullscreenWindow()
+}
+
+^NumpadSub:: { ; Clip mouse to active windows client area
+	static toggle := 0
+	if (toggle := !toggle)
+		clipCursor(1)
+	else
+		clipCursor(0)
 }
 
 ^NumpadDiv:: {	; Show Mouse Coordinates
@@ -546,6 +399,24 @@ slowClose(wHandle, HeightStep := 100, WidthStep := 100) {
 	Loop (WidthStep)
 		WinMove(x := x + (Step2 / 2), , w := w - Step2, , wHandle)
 	WinClose(wHandle)
+}
+
+sierpinskiCoords(x, y, width, height, depth) {
+	; height := Integer(Round(sqrt(3)/2 * width))
+	if (depth == 0)
+		return Format("{}-{} {}-{} {}-{} {}-{} ", x, y, x + width // 2, y + height, x - width // 2, y + height, x, y)
+	str := sierpinskiCoords(x, y, width // 2, height // 2, depth - 1) . x "-" y " "
+	str .= sierpinskiCoords(x + width // 4, y + height // 2, width // 2, height // 2, depth - 1) . x "-" y " "
+	str .= sierpinskiCoords(x - width // 4, y + height // 2, width // 2, height // 2, depth - 1) . x "-" y " "
+	return str
+}
+
+clipCursor(mode := true, window := "A") {
+	WinGetClientPos(&wx, &wy, &ww, &wh, WinExist(window))
+	if (!mode)
+		return !DllCall("ClipCursor", "Ptr", 0)
+	NumPut("UInt", wx, "UInt", wy, "UInt", wx + ww, "UInt", wy + wh, llrectA := Buffer(16, 0), 0)
+	return DllCall("ClipCursor", "Ptr", llrectA)
 }
 
 ; ###########################################################################
@@ -809,21 +680,206 @@ customExit(ExitReason, ExitCode) {
 ; :*b0:**::**{left 2} ; bold in markdown
 ; :*b0:__::__{left 2} ; underlined in markdown
 
+; ###########################################################################
+; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################
+; ###########################################################################
+
+*^LWin Up:: { ; Open Everything Search Window
+	static searchString := "Everything ahk_exe Everything.exe ahk_class EVERYTHING"
+	state := GetKeyState("Shift")
+	move := true, list := []
+	if (WinExist(searchString)) {
+		move := false
+		list := WinGetList(searchString)
+	}
+	Run('"C:\Program Files\Everything\Everything.exe" -newwindow')
+	Loop {
+		if (WinGetCount(searchString) == list.Length) {
+			Sleep(50)
+			continue
+		}
+		list2 := WinGetList(searchString)
+		for i, e in list2 {
+			if (!objContainsValue(list, e))
+				hwnd := e
+		}
+		if (IsSet(hwnd)) ; if we found the window, good
+			break
+		return 0 ; give up else, we probably interfered and closed the window or something
+	}
+	WinActivate(hwnd)
+	WinMoveTop(hwnd)
+	mmx := WinGetMinMax(hwnd)
+	if (mmx == 1 || mmx == -1)
+		WinRestore(hwnd)
+	if (move)
+		winSlowMove(hwnd, 40, 400, 784, 648, 8)
+	if (state)
+		return
+	WinWaitNotActive(hwnd)
+	try WinClose(hwnd)
+}
+
+#HotIf !WinExist("ahk_exe AutoClickerPos.exe")
+^Numpad5::{	; Toggle Autoclicker
+	static timer := Click.Bind("L")
+	static toggle := 0
+	if (toggle := !toggle)
+		SetTimer(timer, 20)
+	else
+		SetTimer(timer, 0)
+}
+#HotIf
+
+#HotIf WinActive("ahk_exe vlc.exe")
+^D:: {		; VLC: Open/Close Media Playlist
+	SetControlDelay(-1)
+	vlcid := WinGetID("VLC media player ahk_exe vlc.exe", , "Wiedergabeliste")
+	WinGetClientPos(, , , &vlcH, vlcid)
+	controlY := vlcH - 40
+	ControlSend("{Esc}", , vlcid)
+	ControlClick("X212 Y" controlY, vlcid, , , , "Pos NA")
+}
+#HotIf
+
+#HotIf WinActive("ahk_group zoomableWindows")
+^+::WheelUp ; Zoomable: Zoom in
+^-::WheelDown
+#HotIf
+
+#HotIf WinActive("ahk_class Photo_Lightweight_Viewer")
+^T::!Esc ; Fotoanzeige: StrgT->ShiftEsc
+^W::!F4	; Fotoanzeige: StrgW->AltF4
+#HotIf
+
+#HotIf WinActive("ahk_exe firefox.exe")
+^h::^+h ; Firefox: Ctrl H -> Ctrl Shift H
+#HotIf
+
+#HotIf WinActive("Minecraft ahk_exe javaw.exe")
+^z::y ; MC: ctrl z -> y
+^y::z ; MC: ctrl y -> z
+^ö:: {	; MC: Spam shift Key
+	static toggle := 0
+	static timer := ((*) => (Send("{Shift Down}"), Sleep(10), Send("{Shift Up}")))
+	if (toggle := !toggle)
+		SetTimer(timer, 20)
+	else
+		SetTimer(timer, 0)
+}
+#HotIf
+
+/*
+#HotIf WinActive("ahk_exe BTD5-Win.exe")
+r::w	; BTD5: Send w
+z::e	; BTD5: Send e
+w::r	; BTD5: Send r
+d::t	; BTD5: Send t
+e::y	; BTD5: Send y
+t::a	; BTD5: Send a
+y::s	; BTD5: Send s
+c::d	; BTD5: Send d
+v::f	; BTD5: Send f
+s::g	; BTD5: Send g
+a::h	; BTD5: Send h
+k::c	; BTD5: Send c
+h::v	; BTD5: Send v
+n::b	; BTD5: Send b
+m::n 	; BTD5: Send n
+j::m 	; BTD5: Send m
+b::j	; BTD5: Send j
+x::k	; BTD5: Send k
+f::;	; BTD5: Send Semicolon
+ö::z	; BTD5: Send z
+ä::x	; BTD5: Send x
+
+-::.	; BTD5: Send .
+
+Left::	; BTD5: MouseLeft
+MouseMove, -1,0,,R
+return
+
+Right::	; BTD5: MouseRight
+MouseMove, 1,0,,R
+return
+
+Up::	; BTD5: MouseUp
+MouseMove, 0,-1,,R
+return
+
+Down::	; BTD5: MouseDown
+MouseMove, 0,1,,R
+return
+#HotIf
+*/
+
+
+#HotIf WinActive("ahk_exe bloonstd6.exe")
+
+F11::Escape	; BTD6: Rebind Escape
+
+^,:: {	; BTD6: press comma
+	static toggle := 0
+	if !(presscomma)
+		presscomma := Send.Bind(",")
+	if (toggle := !toggle)
+		SetTimer(presscomma, 30)
+	else
+		SetTimer(presscomma, 0)
+}
+
+^.:: {	; BTD6: press dot
+	static toggle := 0
+	if !(pressdot)
+		pressdot := Send.Bind(".")
+	if (toggle := !toggle)
+		SetTimer(pressdot, 30)
+	else
+		SetTimer(pressdot, 0)
+}
+
+^-:: {	; BTD6: press minus
+	static toggle := 0
+	if !(pressminus)
+		pressminus := Send.Bind("-")
+	if (toggle := !toggle)
+		SetTimer(pressminus, 30)
+	else
+		SetTimer(pressminus, 0)
+}
+#HotIf
+
+
+#HotIf WinActive("HoloCure ahk_exe HoloCure.exe")
+^ö:: {	; Holocure: Spam shift Key
+	static toggle := 0
+	static timer := ((*) => (Send("{Space Down}"), Sleep(10), Send("{Space Up}")))
+	if (toggle := !toggle)
+		SetTimer(timer, 20)
+	else
+		SetTimer(timer, 0)
+}
+#HotIf
+
+#HotIf WinActive("ahk_exe Skul.exe")
++:: {	; Skul: Spam l
+	static sTimer := Send.Bind("l")
+	static toggle := false
+	SetTimer(sTimer, toggle := !toggle ? 50 : 0)
+}
+#HotIf
+
+#HotIf WinActive('ahk_exe Terraria.exe')
+^ä::{
+	Send("{w down}")
+}
+#HotIf
 
 ; ###########################################################################
 ; ############################ END OF SCRIPT ################################
 ; ###########################################################################
 #HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
 
-sierpinskiCoords(x, y, width, height, depth) {
-	; height := Integer(Round(sqrt(3)/2 * width))
-	if (depth == 0)
-		return Format("{}-{} {}-{} {}-{} {}-{} ", x, y, x + width // 2, y + height, x - width // 2, y + height, x, y)
-	str := sierpinskiCoords(x, y, width // 2, height // 2, depth - 1) . x "-" y " "
-	str .= sierpinskiCoords(x + width // 4, y + height // 2, width // 2, height // 2, depth - 1) . x "-" y " "
-	str .= sierpinskiCoords(x - width // 4, y + height // 2, width // 2, height // 2, depth - 1) . x "-" y " "
-	return str
-}
 
 getAllPermutations(str1, str2) {
 	if (StrLen(str1) != StrLen(str2))
@@ -869,104 +925,6 @@ makeTextAnsiColorful(str) {
 	return tStr
 }
 
-
-^!+Ä:: {	; Reload other script
-	DetectHiddenWindows("On")
-	PostMessage(0x111, 65303, , , A_ScriptHwnd)
-}
-
-
-; ^m:: { ; Get Permutations
-;	A_Clipboard := getAllPermutations("12345", "abcde")
-; }
-
-; ^l:: { ; Make colorful Text
-;	text := fastCopy()
-;	text := makeTextAnsiColorful(text)
-;	fastPrint(text)
-; }
-
-; #HotIf WinActive("doujinshi and manga - Vivaldi")
-; ß:: { ; Vivaldi: Toggle Website Override
-; 	Hotkey("w", "Toggle")
-; 	Hotkey("a", "Toggle")
-; 	Hotkey("s", "Toggle")
-; 	Hotkey("d", "Toggle")
-; 	Hotkey("Right", "Toggle")
-; }
-; Right:: {	; Vivaldi: Website Override Right
-; 	Send("{Right}")
-; 	Send("{Home}")
-; }
-; w:: {	; Vivaldi: Website Override Up
-; 	Send("{PgUp}")
-; }
-; a:: {	; Vivaldi: Website Override Left
-; 	Send("{Left}")
-; }
-; s:: {	; Vivaldi: Website Override Down
-; 	Send("{PgDn}")
-; }
-; d:: {	; Vivaldi: Website Override Right
-; 	Send("{Right}")
-; 	Send("{Home}")
-; }
-; #HotIf
-
-^NumpadSub:: { ; Clip mouse to active windows' client area
-	static toggle := 0
-	if (toggle := !toggle)
-		clipCursor(1)
-	else
-		clipCursor(0)
-}
-
-clipCursor(mode := true, window := "A") {
-	WinGetClientPos(&wx, &wy, &ww, &wh, WinExist(window))
-	if (!mode)
-		return !DllCall("ClipCursor", "Ptr", 0)
-	NumPut("UInt", wx, "UInt", wy, "UInt", wx + ww, "UInt", wy + wh, llrectA := Buffer(16, 0), 0)
-	return DllCall("ClipCursor", "Ptr", llrectA)
-}
-
-
-#HotIf WinActive("ahk_exe javaw.exe")
-^ö:: {	; MC: Spam shift Key
-	static toggle := 0
-	static timer := ((*) => (Send("{Shift Down}"), Sleep(10), Send("{Shift Up}")))
-	if (toggle := !toggle)
-		SetTimer(timer, 20)
-	else
-		SetTimer(timer, 0)
-}
-#HotIf
-
-
-#HotIf WinActive("ahk_exe Skul.exe")
-+:: {	; Skul: Spam l
-	static sTimer := Send.Bind("l")
-	static toggle := false
-	SetTimer(sTimer, toggle := !toggle ? 50 : 0)
-}
-#HotIf
-
-; Numpad5::{
-; 	newGui := Gui()
-; 	retValue := ""
-; 	editControl := newGui.AddEdit("ReadOnly w500 R30")
-; 	newGui.Show("AutoSize")
-; 	cmdRetAsync("ping 8.8.8.8", &retValue, intermediate, finished)
-; 	return 0
-; 	intermediate(curValue) {
-; 		editControl.Value := editControl.Value . "`n" . curValue
-; 	}
-
-; 	finished() {
-; 		editControl.Value := editControl.Value . "`nPOGGERS WE ARE DONE"
-; 	}
-; }
-
-
 loadTableAsHotstrings(filePath) {
 	static str := "Deutsch"
 	static repl := "Kayoogis"
@@ -993,25 +951,3 @@ loadTableAsHotstrings(filePath) {
 	hotstringsAsJsonStr := jsongo.Stringify(hotstrings, , "`t")
 	try HotstringLoader.load(hotstringsAsJsonStr, "Kayoogis", , , , true)
 }
-
-#HotIf WinActive("HoloCure ahk_exe HoloCure.exe")
-^ö:: {	; Holocure: Spam shift Key
-	static toggle := 0
-	static timer := ((*) => (Send("{Space Down}"), Sleep(10), Send("{Space Up}")))
-	if (toggle := !toggle)
-		SetTimer(timer, 20)
-	else
-		SetTimer(timer, 0)
-}
-#HotIf
-
-#HotIf !WinExist("ahk_exe AutoClickerPos.exe")
-Numpad5::{	; Toggle Autoclicker
-	static timer := Click.Bind("L")
-	static toggle := 0
-	if (toggle := !toggle)
-		SetTimer(timer, 20)
-	else
-		SetTimer(timer, 0)
-}
-#HotIf
