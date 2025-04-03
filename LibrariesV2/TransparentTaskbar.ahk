@@ -7,7 +7,7 @@ class TransparentTaskbar {
 	
 	static transparentTaskbar(mode := 0, newPeriod := -1, debug := 0, *) {
 		; mode = 0 (turn off), 1 (turn on), -1 or T... (toggle)
-		this.logStatus := debug
+		this.debug := debug
 		if (!this.init)
 			this.initialize()
 		if (SubStr(mode, 1, 1) == "T" || mode == -1)
@@ -32,10 +32,11 @@ class TransparentTaskbar {
 		timerMenu.Add("Taskbar Transparency Timer", this.transparentTaskbar.Bind(this, -1, -1, 0))
 		A_TrayMenu.Add("Timers", timerMenu)
 		this.taskbar_timer := this.updateTaskbarTimer.Bind(this)
+		this.retry_timer := this.retry.bind(this)
 		this.period := 200
 		this.isLocked := false
 		this.blacklist := "(Program Manager|NVIDIA GeForce Overlay|^$)"
-		this.logStatus := 0
+		this.debug := 0
 		this.taskbar_accent_color := 0x202020 ; the gray of the taskbar when turning off
 		this.taskbar_accent_transparency := 0xE0
 		this.taskbar_maximized_color := 0x393747 ; color when window is maximized
@@ -73,8 +74,8 @@ class TransparentTaskbar {
 			this.monitors := relevantMonitors
 		}
 		catch Error
-			return
-		this.init := true
+			return 0
+		return (this.init := true)
 	}
 	
 	static reset(hard := false) {
@@ -86,11 +87,21 @@ class TransparentTaskbar {
 		catch Error
 			return
 	}
+
+	static retry() {
+		this.reset(1)
+		if (this.initialize()) {
+			try 
+				this.updateTaskbar()
+			catch Error
+				return 0
+			SetTimer(this.retry_timer, 0)
+			this.transparentTaskbar(1)
+		}
+	}
 	
 	static updateTaskbarTimer(override := false) {
-		static index := 0
-		static lastError := A_TickCount - 5500 ; so that one retry is guaranteed on startup
-		ListLines(this.logStatus)
+		ListLines(this.debug)
 		if (this.sessionIsLocked()) {
 			if (!this.isLocked) {
 				this.isLocked := true
@@ -102,40 +113,41 @@ class TransparentTaskbar {
 			this.isLocked := false
 			SetTimer(this.taskbar_timer, this.period)
 		}
-		try {
-			maximizedMonitors := this.getMaximizedMonitors()
-			for i, el in this.monitors {
-				if (maximizedMonitors[el.MonitorNumber]) {
-					if (this.taskbar_RGB_mode) {
-						this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.MonitorNumber, this.gradient[index+1], this.rgbTransparency)
-						this.taskbarTransparency[el.MonitorNumber] := 0
-						index := mod(index + 1, round(this.RGB_rotate_duration*63))
-					}
-					else if (this.taskbarTransparency[el.MonitorNumber]) {
-						this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.MonitorNumber, this.taskbar_maximized_color, this.taskbar_maximized_transparency)
-						this.taskbarTransparency[el.MonitorNumber] := 0
-					}
-					else if (override) {
-						this.TaskBar_SetAttr(1, el.MonitorNumber, 0x222222, 0x01) ; fix the accented color being wrong
-						this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.MonitorNumber, this.taskbar_maximized_color)
-					}
-				}
-				else {
-					if (override)
-						this.TaskBar_SetAttr(1, el.MonitorNumber, 0x222222, 0x01) ; fix
-					this.TaskBar_SetAttr(2, el.MonitorNumber, 0x000000, 0x01)
-					this.taskbarTransparency[el.MonitorNumber] := 1
-				}
-			}
-		} catch Error as e {
+		try
+			this.updateTaskbar(override)
+		catch Error as e {
 			ListLines(1)
 			this.transparentTaskbar(0)
-			this.init := 0
-			if (A_TickCount - lastError < 5500)
-				MsgBox("Error: " e.Message " in " e.What "`nTaskbar Transparency has been turned off.`nDebug Information:`nFile: " e.File "`nLine: " e.Line "`nExtra: " e.Extra "`nStack: " e.Stack)
-			else
-				SetTimer(() => (this.transparentTaskbar(1)), -5000)
-			lastError := A_TickCount
+			timedTooltip("Attempting to restart.")
+			SetTimer(this.retry_timer, 2000)
+		}
+	}
+
+	static updateTaskbar(override := false) {
+		static index := 0
+		maximizedMonitors := this.getMaximizedMonitors()
+		for i, el in this.monitors {
+			if (maximizedMonitors[el.MonitorNumber]) {
+				if (this.taskbar_RGB_mode) {
+					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.MonitorNumber, this.gradient[index+1], this.rgbTransparency)
+					this.taskbarTransparency[el.MonitorNumber] := 0
+					index := mod(index + 1, round(this.RGB_rotate_duration*63))
+				}
+				else if (this.taskbarTransparency[el.MonitorNumber]) {
+					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.MonitorNumber, this.taskbar_maximized_color, this.taskbar_maximized_transparency)
+					this.taskbarTransparency[el.MonitorNumber] := 0
+				}
+				else if (override) {
+					this.TaskBar_SetAttr(1, el.MonitorNumber, 0x222222, 0x01) ; fix the accented color being wrong
+					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.MonitorNumber, this.taskbar_maximized_color)
+				}
+			}
+			else {
+				if (override)
+					this.TaskBar_SetAttr(1, el.MonitorNumber, 0x222222, 0x01) ; fix
+				this.TaskBar_SetAttr(2, el.MonitorNumber, 0x000000, 0x01)
+				this.taskbarTransparency[el.MonitorNumber] := 1
+			}
 		}
 	}
 	
