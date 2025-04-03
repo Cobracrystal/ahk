@@ -56,14 +56,16 @@ try reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBAL
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
 if (StrCompare(A_OSVersion, "10.0.22000") < 0)
-	TransparentTaskbar.TransparentTaskbar(1, 50)
+	TransparentTaskbar.TransparentTaskbar(1, 50, 0)
 ; Start keeping track of desktop window changes
 DesktopState.enable(60000)
 ; import custom blacklist into AltDrag
 AltDrag.addBlacklist([
 	"Satisfactory ahk_class UnrealWindow",
 	"DriveBeyondHorizons ahk_exe DriveBeyondHorizons-Win64-Shipping.exe",
-	"Minecraft ahk_exe javaw.exe"
+	"Minecraft ahk_exe javaw.exe",
+	"Terraria Terraria.exe",
+	"Split Fiction SplitFiction.exe"
 ])
 ; Start Loop to close winrar popups
 SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't interrupt
@@ -950,4 +952,8 @@ loadTableAsHotstrings(filePath) {
 	}
 	hotstringsAsJsonStr := jsongo.Stringify(hotstrings, , "`t")
 	try HotstringLoader.load(hotstringsAsJsonStr, "Kayoogis", , , , true)
+}
+
+^+!d::{
+	Run("C:\Users\Simon\Desktop\programs\programming\ahk\Demo_Scripts\download.ahk")
 }
