@@ -175,23 +175,32 @@ objRemoveValue(obj, value, removeAll := true) {
 	return n
 }
 
-objToString(obj, compact := true, spacer := "`n") {
+/**
+ * 
+ * @param obj Object, Map, Array Value etc.
+ * @param {Integer} compact Whether to use spacer value to separate objects within objects (default true)
+ * @param {Integer} compress Whether to omit spaces (default false)
+ * @param {String} spacer Spacer value (default newline)
+ * @returns {String} 
+ */
+objToString(obj, compact := true, compress := false, spacer := "`n") {
 	if !(obj is Object)
 		return obj
 	isArr := obj is Array
 	isMap := obj is Map
 	isObj := !(isArr || isMap)
 	str := ""
+	trspace := compress ? "" : A_Space
 	for key, val in (isObj ? obj.OwnProps() : obj) {
-		separator := (compact ? "" : (val is Object ? spacer : A_Space))
-		if (isArr)
-			str .= objToString(val, compact, spacer) "," . separator
-		else if (isMap)
-			str .= objToString(key, compact, spacer) . ": " . objToString(val, compact, spacer) . separator
+		separator := compact ? trspace : ((val??"") is Object ? spacer : trspace)
+		if !(IsSet(val))
+			str := RTrim(str, separator) "," separator
+		else if (isArr)
+			str .= objToString(val ?? "", compact, spacer) "," separator
 		else
-			str .= objToString(key, compact, spacer) . ": " . objToString(val, compact, spacer) . "," . separator
+			str .= objToString(key, compact, spacer) ":" trspace objToString(val ?? "", compact, spacer) "," separator
 	}
-	return ( isArr ? "[" : isMap ? "(" : "{" ) . RTrim(str, " `t`n`r,") . ( isArr ? "]" : isMap ? ")" : "}" )
+	return ( isArr ? "[" : isMap ? "Map(" : "{" ) RegExReplace(str, "," separator "$") ( isArr ? "]" : isMap ? ")" : "}" )
 }
 
 reverseArray(array) {
@@ -945,6 +954,10 @@ timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 	stopTooltip() {
 		ToolTip(, , , whichTooltip?)
 	}
+}
+
+useIfSet(value, default := unset) {
+	return IsSet(value) ? value : default
 }
 
 MsgBoxGui(funcObj, text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, icon := 0, isOwnedBy := 0, timeout := 0) {
