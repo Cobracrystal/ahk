@@ -20,7 +20,7 @@ class ReminderManager {
 		guiMenu.Add("Open Reminder Manager", this.reminderManagerGUI.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
 		this.data := { coords: [565, 300] }
-		this.guiVars := { 1: ["rem1Message", "rem1S", "rem1M", "rem1H", "rem1D"], 
+		this.guiVars := { 1: ["rem1Message", "rem1S", "rem1M", "rem1H"], 
 						  2: ["rem2Message", "rem2S", "rem2M", "rem2H", "rem2D", "rem2Mo"] }
 		this.gui := -1
 		this.LV := -1
@@ -226,14 +226,14 @@ class ReminderManager {
 		this.gui.AddGroupBox("Section w400 h90", "Add Reminder in")
 		this.gui.SetFont("s9")
 		this.gui.AddText("Center ys+22 xs+10", "Remind me in ")
-			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[5]
-			this.gui.AddText("Center ys+22 x+5", "d")
+			; this.gui.AddEdit("ys+20 x+5 r1", 0).Name := this.guiVars.1[5]
+			; this.gui.AddText("Center ys+22 x+5", "d")
 			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[4]
 			this.gui.AddText("Center ys+22 x+5", "h")
 			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[3]
 			this.gui.AddText("Center ys+22 x+5", "m ")
-			this.gui.AddEdit("ys+20 x+5 r1 w30 " (this.settings.flagDebug ? "" : "Hidden"), 0).Name := this.guiVars.1[2]
-			this.gui.AddText("Center ys+22 x+5 " (this.settings.flagDebug ? "" : "Hidden"), "s")
+			this.gui.AddEdit("ys+20 x+5 r1 w30", 0).Name := this.guiVars.1[2]
+			this.gui.AddText("Center ys+22 x+5", "s")
 		this.gui.AddText("Center ys+22 x+5", "with the message:")
 			this.gui.AddEdit("ys+47 xs+10 r2 w375").Name := this.guiVars.1[1]
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderInFromGUI.bind(this))
@@ -336,7 +336,7 @@ class ReminderManager {
 		if !(t[1]) && (MsgBox("You have not set a reminder message. Proceed?", "Reminder", 0x1) == "Cancel")
 			return
 		try
-			res := this.setTimerIn(t[5], t[4], t[3], t[2], t[1])
+			res := this.setTimerIn(, t[4], t[3], t[2], t[1])
 		catch Error as e {
 			msgbox("Problem setting the Reminder. Check if entered time is valid.`nSpecifically: " e.What " failed with`n" e.Message)
 			return 0
