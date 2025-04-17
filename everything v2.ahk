@@ -35,6 +35,7 @@ A_TrayMenu.Delete()
 #Include "BasicUtilities.ahk"
 #Include "HotstringLoader.ahk"
 #Include "TableFilter v2.ahk"
+; #Include "%A_ScriptDir%\not_mine_or_examples\AquaHotkey\AquaHotkey.ahk"
 ; #Include "jsongo.ahk"
 ; for windows in which ctrl+ should replace scrolling
 GroupAdd("zoomableWindows", "ahk_exe Mindustry.exe")
@@ -65,6 +66,7 @@ AltDrag.addBlacklist([
 	"DriveBeyondHorizons ahk_exe DriveBeyondHorizons-Win64-Shipping.exe",
 	"Minecraft ahk_exe javaw.exe",
 	"Terraria Terraria.exe",
+	"Leaf Blower Revolution",
 	"Split Fiction SplitFiction.exe"
 ])
 ; Start Loop to close winrar popups
@@ -957,3 +959,7 @@ loadTableAsHotstrings(filePath) {
 ^+!d::{
 	Run("C:\Users\Simon\Desktop\programs\programming\ahk\Demo_Scripts\download.ahk")
 }
+
+; ^j::{
+; 	Array(5,3,3,4).stream().foreach(x => x*x).tostring().msgbox()
+; }
