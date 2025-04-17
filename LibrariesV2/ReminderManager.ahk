@@ -407,7 +407,7 @@ class ReminderManager {
 		message := "It is " . FormatTime("L1033", "dddd, dd.MM.yyyy, HH:mm:ss") . "`nYou set a reminder for this point in time."
 		message .= (msg == "" ? "" : "`nReminder Message: " . msg)
 		SoundPlay("*48")
-		SetTimer((*) => MsgBox(message, "Reminder"), -1)
+		MsgBoxAsGui(message,, "Reminder")
 		return
 	}
 

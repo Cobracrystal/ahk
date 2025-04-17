@@ -190,7 +190,7 @@ objToString(obj, compact := true, compress := false, spacer := "`n") {
 	isMap := obj is Map
 	isObj := !(isArr || isMap)
 	str := ""
-	trspace := compress ? "" : A_Space
+	separator := (trspace := compress ? "" : A_Space)
 	for key, val in (isObj ? obj.OwnProps() : obj) {
 		separator := compact ? trspace : ((val??"") is Object ? spacer : trspace)
 		if !(IsSet(val))
@@ -960,14 +960,23 @@ useIfSet(value, default := unset) {
 	return IsSet(value) ? value : default
 }
 
-MsgBoxGui(funcObj, text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, icon := 0, isOwnedBy := 0, timeout := 0) {
+MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName, buttonStyle := 0, defaultButton := 1, icon := 0, owner := 0, timeout := 0) {
 	static MB_OK 						:= 0
 	static MB_OKCANCEL 					:= 1
 	static MB_ABORTRETRYIGNORE 			:= 2
 	static MB_YESNOCANCEL 				:= 3
 	static MB_YESNO 					:= 4
 	static MB_RETRYCANCEL 				:= 5
-	static MB_CANCELTRYAGAINCONTINUE 	:= 6
+	static MB_CANCELRETRYCONTINUE 		:= 6
+	static MB_TEXT_MAP := Map(
+		MB_OK,					["OK"],
+		MB_OKCANCEL,			["OK", "Cancel"],
+		MB_ABORTRETRYIGNORE,	["Abort", "Retry", "Ignore"],
+		MB_YESNOCANCEL,			["Yes", "No", "Cancel"],
+		MB_YESNO,				["Yes", "No"],
+		MB_RETRYCANCEL,			["Retry", "Cancel"],
+		MB_CANCELRETRYCONTINUE,	["Cancel", "Retry", "Continue"]
+	)
 
 	static MB_ICONHANDERROR				:= 16
 	static MB_ICONQUESTION 				:= 32
@@ -990,61 +999,71 @@ MsgBoxGui(funcObj, text := "Press OK to continue", title := A_ScriptName, button
 	static SS_WHITERECT := 0x0006	; Gui option for white rectangle (http://ahkscript.org/boards/viewtopic.php?p=20053#p20053)
 
 	bottomGap := leftMargin
-	BottomHeight := buttonHeight + 2 * bottomGap + 3
+	BottomHeight := buttonHeight + 2 * bottomGap
 	gStr := ""
-	if (isOwnedBy)
-		gStr := "+Owner" isOwnedBy
-	guiFontOptions := "S" MB_FONTSIZE " W" MB_FONTWEIGHT ( MB_FONTISITALIC ? " italic" : "")
+	if !(MB_TEXT_MAP.Has(buttonStyle))
+		throw Error("Invalid button Style")
+	if (owner)
+		gStr := "+Owner" owner
+	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT ( MB_FONTISITALIC ? " italic" : "") : ""
 	mbgui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " gStr, title)
 	mbgui.Opt("+0x94C80000")
 	mbgui.Opt("-ToolWindow")
+	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
 	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, text)
 	mbgui.AddText("x" leftMargin " y" gap " BackgroundTrans vTextBox", text)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
-	guiWidth := leftMargin + TBw + buttonOffset + buttonWidth + rightMargin + 1
+	guiWidth := leftMargin + TBw - buttonOffset + (buttonWidth + rightMargin) * MB_TEXT_MAP[buttonStyle].Length + 1
 	guiWidth := (guiWidth < minGuiWidth ? minGuiWidth : guiWidth)
 	whiteBoxHeight := TBy + TBh + gap
 	mbGui["WhiteBoxTop"].Move(0, 0, guiWidth, whiteBoxHeight)
-	buttonX := guiWidth - rightMargin - buttonWidth
+	buttonX := guiWidth - (rightMargin + buttonWidth) * MB_TEXT_MAP[buttonStyle].Length
 	buttonY := whiteBoxHeight + bottomGap
-	mbGui.AddButton("vButton1 x" buttonX " y" buttonY " w" buttonWidth " h" buttonHeight " Default", "OK")
-	mbGui["Button1"].Focus()
+	for i, e in MB_TEXT_MAP[buttonStyle]
+		mbgui.AddButton("vButton" i " x" (buttonX + (i-1) * (buttonWidth + rightMargin)) " y" buttonY " w" buttonWidth " h" buttonHeight, e).OnEvent("Click", buttonEvent.bind(buttonStyle, i))
+	mbGui["Button" defaultButton].Focus()
 	guiHeight := whiteBoxHeight + BottomHeight
 	mbGui.OnEvent("Escape", (*) => mbgui.Destroy())
 	mbGui.OnEvent("Close", (*) => mbgui.Destroy())
-	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
 	mbgui.Show("Center w" guiWidth " h" guiHeight)
 	return mbgui
+
+	buttonEvent(buttonStyle, buttonNumber, buttonCtrl, info) {
+		mbgui.Destroy()
+		if (funcObj)
+			funcObj(MB_TEXT_MAP[buttonStyle][buttonNumber])
+	}
+
+	getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
+		; SystemParametersInfo constant for retrieving the metrics associated with the nonclient area of nonminimized windows
+		static SPI_GETNONCLIENTMETRICS := 0x0029
+
+		static NCM_Size        := 40 + 5 * 92   ; Size of NONCLIENTMETRICS structure (not including iPaddedBorderWidth)
+		static MsgFont_Offset  := 40 + 4 * 92   ; Offset for lfMessageFont in NONCLIENTMETRICS structure
+		static Size_Offset     := 0    ; Offset for cbSize in NONCLIENTMETRICS structure
+
+		static Height_Offset   := 0    ; Offset for lfHeight in LOGFONT structure
+		static Weight_Offset   := 16   ; Offset for lfWeight in LOGFONT structure
+		static Italic_Offset   := 20   ; Offset for lfItalic in LOGFONT structure
+		static FaceName_Offset := 28   ; Offset for lfFaceName in LOGFONT structure
+		static FACESIZE        := 32   ; Size of lfFaceName array in LOGFONT structure
+		; Maximum number of characters in font name string
+
+		NCM := Buffer(NCM_Size, 0)
+		NumPut("UInt", NCM_Size, NCM, Size_Offset)   ; Set the cbSize element of the NCM structure
+		; Get the system parameters and store them in the NONCLIENTMETRICS structure (NCM)
+		if !DllCall("SystemParametersInfo", "UInt", SPI_GETNONCLIENTMETRICS, "UInt", NCM_Size, "Ptr", NCM.Ptr, "UInt", 0)                        ; Don't update the user profile
+			return false                               ; Return false
+		name   := StrGet(NCM.Ptr + MsgFont_Offset + FaceName_Offset, FACESIZE)          ; Get the font name
+		height := NumGet(NCM.Ptr + MsgFont_Offset + Height_Offset, "Int")               ; Get the font height
+		size   := DllCall("MulDiv", "Int", -Height, "Int", 72, "Int", A_ScreenDPI)   ; Convert the font height to the font size in points
+		; Reference: http://stackoverflow.com/questions/2944149/converting-logfont-height-to-font-size-in-points
+		weight   := NumGet(NCM.Ptr + MsgFont_Offset + Weight_Offset, "Int")             ; Get the font weight (400 is normal and 700 is bold)
+		isItalic := NumGet(NCM.Ptr + MsgFont_Offset + Italic_Offset, "UChar")           ; Get the italic state of the font
+		return true
+	}
 }
 
-getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
-	; SystemParametersInfo constant for retrieving the metrics associated with the nonclient area of nonminimized windows
-	static SPI_GETNONCLIENTMETRICS := 0x0029
-
-	static NCM_Size        := 40 + 5 * 92   ; Size of NONCLIENTMETRICS structure (not including iPaddedBorderWidth)
-	static MsgFont_Offset  := 40 + 4 * 92   ; Offset for lfMessageFont in NONCLIENTMETRICS structure
-	static Size_Offset     := 0    ; Offset for cbSize in NONCLIENTMETRICS structure
-
-	static Height_Offset   := 0    ; Offset for lfHeight in LOGFONT structure
-	static Weight_Offset   := 16   ; Offset for lfWeight in LOGFONT structure
-	static Italic_Offset   := 20   ; Offset for lfItalic in LOGFONT structure
-	static FaceName_Offset := 28   ; Offset for lfFaceName in LOGFONT structure
-	static FACESIZE        := 32   ; Size of lfFaceName array in LOGFONT structure
-	; Maximum number of characters in font name string
-
-	NCM := Buffer(NCM_Size, 0)
-	NumPut("UInt", NCM_Size, NCM, Size_Offset)   ; Set the cbSize element of the NCM structure
-	; Get the system parameters and store them in the NONCLIENTMETRICS structure (NCM)
-	if !DllCall("SystemParametersInfo", "UInt", SPI_GETNONCLIENTMETRICS, "UInt", NCM_Size, "Ptr", NCM.Ptr, "UInt", 0)                        ; Don't update the user profile
-		return false                               ; Return false
-	name   := StrGet(NCM.Ptr + MsgFont_Offset + FaceName_Offset, FACESIZE)          ; Get the font name
-	height := NumGet(NCM.Ptr + MsgFont_Offset + Height_Offset, "Int")               ; Get the font height
-	size   := DllCall("MulDiv", "Int", -Height, "Int", 72, "Int", A_ScreenDPI)   ; Convert the font height to the font size in points
-	; Reference: http://stackoverflow.com/questions/2944149/converting-logfont-height-to-font-size-in-points
-	weight   := NumGet(NCM.Ptr + MsgFont_Offset + Weight_Offset, "Int")             ; Get the font weight (400 is normal and 700 is bold)
-	isItalic := NumGet(NCM.Ptr + MsgFont_Offset + Italic_Offset, "UChar")           ; Get the italic state of the font
-	return true
-}
 
 base64Encode(str, encoding := "UTF-8") {
 	static CRYPT_STRING_BASE64 := 0x00000001
