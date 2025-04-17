@@ -437,10 +437,6 @@ class WindowManager {
 		}
 	}
 
-	static borderlessFullscreen(wHandle) {
-		
-	}
-
 	static transparencyGUI(wHandles) {
 		tp := WinGetTransparent(wHandles[1])
 		tp := (tp == "" ? 255 : tp)
@@ -491,7 +487,7 @@ class DesktopState {
 		for i, e in this.prevState {
 			if (!WinExist(e.hwnd))
 				continue
-			try {					
+			try {
 				if (e.state == -1)
 					WinMinimize(e.hwnd)
 				else if (e.state == 1)
