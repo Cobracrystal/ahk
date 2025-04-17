@@ -413,7 +413,7 @@ class ReminderManager {
 
 	reminder1337(*) {
 		SoundPlay("*48")
-		if (MsgBox("Copy 1337 in clipboard and activate discord?", "1337", 0x1) == "Cancel")
+		if (MsgBoxAsGui("Copy 1337 in clipboard and activate discord?",, "1337", 0x1,,,,,true) == "Cancel")
 			return
 		A_Clipboard := 1337
 		if (WinExist("ahk_exe discord.exe"))

@@ -500,6 +500,6 @@ class DesktopState {
 			}
 		}
 		if (IsSet(logString))
-			msgbox(logString)
+			MsgBoxAsGui(logString)
 	}
 }

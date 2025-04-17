@@ -643,14 +643,14 @@ enumerateDay(day) {
 	return A_DD - A_WDAY + day
 }
 
-ExecScript(expression, Wait := true) {
+ExecScript(expression, Wait := true, void := false) {
 	input := '#Warn All, Off`n'
 	input .= '#Include "*i ' A_LineFile '"`n'
 	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\MathUtilities.ahk"`n'
-	if (RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox\(.+\)'))
+	if (RegexMatch(expression, 'i)print\(.*\)'))
+		expression := RegexReplace(expression, "print\((.*)?\)", 'FileAppend(objToString($1), "*")')
+	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox\(.+\)') || RegExMatch(expression, 'i)MsgBoxAsGui\(.+\)'))
 		input .= expression
-	else if (RegexMatch(expression, 'i)print\(.*\)'))
-		input .= RegexReplace(expression, "print\((.*)?\)", 'FileAppend(objToString($1), "*")')
 	else
 		input .= 'FileAppend(objToString(' . expression . '), "*")'
 	shell := ComObject("WScript.Shell")
@@ -960,7 +960,7 @@ useIfSet(value, default := unset) {
 	return IsSet(value) ? value : default
 }
 
-MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName, buttonStyle := 0, defaultButton := 1, icon := 0, owner := 0, timeout := 0) {
+MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName, buttonStyle := 0, defaultButton := 1, icon := 0, owner := 0, timeout := 0, wait := false) {
 	static MB_OK 						:= 0
 	static MB_OKCANCEL 					:= 1
 	static MB_ABORTRETRYIGNORE 			:= 2
@@ -997,6 +997,7 @@ MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName,
 	static buttonOffset := 30	; Offset between the right side of text and right edge of button
 	static minGuiWidth := 138	; Minimum width of Gui
 	static SS_WHITERECT := 0x0006	; Gui option for white rectangle (http://ahkscript.org/boards/viewtopic.php?p=20053#p20053)
+	static retValue := ""
 
 	bottomGap := leftMargin
 	BottomHeight := buttonHeight + 2 * bottomGap
@@ -1009,29 +1010,38 @@ MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName,
 	mbgui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " gStr, title)
 	mbgui.Opt("+0x94C80000")
 	mbgui.Opt("-ToolWindow")
+	if (buttonStyle == 2 || buttonStyle == 4)
+		mbgui.Opt("-SysMenu")
 	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
 	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, text)
 	mbgui.AddText("x" leftMargin " y" gap " BackgroundTrans vTextBox", text)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
-	guiWidth := leftMargin + TBw - buttonOffset + (buttonWidth + rightMargin) * MB_TEXT_MAP[buttonStyle].Length + 1
+	guiWidth := leftMargin + buttonOffset + Max(TBw, (buttonWidth + rightMargin) * MB_TEXT_MAP[buttonStyle].Length) + 1
 	guiWidth := (guiWidth < minGuiWidth ? minGuiWidth : guiWidth)
 	whiteBoxHeight := TBy + TBh + gap
 	mbGui["WhiteBoxTop"].Move(0, 0, guiWidth, whiteBoxHeight)
 	buttonX := guiWidth - (rightMargin + buttonWidth) * MB_TEXT_MAP[buttonStyle].Length
 	buttonY := whiteBoxHeight + bottomGap
 	for i, e in MB_TEXT_MAP[buttonStyle]
-		mbgui.AddButton("vButton" i " x" (buttonX + (i-1) * (buttonWidth + rightMargin)) " y" buttonY " w" buttonWidth " h" buttonHeight, e).OnEvent("Click", buttonEvent.bind(buttonStyle, i))
+		mbgui.AddButton("vButton" i " x" (buttonX + (i-1) * (buttonWidth + rightMargin)) " y" buttonY " w" buttonWidth " h" buttonHeight, e).OnEvent("Click", finalEvent.bind(buttonStyle, i))
 	mbGui["Button" defaultButton].Focus()
 	guiHeight := whiteBoxHeight + BottomHeight
-	mbGui.OnEvent("Escape", (*) => mbgui.Destroy())
-	mbGui.OnEvent("Close", (*) => mbgui.Destroy())
+	if (buttonStyle != 2 && buttonStyle != 4)
+		mbGui.OnEvent("Escape", (*) => finalEvent(buttonStyle, 0, 0, 0))
+	mbGui.OnEvent("Close", (*) => finalEvent(buttonStyle, 0, 0, 0))
 	mbgui.Show("Center w" guiWidth " h" guiHeight)
+	if (wait) {
+		WinWait(mbgui.hwnd)
+		WinWaitClose(mbgui.hwnd)
+		return retValue
+	}
 	return mbgui
 
-	buttonEvent(buttonStyle, buttonNumber, buttonCtrl, info) {
+	finalEvent(buttonStyle, buttonNumber, buttonCtrl, info) {
 		mbgui.Destroy()
+		retValue := buttonStyle == 0 ? "OK" : (buttonNumber == 0 ? "Cancel" : MB_TEXT_MAP[buttonStyle][buttonNumber])
 		if (funcObj)
-			funcObj(MB_TEXT_MAP[buttonStyle][buttonNumber])
+			funcObj(retValue)
 	}
 
 	getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {

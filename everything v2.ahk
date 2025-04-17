@@ -959,7 +959,3 @@ loadTableAsHotstrings(filePath) {
 ^+!d::{
 	Run("C:\Users\Simon\Desktop\programs\programming\ahk\Demo_Scripts\download.ahk")
 }
-
-; ^j::{
-; 	Array(5,3,3,4).stream().foreach(x => x*x).tostring().msgbox()
-; }

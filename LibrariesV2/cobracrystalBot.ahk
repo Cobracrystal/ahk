@@ -87,7 +87,7 @@ class ccBot {
 				}
 			}
 			catch as e {
-				MsgBox("Role Error: " errorlog . "`n" . e.Message "`n" e.What "`n" e.Extra)
+				MsgBoxAsGui("Role Error: " errorlog . "`n" . e.Message "`n" e.What "`n" e.Extra)
 			} finally {
 				errorlog .= rolesEditedCount . " roles edited.`n"
 			}
@@ -116,7 +116,7 @@ class ccBot {
 				}
 			}
 			catch as e {
-				MsgBox("Channel Error: " . errorlog . "`n" . e.Message "`n" e.What "`n" e.Extra)
+				MsgBoxAsGui("Channel Error: " . errorlog . "`n" . e.Message "`n" e.What "`n" e.Extra)
 			} finally {
 				errorlog .= channelsEditedCount . " channels edited.`n"
 			}

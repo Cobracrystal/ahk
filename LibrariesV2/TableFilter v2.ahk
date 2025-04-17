@@ -668,12 +668,12 @@ class TableFilter {
 				n := g.LV.GetText(rowN, this.data.keys.Length + 1)
 				this.debugShowDatabaseEntry(g, n, rowN)
 			case "Show Config":
-				MsgBox(jsongo.Stringify(this.config, , A_Tab), , "Owner" g.Hwnd)
+				MsgBoxAsGui(jsongo.Stringify(this.config, , A_Tab),, "TableFilter Config",,,, g.Hwnd)
 			case "Show Internal Data":
 				smallData := {}
 				for i, e in this.data.OwnProps()
 					smallData.%i% := (i == "data" ? "NOT SHOWN" : e)
-				MsgBox(jsongo.Stringify(smallData, , A_Tab), , "Owner" g.Hwnd)
+				MsgBoxAsGui(jsongo.Stringify(smallData, , A_Tab),,,,,, g.Hwnd)
 			default:
 				if (IsSet(extra))
 					this.rowTagger(itemName, g, extra)

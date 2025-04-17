@@ -13,7 +13,7 @@ class expressionCalculator {
 		if (SubStr(expression, 1, 2) == "w:")
 			result := this.giveUpAndCallWolframalpha(SubStr(expression, 3))
 		else if (SubStr(expression, 1, 2) == "b:")
-			return ExecScript(this.clean_expression(SubStr(expression, 3)), false)
+			return ExecScript(this.clean_expression(SubStr(expression, 3)), false, true)
 		else
 			result := this.readableFormat(ExecScript(this.clean_expression(expression)))
 		; READ THE ERROR STREAM. IF THERE'S SOME ERROR IN THERE, ALSO GIVE IT TO WOLFRAMALPHA
@@ -29,7 +29,7 @@ class expressionCalculator {
 			case "c":
 				A_Clipboard := result
 			default:
-				msgbox(result)
+				MsgBoxAsGui(result,,"Expression Result")
 		}
 	}
 
