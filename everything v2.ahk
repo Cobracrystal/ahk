@@ -10,7 +10,7 @@ InstallKeybdHook(true, true)
 if !InStr(FileExist(A_ScriptDir "\script_files\everything"), "D")
 	DirCreate("script_files\everything")
 SetWorkingDir(A_ScriptDir . "\script_files")
-
+TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think.ico", , true)
 OnExit(customExit)
 Hotstring("EndChars", "-()[]{}:;`'`"/\,.?!" . A_Space . A_Tab)
 
@@ -572,7 +572,6 @@ customTrayMenu() {
 	A_TrayMenu.Add("Suspend/Stop", suspendMenu)
 	A_TrayMenu.Add("Exit", trayMenuHandler)
 	A_TrayMenu.Default := "Open Recent Lines"
-	TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think.ico", , true)
 }
 
 trayMenuHandler(itemName, *) {

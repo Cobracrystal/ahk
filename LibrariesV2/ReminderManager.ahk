@@ -408,16 +408,18 @@ class ReminderManager {
 		message .= (msg == "" ? "" : "`nReminder Message: " . msg)
 		SoundPlay("*48")
 		MsgBoxAsGui(message,, "Reminder")
-		return
 	}
 
 	reminder1337(*) {
 		SoundPlay("*48")
-		if (MsgBoxAsGui("Copy 1337 in clipboard and activate discord?",, "1337", 0x1,,,,,true) == "Cancel")
-			return
-		A_Clipboard := 1337
-		if (WinExist("ahk_exe discord.exe"))
-			WinActivate("ahk_exe discord.exe")
+		MsgBoxAsGui("Copy 1337 in clipboard and activate discord?", (r) => (
+			r == "Cancel" ? 
+				0 : 
+				A_Clipboard := "1337", 
+				WinExist("ahk_exe discord.exe") ? 
+					WinActivate("ahk_exe discord.exe") : 
+					0
+			), "1337", 0x1)
 	}
 
 	discordReminder(msg, id) {
