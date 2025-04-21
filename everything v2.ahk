@@ -180,9 +180,9 @@ return
 	BlockInput(0)
 }
 
-; Evaluate Shell Expression in-text
-^!K:: expressionCalculator.calculateExpression("p")
-
+^!K:: { 	; Evaluate Shell Expression in-text
+	expressionCalculator.calculateExpression("p")
+}
 ; ###########################################################################
 ; ######################### DESKTOP-RELATED HOTKEYS #########################
 ; ###########################################################################
@@ -959,3 +959,11 @@ loadTableAsHotstrings(filePath) {
 ^+!d::{
 	Run("C:\Users\Simon\Desktop\programs\programming\ahk\Demo_Scripts\download.ahk")
 }
+#HotIf WinActive("Revolution Idle")
+b::{	; revo idle buy
+	MouseGetPos(&x, &y)
+	MouseClick("L", 1420, 1020)
+	Sleep(50)
+	MouseMove(x,y)
+}
+#HotIf
