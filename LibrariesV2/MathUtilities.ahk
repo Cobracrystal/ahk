@@ -138,12 +138,16 @@ roundProper(number, precision := 12) {
 primefactor(n) {
 	if (n == 0)
 		return [0]
-	num := Abs(n)
 	local factors := []
+	n := Abs(n)
 	divisor := 2
-	while (num != 1) {
-		if (Mod(num, divisor) == 0) {
-			num //= divisor
+	while (n != 1) {
+		if (divisor > Ceil(sqrt(n))) {
+			factors.push(n)
+			break
+		}
+		if (Mod(n, divisor) == 0) {
+			n //= divisor
 			factors.push(divisor)
 			continue
 		}
@@ -167,7 +171,7 @@ factors(n) {
 			f *= k
 		factors.push(f)
 	}
-	factors := uniquesFromArray(factors)
+	factors := sortArray(uniquesFromArray(factors), "N")
 	return factors
 }
 
@@ -246,7 +250,7 @@ lcd(nums*) {
  */
 gcm(nums*) {
 	n := lcm(nums*)
-	return 2**63 - mod(2**63-1,240) - 1
+	return 2**63 - 1
 }
 
 
@@ -286,7 +290,7 @@ perfectPowers(n) {
 		i++
 	}
 	str := Sort(str, "N D,")
-	Loop Parse, str, "," {
+	Loop Parse, SubStr(str, 1, -1), "," {
 		if (IsDigit(A_LoopField))
 			arr.push(A_LoopField)
 	}
