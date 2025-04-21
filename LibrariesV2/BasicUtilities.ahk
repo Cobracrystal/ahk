@@ -232,7 +232,7 @@ uniquesFromArray(arr, key?, isMap := 0) {
 	arr2 := []
 	uniques := Map()
 	for i, e in arr {
-		el := key ? (isMap ? e[key] : e.%key%) : e
+		el := IsSet(key) ? (isMap ? e[key] : e.%key%) : e
 		if !(uniques.Has(el)) {
 			uniques[el] := true
 			arr2.push(e)
@@ -1043,35 +1043,35 @@ MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName,
 		if (funcObj)
 			funcObj(retValue)
 	}
+}
 
-	getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
-		; SystemParametersInfo constant for retrieving the metrics associated with the nonclient area of nonminimized windows
-		static SPI_GETNONCLIENTMETRICS := 0x0029
+getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
+	; SystemParametersInfo constant for retrieving the metrics associated with the nonclient area of nonminimized windows
+	static SPI_GETNONCLIENTMETRICS := 0x0029
 
-		static NCM_Size        := 40 + 5 * 92   ; Size of NONCLIENTMETRICS structure (not including iPaddedBorderWidth)
-		static MsgFont_Offset  := 40 + 4 * 92   ; Offset for lfMessageFont in NONCLIENTMETRICS structure
-		static Size_Offset     := 0    ; Offset for cbSize in NONCLIENTMETRICS structure
+	static NCM_Size        := 40 + 5 * 92   ; Size of NONCLIENTMETRICS structure (not including iPaddedBorderWidth)
+	static MsgFont_Offset  := 40 + 4 * 92   ; Offset for lfMessageFont in NONCLIENTMETRICS structure
+	static Size_Offset     := 0    ; Offset for cbSize in NONCLIENTMETRICS structure
 
-		static Height_Offset   := 0    ; Offset for lfHeight in LOGFONT structure
-		static Weight_Offset   := 16   ; Offset for lfWeight in LOGFONT structure
-		static Italic_Offset   := 20   ; Offset for lfItalic in LOGFONT structure
-		static FaceName_Offset := 28   ; Offset for lfFaceName in LOGFONT structure
-		static FACESIZE        := 32   ; Size of lfFaceName array in LOGFONT structure
-		; Maximum number of characters in font name string
+	static Height_Offset   := 0    ; Offset for lfHeight in LOGFONT structure
+	static Weight_Offset   := 16   ; Offset for lfWeight in LOGFONT structure
+	static Italic_Offset   := 20   ; Offset for lfItalic in LOGFONT structure
+	static FaceName_Offset := 28   ; Offset for lfFaceName in LOGFONT structure
+	static FACESIZE        := 32   ; Size of lfFaceName array in LOGFONT structure
+	; Maximum number of characters in font name string
 
-		NCM := Buffer(NCM_Size, 0)
-		NumPut("UInt", NCM_Size, NCM, Size_Offset)   ; Set the cbSize element of the NCM structure
-		; Get the system parameters and store them in the NONCLIENTMETRICS structure (NCM)
-		if !DllCall("SystemParametersInfo", "UInt", SPI_GETNONCLIENTMETRICS, "UInt", NCM_Size, "Ptr", NCM.Ptr, "UInt", 0)                        ; Don't update the user profile
-			return false                               ; Return false
-		name   := StrGet(NCM.Ptr + MsgFont_Offset + FaceName_Offset, FACESIZE)          ; Get the font name
-		height := NumGet(NCM.Ptr + MsgFont_Offset + Height_Offset, "Int")               ; Get the font height
-		size   := DllCall("MulDiv", "Int", -Height, "Int", 72, "Int", A_ScreenDPI)   ; Convert the font height to the font size in points
-		; Reference: http://stackoverflow.com/questions/2944149/converting-logfont-height-to-font-size-in-points
-		weight   := NumGet(NCM.Ptr + MsgFont_Offset + Weight_Offset, "Int")             ; Get the font weight (400 is normal and 700 is bold)
-		isItalic := NumGet(NCM.Ptr + MsgFont_Offset + Italic_Offset, "UChar")           ; Get the italic state of the font
-		return true
-	}
+	NCM := Buffer(NCM_Size, 0)
+	NumPut("UInt", NCM_Size, NCM, Size_Offset)   ; Set the cbSize element of the NCM structure
+	; Get the system parameters and store them in the NONCLIENTMETRICS structure (NCM)
+	if !DllCall("SystemParametersInfo", "UInt", SPI_GETNONCLIENTMETRICS, "UInt", NCM_Size, "Ptr", NCM.Ptr, "UInt", 0)                        ; Don't update the user profile
+		return false                               ; Return false
+	name   := StrGet(NCM.Ptr + MsgFont_Offset + FaceName_Offset, FACESIZE)          ; Get the font name
+	height := NumGet(NCM.Ptr + MsgFont_Offset + Height_Offset, "Int")               ; Get the font height
+	size   := DllCall("MulDiv", "Int", -Height, "Int", 72, "Int", A_ScreenDPI)   ; Convert the font height to the font size in points
+	; Reference: http://stackoverflow.com/questions/2944149/converting-logfont-height-to-font-size-in-points
+	weight   := NumGet(NCM.Ptr + MsgFont_Offset + Weight_Offset, "Int")             ; Get the font weight (400 is normal and 700 is bold)
+	isItalic := NumGet(NCM.Ptr + MsgFont_Offset + Italic_Offset, "UChar")           ; Get the italic state of the font
+	return true
 }
 
 
