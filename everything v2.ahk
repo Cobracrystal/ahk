@@ -269,9 +269,11 @@ return
 	else {
 		for i, win in windowInfo {
 			if (win.state != -1)
-				WinMove(win.xpos, win.ypos, win.width, win.height, win.hwnd)
+				try
+					WinMove(win.xpos, win.ypos, win.width, win.height, win.hwnd)
 			if (win.state == 1)
-				WinMaximize(win.hwnd)
+				try
+					WinMaximize(win.hwnd)
 		}
 	}
 }
@@ -873,7 +875,7 @@ F11::Escape	; BTD6: Rebind Escape
 #HotIf
 
 #HotIf WinActive('ahk_exe Terraria.exe')
-^ä::{
+^ä::{	; Terrari: W Down
 	Send("{w down}")
 }
 #HotIf
@@ -955,14 +957,77 @@ loadTableAsHotstrings(filePath) {
 	try HotstringLoader.load(hotstringsAsJsonStr, "Kayoogis", , , , true)
 }
 
-^+!d::{
+^+!d::{	; Run download script for list of links to image/video sites
 	Run("C:\Users\Simon\Desktop\programs\programming\ahk\Demo_Scripts\download.ahk")
 }
+
 #HotIf WinActive("Revolution Idle")
-b::{	; revo idle buy
+b::{	; Revo Idle: Buy
 	MouseGetPos(&x, &y)
 	MouseClick("L", 1420, 1020)
+	Sleep(40)
+	MouseMove(x,y)
+}
+1::{ ; Revo Idle: Slot 1 Merge
+	MouseGetPos(&x, &y)
+	Send("{LButton Down}")
 	Sleep(50)
+	MouseMove(295,722)
+	Sleep(50)
+	Send("{LButton Up}")
+	Sleep(100)
+	MouseMove(x,y)
+}
+2::{ ; Revo Idle: Slot 2 Merge
+	MouseGetPos(&x, &y)
+	Send("{LButton Down}")
+	Sleep(50)
+	MouseMove(390,722)
+	Sleep(50)
+	Send("{LButton Up}")
+	Sleep(100)
+	MouseMove(x,y)
+}
+3::{ ; Revo Idle: Slot 3 Merge
+	MouseGetPos(&x, &y)
+	Send("{LButton Down}")
+	Sleep(50)
+	MouseMove(475,722)
+	Sleep(50)
+	Send("{LButton Up}")
+	Sleep(100)
 	MouseMove(x,y)
 }
 #HotIf
+
+
+
+F6::{	; Controller Test
+	Loop 16 {
+		if (GetKeyState(A_Index "JoyName")) {
+			conIndex := A_Index
+			break
+		}
+	}
+	if !IsSet(conIndex)
+		throw Error()
+	g := Gui()
+	ed := g.AddEdit("w300 R20 ReadOnly")
+	g.show()
+	conBtns := GetKeyState(conIndex "JoyButtons")
+	conName := GetKeyState(conIndex "JoyName")
+	conInfo := GetKeyState(conIndex "JoyInfo")
+	Loop {
+		btnsActive := ""
+		conSticks := ""
+		Loop conBtns
+			btnsActive .= GetKeyState(conIndex "Joy" A_Index) ? " " A_Index : ""
+		conArr := StrSplitUTF8(conInfo)
+		objRemoveValues(conArr, ["D"])
+		conArr.InsertAt(1, "X", "Y")
+		for i, e in conArr
+			conSticks .= (e == "P" ? "POV" : e) . Round(GetKeyState(conIndex "Joy" (e == "P" ? "POV" : e))) " "
+		ed.Value := Format("Controller Name: {} (#{})`nCon Info: {}`nAxis: {}`nButtons Down: {}", conName, conIndex, conInfo, conSticks, btnsActive)
+		Sleep(100)
+	}
+}
