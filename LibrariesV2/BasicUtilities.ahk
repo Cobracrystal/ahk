@@ -131,21 +131,21 @@ parseHeaders(str) {
  * @param value value to check for
  * @returns {Integer} Count of how many instances of value were encountered
  */
-objCountValue(obj, value) {
+objCountValue(obj, value, comparator := ((a,b) => (a = b))) {
 	if !(obj is Array || obj is Map)
 		throw(Error("objCountValue does not handle type " . Type(obj)))
 	count := 0
 	for i, e in obj
-		if (e = value)
+		if (comparator(e, value))
 			count++
 	return count
 }
 
-objContainsValue(obj, value) {
+objContainsValue(obj, value, comparator := ((a,b) => (a = b))) {
 	if !(obj is Array || obj is Map)
 		throw(Error("objContains does not handle type " . Type(obj)))
 	for i, e in obj
-		if (e = value)
+		if (comparator(e, value))
 			return i
 	return 0
 }
@@ -157,13 +157,39 @@ objContainsValue(obj, value) {
  * @param {Integer} removeAll 
  * @returns {Integer} count
  */
-objRemoveValue(obj, value, removeAll := true) {
+objRemoveValue(obj, value := "", removeAll := true, comparator := ((a,b) => (a = b))) {
 	if !(obj is Array || obj is Map)
 		throw(Error("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
 	for next, e in obj
-		if (e = value)
+		if (comparator(e, value))
 			queue.push(next)
+	n := queue.Length
+	while (queue.Length != 0) {
+		next := queue.Pop()
+		if (obj is Array)
+			obj.RemoveAt(next)
+		else
+			obj.Delete(next)
+	}
+	return n
+}
+
+/**
+ * Deletes given Value from Object, either on first encounter or on all encounters. Returns count of removed values
+ * @param {Array | Map} obj
+ * @param value 
+ * @param {Integer} removeAll 
+ * @returns {Integer} count
+ */
+objRemoveValues(obj, values, removeAll := true, comparator := ((a,b) => (a = b))) {
+	if !(obj is Array || obj is Map)
+		throw(Error("objRemoveValue does not handle type " . Type(obj)))
+	queue := []
+	for next, e in obj
+		for i, f in values
+			if (comparator(e, f))
+				queue.push(next)
 	n := queue.Length
 	while (queue.Length != 0) {
 		next := queue.Pop()
@@ -760,6 +786,16 @@ menu_RemoveSpace(menuHandle, applyToSubMenus := true) {
 	return true
 }
 
+getMonitors() {
+	monitors := []
+	Loop(MonitorGetCount())
+	{
+		MonitorGet(A_Index, &mLeft, &mTop, &mRight, &mBottom)
+		monitors.push({MonitorNumber:A_Index, Left:mLeft, Right:mRight, Top:mTop, Bottom:mBottom})
+	}
+	return monitors
+}
+
 windowGetCoordinates(wHandle) {
 	dhw := A_DetectHiddenWindows
 	DetectHiddenWindows(1)
@@ -777,6 +813,35 @@ windowGetCoordinates(wHandle) {
 	ch := NumGet(pos, 12, "int")
 	DetectHiddenWindows(dhw)
 	return [x, y, w, h, cw, ch, mmx]
+}
+
+resetWindowPosition(wHandle := Winexist("A"), sizePercentage?, monitorNum?) {
+	NumPut("Uint", 40, monitorInfo := Buffer(40))
+	if (IsSet(monitorNum)) {
+		MonitorGetWorkArea(monitorNum, &workLeft, &workTop, &workRight, &workBottom)
+	} else {
+		monitorHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+		DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
+			workLeft := NumGet(monitorInfo, 20, "Int") ; Left
+			workTop := NumGet(monitorInfo, 24, "Int") ; Top
+			workRight := NumGet(monitorInfo, 28, "Int") ; Right
+			workBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
+	}
+	WinRestore(wHandle)
+	WinGetPos(&wx, &wy, &ww, &wh, wHandle)
+	if (IsSet(sizePercentage))
+		WinMove(
+			workLeft + (workRight - workLeft) * (1 - sizePercentage) / 2, ; left edge of screen + half the width of it - half the width of the window, to center it.
+			workTop + (workBottom - workTop) * (1 - sizePercentage) / 2,  ; same as above but with top bottom
+			(workRight - workLeft) * sizePercentage,	; width
+			(workBottom - workTop) * sizePercentage,	; height
+			wHandle
+		)
+	else
+		WinMove(
+			workLeft + (workRight - workLeft) / 2 - ww / 2, 
+			workTop + (workBottom - workTop) / 2 - wh / 2, , , wHandle
+		)
 }
 
 GetWindowPlacement(hwnd) {
@@ -1256,3 +1321,57 @@ doNothing(*) {
 ; 	}
 ; }
 
+numericCore(n) {
+	values := splitRecursive(n, 4)
+	solutions := []
+	for i, e in values {
+		f := smallest(e*)
+		if (f[2] != 0)
+			solutions.push(f)
+	}
+	sortedSolutions := sortObjectByKey(solutions, 1, "N")
+	s := sortedSolutions[1].value
+	if (s[1] >= 1000) {
+		ncr := numericCore(s[1])
+		ncr.push(s*)
+		return ncr
+	}
+	return s
+
+	smallest(m,n,o,p) {
+		static calcStrings := Map(1, "{}-{}*{}/{}",	2, "{}*{}-{}/{}", 3, "{}*{}/{}-{}", 4, "{}/{}-{}*{}")
+		m := Integer(m), n := Integer(n), o := Integer(o), p := Integer(p), arr := []
+		a1 := p = 0 ? -1 : (m - n) * o / p ; a2 equivalent to this
+		a3 := p = 0 ? -1 : (m * n - o) / p
+		a4 := o = 0 ? -1 : m * n / o - p ; a5 equivalent to this
+		a6 := n = 0 ? -1 : (m / n - o) * p
+		arr := [a1, a3, a4, a6]
+		sI := objContainsValue(arr,0,(e,*) => (e == round(e) && e >= 0))
+		if (sI == 0)
+			return [0, 0]
+		for i, e in arr
+			if (e < arr[sI] && e == round(e) && e >= 0)
+				sI := i
+		return [Integer(arr[sI]), Format(calcStrings[sI], m,n,o,p)]
+	}
+
+}
+
+
+splitRecursive(n, splits := StrLen(n)) {
+	if (splits == 1)
+		return [[n]]
+	else if (StrLen(n) == splits)
+		return [StrSplit(n)]
+	arr := []
+	Loop(StrLen(n) - splits + 1) {
+		cur := SubStr(n, 1, A_Index)
+		a := splitRecursive(SubStr(n, A_Index + 1), splits - 1)
+		for i, e in a
+			a[i].insertat(1, cur)
+		arr.push(a*)
+	}
+	return arr
+}
+
+print(i, options?) => FileAppend(i "`n", "*", options ?? "UTF-8")

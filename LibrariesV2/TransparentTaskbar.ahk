@@ -59,7 +59,7 @@ class TransparentTaskbar {
 	static initialize() {
 		this.init := false
 		try {
-			this.monitors := this.getMonitors()
+			this.monitors := getMonitors()
 			relevantMonitors := []
 			DetectHiddenWindows(1)
 			this.trayHandles[MonitorGetPrimary()] := WinGetID("ahk_class Shell_TrayWnd") 
@@ -149,16 +149,6 @@ class TransparentTaskbar {
 				this.taskbarTransparency[el.MonitorNumber] := 1
 			}
 		}
-	}
-	
-	static getMonitors() {
-		monitors := []
-		Loop(MonitorGetCount())
-		{
-			MonitorGet(A_Index, &mLeft, &mTop, &mRight, &mBottom)
-			monitors.push({MonitorNumber:A_Index, Left:mLeft, Right:mRight, Top:mTop, Bottom:mBottom})
-		}
-		return monitors
 	}
 
 	static getMaximizedMonitors() {

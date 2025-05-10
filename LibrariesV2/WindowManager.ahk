@@ -5,7 +5,7 @@
 ; add search that allows default ahk syntax via "wintitle ahk_exe test.exe"
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
-
+#Include "*i A_LineFile%\..\..\LibrariesV2\CustomWindowFunctions.ahk"
 ; Usage:
 ; ^+F11::WindowManager.windowManager("T")
 
@@ -44,21 +44,38 @@ class WindowManager {
 		guiMenu.Add("Open Window Manager", this.windowManager.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; window menu
-		winMenu := Menu()
-		winMenu.Add("Activate Window", this.menuHandler.Bind(this))
-		winMenu.Add("Reset Window Position", this.menuHandler.Bind(this))
-		winMenu.Add("Minimize Window", this.menuHandler.Bind(this))
-		winMenu.Add("Maximize Window", this.menuHandler.Bind(this))
-		winMenu.Add("Borderless Fullscreen", this.menuHandler.Bind(this))
-		winMenu.Add("Restore Window", this.menuHandler.Bind(this))
-		winMenu.Add("Close Window", this.menuHandler.Bind(this))
-		winMenu.Add("Toggle Lock Status", this.menuHandler.Bind(this))
-		winMenu.Add()
-		winMenu.Add("Change Window Transparency", this.menuHandler.Bind(this))
-		winMenu.Add("Copy Window Title", this.menuHandler.Bind(this))
-		winMenu.Add("View Properties", this.menuHandler.Bind(this))
-		winMenu.Add("View Program Folder", this.menuHandler.Bind(this))
-		this.menu := winMenu
+		this.winMenu := Menu()
+		this.winSubMenu := Menu()
+		this.customFunctionMenu := Menu()
+		this.winMenu.Add("Activate Window", this.menuHandler.Bind(this))
+		this.winMenu.Add("Reset Window Position", this.menuHandler.Bind(this))
+		this.winMenu.Add("Minimize Window", this.menuHandler.Bind(this))
+		this.winMenu.Add("Maximize Window", this.menuHandler.Bind(this))
+		this.winMenu.Add("Borderless Fullscreen", this.menuHandler.Bind(this))
+		this.winMenu.Add("Restore Window", this.menuHandler.Bind(this))
+		this.winMenu.Add("Close Window", this.menuHandler.Bind(this))
+		this.winSubMenu.Add("Change Window Transparency", this.menuHandler.Bind(this))
+		this.winSubMenu.Add("Toggle Lock Status", this.menuHandler.Bind(this))
+		this.winSubMenu.Add("Remove Title Bar", this.menuHandler.Bind(this))
+		this.winSubMenu.Add("Add Title Bar", this.menuHandler.Bind(this))
+		this.winSubMenu.Add("Move Windows to Monitor 1", this.menuHandler.Bind(this))
+		this.winSubMenu.Add("Move Windows to Monitor 2", this.menuHandler.Bind(this))
+		this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
+		this.winSubMenu.Add("Spread Windows per Screen", this.menuHandler.Bind(this))
+		this.customFunctions := [vlcMinimalViewingMode]
+		for i, customFunc in this.customFunctions
+			this.customFunctionMenu.Add(customFunc.Name, this.menuHandler.Bind(this))
+		this.winSubMenu.Add("Run Custom Code", this.customFunctionMenu)
+		this.winMenu.Add("Other Options", this.winSubMenu)
+		this.winMenu.Add()
+		this.winMenu.Add("Copy Window Title", this.menuHandler.Bind(this))
+		this.winMenu.Add("View Properties", this.menuHandler.Bind(this))
+		this.winMenu.Add("View Program Folder", this.menuHandler.Bind(this))
+		this.menu := this.winMenu
+		this.menu.submenu := this.winSubMenu
+		HotIfWinactive("Window Manager ahk_class AutoHotkeyGUI")
+		Hotkey("^f", (*) => (this.gui["EditFilterWindows"].Focus()))
+		HotIfWinactive()
 		; init class variables
 		this.gui := -1
 		this.settings := {
@@ -93,7 +110,6 @@ class WindowManager {
 		this.guiListviewCreate(true, true)
 		if (this.settings.darkMode)
 			this.toggleGuiDarkMode(this.settings.darkMode)
-		this.insertWindowInfo(this.gui.Hwnd, 1) ;// inserts the first row to be about the windowManager itself
 		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.settings.coords[1], this.settings.coords[2], this.settings.coords[3] - 2 - 14, this.settings.coords[4] - 32 - 7, this.settings.coords[7] == 1 ? "Maximize" : "Restore"))
 		this.LV.Focus()
 	}
@@ -129,25 +145,23 @@ class WindowManager {
 		; DllCall("uxtheme\SetWindowTheme", "ptr", this.LV.hwnd, "str", "Explorer", "ptr", 0)
 	}
 
-	static guiListviewCreate(redraw := false, first := false, guiCtrl := false, *) {
+	static guiListviewCreate(redraw := false, firstCall := false, guiCtrl := false, *) {
 		this.gui.Opt("+Disabled")
 		this.LV.Opt("-Redraw")
 		this.LV.Delete()
 		static winInfo := []
-		if (!guiCtrl)
+		if (!guiCtrl) {
 			winInfo := this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.showExcludedWindows)
+			if (firstCall)
+				winInfo.InsertAt(1, this.getWindowInfo(this.gui.Hwnd))
+		}
 		for i, win in winInfo
 			if (this.isIncludedInSearch(win))
 				this.LV.Add(, win.hwnd, win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
-		this.gui["WindowCount"].Value := Format("Window Count: {:5}", this.LV.GetCount() + (first ? 1 : 0))
-		if (this.LV.GetCount() == 0)
-			this.LV.Add("", "/", "Nothing Found.")
-		if (first) {
-			Loop (5)
-				this.LV.ModifyCol(A_Index + 3, "+Integer")
-			this.LV.ModifyCol(1, "+Integer")
-			this.LV.ModifyCol(10, "+Integer")
-		}
+		this.gui["WindowCount"].Value := Format("Window Count: {:5}", this.LV.GetCount())
+		if (firstCall)
+			for i in [1, 4, 5, 6, 7, 8, 10]
+				this.LV.ModifyCol(i, "+Integer")
 		if (redraw) {
 			Loop (this.LV.GetCount("Col"))
 				this.LV.ModifyCol(A_Index, "+AutoHdr")
@@ -164,11 +178,6 @@ class WindowManager {
 			if (InStr(e, search))
 				return true
 		return false
-	}
-
-	static insertWindowInfo(wHandle, rowN) {
-		t := this.getWindowInfo(wHandle) 
-		this.LV.Insert(rowN, , t.hwnd, t.title, t.process, this.settings.coords[7], this.settings.coords[1], this.settings.coords[2], this.settings.coords[3], this.settings.coords[4], t.class, t.pid, t.processPath, t.commandLine)
 	}
 
 	static getAllWindowInfo(getHidden := false, notExclude := false) {
@@ -241,9 +250,9 @@ class WindowManager {
 			return
 		}
 		if (WinGetExStyle(wHandle) & 0x8)
-			this.menu.Check("Toggle Lock Status")
+			this.menu.submenu.Check("Toggle Lock Status")
 		else
-			this.menu.Uncheck("Toggle Lock Status")
+			this.menu.submenu.Uncheck("Toggle Lock Status")
 		this.menu.show()
 	}
 
@@ -282,11 +291,18 @@ class WindowManager {
 			case "65": ; ctrl A
 				if (!GetKeyState("Ctrl"))
 					return
-				offset := GetKeyState("Shift") ? 0 : 1
-				if (offset)
-					this.LV.Modify(1, "-Select")
-				Loop this.LV.GetCount() - offset
-					this.LV.Modify(A_Index + offset, "+Select")
+				guiRowIndex := 0
+				if !GetKeyState("Shift")
+					Loop(this.LV.GetCount())
+						if (this.LV.GetText(A_Index, 1) == this.gui.Hwnd) {
+							guiRowIndex := A_Index
+							break
+						}
+				if (guiRowIndex)
+					this.LV.Modify(guiRowIndex, "-Select")
+				Loop this.LV.GetCount()
+					if (A_Index != guiRowIndex)
+						this.LV.Modify(A_Index, "+Select")
 			case "67": ; ctrl C
 				if (!GetKeyState("Ctrl"))
 					return
@@ -307,7 +323,7 @@ class WindowManager {
 					; Loop(this.LV.GetCount("Col"))
 					; 	str .= this.LV.GetText(rowN, A_Index) "`t"
 				}
-			case "116":	;// F5 Key -> Refresh LV
+			case "116":	; F5 Key -> Refresh LV
 				this.guiListviewCreate()
 			default:
 				return
@@ -361,79 +377,100 @@ class WindowManager {
 		}
 		for i, e in rowNums
 			wHandles.push(Integer(this.LV.GetText(e, 1)))
-		switch itemName {
-			case "Activate Window":
-				for i, wHandle in reverseArray(wHandles)
-					try WinActivate(wHandle)
-			case "Reset Window Position":
-				for i, wHandle in wHandles {
-					try {
-						mmx := WinGetMinMax(wHandle)
-						WinGetPos(, , &w, &h, wHandle)
-						WinRestore(wHandle)
-						WinMove(A_ScreenWidth / 2 - w / 2, A_ScreenHeight / 2 - h / 2, , , wHandle)
-						WinActivate(wHandle)
+		if (menuObj == this.winMenu) {
+			switch itemName {
+				case "Activate Window":
+					for i, wHandle in reverseArray(wHandles)
+						try WinActivate(wHandle)
+				case "Reset Window Position":
+					for i, wHandle in wHandles
+						try	resetWindowPosition(wHandle)
+				case "Minimize Window":
+					for i, wHandle in wHandles
+						try WinMinimize(wHandle)
+				case "Maximize Window":
+					for i, wHandle in wHandles
+						try WinMaximize(wHandle)
+				case "Borderless Fullscreen":
+					for i, wHandle in wHandles {
+						WinGetPos(&x, &y, &w, &h, wHandle)
+						WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+						mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+						NumPut("Uint", 40, monitorInfo := Buffer(40))
+						DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
+						monitor := {
+							left: NumGet(monitorInfo, 4, "Int"),
+							top: NumGet(monitorInfo, 8, "Int"),
+							right: NumGet(monitorInfo, 12, "Int"),
+							bottom: NumGet(monitorInfo, 16, "Int")
+						}
+						WinMove(
+							monitor.left + (x - cx),
+							monitor.top + (y - cy),
+							monitor.right - monitor.left + (w - cw),
+							monitor.bottom - monitor.top + (h - ch),
+							wHandle
+						)
 					}
-				}
-			case "Minimize Window":
-				for i, wHandle in wHandles
-					try WinMinimize(wHandle)
-			case "Maximize Window":
-				for i, wHandle in wHandles
-					try WinMaximize(wHandle)
-			case "Borderless Fullscreen":
-				for i, wHandle in wHandles {
-					WinGetPos(&x, &y, &w, &h, wHandle)
-					WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
-					mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-					NumPut("Uint", 40, monitorInfo := Buffer(40))
-					DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-					monitor := {
-						left: NumGet(monitorInfo, 4, "Int"),
-						top: NumGet(monitorInfo, 8, "Int"),
-						right: NumGet(monitorInfo, 12, "Int"),
-						bottom: NumGet(monitorInfo, 16, "Int")
+				case "Restore Window":
+					for i, wHandle in wHandles
+						try WinRestore(wHandle)
+				case "Close Window":
+					if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
+						return
+					for i, wHandle in reverseArray(wHandles) {
+						try WinClose(wHandle)
+						if WinWaitClose(wHandle, , 0.5)
+							this.LV.Delete(rowNums[rowNums.Length - i + 1])
 					}
-					WinMove(
-						monitor.left + (x - cx),
-						monitor.top + (y - cy),
-						monitor.right - monitor.left + (w - cw),
-						monitor.bottom - monitor.top + (h - ch),
-						wHandle
-					)
-				}
-			case "Restore Window":
-				for i, wHandle in wHandles
-					try WinRestore(wHandle)
-			case "Close Window":
-				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
+				case "Copy Window Title":
+					for i, wHandle in wHandles
+						str .= (WinExist(wHandle) ? WinGetTitle(wHandle) : "") . (i == wHandles.Length ? "" : "`n")
+					A_Clipboard := str
+				case "View Properties":
+					for i, wHandle in wHandles
+						try Run('properties "' WinGetProcessPath(wHandle) '"')
+				case "View Program Folder":
+					for i, wHandle in wHandles
+						try Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"')
+				default:
 					return
-				for i, wHandle in reverseArray(wHandles) {
-					try WinClose(wHandle)
-					if WinWaitClose(wHandle, , 0.5)
-						this.LV.Delete(rowNums[rowNums.Length - i + 1])
-				}
-			case "Toggle Lock Status":
-				for i, wHandle in reverseArray(wHandles) {
-					try {
-						tStyle := WinGetExStyle(wHandle)
-						WinSetAlwaysOnTop(tStyle & 0x8 ? 0 : 1, wHandle) ; 0x8 is WS_EX_TOPMOST
+			}
+		} else if (menuObj == this.winSubMenu) {
+			switch itemName {
+				case "Change Window Transparency":
+					this.transparencyGUI(wHandles)
+				case "Toggle Lock Status":
+					for i, wHandle in reverseArray(wHandles) {
+						try {
+							tStyle := WinGetExStyle(wHandle)
+							WinSetAlwaysOnTop(tStyle & 0x8 ? 0 : 1, wHandle) ; 0x8 is WS_EX_TOPMOST
+						}
 					}
+				case "Remove Title Bar":
+					for i, wHandle in wHandles
+						try WinSetStyle("-0xC00000", wHandle)
+				case "Add Title Bar":
+					for i, wHandle in wHandles
+						try WinSetStyle("+0xC00000", wHandle)
+				case "Move Windows to Monitor 1":
+					for i, wHandle in wHandles
+						try resetWindowPosition(wHandle,,1)
+				case "Move Windows to Monitor 2":
+					for i, wHandle in wHandles
+						try resetWindowPosition(wHandle,,2)
+				; this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
+				; this.winSubMenu.Add("Spread Windows per Screen", this.menuHandler.Bind(this))
+				case "Spread Windows":
+			}
+		} else if (menuObj == this.customFunctionMenu) {
+			for i, e in this.customFunctions {
+				if (e.Name == itemName) {
+					for i, wHandle in wHandles
+						try e(wHandle)
+					break
 				}
-			case "Change Window Transparency":
-				this.transparencyGUI(wHandles)
-			case "Copy Window Title":
-				for i, wHandle in wHandles
-					str .= (WinExist(wHandle) ? WinGetTitle(wHandle) : "") . (i == wHandles.Length ? "" : "`n")
-				A_Clipboard := str
-			case "View Properties":
-				for i, wHandle in wHandles
-					try Run('properties "' WinGetProcessPath(wHandle) '"')
-			case "View Program Folder":
-				for i, wHandle in wHandles
-					try Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"')
-			default:
-				return
+			}
 		}
 	}
 
@@ -467,10 +504,11 @@ class WindowManager {
 class DesktopState {
 	static __New() {
 		this.timer := this.save.bind(this)
+		this.prevState := []
+		this.customStates := Map()
 	}
 
-	static enable(period := 60000) {
-		this.prevState := []
+	static enable(period := 20000) {
 		this.save()
 		SetTimer(this.timer, period)
 	}
@@ -479,12 +517,15 @@ class DesktopState {
 		SetTimer(this.timer, 0)
 	}
 
-	static save() {
-		this.prevState := WindowManager.getAllWindowInfo(0, 0)
+	static save(custom?) {
+		if (IsSet(custom))
+			this.customStates[custom] := WindowManager.getAllWindowInfo(0, 0)
+		else
+			this.prevState := WindowManager.getAllWindowInfo(0, 0)
 	}
 
-	static restore() {
-		for i, e in this.prevState {
+	static restore(custom?) {
+		for i, e in (IsSet(custom) ? this.customStates[custom] : this.prevState) {
 			if (!WinExist(e.hwnd))
 				continue
 			try {

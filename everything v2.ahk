@@ -261,21 +261,15 @@ return
 ^!+K:: { ; Tiles Windows Vertically
 	static windowInfo, tileState := false
 	if (tileState := !tileState) {
-		windowInfo := WindowManager.getAllWindowInfo(0, 0)
+		DesktopState.save("TilingState")
 		shell := ComObject("Shell.Application")
-		if (MsgBox("Tile Windows Vertically?", "Confirm Dialog", 0x1) == "OK")
+		if (MsgBoxAsGui("Tile Windows Vertically?",, "Confirm Dialog", 0x1,,,,,true) == "OK")
 			shell.TileVertically()
+		else if (MsgBoxAsGui("Horizonally?",, "Confirm Dialog", 0x1,,,,,true) == "OK")
+			shell.TileHorizontally()
 	}
-	else {
-		for i, win in windowInfo {
-			if (win.state != -1)
-				try
-					WinMove(win.xpos, win.ypos, win.width, win.height, win.hwnd)
-			if (win.state == 1)
-				try
-					WinMaximize(win.hwnd)
-		}
-	}
+	else
+		DesktopState.restore("TilingState")
 }
 
 ^!+L:: { ; save / restore desktop state
