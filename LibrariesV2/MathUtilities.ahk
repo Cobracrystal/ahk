@@ -350,6 +350,26 @@ streetInDice(streetLen, diceAmount, filePath) {
 	}
 }
 
+linearRegressionParameters(datasetX, datasetY) {
+	avgX := 0
+	for x in datasetX
+		avgX += x
+	avgX /= datasetX.Length
+	avgY := 0
+	for y in datasetY
+		avgY += y
+	avgY /= datasetY.Length
+	b1 := 0
+	b2 := 0
+	for i, e in datasetX {
+		b1 += (e - avgX) * (datasetY[i] - avgY)
+		b2 += (e - avgX)**2
+	}
+	b := b1/b2
+	a := avgY - b  * avgX
+	return [a, b]
+}
+
 ; ALIAS SECTION
 pfactor(n) => primefactor(n)
 pfactors(n) => primefactor(n)
