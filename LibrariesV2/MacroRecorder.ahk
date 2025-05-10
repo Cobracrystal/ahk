@@ -209,7 +209,7 @@ class MacroRecorder {
 	static AddCodeToScript(*) {
 		code := this.gui["CodeEdit"].Value
 		if (!Instr(code, "::")) {
-			MsgBoxAsGui("Problem while adding", "No Hotkey found.", 0)
+			MsgBoxAsGui("Problem while adding", "No Hotkey found.")
 			return
 		}
 		hkey := SubStr(Code, 1, InStr(Code, "::") - 1)
@@ -225,14 +225,14 @@ class MacroRecorder {
 			return
 		}
 		msgBoxtext := "This will add the recorded Macro with the " . (hkey == "^Insert" ? "DEFAULT " : " ") . "Hotkey `n " . hkey . "`nto the script.`nProceed anyway?"
-		if (MsgBoxAsGui(msgBoxtext,,"Add to Script",4,,,,,true) == "No")
+		if (MsgBoxAsGui(msgBoxtext,"Add to Script",4,,true) == "No")
 			return
 		FileAppend("`n" . code, A_ScriptFullPath)
-		MsgBoxAsGui("Added to script. Reload?",(r) => (r == "Yes" ? Reload() : ""),"Reload?", 4)
+		MsgBoxAsGui("Added to script. Reload?", "Reload?", 4,,, (r) => (r == "Yes" ? Reload() : ""))
 	}
 
 	static guiClose(guiObj) {	; Close GUI
-		MsgBoxAsGui("Close GUI and delete recording?", (r) => (r == "OK" ? (this.gui.destroy(), this.gui := 0) : ""), "Delete Macro?", 1)
+		MsgBoxAsGui("Close GUI and delete recording?", "Delete Macro?", 1,,, (r) => (r == "OK" ? (this.gui.destroy(), this.gui := 0) : ""))
 		return true ; necessary to stop it from hiding
 	}
 }

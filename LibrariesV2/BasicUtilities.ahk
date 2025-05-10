@@ -1025,7 +1025,7 @@ useIfSet(value, default := unset) {
 	return IsSet(value) ? value : default
 }
 
-MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName, buttonStyle := 0, defaultButton := 1, icon := 0, owner := 0, timeout := 0, wait := false) {
+MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, buttonNames := MB_TEXT_MAP[buttonStyle], owner := 0, icon := 0, timeout := 0) {
 	static MB_OK 						:= 0
 	static MB_OKCANCEL 					:= 1
 	static MB_ABORTRETRYIGNORE 			:= 2
@@ -1033,6 +1033,9 @@ MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName,
 	static MB_YESNO 					:= 4
 	static MB_RETRYCANCEL 				:= 5
 	static MB_CANCELRETRYCONTINUE 		:= 6
+	static MB_CUSTOM4BTNS				:= 7
+	static MB_CUSTOM5BTNS				:= 8
+	static MB_CUSTOM6BTNS				:= 9
 	static MB_TEXT_MAP := Map(
 		MB_OK,					["OK"],
 		MB_OKCANCEL,			["OK", "Cancel"],
@@ -1040,7 +1043,10 @@ MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName,
 		MB_YESNOCANCEL,			["Yes", "No", "Cancel"],
 		MB_YESNO,				["Yes", "No"],
 		MB_RETRYCANCEL,			["Retry", "Cancel"],
-		MB_CANCELRETRYCONTINUE,	["Cancel", "Retry", "Continue"]
+		MB_CANCELRETRYCONTINUE,	["Cancel", "Retry", "Continue"],
+		MB_CUSTOM4BTNS,	[1,2,3,4],
+		MB_CUSTOM5BTNS,	[1,2,3,4,5],
+		MB_CUSTOM6BTNS,	[1,2,3,4,5,6]
 	)
 
 	static MB_ICONHANDERROR				:= 16
@@ -1069,6 +1075,8 @@ MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName,
 	gStr := ""
 	if !(MB_TEXT_MAP.Has(buttonStyle))
 		throw Error("Invalid button Style")
+	if (MB_TEXT_MAP[buttonStyle].Length != buttonNames.Length)
+		throw Error("Invalid Button Names for given Button Style")
 	if (owner)
 		gStr := "+Owner" owner
 	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT ( MB_FONTISITALIC ? " italic" : "") : ""
@@ -1081,13 +1089,13 @@ MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName,
 	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, text)
 	mbgui.AddText("x" leftMargin " y" gap " BackgroundTrans vTextBox", text)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
-	guiWidth := leftMargin + buttonOffset + Max(TBw, (buttonWidth + rightMargin) * MB_TEXT_MAP[buttonStyle].Length) + 1
+	guiWidth := leftMargin + buttonOffset + Max(TBw, (buttonWidth + rightMargin) * buttonNames.Length) + 1
 	guiWidth := (guiWidth < minGuiWidth ? minGuiWidth : guiWidth)
 	whiteBoxHeight := TBy + TBh + gap
 	mbGui["WhiteBoxTop"].Move(0, 0, guiWidth, whiteBoxHeight)
-	buttonX := guiWidth - (rightMargin + buttonWidth) * MB_TEXT_MAP[buttonStyle].Length
+	buttonX := guiWidth - (rightMargin + buttonWidth) * buttonNames.Length
 	buttonY := whiteBoxHeight + bottomGap
-	for i, e in MB_TEXT_MAP[buttonStyle]
+	for i, e in buttonNames
 		mbgui.AddButton("vButton" i " x" (buttonX + (i-1) * (buttonWidth + rightMargin)) " y" buttonY " w" buttonWidth " h" buttonHeight, e).OnEvent("Click", finalEvent.bind(buttonStyle, i))
 	mbGui["Button" defaultButton].Focus()
 	guiHeight := whiteBoxHeight + BottomHeight
@@ -1104,7 +1112,7 @@ MsgBoxAsGui(text := "Press OK to continue", funcObj := 0, title := A_ScriptName,
 
 	finalEvent(buttonStyle, buttonNumber, buttonCtrl, info) {
 		mbgui.Destroy()
-		retValue := buttonStyle == 0 ? "OK" : (buttonNumber == 0 ? "Cancel" : MB_TEXT_MAP[buttonStyle][buttonNumber])
+		retValue := buttonStyle == 0 ? "OK" : (buttonNumber == 0 ? "Cancel" : buttonNames[buttonNumber])
 		if (funcObj)
 			funcObj(retValue)
 	}

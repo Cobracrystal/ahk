@@ -29,7 +29,7 @@ class expressionCalculator {
 			case "c":
 				A_Clipboard := result
 			default:
-				MsgBoxAsGui(result,,"Expression Result")
+				MsgBoxAsGui(result,"Expression Result")
 		}
 	}
 
