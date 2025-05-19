@@ -273,6 +273,54 @@ primetest(n) {
 	return true
 }
 
+/**
+ * Given a number, returns closest prime number
+ * @param n 
+ */
+closestPrime(n) {
+	i := 0
+	sw := -1
+	while(true) {
+		k := Round(n) + (sw := sw * -1) * i
+		if primetest(k)
+			return k
+		i++
+	}
+}
+
+/**
+ * Returns Integer multiplication n * m that is closest to given number. 
+ * @param num Number
+ * @param {Integer} direction 0 for both directions, -1 to give the largest number smaller than num, 1 to give the smallest number larger than num
+ * @returns {Array} Values n,m
+ */
+getClosestRectangle(num, direction := 0) {
+	i := 0
+	sw := -1
+	while(true) {
+		k := Round(num) + (sw := sw * -1) * i
+		if primetest(k) {
+			i++
+			continue
+		}
+		facts := factor(k)
+		minV := sqrt(k)
+		; we have a valid decomposition, now we want the most square one from all valid factors
+		diffs := []
+		for i, e in facts
+			diffs.push(Abs(minV - e))
+		bestDiff := Min(diffs*)
+		for i, e in diffs
+			if (e == bestDiff) {
+				index := i
+				break
+			}
+		f1 := facts[index]
+		f2 := k // f1
+		return [f1, f2]
+	}
+}
+
 
 /**
  * Given an integer, finds all numbers smaller than it such that they have any integer root

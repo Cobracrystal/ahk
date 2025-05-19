@@ -12,5 +12,6 @@ vlcMinimalViewingMode(wHandle) {
 	Sleep(100)
 	Send("m")
 	Sleep(100)
+	WinSetStyle("-0x40000", wHandle)
 	return 1
 }

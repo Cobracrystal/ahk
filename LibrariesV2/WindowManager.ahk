@@ -27,7 +27,7 @@ class WindowManager {
 				WinActivate(this.gui.hwnd)
 			else {
 				this.settings.coords := windowGetCoordinates(this.gui.hwnd)
-				this.settings.coords[7] := (this.settings.coords[7] == 3 ? 1 : (this.settings.coords[7] == 2 ? -1 : 0))
+				this.settings.coords.mmx := (this.settings.coords.mmx == 3 ? 1 : (this.settings.coords.mmx == 2 ? -1 : 0))
 				this.gui.destroy()
 				this.gui := -1
 			}
@@ -39,53 +39,62 @@ class WindowManager {
 	;------------------------------------------------------------------------
 
 	static __New() {
+		CUSTOM_FUNCTIONS := [vlcMinimalViewingMode]
 		; Tray Menu
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Window Manager", this.windowManager.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; window menu
-		this.winMenu := Menu()
-		this.winSubMenu := Menu()
-		this.customFunctionMenu := Menu()
-		this.winMenu.Add("Activate Window", this.menuHandler.Bind(this))
-		this.winMenu.Add("Reset Window Position", this.menuHandler.Bind(this))
-		this.winMenu.Add("Minimize Window", this.menuHandler.Bind(this))
-		this.winMenu.Add("Maximize Window", this.menuHandler.Bind(this))
-		this.winMenu.Add("Borderless Fullscreen", this.menuHandler.Bind(this))
-		this.winMenu.Add("Restore Window", this.menuHandler.Bind(this))
-		this.winMenu.Add("Close Window", this.menuHandler.Bind(this))
-		this.winSubMenu.Add("Change Window Transparency", this.menuHandler.Bind(this))
-		this.winSubMenu.Add("Toggle Lock Status", this.menuHandler.Bind(this))
-		this.winSubMenu.Add("Remove Title Bar", this.menuHandler.Bind(this))
-		this.winSubMenu.Add("Add Title Bar", this.menuHandler.Bind(this))
-		this.winSubMenu.Add("Move Windows to Monitor 1", this.menuHandler.Bind(this))
-		this.winSubMenu.Add("Move Windows to Monitor 2", this.menuHandler.Bind(this))
-		this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
-		this.winSubMenu.Add("Spread Windows per Screen", this.menuHandler.Bind(this))
-		this.customFunctions := [vlcMinimalViewingMode]
-		for i, customFunc in this.customFunctions
-			this.customFunctionMenu.Add(customFunc.Name, this.menuHandler.Bind(this))
-		this.winSubMenu.Add("Run Custom Code", this.customFunctionMenu)
-		this.winMenu.Add("Other Options", this.winSubMenu)
-		this.winMenu.Add()
-		this.winMenu.Add("Copy Window Title", this.menuHandler.Bind(this))
-		this.winMenu.Add("View Properties", this.menuHandler.Bind(this))
-		this.winMenu.Add("View Program Folder", this.menuHandler.Bind(this))
-		this.menu := this.winMenu
-		this.menu.submenu := this.winSubMenu
+		this.menus := {}
+		this.menus.menu := Menu()
+		this.menus.subMenu := Menu()
+		this.menus.customFunctions := Map()
+		for cFunc in CUSTOM_FUNCTIONS ; define custom function map
+			this.menus.customFunctions[cFunc.Name] := cFunc
+		this.menus.MenuFunctionNames := [
+			"Activate Window", "Reset Window Position", "Minimize Window", "Maximize Window", 
+			"Borderless Fullscreen", "Restore Window", "Close Window", 
+			0, 
+			"Copy Window Title", "View Properties", "View Program Folder"
+		]
+		this.menus.SubMenuFunctionNames := [
+			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Spread Windows on all Screens", "Spread Windows per Screen"]
+		this.menus.subMenuToggles := [
+			["Toggle Window Lock", "Set Window Lock", "Remove Window Lock"], 
+			["Toggle Title Bar", "Add Title Bar", "Remove Title Bar"],
+			["Toggle Visibility", "Hide Window", "Show Window"]
+		]
+		handler := this.menuHandler.Bind(this)
+		for toggle in this.menus.subMenuToggles {
+			toggleMenu := Menu()
+			toggleMenu.Add(toggle[1], handler)
+			toggleMenu.Add(toggle[2], handler)
+			toggleMenu.Add(toggle[3], handler)
+			toggleMenu.Default := toggle[1]
+			this.menus.submenu.Add(toggle[1], toggleMenu)
+		}
+		for fName in this.menus.SubMenuFunctionNames ; add submenu standard functions
+			this.menus.submenu.Add(fName, handler)
+		this.menus.submenu.Add() ; add submenu separator
+		for fName, cFunc in this.menus.customFunctions ; add submenu custom functions
+			this.menus.submenu.Add(fName, handler)
+		for fName in this.menus.MenuFunctionNames ; add menu functions
+			this.menus.menu.Add(fName ? fName : unset, fName ? handler : unset)
+		this.menus.menu.Insert(objContainsValue(this.menus.MenuFunctionNames, 0) . "&", "Other Options", this.menus.submenu)
 		HotIfWinactive("Window Manager ahk_class AutoHotkeyGUI")
 		Hotkey("^f", (*) => (this.gui["EditFilterWindows"].Focus()))
+		Hotkey("^d", (*) => (this.LV.Focus()))
 		HotIfWinactive()
 		; init class variables
 		this.gui := -1
 		this.settings := {
-			coords: [300, 200, 1022, 432, 1000, 400, 0],
-			showExcludedWindows: 0,
+			coords: {x: 300, y: 200, w: 1022, h: 432, mmx: 0},
+			excludeWindows: 1,
 			detectHiddenWindows: 0,
 			getCommandLine: 0,
 			darkMode: 1,
-			darkThemeColor: SubStr("c0x002b36", 2),
-			darkThemeFontColor: SubStr("c0x109698",2),
+			darkThemeColor: "0x002b36",
+			darkThemeFontColor: "0x109698",
 			excludeWindowsRegex: "i)(?:ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|Program Manager|^$)"
 		}
 	}
@@ -97,7 +106,7 @@ class WindowManager {
 		this.gui.OnEvent("Size", this.onResize.bind(this))
 		this.gui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 		this.gui.AddCheckbox("Section vCheckboxHiddenWindows Checked" . this.settings.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
-		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . this.settings.showExcludedWindows, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
+		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . !this.settings.excludeWindows, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxGetCommandLine Checked" . this.settings.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false))
 		this.gui.AddText("ys xs+890 w110 vWindowCount", "Window Count: 0")
@@ -110,7 +119,7 @@ class WindowManager {
 		this.guiListviewCreate(true, true)
 		if (this.settings.darkMode)
 			this.toggleGuiDarkMode(this.settings.darkMode)
-		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.settings.coords[1], this.settings.coords[2], this.settings.coords[3] - 2 - 14, this.settings.coords[4] - 32 - 7, this.settings.coords[7] == 1 ? "Maximize" : "Restore"))
+		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.settings.coords.x, this.settings.coords.y, this.settings.coords.w - 2 - 14, this.settings.coords.h - 32 - 7, this.settings.coords.mmx == 1 ? "Maximize" : "Restore"))
 		this.LV.Focus()
 	}
 
@@ -123,10 +132,7 @@ class WindowManager {
 			if (VerCompare(A_OSVersion, "10.0.18985")) {
 				attr := 20
 			}
-			if (dark)
-				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", this.gui.hwnd, "int", attr, "int*", true, "int", 4)
-			else
-				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", this.gui.hwnd, "int", attr, "int*", false, "int", 4)
+			DllCall("dwmapi\DwmSetWindowAttribute", "ptr", this.gui.hwnd, "int", attr, "int*", dark ? true : false, "int", 4)
 		}
 		this.gui.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
 		font := (dark ? "c" this.settings.darkThemeFontColor : "cDefault")
@@ -141,8 +147,6 @@ class WindowManager {
 				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
 			}
 		}
-		; todo: setting to make this look like this ? 
-		; DllCall("uxtheme\SetWindowTheme", "ptr", this.LV.hwnd, "str", "Explorer", "ptr", 0)
 	}
 
 	static guiListviewCreate(redraw := false, firstCall := false, guiCtrl := false, *) {
@@ -151,7 +155,7 @@ class WindowManager {
 		this.LV.Delete()
 		static winInfo := []
 		if (!guiCtrl) {
-			winInfo := this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.showExcludedWindows)
+			winInfo := this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.excludeWindows)
 			if (firstCall)
 				winInfo.InsertAt(1, this.getWindowInfo(this.gui.Hwnd))
 		}
@@ -180,16 +184,16 @@ class WindowManager {
 		return false
 	}
 
-	static getAllWindowInfo(getHidden := false, notExclude := false) {
+	static getAllWindowInfo(getHidden := false, exclude := true) {
 		windows := []
 		tMM := A_TitleMatchMode
 		dHW := A_DetectHiddenWindows
 		SetTitleMatchMode("RegEx")
 		DetectHiddenWindows(getHidden)
-		if (notExclude)
-			wHandles := WinGetList()
-		else
+		if (exclude)
 			wHandles := WinGetList(, , this.settings.excludeWindowsRegex)
+		else
+			wHandles := WinGetList()
 		for i, wHandle in wHandles
 			windows.push(this.getWindowInfo(wHandle))
 		SetTitleMatchMode(tMM)
@@ -249,11 +253,19 @@ class WindowManager {
 			this.LV.Delete(rowN)
 			return
 		}
-		if (WinGetExStyle(wHandle) & 0x8)
-			this.menu.submenu.Check("Toggle Lock Status")
+		if (WinGetExStyle(wHandle) & this.windowExStyles.WS_EX_TOPMOST)
+			this.menus.submenu.Check("Toggle Window Lock")
 		else
-			this.menu.submenu.Uncheck("Toggle Lock Status")
-		this.menu.show()
+			this.menus.submenu.Uncheck("Toggle Window Lock")
+		if (WinGetStyle(wHandle) & this.windowStyles.WS_CAPTION)
+			this.menus.submenu.Check("Toggle Title Bar")
+		else
+			this.menus.submenu.Uncheck("Toggle Title Bar")
+		if (WinGetStyle(wHandle) & this.windowStyles.WS_VISIBLE)
+			this.menus.submenu.Check("Toggle Visibility")
+		else
+			this.menus.submenu.Uncheck("Toggle Visibility")
+		this.menus.menu.show()
 	}
 
 	static onKeyPress(ctrlObj, lParam) {
@@ -278,16 +290,18 @@ class WindowManager {
 					flagKill := true
 				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
 					return
-				for i, wHandle in reverseArray(wHandles) {
+				rWH := reverseArray(wHandles)
+				for i, wHandle in rWH {
 					try {
 						if (flagKill ?? false)
 							WinKill(wHandle)
 						else
 							WinClose(wHandle)
 					}
+				}
+				for i, wHandle in rWH
 					if WinWaitClose(wHandle, , 0.5)
 						try this.LV.Delete(rowNums[rowNums.Length - i + 1])
-				}
 			case "65": ; ctrl A
 				if (!GetKeyState("Ctrl"))
 					return
@@ -352,7 +366,7 @@ class WindowManager {
 			case "CheckboxHiddenWindows":
 				this.settings.detectHiddenWindows := !this.settings.detectHiddenWindows
 			case "CheckboxExcludedWindows":
-				this.settings.showExcludedWindows := !this.settings.showExcludedWindows
+				this.settings.excludeWindows := !this.settings.excludeWindows
 			case "CheckboxGetCommandLine":
 				this.settings.getCommandLine := !this.settings.getCommandLine
 				if (this.settings.getCommandLine)
@@ -375,102 +389,77 @@ class WindowManager {
 				break
 			rowNums.push(nextRow)
 		}
-		for i, e in rowNums
-			wHandles.push(Integer(this.LV.GetText(e, 1)))
-		if (menuObj == this.winMenu) {
-			switch itemName {
-				case "Activate Window":
-					for i, wHandle in reverseArray(wHandles)
-						try WinActivate(wHandle)
-				case "Reset Window Position":
-					for i, wHandle in wHandles
-						try	resetWindowPosition(wHandle)
-				case "Minimize Window":
-					for i, wHandle in wHandles
-						try WinMinimize(wHandle)
-				case "Maximize Window":
-					for i, wHandle in wHandles
-						try WinMaximize(wHandle)
-				case "Borderless Fullscreen":
-					for i, wHandle in wHandles {
-						WinGetPos(&x, &y, &w, &h, wHandle)
-						WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
-						mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-						NumPut("Uint", 40, monitorInfo := Buffer(40))
-						DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-						monitor := {
-							left: NumGet(monitorInfo, 4, "Int"),
-							top: NumGet(monitorInfo, 8, "Int"),
-							right: NumGet(monitorInfo, 12, "Int"),
-							bottom: NumGet(monitorInfo, 16, "Int")
-						}
-						WinMove(
-							monitor.left + (x - cx),
-							monitor.top + (y - cy),
-							monitor.right - monitor.left + (w - cw),
-							monitor.bottom - monitor.top + (h - ch),
-							wHandle
-						)
+		for i, cFunc in rowNums
+			wHandles.push(Integer(this.LV.GetText(cFunc, 1)))
+		basicTasks := Map(
+			"Reset Window Position", resetWindowPosition,
+			"Minimize Window", WinMinimize,
+			"Maximize Window", WinMaximize,
+			"Restore Window", WinRestore,
+			"Move Windows to Monitor 1", resetWindowPosition.bind(,,1),
+			"Move Windows to Monitor 2", resetWindowPosition.bind(,,2),
+			"Toggle Window Lock", (wHandle) => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & 0x8 ? 0 : 1, wHandle)),
+			"Set Window Lock", WinSetAlwaysOnTop.bind(true),
+			"Remove Window Lock", WinSetAlwaysOnTop.bind(false),
+			"Toggle Title Bar", (wHandle) => (WinSetStyle((WinGetStyle(wHandle) & this.windowStyles.WS_CAPTION ? "-" : "+" ) . this.windowStyles.WS_CAPTION, wHandle)),
+			"Add Title Bar", WinSetStyle.bind("+" this.windowStyles.WS_CAPTION),
+			"Remove Title Bar", WinSetStyle.bind("-" this.windowStyles.WS_CAPTION),
+			"Toggle Visibility", (wHandle) => (WinGetStyle(wHandle) & this.windowStyles.WS_VISIBLE ? WinHide(wHandle) : WinShow(wHandle)),
+			"Show Window", WinShow,
+			"Hide Window", WinHide,
+			"View Properties", (wHandle) => (Run('properties "' WinGetProcessPath(wHandle) '"')),
+			"View Program Folder", (wHandle) => (Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"'))
+		)
+		if (basicTasks.Has(itemName))
+			for i, wHandle in wHandles
+				try basicTasks[itemName](wHandle)
+		switch itemName {
+			case "Activate Window":
+				for i, wHandle in reverseArray(wHandles)
+					try WinActivate(wHandle)
+			case "Borderless Fullscreen":
+				for i, wHandle in wHandles {
+					WinGetPos(&x, &y, &w, &h, wHandle)
+					WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+					mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+					NumPut("Uint", 40, monitorInfo := Buffer(40))
+					DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
+					monitor := {
+						left: NumGet(monitorInfo, 4, "Int"),
+						top: NumGet(monitorInfo, 8, "Int"),
+						right: NumGet(monitorInfo, 12, "Int"),
+						bottom: NumGet(monitorInfo, 16, "Int")
 					}
-				case "Restore Window":
-					for i, wHandle in wHandles
-						try WinRestore(wHandle)
-				case "Close Window":
-					if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
-						return
-					for i, wHandle in reverseArray(wHandles) {
-						try WinClose(wHandle)
-						if WinWaitClose(wHandle, , 0.5)
-							this.LV.Delete(rowNums[rowNums.Length - i + 1])
-					}
-				case "Copy Window Title":
-					for i, wHandle in wHandles
-						str .= (WinExist(wHandle) ? WinGetTitle(wHandle) : "") . (i == wHandles.Length ? "" : "`n")
-					A_Clipboard := str
-				case "View Properties":
-					for i, wHandle in wHandles
-						try Run('properties "' WinGetProcessPath(wHandle) '"')
-				case "View Program Folder":
-					for i, wHandle in wHandles
-						try Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"')
-				default:
-					return
-			}
-		} else if (menuObj == this.winSubMenu) {
-			switch itemName {
-				case "Change Window Transparency":
-					this.transparencyGUI(wHandles)
-				case "Toggle Lock Status":
-					for i, wHandle in reverseArray(wHandles) {
-						try {
-							tStyle := WinGetExStyle(wHandle)
-							WinSetAlwaysOnTop(tStyle & 0x8 ? 0 : 1, wHandle) ; 0x8 is WS_EX_TOPMOST
-						}
-					}
-				case "Remove Title Bar":
-					for i, wHandle in wHandles
-						try WinSetStyle("-0xC00000", wHandle)
-				case "Add Title Bar":
-					for i, wHandle in wHandles
-						try WinSetStyle("+0xC00000", wHandle)
-				case "Move Windows to Monitor 1":
-					for i, wHandle in wHandles
-						try resetWindowPosition(wHandle,,1)
-				case "Move Windows to Monitor 2":
-					for i, wHandle in wHandles
-						try resetWindowPosition(wHandle,,2)
-				; this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
-				; this.winSubMenu.Add("Spread Windows per Screen", this.menuHandler.Bind(this))
-				case "Spread Windows":
-			}
-		} else if (menuObj == this.customFunctionMenu) {
-			for i, e in this.customFunctions {
-				if (e.Name == itemName) {
-					for i, wHandle in wHandles
-						try e(wHandle)
-					break
+					WinMove(
+						monitor.left + (x - cx),
+						monitor.top + (y - cy),
+						monitor.right - monitor.left + (w - cw),
+						monitor.bottom - monitor.top + (h - ch),
+						wHandle
+					)
 				}
-			}
+			case "Close Window":
+				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
+					return
+				for i, wHandle in reverseArray(wHandles) {
+					try WinClose(wHandle)
+					if WinWaitClose(wHandle, , 0.5)
+						this.LV.Delete(rowNums[rowNums.Length - i + 1])
+				}
+			case "Copy Window Title":
+				for i, wHandle in wHandles
+					str .= (WinExist(wHandle) ? WinGetTitle(wHandle) : "") . (i == wHandles.Length ? "" : "`n")
+				A_Clipboard := str
+			case "Change Window Transparency":
+				this.transparencyGUI(wHandles)
+			; this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
+			; this.winSubMenu.Add("Spread Windows per Screen", this.menuHandler.Bind(this))
+			case "Spread Windows":
+				return
+			default: ; custom functions
+				if (this.menus.customFunctions.Has(itemName))
+					for i, wHandle in wHandles
+						try this.menus.customFunctions[itemName](wHandle)
 		}
 	}
 
@@ -499,6 +488,35 @@ class WindowManager {
 			transparencyGUI.Destroy()
 		}
 	}
+
+	static windowStyles => {
+		WS_BORDER: 0x800000,
+		WS_POPUP: 0x80000000,
+		WS_CAPTION: 0xC00000,
+		WS_CLIPSIBLINGS: 0x4000000,
+		WS_DISABLED: 0x8000000,
+		WS_DLGFRAME: 0x400000,
+		WS_GROUP: 0x20000,
+		WS_HSCROLL: 0x100000,
+		WS_MAXIMIZE: 0x1000000,
+		WS_MAXIMIZEBOX: 0x10000,
+		WS_MINIMIZE: 0x20000000,
+		WS_MINIMIZEBOX: 0x20000,
+		WS_OVERLAPPED: 0x0,
+		WS_OVERLAPPEDWINDOW: 0xCF0000,
+		WS_POPUPWINDOW: 0x80880000,
+		WS_SIZEBOX: 0x40000,
+		WS_SYSMENU: 0x80000,
+		WS_TABSTOP: 0x10000,
+		WS_THICKFRAME: 0x40000,
+		WS_VSCROLL: 0x200000,
+		WS_VISIBLE: 0x10000000,
+		WS_CHILD: 0x40000000
+	}
+
+	static windowExStyles => {
+		WS_EX_TOPMOST: 0x8
+	}
 }
 
 class DesktopState {
@@ -519,9 +537,9 @@ class DesktopState {
 
 	static save(custom?) {
 		if (IsSet(custom))
-			this.customStates[custom] := WindowManager.getAllWindowInfo(0, 0)
+			this.customStates[custom] := WindowManager.getAllWindowInfo(0, 1)
 		else
-			this.prevState := WindowManager.getAllWindowInfo(0, 0)
+			this.prevState := WindowManager.getAllWindowInfo(0, 1)
 	}
 
 	static restore(custom?) {

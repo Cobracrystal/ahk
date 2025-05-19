@@ -263,10 +263,26 @@ return
 	if (tileState := !tileState) {
 		DesktopState.save("TilingState")
 		shell := ComObject("Shell.Application")
-		if (MsgBoxAsGui("Tile Windows Vertically?",, "Confirm Dialog", 0x1,,,,,true) == "OK")
-			shell.TileVertically()
-		else if (MsgBoxAsGui("Horizonally?",, "Confirm Dialog", 0x1,,,,,true) == "OK")
-			shell.TileHorizontally()
+		switch MsgBoxAsGui("Tile Windows?", "Confirm Dialog", 0x7, 4, true,, ["Vertically", "Horizontally", "Cascade", "No"]) {
+			case "Vertically":
+				list := WindowManager.getAllWindowInfo()
+				objRemoveValue(list,,,(a,b) => (WinGetMinMax(a) == -1))
+				; msgbox(objToString(list, false))
+				Loop(list.Length) {
+					a := 5
+				}
+				; algorithm: for the number of windows we have, calculate the best integer multiplication (eg for 27: 7x4)
+				; then try both orientations (eg 7x4, 4x7), and choose the one where the calculated width/height ratio for the windows
+				; is smaller (as in, more quadratic).
+				; then, for the final column, extend the height so that the windows fit in anyway
+				shell.TileVertically()
+			case "Horizontally":
+				shell.TileHorizontally()
+			case "Cascade":
+				shell.CascadeWindows()
+			case "No":
+				return
+		}
 	}
 	else
 		DesktopState.restore("TilingState")
