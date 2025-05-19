@@ -10,7 +10,7 @@
 ; ^+F11::WindowManager.windowManager("T")
 
 /*
-hotkeys: 
+hotkeys:
 F5 to refresh view
 Enter to activate
 Del to close window
@@ -52,15 +52,15 @@ class WindowManager {
 		for cFunc in CUSTOM_FUNCTIONS ; define custom function map
 			this.menus.customFunctions[cFunc.Name] := cFunc
 		this.menus.MenuFunctionNames := [
-			"Activate Window", "Reset Window Position", "Minimize Window", "Maximize Window", 
-			"Borderless Fullscreen", "Restore Window", "Close Window", 
-			0, 
+			"Activate Window", "Reset Window Position", "Minimize Window", "Maximize Window",
+			"Borderless Fullscreen", "Restore Window", "Close Window",
+			0,
 			"Copy Window Title", "View Properties", "View Program Folder"
 		]
 		this.menus.SubMenuFunctionNames := [
 			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Spread Windows on all Screens", "Spread Windows per Screen"]
 		this.menus.subMenuToggles := [
-			["Toggle Window Lock", "Set Window Lock", "Remove Window Lock"], 
+			["Toggle Window Lock", "Set Window Lock", "Remove Window Lock"],
 			["Toggle Title Bar", "Add Title Bar", "Remove Title Bar"],
 			["Toggle Visibility", "Hide Window", "Show Window"]
 		]
@@ -84,6 +84,7 @@ class WindowManager {
 		HotIfWinactive("Window Manager ahk_class AutoHotkeyGUI")
 		Hotkey("^f", (*) => (this.gui["EditFilterWindows"].Focus()))
 		Hotkey("^d", (*) => (this.LV.Focus()))
+		Hotkey("^BackSpace", (*) => Send("^+{Left}{Delete}"))
 		HotIfWinactive()
 		; init class variables
 		this.gui := -1
@@ -178,8 +179,29 @@ class WindowManager {
 		search := this.gui["EditFilterWindows"].Value
 		if (search == "")
 			return true
+		tags := ["handle", "title", "process", "mmx", "x", "xpos", "y", "ypos", "w", "width", "h", "height", "class", "pid", "path", "cmd", "command", "commandline"]
+		tagMap := Map(
+			"handle", "hwnd", "title", "title",	"process", "process", "mmx", "state",
+			"x", "xpos", "xpos", "xpos", "y", "ypos", "ypos", "ypos", "w", "width", "width", "width", "h", "height", "height", "height",
+			"class", "class", "pid", "pid", "path", "processPath", "cmd", "commandLine", "command", "commandLine", "commandline", "commandLine"
+		)
+		searches := Map()
+		for tag in tags {
+			RegexMatch(search, "(?:^|\s)" tag . ":([^\s]+)", &o)
+			if (o) {
+				searches[tag] := o[1]
+				search := RegExReplace(search, "\s*" tag . ":[^\s]+\s*")
+			}
+		}
+		freeSearch := search
+		flagInclude := true
+		for tag, search in searches
+			if (tagMap.Has(tag) && !InStr(win.%tagMap[tag]%, search))
+				return false
+		if freeSearch == ""
+			return true
 		for i, e in win.OwnProps()
-			if (InStr(e, search))
+			if (InStr(e, freeSearch))
 				return true
 		return false
 	}
@@ -359,7 +381,7 @@ class WindowManager {
 		for i, wHandle in reverseArray(wHandles)
 			try WinActivate(wHandle)
 	}
-	
+
 
 	static settingCheckboxHandler(guiCtrlObj, *) {
 		switch guiCtrlObj.Name {

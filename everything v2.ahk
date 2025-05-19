@@ -24,7 +24,6 @@ A_TrayMenu.Delete()
 #Include "HotkeyManager.ahk"
 #Include "WindowManager.ahk"
 #Include "ReminderManager.ahk"
-#Include "NeoKeyboardLayout.ahk"
 #Include "YoutubeDLGui.ahk"
 #Include "TextEditMenu.ahk"
 #Include "MacroRecorder.ahk"
@@ -137,9 +136,6 @@ return
 	WindowManager.windowManager("T")
 }
 
-^F10:: {	; Neokeyboard Layout
-	NeoKeyboardLayout.KeyboardLayoutGUI("T")
-}
 
 ^F9:: {	; Shows Internet Connection
 	internetConnectionLogger("T")
