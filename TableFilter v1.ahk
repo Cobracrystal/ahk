@@ -535,10 +535,7 @@ toggleGuiDarkMode(hwnd, dark := 1) {
 		if (A_OSVersion >= "10.0.18985") {
 			attr := 20
 		}
-		if (dark)
-			DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hwnd, "int", attr, "int*", true, "int", 4)
-		else
-			DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hwnd, "int", attr, "int*", false, "int", 4)
+		DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hwnd, "int", attr, "int*", dark ? true : false, "int", 4)
 	}
 	;// then, GUI itself Dark.
 	if (dark) 

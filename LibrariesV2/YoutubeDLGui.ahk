@@ -48,7 +48,7 @@ class YoutubeDLGui {
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; establish basic data necessary for handling
 		this.data := {
-			coords: [750, 425],
+			coords: {x: 750, y: 425},
 			savePath: A_Appdata . "\Autohotkey\YTDL",
 			output: "",
 			outputLastLine: "",
@@ -73,11 +73,13 @@ class YoutubeDLGui {
 		this.controls.editCmdConfig := this.gui.AddEdit("xs+1 r1 w500 -Multi Readonly", "")
 		this.controls.editOutput := this.gui.AddEdit("xs+1 r13 w500 Multi Readonly")
 		this.ytdlOptionHandler()
-		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords[1], this.data.coords[2]))
+		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 		this.data.guiVisibility := 1
 	}
 
 	updateGuiOutput(cmdLine) {
+		static WM_VSCROLL := 0x115 
+		static SB_BOTTOM  := 7
 		lineArray := StrSplit(Rtrim(StrReplace(cmdLine, "`r`n", "`n"), "`n"), "`n")
 		for i, newLine in lineArray {
 			if (Instr(newLine, "https://") || Instr(newLine, "http://")) && !(Instr(this.data.outputLastLine, "[redirect]") || Instr(newLine, "[redirect]")) && (this.data.outputLastLine != "") && (this.data.outputLastLine != YoutubeDLGui.UIComponents.separator . "`n") {
@@ -98,15 +100,10 @@ class YoutubeDLGui {
 			this.data.outputLastLine := newLine . "`n"
 			this.data.outputLastLineCFlag := carriageCount
 			; write saved output and current line to gui
+			; pos := scrollbarGetPosition(this.controls.editOutput.Hwnd)
 			this.controls.editOutput.value := this.data.output . this.data.outputLastLine
-			; if !(flagC && this.data.outputLastLineCFlag && WinActive(this.gui)) {
-			; 	this.controls.editOutput.Focus()
-			; 	Send("^{end}")
-			; }
-			; NEEDS BETTER SCROLLING. https://www.autohotkey.com/board/topic/63325-updating-editscroll-down-after-adding-text/
-			SendMessage(0x115, 7, 0, this.controls.editOutput)
-			;0x115 is WM_VSCROLL
-			;7 is SB_BOTTOM
+			; if (pos == 1) ; bottom
+			SendMessage(WM_VSCROLL, SB_BOTTOM, 0, this.controls.editOutput.hwnd)
 		}
 	}
 

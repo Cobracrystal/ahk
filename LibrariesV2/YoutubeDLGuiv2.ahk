@@ -44,7 +44,7 @@ class YoutubeDLGuiv2 {
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; establish basic data necessary for handling
 		this.data := {
-			coords: [750, 425],
+			coords: {x: 750, y: 425},
 			savePath: A_Appdata . "\Autohotkey\YTDL"
 		}
 		this.settingsManager(1)
@@ -68,7 +68,7 @@ class YoutubeDLGuiv2 {
 		this.controls.editCmdConfig := this.gui.AddEdit("xs+1 r1 w500 -Multi Readonly", "")
 		this.controls.editOutput := this.gui.AddEdit("xs+1 r13 w500 Multi Readonly")
 		this.ytdlOptionHandler()
-		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords[1], this.data.coords[2]))
+		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 		this.data.guiVisibility := 1
 	}
 
@@ -203,7 +203,7 @@ class YoutubeDLGuiv2 {
 		this.controls.editYTDLPath := settingsGui.AddEdit("yp-3 xp+70 r1 w250 -Multi Readonly", this.settings.ytdlPath)
 		settingsGui.AddButton("vButtonYTDLPath yp-1 xp+255", "Browse...").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddButton("xs-1", "Reset Settings").OnEvent("Click", resetSettings)
-		settingsGui.Show(Format("x{1}y{2} Autosize", this.data.coords[1] + 20, this.data.coords[2] + 20))
+		settingsGui.Show(Format("x{1}y{2} Autosize", this.data.coords.x + 20, this.data.coords.y + 20))
 
 		resetSettings(*) {
 			if (MsgBox("Are you sure? This will reset all settings to their default values.", "Reset Settings", "0x1") == "Cancel")

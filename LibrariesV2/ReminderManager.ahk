@@ -19,7 +19,7 @@ class ReminderManager {
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Reminder Manager", this.reminderManagerGUI.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
-		this.data := { coords: [565, 300] }
+		this.data := { coords: {x: 565, y: 300} }
 		this.guiVars := { 1: ["rem1Message", "rem1S", "rem1M", "rem1H"], 
 						  2: ["rem2Message", "rem2S", "rem2M", "rem2H", "rem2D", "rem2Mo"] }
 		this.gui := -1
@@ -256,7 +256,7 @@ class ReminderManager {
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
 		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
 		this.createListView()
-		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords[1], this.data.coords[2]))
+		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 	}
 
 	reminderManagerGUI(mode := "O", *) {
@@ -412,7 +412,7 @@ class ReminderManager {
 
 	reminder1337(*) {
 		SoundPlay("*48")
-		MsgBoxAsGui("Copy 1337 in clipboard and activate discord?", "1337",0x1, (r) => (
+		MsgBoxAsGui("Copy 1337 in clipboard and activate discord?", "1337", 0x1,,, (r) => (
 			r == "Cancel" ? 
 				0 : 
 				A_Clipboard := "1337", 

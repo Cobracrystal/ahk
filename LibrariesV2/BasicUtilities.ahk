@@ -157,7 +157,7 @@ objContainsValue(obj, value, comparator := ((a,b) => (a = b))) {
  * @param {Integer} removeAll 
  * @returns {Integer} count
  */
-objRemoveValue(obj, value := "", removeAll := true, comparator := ((a,b) => (a = b))) {
+objRemoveValue(obj, value := "", removeAll := true, comparator := ((iterator,value) => (iterator = value))) {
 	if !(obj is Array || obj is Map)
 		throw(Error("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
@@ -812,7 +812,7 @@ windowGetCoordinates(wHandle) {
 	cw := NumGet(pos, 8, "int")
 	ch := NumGet(pos, 12, "int")
 	DetectHiddenWindows(dhw)
-	return [x, y, w, h, cw, ch, mmx]
+	return {x: x, y: y, w: w, h: h, cw: cw, ch: ch, mmx: (mmx == 3 ? 1 : (mmx == 2 ? -1 : 0))}
 }
 
 resetWindowPosition(wHandle := Winexist("A"), sizePercentage?, monitorNum?) {
@@ -1025,7 +1025,7 @@ useIfSet(value, default := unset) {
 	return IsSet(value) ? value : default
 }
 
-MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, buttonNames := MB_TEXT_MAP[buttonStyle], owner := 0, icon := 0, timeout := 0) {
+MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, buttonNames := [], owner := 0, icon := 0, timeout := 0) {
 	static MB_OK 						:= 0
 	static MB_OKCANCEL 					:= 1
 	static MB_ABORTRETRYIGNORE 			:= 2
@@ -1075,7 +1075,9 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	gStr := ""
 	if !(MB_TEXT_MAP.Has(buttonStyle))
 		throw Error("Invalid button Style")
-	if (MB_TEXT_MAP[buttonStyle].Length != buttonNames.Length)
+	if (buttonNames.Length == 0)
+		buttonNames := MB_TEXT_MAP[buttonStyle]
+	else if (MB_TEXT_MAP[buttonStyle].Length != buttonNames.Length)
 		throw Error("Invalid Button Names for given Button Style")
 	if (owner)
 		gStr := "+Owner" owner
@@ -1147,6 +1149,28 @@ getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
 	return true
 }
 
+scrollbarGetPosition(ctrlHwnd) {
+	static SIF_RANGE := 0x01
+	static SIF_PAGE := 0x02
+	static SIF_POS := 0x04
+	static SIF_TRACKPOS := 0x10
+	static SIF_ALL := (SIF_RANGE | SIF_PAGE | SIF_POS | SIF_TRACKPOS)
+	static SB_HORZ := 0
+	static SB_VERT := 1
+	static SB_CTL := 2
+	static SB_BOTH := 3
+	static SB_BOTTOM := 7
+	static WM_VSCROLL := 0x115
+	
+	NumPut("UInt", 28, ScrollInfo := Buffer(28, 0))
+	NumPut("UInt", SIF_ALL, ScrollInfo, 4)
+	DllCall("GetScrollInfo", "uint", ctrlHwnd, "int", SB_VERT, "Ptr", ScrollInfo)
+	nMin := NumGet(ScrollInfo, 8, "int")
+	nMax := NumGet(ScrollInfo, 12, "int")
+	nPage := NumGet(ScrollInfo, 16, "uint")
+	curPos := NumGet(ScrollInfo, 20, "uint")
+	return curPos ? curPos / (nMax - nPage + 1 - nMin) : 0
+}
 
 base64Encode(str, encoding := "UTF-8") {
 	static CRYPT_STRING_BASE64 := 0x00000001
@@ -1269,10 +1293,7 @@ doNothing(*) {
 ; 			if (VerCompare(A_OSVersion, "10.0.18985")) {
 ; 				attr := 20
 ; 			}
-; 			if (dark)
-; 				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", true, "int", 4)
-; 			else
-; 				DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", false, "int", 4)
+; 			DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", dark ? true : false, "int", 4)
 ; 		}
 ; 		_gui.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
 ; 		font := (dark ? "c" this.settings.darkThemeFontColor : "cDefault")

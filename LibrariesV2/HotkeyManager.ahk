@@ -26,7 +26,7 @@ class HotkeyManager {
 	static __New() {
 		this.gui := -1
 		this.LV := [-1,-1,-1]
-		this.data := { coords: [300, 135], savedHotkeysPath: A_WorkingDir "\HotkeyManager\SavedHotkeys.txt", thisScript:""}
+		this.data := { coords: {x: 300, y: 135}, savedHotkeysPath: A_WorkingDir "\HotkeyManager\SavedHotkeys.txt", thisScript:""}
 		; Tray Menu
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Hotkey Manager", this.hotkeyManager.Bind(this))
@@ -64,7 +64,7 @@ class HotkeyManager {
 		this.gui.AddText(,"SETTINGS HERE LATER")
 		this.tabObj.UseTab()
 		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", this.onEnter.bind(this))
-		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords[1], this.data.coords[2]))
+		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 	}
 
 	static guiListviewCreate(num, first := false, redraw := false) {
