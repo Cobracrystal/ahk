@@ -1037,3 +1037,12 @@ F6::{	; Controller Test
 		Sleep(100)
 	}
 }
+
+#HotIf WinActive("GT: New Horizons")
+^!q::@
+^!+::~
+^!7::`{
+^!8::[
+^!9::]
+^!0::}
+#HotIf

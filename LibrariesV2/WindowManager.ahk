@@ -268,9 +268,9 @@ class WindowManager {
 	}
 
 	static onContextMenu(ctrlObj, rowN, isRightclick, x, y) {
-		if (rowN == 0)
+		if (rowN == 0 || rowN >= this.LV.GetCount())
 			return
-		wHandle := Integer(ctrlObj.GetText(rowN, 1))
+		wHandle := Integer(this.LV.GetText(rowN, 1))
 		if (!WinExist(wHandle)) {
 			this.LV.Delete(rowN)
 			return
@@ -303,7 +303,7 @@ class WindowManager {
 		}
 		if (rowNums.Length == 0 && vKey != "65" && vKey != "116")
 			return
-		for i, e in rowNums
+		for e in rowNums
 			wHandles.push(Integer(this.LV.GetText(e, 1)))
 		DetectHiddenWindows(this.settings.detectHiddenWindows)
 		switch vKey {
@@ -340,24 +340,33 @@ class WindowManager {
 					if (A_Index != guiRowIndex)
 						this.LV.Modify(A_Index, "+Select")
 			case "67": ; ctrl C
-				if (!GetKeyState("Ctrl"))
-					return
-				if !GetKeyState("Shift") {
-					for i, wHandle in wHandles
-						str .= (WinExist(wHandle) ? WinGetTitle(wHandle) : "") . (i == wHandles.Length ? "" : "`n")
-					A_Clipboard := str
-				}
-				else {
+				if (GetKeyState("Ctrl") && GetKeyState("Shift")) { ; ctrl shift C to get all info
 					wInfoArray := []
-					for i, wHandle in wHandles {
-						wInfo := this.getWindowInfo(wHandle)
-						if !(this.settings.getCommandLine)
-							wInfo.DeleteProp("commandLine")
-						wInfoArray.push(wInfo)
+					for rowN in rowNums {
+						wInfoArray.Push({
+							hwnd: 	 this.LV.GetText(rowN, 1),
+							title: 	 this.LV.GetText(rowN, 2),
+							process: this.LV.GetText(rowN, 3),
+							state: 	 this.LV.GetText(rowN, 4),
+							xpos: 	 this.LV.GetText(rowN, 5),
+							ypos: 	 this.LV.GetText(rowN, 6),
+							width: 	 this.LV.GetText(rowN, 7),
+							height:  this.LV.GetText(rowN, 8),
+							class: 	 this.LV.GetText(rowN, 9),
+							pid: 	 this.LV.GetText(rowN, 10),
+							processPath: this.LV.GetText(rowN, 11),
+							commandLine: this.settings.getCommandLine ? this.LV.GetText(rowN, 12) : unset
+						})
 					}
 					A_Clipboard := jsongo.Stringify(wInfoArray, , "`t")
-					; Loop(this.LV.GetCount("Col"))
-					; 	str .= this.LV.GetText(rowN, A_Index) "`t"
+				} else if (GetKeyState("Ctrl") && GetKeyState("Alt")) { ; ctrl + alt C to get title only
+					for rowN in rowNums
+						str .= this.LV.GetText(rowN, 2) "`n"
+					A_Clipboard := Trim(str, "`n")
+				} else if (GetKeyState("Ctrl")) { ; ctrl C to get identifier
+					for rowN in rowNums
+						str .= this.LV.GetText(rowN, 2) " ahk_exe " this.LV.GetText(rowN, 3) " ahk_class " this.LV.GetText(rowN, 9)
+					A_Clipboard := Trim(str, "`n")
 				}
 			case "116":	; F5 Key -> Refresh LV
 				this.guiListviewCreate()
