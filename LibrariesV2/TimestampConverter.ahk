@@ -18,11 +18,21 @@ textTimestampConverter() {
 		flag := arr[2]
 		valid := FormatTime(timestamp, "yyyyMMddHHmmss")
 		try 
-			unix := DateDiff(valid, "19700101000000", "S")
+			unix := unixTimeStamp(valid)
 		catch error
 			flag := 6
 	}
 	createTimeStampMenu(flag, unix, valid)
+}
+
+unixTimeStamp(timestamp) {
+	if (!IsTime(timestamp))
+		throw Error("Invalid Timestamp")
+	return DateDiff(timestamp, "19700101000000", "S")
+}
+
+getTimestampFromText(text) {
+	return Format(parseToTimeFormat(text)[1], "yyyyMMddHHmmss")
 }
 
 createTimeStampMenu(flag, unix, valid) {

@@ -226,7 +226,7 @@ class YoutubeDLGui {
 			{
 				lineArr := StrSplit(RTrim(e, "`n"), "`n")
 				regexM := StrReplace(this.settings.outputPath, "\", "\\") . "\\([[:ascii:]]*?\." . (this.options["extract-audio"].selected ? "mp3" : "mp4") . ")"
-				for i, e in reverseArray(lineArr)
+				for i, e in arrayReverse(lineArr)
 					if !(Instr(e, "Deleting")) && (RegexMatch(e, regexM, &o))
 						break
 				if (o != "")

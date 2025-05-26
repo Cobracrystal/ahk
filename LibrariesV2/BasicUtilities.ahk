@@ -115,6 +115,17 @@ class Uri {
 	}
 }
 
+htmlDecode(str) {
+	static HTMLCodes := jsongo.Parse(FileRead(A_WorkingDir "\everything\HTML_Encodings.json", "UTF-8"))
+	if InStr(str, "&") {
+		while (pos := RegExMatch(str, "(&.*?;)", &o, pos ?? 1) + (o ? o.Len : 0)) {
+			if (HTMLCodes.Has(o[1]))
+				str := StrReplace(str, o[1], HTMLCodes[o[1]])
+		}
+	}
+	return str
+}
+
 parseHeaders(str) {
 	headersAsText := RTrim(str, "`r`n")
 	headers := Map()
@@ -229,14 +240,69 @@ objToString(obj, compact := true, compress := false, spacer := "`n") {
 	return ( isArr ? "[" : isMap ? "Map(" : "{" ) RegExReplace(str, "," separator "$") ( isArr ? "]" : isMap ? ")" : "}" )
 }
 
-reverseArray(array) {
+arrayMerge(array1, array2) {
+	newArr := []
+	newArr.push(array1*)
+	newArr.push(array2*)
+	return newArr
+}
+
+arraySlice(arr, from := 1, to := arr.Length) {
+	newArr := []
+	Loop(to) {
+		i := from + A_Index - 1
+		newArr.push(arr[i])
+	}
+	return newArr
+}
+
+arrayFunctionMask(arr, maskFunc := (a) => (IsSet(a)), keepEmpty := true) {
+	newArr := []
+	if keepEmpty
+		newArr.Length := arr.Lenght
+	for i, e in arr {
+		if (maskFunc(e)) {
+			if keepEmpty 
+				newArr[i] := e
+			else
+				newArr.push(e)
+		}
+	}
+	return newArr
+}
+
+arrayBinaryMask(arr, mask, keepEmpty := true) {
+	if arr.Length != mask.Length
+		throw Error("Invalid mask given")
+	newArr := []
+	if (keepEmpty)
+		newArr.Length := arr.Length
+	for i, e in mask {
+		if (e) {
+			if (keepEmpty)
+				newArr[i] := arr[i]
+			else
+				newArr.push(arr[i])
+		}
+	}
+	return newArr
+}
+
+arrayIgnoreIndices(arr, indices*) {
+	newArr := arr.Clone()
+	for i, e in arraySort(indices, "N R")
+		newArr.RemoveAt(e)
+	return newArr
+}
+
+arrayReverse(arr) {
 	arr := []
-	for i, e in array
+	for i, e in arr
 		arr.InsertAt(1, e)
 	return arr
 }
 
-sortArray(arr, mode := "") {
+arraySort(arr, mode := "") {
 	arr2 := []
 	for i, e in arr
 		str .= e . "`n"
@@ -254,7 +320,7 @@ sortArray(arr, mode := "") {
  * @param arr 
  * @returns {Array} 
  */
-uniquesFromArray(arr, key?, isMap := 0) {
+arrayUniques(arr, key?, isMap := 0) {
 	arr2 := []
 	uniques := Map()
 	for i, e in arr {
@@ -273,7 +339,7 @@ uniquesFromArray(arr, key?, isMap := 0) {
  * @param {Integer} objType
  * @returns {Array} 
  */
-duplicateIndicesFromArray(arr, key?, isMap := 0) {
+arrayDuplicateIndices(arr, key?, isMap := 0) {
 	duplicates := Map()
 	for i, e in arr {
 		el := key ? (isMap ? e[key] : e.%key%) : e
@@ -287,7 +353,7 @@ duplicateIndicesFromArray(arr, key?, isMap := 0) {
 
 ; gets a map of maps. sorts it by a key of the submap, returns it as array
 ; requires all contents of mapInner[key] to be of the same type (number or string)
-sortObjectByKey(tmap, key, mode := "") {
+objSortByKey(tmap, key, mode := "") {
 	isArr := tMap is Array
 	isMap := tMap is Map
 	if !(tmap is Object)
@@ -324,14 +390,14 @@ sortObjectByKey(tmap, key, mode := "") {
 	return arr3
 }
 
-reverseString(str) {
+strReverse(str) {
 	result := ""
 	for i, e in StrSplitUTF8(str)
 		result := e . result
 	return result
 }
 
-rotateStr(str, offset := 0) {
+strRotate(str, offset := 0) {
 	offset := Mod(offset, StrLen(str))
 	return SubStr(str, -1 * offset + 1) . SubStr(str, 1, -1 * offset)
 }
@@ -1358,7 +1424,7 @@ numericCore(n) {
 		if (f[2] != 0)
 			solutions.push(f)
 	}
-	sortedSolutions := sortObjectByKey(solutions, 1, "N")
+	sortedSolutions := objSortByKey(solutions, 1, "N")
 	s := sortedSolutions[1].value
 	if (s[1] >= 1000) {
 		ncr := numericCore(s[1])

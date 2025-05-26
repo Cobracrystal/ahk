@@ -171,7 +171,7 @@ factors(n) {
 			f *= k
 		factors.push(f)
 	}
-	factors := sortArray(uniquesFromArray(factors), "N")
+	factors := arraySort(arrayUniques(factors), "N")
 	return factors
 }
 
@@ -194,6 +194,23 @@ powerset(arr) {
 		i++
 	}
 	return ps
+}
+
+/**
+ * Given array, returns array of all permutations of its members
+ * @param arr 
+ */
+permutations(arr) {
+	if arr.Length == 1
+		return [arr]
+	local permutationArr := []
+	Loop(arr.Length) {
+		cValue := arr[A_Index]
+		perms := permutations(arrayIgnoreIndices(arr, A_Index))
+		for i, e in perms
+			permutationArr.push([cValue, e*])
+	}
+	return permutationArr
 }
 
 /**
@@ -288,6 +305,19 @@ closestPrime(n) {
 	}
 }
 
+factorial(n) {
+	if n == 1 || n == 0
+		return 1
+	return Float(n) * factorial(n-1)
+}
+
+binomialCoefficient(n,m) {
+	f1 := 1
+	Loop(n-m)
+		f1 *= (m+A_Index)/A_Index
+	return f1
+}
+
 /**
  * Returns Integer multiplication n * m that is closest to given number. 
  * @param num Number
@@ -377,7 +407,7 @@ streetInDice(streetLen, diceAmount, filePath) {
 		strDice := "["
 		Loop(sequence.Length)
 			strDice .= sequence[A_Index] . ","
-		seq := sortArray(uniquesFromArray(sequence), "N")
+		seq := arraySort(arrayUniques(sequence), "N")
 		strDice .= "] sorted ["
 		Loop(seq.Length)
 			strDice .= seq[A_Index] . ","
@@ -427,3 +457,4 @@ ggT(n) => gcd(n)
 kgv(n) => lcm(n)
 kgt(n) => lcd(n)
 ggv(n) => gcm(n)
+choose(n,m) => binomialCoefficient(n,m)

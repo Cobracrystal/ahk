@@ -57,7 +57,7 @@ class TextEditMenu {
 		textModifyMenu.Add("Letter Case", caseMenu)
 		textModifyMenu.Add("Font", fontMenu)
 		textModifyMenu.Add("Runes", runeMenu)
-		textModifyMenu.Add("Reverse", (*) => modifySelectedText(reverseString))
+		textModifyMenu.Add("Reverse", (*) => modifySelectedText(strReverse))
 		textModifyMenu.Add("Mirror", (*) => modifySelectedText(this.mirror.bind(this)))
 		textModifyMenu.Add("Flip", (*) => modifySelectedText(this.flip.bind(this)))
 		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(this.spreadString.bind(this), " "))
@@ -131,9 +131,9 @@ class TextEditMenu {
 		return RTrim(result, delimiter)
 	}
 
-	static mirror(text) => this.replaceCharacters(reverseString(text), "mixed", "mirror")
+	static mirror(text) => this.replaceCharacters(strReverse(text), "mixed", "mirror")
 
-	static flip(text) => this.replaceCharacters(reverseString(text), "mixed", "upsidedown")
+	static flip(text) => this.replaceCharacters(strReverse(text), "mixed", "upsidedown")
 
 	static zalgo(str, intensity) {
 		len := this.dictionary["otherAlphabet"]["zalgo"].length

@@ -66,7 +66,7 @@ class HotstringLoader {
 				}
 			}
 		}
-		for i, e in reverseArray(queue) {
+		for i, e in arrayReverse(queue) {
 			this.hotstrings[index].obj.RemoveAt(e)
 		}
 	}
