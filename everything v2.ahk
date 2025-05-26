@@ -72,6 +72,7 @@ AltDrag.addBlacklist([
 SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't interrupt
 ; Initialize Internet Logging Script
 internetConnectionLogger("Init")
+openDTUScript("Init")
 ; Load LaTeX Hotstrings
 
 try HotstringLoader.load(FileRead(A_WorkingDir "\everything\LatexHotstrings.json", "UTF-8"), "LaTeX",,,false)
@@ -136,6 +137,9 @@ return
 	WindowManager.windowManager("T")
 }
 
+^F10::{	; Shows DTU Script
+	openDTUScript("T")
+}
 
 ^F9:: {	; Shows Internet Connection
 	internetConnectionLogger("T")
@@ -495,6 +499,44 @@ internetConnectionLogger(mode := "T") {
 	DetectHiddenWindows(0)
 	if (mode == "O")
 		WinShow("ahk_pid " . internetConsolePID)
+	return
+}
+
+openDTUScript(mode := "T") {
+	static consolePID
+	static dtuConsoleTitle := "openDTU NetZero"
+	static dtuDirectory := A_Desktop "\programs\programming\Python\openDTU\openDTU"
+	static dtuScript := "openDTU-NetZeroInput.py"
+	static consoleString := Format('{} /c "title={} && mode con: cols=80 lines=16 && cd "{}" && python {}"', 
+			A_ComSpec, 
+			dtuConsoleTitle, 
+			dtuDirectory, 
+			dtuScript
+		)
+	DetectHiddenWindows(1)
+	flagExist := WinExist(dtuConsoleTitle " ahk_exe cmd.exe")
+	DetectHiddenWindows(0)
+	flagVisible := WinExist(dtuConsoleTitle " ahk_exe cmd.exe")
+	mode := SubStr(mode, 1, 1)
+	if (mode == "T")
+		mode := (flagVisible ? "C" : "O")
+	if (mode == "C" && flagExist) {
+		WinHide("ahk_pid " . consolePID)
+		return
+	}
+	DetectHiddenWindows(1)
+	if (flagExist)
+		consolePID := WinGetPID("ahk_id " flagExist)
+	else {
+		Run(consoleString, , "Hide", &consolePID)
+		if !(WinWait("ahk_pid " consolePID, , 1))
+			return
+		WinSetAlwaysOnTop(1, "ahk_pid " consolePID)
+		WinSetStyle(-0x70000, "ahk_pid " consolePID)
+	}
+	DetectHiddenWindows(0)
+	if (mode == "O")
+		WinShow("ahk_pid " . consolePID)
 	return
 }
 
@@ -964,7 +1006,7 @@ loadTableAsHotstrings(filePath) {
 }
 
 ^+!d::{	; Run download script for list of links to image/video sites
-	Run("C:\Users\Simon\Desktop\programs\programming\ahk\Demo_Scripts\download.ahk")
+	Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")
 }
 
 #HotIf WinActive("Revolution Idle")
@@ -1008,7 +1050,7 @@ b::{	; Revo Idle: Buy
 
 
 
-F6::{	; Controller Test
+^F6::{	; Controller Test
 	Loop 16 {
 		if (GetKeyState(A_Index "JoyName")) {
 			conIndex := A_Index
@@ -1039,10 +1081,98 @@ F6::{	; Controller Test
 }
 
 #HotIf WinActive("GT: New Horizons")
-^!q::@
+^!F5::@
 ^!+::~
 ^!7::`{
 ^!8::[
 ^!9::]
 ^!0::}
+#HotIf
+
+Numpad8::{
+	path := "C:\Users\Simon\Downloads\do not click this folder, its literally just pornography\uegeWYSNT7yvcbAUzSKMYQ.htm"
+	html := FileRead(path, "UTF-8")
+	output := ""
+	previous := ""
+	collectionsArray := []
+	collection := {}
+	url := {}
+	loop parse html, "`n", "`r" {
+		line := A_LoopField
+		if (InStr(line, 'class="tabGroup"')) {
+			if (ObjOwnPropCount(collection) > 0)
+				collectionsArray.push(collection)
+			collection := {title: "", links: []}
+		}
+		else if (InStr(line, 'class="tabGroupLabel"')) {
+			RegexMatch(line, '<div class="tabGroupLabel">(.*)</div>', &o)
+			collection.title := htmlDecode(o[1])
+		} else if (InStr(line, '<div class="tab">')) {
+			if (ObjOwnPropCount(url) > 0)
+				collection.links.push(url)
+			url := {}
+		} else if (InStr(line, 'class="favIconImg"')) {
+			RegExMatch(line, '<img class="favIconImg" src="(.*)">', &o)
+			url.favIconUrl := htmlDecode(o[1])
+		} else if (InStr(line, 'class="tabLink"')) {
+			RegExMatch(line, '<a class="tabLink" rel="ugc" href="(.*)">(.*)</a>', &o)
+			url.url := htmlDecode(o[1])
+			url.title := htmlDecode(o[2])
+		}
+	}
+	collection.links.push(url)
+	collectionsArray.Push(collection)
+	A_Clipboard := jsongo.Stringify(collectionsArray)
+}
+
+Numpad9::{
+	text := FileRead("C:\Users\Simon\Desktop\programs\programming\ahk\oneTabJson.json", "UTF-8")
+	obj := jsongo.parse(text)
+	collectionRead := {title:"read", folders:[]}
+	collectionTodo := {title:"Todo", folders:[]}
+	collection3 := {title:"Other", folders:[]}
+	local collectionsArray := [collectionRead, collectionTodo, collection3]
+	for i, e in obj {
+		timestamp := e["created"]
+		e.Delete("created")
+		for j, url in e["links"] {
+			RegExMatch(url["url"], "(https?://[^/]+)", &o)
+			url["favIconUrl"] := o[1] "/favicon.ico"
+		}
+		if (InStr(e["title"], "read")) {
+				e["title"] := DateAddW("19700101000000", timestamp / 1000, "S")
+				collectionRead.folders.push(e)
+		} else if (InStr(e["title"], "todo"))
+			collectionTodo.folders.Push(e)
+		else
+			collection3.folders.Push(e)
+		
+	}
+	A_Clipboard := jsongo.Stringify(collectionsArray)
+}
+
+Numpad7::{
+	text := FileRead("C:\Users\Simon\Desktop\programs\programming\ahk\oneTabJson.json", "UTF-8")
+	obj := jsongo.parse(text)
+	local collectionsArray := []
+	for i, e in obj {
+		for j, url in e["links"] {
+			RegExMatch(url["url"], "(https?://[^/]+)", &o)
+			url["favIconUrl"] := o[1] "/favicon.ico"
+		}
+		e["folders"] := [{links:e["links"]}]
+		e.delete("links")
+	}
+	A_Clipboard := jsongo.Stringify(obj)
+}
+
+#HotIf WinActive("BLUE PRINCE")
+^Insert::{	; Automatic Hotkey generated 26.05.2025, 22:50:30
+Loop(1) {
+	MouseClick("R", 606, 505)
+	Sleep(300)
+	MouseClick("L", 677, 598)
+	Sleep(300)
+	MouseClick("L", 686, 614)
+}}
 #HotIf
