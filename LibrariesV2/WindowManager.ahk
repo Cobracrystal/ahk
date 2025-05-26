@@ -14,8 +14,11 @@ hotkeys:
 F5 to refresh view
 Enter to activate
 Del to close window
+ctrl+d to focus list view
+ctrl+f to focus search
 shift+del to forcefully close window (skipping warnings etc)
-ctrl+C to copy window title
+ctrl+C to copy identifier
+ctrl+alt+c to copy title only
 ctrl+shift+c to copy all window data in json format
 */
 
@@ -26,8 +29,8 @@ class WindowManager {
 			if (mode == "O")
 				WinActivate(this.gui.hwnd)
 			else {
-				this.settings.coords := windowGetCoordinates(this.gui.hwnd)
-				this.settings.coords.mmx := (this.settings.coords.mmx == 3 ? 1 : (this.settings.coords.mmx == 2 ? -1 : 0))
+				this.data.coords := windowGetCoordinates(this.gui.hwnd)
+				this.data.coords.mmx := (this.data.coords.mmx == 3 ? 1 : (this.data.coords.mmx == 2 ? -1 : 0))
 				this.gui.destroy()
 				this.gui := -1
 			}
@@ -86,18 +89,14 @@ class WindowManager {
 		Hotkey("^d", (*) => (this.LV.Focus()))
 		Hotkey("^BackSpace", (*) => Send("^+{Left}{Delete}"))
 		HotIfWinactive()
+		if (A_LineFile == A_ScriptFullPath)
+			Hotkey("^F11", this.windowManager("T"))
 		; init class variables
 		this.gui := -1
-		this.settings := {
-			coords: {x: 300, y: 200, w: 1022, h: 432, mmx: 0},
-			excludeWindows: 1,
-			detectHiddenWindows: 0,
-			getCommandLine: 0,
-			darkMode: 1,
-			darkThemeColor: "0x002b36",
-			darkThemeFontColor: "0x109698",
-			excludeWindowsRegex: "i)(?:ZPToolBarParentWnd|Default IME|MSCTFIME UI|NVIDIA GeForce Overlay|Microsoft Text Input Application|Program Manager|^$)"
+		this.data := {
+			coords: {x: 300, y: 200, w: 1022, h: 432, mmx: 0}
 		}
+		this.settings := WindowManager.defaultSettings
 	}
 
 	static guiCreate() {
@@ -107,7 +106,7 @@ class WindowManager {
 		this.gui.OnEvent("Size", this.onResize.bind(this))
 		this.gui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 		this.gui.AddCheckbox("Section vCheckboxHiddenWindows Checked" . this.settings.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
-		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . !this.settings.excludeWindows, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
+		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . !this.settings.useBlacklist, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddCheckbox("ys vCheckboxGetCommandLine Checked" . this.settings.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.settingCheckboxHandler.bind(this))
 		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false))
 		this.gui.AddText("ys xs+890 w110 vWindowCount", "Window Count: 0")
@@ -120,7 +119,7 @@ class WindowManager {
 		this.guiListviewCreate(true, true)
 		if (this.settings.darkMode)
 			this.toggleGuiDarkMode(this.settings.darkMode)
-		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.settings.coords.x, this.settings.coords.y, this.settings.coords.w - 2 - 14, this.settings.coords.h - 32 - 7, this.settings.coords.mmx == 1 ? "Maximize" : "Restore"))
+		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.data.coords.x, this.data.coords.y, this.data.coords.w - 2 - 14, this.data.coords.h - 32 - 7, this.data.coords.mmx == 1 ? "Maximize" : "Restore"))
 		this.LV.Focus()
 	}
 
@@ -156,7 +155,7 @@ class WindowManager {
 		this.LV.Delete()
 		static winInfo := []
 		if (!guiCtrl) {
-			winInfo := this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.excludeWindows)
+			winInfo := this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.useBlacklist)
 			if (firstCall)
 				winInfo.InsertAt(1, this.getWindowInfo(this.gui.Hwnd))
 		}
@@ -206,18 +205,19 @@ class WindowManager {
 		return false
 	}
 
-	static getAllWindowInfo(getHidden := false, exclude := true) {
+	static getAllWindowInfo(getHidden := false, useBlacklist := true) {
 		windows := []
 		tMM := A_TitleMatchMode
 		dHW := A_DetectHiddenWindows
-		SetTitleMatchMode("RegEx")
 		DetectHiddenWindows(getHidden)
-		if (exclude)
-			wHandles := WinGetList(, , this.settings.excludeWindowsRegex)
-		else
 			wHandles := WinGetList()
-		for i, wHandle in wHandles
+		for i, wHandle in wHandles {
+			if useBlacklist
+				for e in this.settings.blacklist
+					if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == e))
+						continue 2
 			windows.push(this.getWindowInfo(wHandle))
+		}
 		SetTitleMatchMode(tMM)
 		DetectHiddenWindows(dHW)
 		return windows
@@ -268,7 +268,7 @@ class WindowManager {
 	}
 
 	static onContextMenu(ctrlObj, rowN, isRightclick, x, y) {
-		if (rowN == 0 || rowN >= this.LV.GetCount())
+		if (rowN == 0 || rowN > this.LV.GetCount())
 			return
 		wHandle := Integer(this.LV.GetText(rowN, 1))
 		if (!WinExist(wHandle)) {
@@ -312,7 +312,7 @@ class WindowManager {
 					flagKill := true
 				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
 					return
-				rWH := reverseArray(wHandles)
+				rWH := arrayReverse(wHandles)
 				for i, wHandle in rWH {
 					try {
 						if (flagKill ?? false)
@@ -365,7 +365,7 @@ class WindowManager {
 					A_Clipboard := Trim(str, "`n")
 				} else if (GetKeyState("Ctrl")) { ; ctrl C to get identifier
 					for rowN in rowNums
-						str .= this.LV.GetText(rowN, 2) " ahk_exe " this.LV.GetText(rowN, 3) " ahk_class " this.LV.GetText(rowN, 9)
+						str .= this.LV.GetText(rowN, 2) " ahk_exe " this.LV.GetText(rowN, 3) " ahk_class " this.LV.GetText(rowN, 9) . "`n"
 					A_Clipboard := Trim(str, "`n")
 				}
 			case "116":	; F5 Key -> Refresh LV
@@ -387,7 +387,7 @@ class WindowManager {
 		}
 		if (wHandles.Length == 0)
 			return
-		for i, wHandle in reverseArray(wHandles)
+		for i, wHandle in arrayReverse(wHandles)
 			try WinActivate(wHandle)
 	}
 
@@ -397,7 +397,7 @@ class WindowManager {
 			case "CheckboxHiddenWindows":
 				this.settings.detectHiddenWindows := !this.settings.detectHiddenWindows
 			case "CheckboxExcludedWindows":
-				this.settings.excludeWindows := !this.settings.excludeWindows
+				this.settings.useBlacklist := !this.settings.useBlacklist
 			case "CheckboxGetCommandLine":
 				this.settings.getCommandLine := !this.settings.getCommandLine
 				if (this.settings.getCommandLine)
@@ -446,7 +446,7 @@ class WindowManager {
 				try basicTasks[itemName](wHandle)
 		switch itemName {
 			case "Activate Window":
-				for i, wHandle in reverseArray(wHandles)
+				for i, wHandle in arrayReverse(wHandles)
 					try WinActivate(wHandle)
 			case "Borderless Fullscreen":
 				for i, wHandle in wHandles {
@@ -472,7 +472,7 @@ class WindowManager {
 			case "Close Window":
 				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
 					return
-				for i, wHandle in reverseArray(wHandles) {
+				for i, wHandle in arrayReverse(wHandles) {
 					try WinClose(wHandle)
 					if WinWaitClose(wHandle, , 0.5)
 						this.LV.Delete(rowNums[rowNums.Length - i + 1])
@@ -518,6 +518,26 @@ class WindowManager {
 			this.gui.Opt("-Disabled")
 			transparencyGUI.Destroy()
 		}
+	}
+
+	static defaultSettings => {
+		useConfig: true,
+		debug: false,
+		guiHotkey: "^F11", ; hotkey to open GUI (always)
+		darkMode: 1,
+		darkThemeColor: "0x002b36",
+		darkThemeFontColor: "0x109698",
+		getCommandLine: 0,
+		detectHiddenWindows: 0,
+		useBlacklist: 1,
+		blacklist: [
+			"Default IME",
+			"MSCTFIME UI",
+			"NVIDIA GeForce Overlay",
+			"Microsoft Text Input Application",
+			"Program Manager",
+			""
+		]
 	}
 
 	static windowStyles => {
