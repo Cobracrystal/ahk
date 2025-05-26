@@ -1,13 +1,13 @@
 #Requires AutoHotkey >=v2.0
 #SingleInstance Force
 Persistent()
-winTitle := "Brawlhalla ahk_exe Brawlhalla.exe"
-if (A_UserName == "Cobracrystal") ; for testing
-	winTitle := "ahk_class Notepad"
+GroupAdd("lockWindows", "Rounds ahk_exe Rounds.exe")
+GroupAdd("lockWindows", "ROUNDS ahk_exe ROUNDS.exe")
+GroupAdd("lockWindows", "Brawlhalla ahk_exe Brawlhalla.exe")
 TraySetIcon("HICON: " Base64toHICON(getBase64PNG()), , true)
-HotIfWinActive(winTitle)
+HotIfWinActive("ahk_group lockWindows")
 Hotkey("$~Alt", (*) => clipCursor(false))
-Hotkey("$Alt Up", (*) => clipCursor(true, winTitle))
+Hotkey("$Alt Up", (*) => clipCursor(true, "ahk_group lockWindows"))
 Hotkey("!LButton", (*) => clickWhileAlted())
 HotIfWinActive()
 DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd) 
@@ -17,7 +17,7 @@ if (WinExist("ahk_exe r5apex.exe") || WinExist("ahk_exe r5apex_dx12.exe"))
 	ExitApp()
 
 while true {
-	hwnd := WinWaitActive(winTitle)
+	hwnd := WinWaitActive("ahk_group lockWindows")
 	clipCursor(true, hwnd)
 	WinWaitNotActive(hwnd)
 	clipCursor(false)
