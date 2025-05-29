@@ -48,6 +48,7 @@ class WindowManager {
 		guiMenu.Add("Open Window Manager", this.windowManager.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; window menu
+		this.currentWinInfo := []
 		this.menus := {}
 		this.menus.menu := Menu()
 		this.menus.subMenu := Menu()
@@ -149,24 +150,23 @@ class WindowManager {
 		}
 	}
 
-	static guiListviewCreate(redraw := false, firstCall := false, guiCtrl := false, *) {
+	static guiListviewCreate(resize := false, firstCall := false, guiCtrl := false, *) {
 		this.gui.Opt("+Disabled")
 		this.LV.Opt("-Redraw")
 		this.LV.Delete()
-		static winInfo := []
 		if (!guiCtrl) {
-			winInfo := this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.useBlacklist)
+			this.currentWinInfo := this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.useBlacklist)
 			if (firstCall)
-				winInfo.InsertAt(1, this.getWindowInfo(this.gui.Hwnd))
+				this.currentWinInfo.InsertAt(1, this.getWindowInfo(this.gui.Hwnd))
 		}
-		for i, win in winInfo
+		for i, win in this.currentWinInfo
 			if (this.isIncludedInSearch(win))
 				this.LV.Add(, win.hwnd, win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
 		this.gui["WindowCount"].Value := Format("Window Count: {:5}", this.LV.GetCount())
 		if (firstCall)
 			for i in [1, 4, 5, 6, 7, 8, 10]
 				this.LV.ModifyCol(i, "+Integer")
-		if (redraw) {
+		if (resize) {
 			Loop (this.LV.GetCount("Col"))
 				this.LV.ModifyCol(A_Index, "+AutoHdr")
 		}
@@ -214,7 +214,7 @@ class WindowManager {
 		for i, wHandle in wHandles {
 			if useBlacklist
 				for e in this.settings.blacklist
-					if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == e))
+					if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == ""))
 						continue 2
 			windows.push(this.getWindowInfo(wHandle))
 		}
@@ -310,8 +310,8 @@ class WindowManager {
 			case "46": 	;// Del/Entf Key -> Close that window
 				if (GetKeyState("Shift"))
 					flagKill := true
-				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
-					return
+					if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
+						return
 				rWH := arrayReverse(wHandles)
 				for i, wHandle in rWH {
 					try {
@@ -322,8 +322,10 @@ class WindowManager {
 					}
 				}
 				for i, wHandle in rWH
-					if WinWaitClose(wHandle, , 0.5)
+					if WinWaitClose(wHandle, , 0.5) {
 						try this.LV.Delete(rowNums[rowNums.Length - i + 1])
+						try objRemoveValue(this.currentWinInfo, wHandle,, (iterator, wHandle) => (iterator.hwnd == wHandle))
+					}
 			case "65": ; ctrl A
 				if (!GetKeyState("Ctrl"))
 					return
@@ -470,13 +472,16 @@ class WindowManager {
 					)
 				}
 			case "Close Window":
-				if(wHandles.Length > 1 && MsgBox("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1) == "Cancel")
+				if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
 					return
-				for i, wHandle in arrayReverse(wHandles) {
+				rWH := arrayReverse(wHandles)
+				for i, wHandle in rWH
 					try WinClose(wHandle)
-					if WinWaitClose(wHandle, , 0.5)
-						this.LV.Delete(rowNums[rowNums.Length - i + 1])
-				}
+				for i, wHandle in rWH
+					if WinWaitClose(wHandle, , 0.5) {
+						try this.LV.Delete(rowNums[rowNums.Length - i + 1])
+						try objRemoveValue(this.currentWinInfo, wHandle,, (iterator, wHandle) => (iterator.hwnd == wHandle))
+					}
 			case "Copy Window Title":
 				for i, wHandle in wHandles
 					str .= (WinExist(wHandle) ? WinGetTitle(wHandle) : "") . (i == wHandles.Length ? "" : "`n")
