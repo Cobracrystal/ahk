@@ -241,65 +241,65 @@ objToString(obj, compact := true, compress := false, spacer := "`n") {
 }
 
 arrayMerge(array1, array2) {
-	newArr := []
-	newArr.push(array1*)
-	newArr.push(array2*)
-	return newArr
+	arr2 := []
+	arr2.push(array1*)
+	arr2.push(array2*)
+	return arr2
 }
 
 arraySlice(arr, from := 1, to := arr.Length) {
-	newArr := []
+	arr2 := []
 	Loop(to) {
 		i := from + A_Index - 1
-		newArr.push(arr[i])
+		arr2.push(arr[i])
 	}
-	return newArr
+	return arr2
 }
 
 arrayFunctionMask(arr, maskFunc := (a) => (IsSet(a)), keepEmpty := true) {
-	newArr := []
+	arr2 := []
 	if keepEmpty
-		newArr.Length := arr.Lenght
+		arr2.Length := arr.Lenght
 	for i, e in arr {
 		if (maskFunc(e)) {
 			if keepEmpty 
-				newArr[i] := e
+				arr2[i] := e
 			else
-				newArr.push(e)
+				arr2.push(e)
 		}
 	}
-	return newArr
+	return arr2
 }
 
 arrayBinaryMask(arr, mask, keepEmpty := true) {
 	if arr.Length != mask.Length
 		throw Error("Invalid mask given")
-	newArr := []
+	arr2 := []
 	if (keepEmpty)
-		newArr.Length := arr.Length
+		arr2.Length := arr.Length
 	for i, e in mask {
 		if (e) {
 			if (keepEmpty)
-				newArr[i] := arr[i]
+				arr2[i] := arr[i]
 			else
-				newArr.push(arr[i])
+				arr2.push(arr[i])
 		}
 	}
-	return newArr
+	return arr2
 }
 
 arrayIgnoreIndices(arr, indices*) {
-	newArr := arr.Clone()
+	arr2 := arr.Clone()
 	for i, e in arraySort(indices, "N R")
-		newArr.RemoveAt(e)
-	return newArr
+		arr2.RemoveAt(e)
+	return arr2
 }
 
 arrayReverse(arr) {
-	arr := []
+	arr2 := []
 	for i, e in arr
-		arr.InsertAt(1, e)
-	return arr
+		arr2.InsertAt(1, e)
+	return arr2
 }
 
 arraySort(arr, mode := "") {
@@ -1469,4 +1469,4 @@ splitRecursive(n, splits := StrLen(n)) {
 	return arr
 }
 
-print(i, options?) => FileAppend(i "`n", "*", options ?? "UTF-8")
+print(i, options?) => FileAppend(objToString(i) "`n", "*", options ?? "UTF-8")
