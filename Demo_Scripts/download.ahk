@@ -139,7 +139,7 @@ betterFileNames(linkArray) {
 		linkArray[i].fileName := finfo
 	}
 	newLinkArray := []
-	dupeURLs := duplicateIndicesFromArray(linkArray, "url", false)
+	dupeURLs := arrayDuplicateIndices(linkArray, "url", false)
 	for i, e in dupeURLs
 		if (e.Length > 1)
 			Loop(e.Length - 1)
