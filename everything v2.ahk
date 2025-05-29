@@ -1165,14 +1165,3 @@ Numpad7::{
 	}
 	A_Clipboard := jsongo.Stringify(obj)
 }
-
-#HotIf WinActive("BLUE PRINCE")
-^Insert::{	; Automatic Hotkey generated 26.05.2025, 22:50:30
-Loop(1) {
-	MouseClick("R", 606, 505)
-	Sleep(300)
-	MouseClick("L", 677, 598)
-	Sleep(300)
-	MouseClick("L", 686, 614)
-}}
-#HotIf
