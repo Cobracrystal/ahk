@@ -1277,9 +1277,9 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 	whr.Open(method, url, true)
 	whr.Send()
 	whr.WaitForResponse()
-	arr := whr.ResponseBody
-	if !(arr)
+	if !(whr.ResponseBody)
 		return ""
+	arr := whr.ResponseBody
 	pData := NumGet(ComObjValue(arr) + 8 + A_PtrSize, 0, "UPtr")
 	length := (arr.MaxIndex() - arr.MinIndex()) + 1
 	return Trim(StrGet(pData, length, encoding), "`n`r`t ")

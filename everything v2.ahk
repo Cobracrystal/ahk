@@ -457,15 +457,10 @@ runAsAdmin() {
 }
 
 connectNextDNS() {
-	try {
-		whr := ComObject("WinHttp.WinHttpRequest.5.1")
-		whr.Open("GET", "https://link-ip.nextdns.io/" . FileRead(A_WorkingDir "\everything\nextDNS_Link.id"), true)
-		whr.Send()
-		whr.WaitForResponse()
-	} catch as e {
+	try 
+		return sendRequest("https://link-ip.nextdns.io/" FileRead(A_WorkingDir "\everything\nextDNS_Link.id"))
+	catch as e
 		return "Could not connect to NextDNS. Error:`n" e.What "`n" e.Extra
-	}
-	return whr.ResponseText
 }
 
 internetConnectionLogger(mode := "T") {
