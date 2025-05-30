@@ -212,6 +212,25 @@ objRemoveValues(obj, values, removeAll := true, comparator := ((a,b) => (a = b))
 	return n
 }
 
+objForEach(obj, fn := ((a) => (objToString(a))), value := 0, conditional := ((a,b) => (true))) {
+	if !(obj is Array || obj is Map)
+		throw(Error("objForEach does not handle type " . Type(obj)))
+	queue := []
+	for i, e in obj
+		if (conditional(e, value))
+			obj[i] := fn(e)
+	return obj
+}
+
+objCollect(obj, fn := ((a, b) => (a . objToString(b))), value := 0, conditional := ((a,b) => (true))) {
+	if !(obj is Array || obj is Map)
+		throw(Error("objForEach does not handle type " . Type(obj)))
+	for i, e in obj
+		if (conditional(e, value))
+			base := IsSet(base) ? fn(base, e) : e
+	return base ?? ""
+}
+
 /**
  * 
  * @param obj Object, Map, Array Value etc.
@@ -374,7 +393,7 @@ objSortByKey(tmap, key, mode := "") {
 			arr2[tv] := [i]
 		str .= tv . "`n"
 	}
-	newStr := Sort(str, mode)
+	newStr := Sort(str ?? "", mode)
 	strArr := StrSplit(newStr, "`n")
 	strArr.Pop()
 	counter := 1
@@ -432,15 +451,20 @@ BoundFnName(Obj) {
 	return Obj.Name
 }
 
-replaceCharacters(text, alphMap) {
-	if !(alphMap is Map)
+replaceCharacters(text, replacer) {
+	if !(replacer is Map || replacer is Func)
 		return text
 	result := ""
+	isMap := replacer is Map
 	for i, e in StrSplitUTF8(text) {
-		if (alphMap.Has(e))
-			result .= alphMap[e]
-		else
-			result .= e
+		if (isMap) {
+			if replacer.Has(e)
+				result .= replacer[e]
+			else
+				result .= e
+		} else {
+			result .= replacer(e)
+		}
 	}
 	return result
 }
@@ -1416,43 +1440,6 @@ doNothing(*) {
 ; 	}
 ; }
 
-numericCore(n) {
-	values := splitRecursive(n, 4)
-	solutions := []
-	for i, e in values {
-		f := smallest(e*)
-		if (f[2] != 0)
-			solutions.push(f)
-	}
-	sortedSolutions := objSortByKey(solutions, 1, "N")
-	s := sortedSolutions[1].value
-	if (s[1] >= 1000) {
-		ncr := numericCore(s[1])
-		ncr.push(s*)
-		return ncr
-	}
-	return s
-
-	smallest(m,n,o,p) {
-		static calcStrings := Map(1, "{}-{}*{}/{}",	2, "{}*{}-{}/{}", 3, "{}*{}/{}-{}", 4, "{}/{}-{}*{}")
-		m := Integer(m), n := Integer(n), o := Integer(o), p := Integer(p), arr := []
-		a1 := p = 0 ? -1 : (m - n) * o / p ; a2 equivalent to this
-		a3 := p = 0 ? -1 : (m * n - o) / p
-		a4 := o = 0 ? -1 : m * n / o - p ; a5 equivalent to this
-		a6 := n = 0 ? -1 : (m / n - o) * p
-		arr := [a1, a3, a4, a6]
-		sI := objContainsValue(arr,0,(e,*) => (e == round(e) && e >= 0))
-		if (sI == 0)
-			return [0, 0]
-		for i, e in arr
-			if (e < arr[sI] && e == round(e) && e >= 0)
-				sI := i
-		return [Integer(arr[sI]), Format(calcStrings[sI], m,n,o,p)]
-	}
-
-}
-
-
 splitRecursive(n, splits := StrLen(n)) {
 	if (splits == 1)
 		return [[n]]
@@ -1469,4 +1456,9 @@ splitRecursive(n, splits := StrLen(n)) {
 	return arr
 }
 
-print(i, options?) => FileAppend(objToString(i) "`n", "*", options ?? "UTF-8")
+StrCountStr(HayStack, SearchText, CaseSense := false) {
+	StrReplace(HayStack, SearchText,,CaseSense, &count)
+	return count
+}
+
+print(i, options?, options2?) => FileAppend(objToString(i, options2?) "`n", "*", options ?? "UTF-8")
