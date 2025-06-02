@@ -777,7 +777,7 @@ ExecScript(expression, Wait := true, void := false) {
 		return exec.StdOut.ReadAll()
 }
 
-cmdRet(sCmd, callBackFuncObj := "", encoding := '') {
+cmdRet(sCmd, callBackFuncObj := "", encoding := 'UTF-8') {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
 	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100, ptrsize := A_PtrSize
 	if (encoding == '')
@@ -810,7 +810,7 @@ cmdRet(sCmd, callBackFuncObj := "", encoding := '') {
 	return sOutput
 }
 
-cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finishCallBackFuncObj := "", encoding := '') {
+cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finishCallBackFuncObj := "", encoding := 'UTF-8') {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
 	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100, ptrsize := A_PtrSize
 	if (encoding == '')
