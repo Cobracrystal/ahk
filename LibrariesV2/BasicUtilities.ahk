@@ -763,6 +763,7 @@ ExecScript(expression, Wait := true, void := false) {
 	input := '#Warn All, Off`n'
 	input .= '#Include "*i ' A_LineFile '"`n'
 	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\MathUtilities.ahk"`n'
+	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\FileUtilities.ahk"`n'
 	if (RegexMatch(expression, 'i)print\(.*\)'))
 		expression := RegexReplace(expression, "print\((.*)?\)", 'FileAppend(objToString($1), "*")')
 	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox\(.+\)') || RegExMatch(expression, 'i)MsgBoxAsGui\(.+\)'))

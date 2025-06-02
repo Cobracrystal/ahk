@@ -258,7 +258,7 @@ return
 	}
 }
 
-^!+K:: { ; Tiles Windows Vertically
+^!+J:: { ; Tiles Windows Vertically
 	static windowInfo, tileState := false
 	if (tileState := !tileState) {
 		DesktopState.save("TilingState")
@@ -311,7 +311,7 @@ return
 	TransparentTaskbar.setInvisibility("T", 0)
 }
 
-^+F9:: { ; Show/Hide Taskbar
+^+!K:: { ; Show/Hide Taskbar
 	static hide := false
 	TransparentTaskbar.hideShowTaskbar(hide := !hide)
 }
@@ -1076,87 +1076,11 @@ b::{	; Revo Idle: Buy
 }
 
 #HotIf WinActive("GT: New Horizons")
-^!F5::@
-^!+::~
-^!7::`{
-^!8::[
-^!9::]
-^!0::}
+^!q::@ ; GTNH: Fix Ctrl Alt
+^!+::~ ; GTNH: Fix Ctrl Alt
+^!7::`{ ; GTNH: Fix Ctrl Alt
+^!8::[ ; GTNH: Fix Ctrl Alt
+^!9::] ; GTNH: Fix Ctrl Alt
+^!0::} ; GTNH: Fix Ctrl Alt
 #HotIf
 
-Numpad8::{
-	path := "C:\Users\Simon\Downloads\do not click this folder, its literally just pornography\uegeWYSNT7yvcbAUzSKMYQ.htm"
-	html := FileRead(path, "UTF-8")
-	output := ""
-	previous := ""
-	collectionsArray := []
-	collection := {}
-	url := {}
-	loop parse html, "`n", "`r" {
-		line := A_LoopField
-		if (InStr(line, 'class="tabGroup"')) {
-			if (ObjOwnPropCount(collection) > 0)
-				collectionsArray.push(collection)
-			collection := {title: "", links: []}
-		}
-		else if (InStr(line, 'class="tabGroupLabel"')) {
-			RegexMatch(line, '<div class="tabGroupLabel">(.*)</div>', &o)
-			collection.title := htmlDecode(o[1])
-		} else if (InStr(line, '<div class="tab">')) {
-			if (ObjOwnPropCount(url) > 0)
-				collection.links.push(url)
-			url := {}
-		} else if (InStr(line, 'class="favIconImg"')) {
-			RegExMatch(line, '<img class="favIconImg" src="(.*)">', &o)
-			url.favIconUrl := htmlDecode(o[1])
-		} else if (InStr(line, 'class="tabLink"')) {
-			RegExMatch(line, '<a class="tabLink" rel="ugc" href="(.*)">(.*)</a>', &o)
-			url.url := htmlDecode(o[1])
-			url.title := htmlDecode(o[2])
-		}
-	}
-	collection.links.push(url)
-	collectionsArray.Push(collection)
-	A_Clipboard := jsongo.Stringify(collectionsArray)
-}
-
-Numpad9::{
-	text := FileRead("C:\Users\Simon\Desktop\programs\programming\ahk\oneTabJson.json", "UTF-8")
-	obj := jsongo.parse(text)
-	collectionRead := {title:"read", folders:[]}
-	collectionTodo := {title:"Todo", folders:[]}
-	collection3 := {title:"Other", folders:[]}
-	local collectionsArray := [collectionRead, collectionTodo, collection3]
-	for i, e in obj {
-		timestamp := e["created"]
-		e.Delete("created")
-		for j, url in e["links"] {
-			RegExMatch(url["url"], "(https?://[^/]+)", &o)
-			url["favIconUrl"] := o[1] "/favicon.ico"
-		}
-		if (InStr(e["title"], "read")) {
-				e["title"] := DateAddW("19700101000000", timestamp / 1000, "S")
-				collectionRead.folders.push(e)
-		} else if (InStr(e["title"], "todo"))
-			collectionTodo.folders.Push(e)
-		else
-			collection3.folders.Push(e)
-		
-	}
-	A_Clipboard := jsongo.Stringify(collectionsArray)
-}
-
-Numpad7::{
-	text := FileRead("C:\Users\Simon\Desktop\programs\programming\ahk\oneTabJson.json", "UTF-8")
-	obj := jsongo.parse(text)
-	local collectionsArray := []
-	for i, e in obj {
-		for j, url in e["links"] {
-			RegExMatch(url["url"], "(https?://[^/]+)", &o)
-			url["favIconUrl"] := o[1] "/favicon.ico"
-		}
-		e["folders"] := [{links:e["links"]}]
-		e.delete("links")
-	}
-	A_Clipboard := jsongo.Stringify(obj)
-}
