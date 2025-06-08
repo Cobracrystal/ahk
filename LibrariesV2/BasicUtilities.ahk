@@ -242,7 +242,7 @@ objCollect(obj, fn := ((a, b) => (a . objToString(b))), value := 0, conditional 
  */
 objToString(obj, compact := true, compress := false, spacer := "`n") {
 	if !(obj is Object)
-		return obj
+		return String(obj)
 	isArr := obj is Array
 	isMap := obj is Map
 	isObj := !(isArr || isMap)
@@ -1115,7 +1115,7 @@ useIfSet(value, default := unset) {
 	return IsSet(value) ? value : default
 }
 
-MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, buttonNames := [], owner := 0, icon := 0, timeout := 0) {
+MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, owner := 0, addCopyButton := 0, buttonNames := [], icon := 0, timeout := 0) {
 	static MB_OK 						:= 0
 	static MB_OKCANCEL 					:= 1
 	static MB_ABORTRETRYIGNORE 			:= 2
@@ -1171,7 +1171,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 		throw Error("Invalid Button Names for given Button Style")
 	if (owner)
 		gStr := "+Owner" owner
-	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT ( MB_FONTISITALIC ? " italic" : "") : ""
+	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT (MB_FONTISITALIC ? " italic" : "") : ""
 	mbgui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " gStr, title)
 	mbgui.Opt("+0x94C80000")
 	mbgui.Opt("-ToolWindow")
@@ -1181,14 +1181,16 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, text)
 	mbgui.AddText("x" leftMargin " y" gap " BackgroundTrans vTextBox", text)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
-	guiWidth := leftMargin + buttonOffset + Max(TBw, (buttonWidth + rightMargin) * buttonNames.Length) + 1
+	guiWidth := leftMargin + buttonOffset + Max(TBw, (buttonWidth + rightMargin) * (buttonNames.Length + (addCopyButton ? 1 : 0))) + 1
 	guiWidth := (guiWidth < minGuiWidth ? minGuiWidth : guiWidth)
 	whiteBoxHeight := TBy + TBh + gap
 	mbGui["WhiteBoxTop"].Move(0, 0, guiWidth, whiteBoxHeight)
-	buttonX := guiWidth - (rightMargin + buttonWidth) * buttonNames.Length
+	buttonX := guiWidth - (rightMargin + buttonWidth) * (buttonNames.Length + (addCopyButton ? 1 : 0))
 	buttonY := whiteBoxHeight + bottomGap
 	for i, e in buttonNames
-		mbgui.AddButton("vButton" i " x" (buttonX + (i-1) * (buttonWidth + rightMargin)) " y" buttonY " w" buttonWidth " h" buttonHeight, e).OnEvent("Click", finalEvent.bind(buttonStyle, i))
+		mbgui.AddButton("vButton" i " x" (buttonX + (i - 1) * (buttonWidth + rightMargin)) " y" buttonY " w" buttonWidth " h" buttonHeight, e).OnEvent("Click", finalEvent.bind(buttonStyle, i))
+	if (addCopyButton)
+		mbgui.AddButton("vButtonCopy x" (buttonX + buttonNames.Length * (buttonWidth + rightMargin)) " y" buttonY " w" buttonWidth " h" buttonHeight, "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := guiCtrl.gui["TextBox"].Value))
 	mbGui["Button" defaultButton].Focus()
 	guiHeight := whiteBoxHeight + BottomHeight
 	if (buttonStyle != 2 && buttonStyle != 4)
@@ -1467,5 +1469,5 @@ print(msg, options?, compact := true, compress := false, spacer := "`n") {
 	try 
 		FileAppend(msg "`n", "*", options ?? "UTF-8")
 	catch Error 
-		MsgBoxAsGui(msg)
+		MsgBoxAsGui(msg,,,,,,,1)
 }
