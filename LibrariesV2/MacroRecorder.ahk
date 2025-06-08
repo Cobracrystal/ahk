@@ -179,7 +179,7 @@ class MacroRecorder {
 			return
 		if !IsInteger(d.Value)
 		{
-			MsgBoxAsGui("Not a valid entry.")
+			MsgBox("Not a valid entry.")
 			return
 		}
 		this.gui["CodeEdit"].Value := this.contractCode(code, d.value)
@@ -192,7 +192,7 @@ class MacroRecorder {
 			return
 		if !IsInteger(d.Value)
 		{
-			MsgBoxAsGui("Not a valid entry.")
+			MsgBox("Not a valid entry.")
 			return
 		}
 		e := InputBox("Specify what time the Sleeps should be normed to`nEnter -1 for rounding to the nearest 1/10s", "Norm Sleeptime", , 75)
@@ -200,7 +200,7 @@ class MacroRecorder {
 			return
 		if !IsInteger(e.Value)
 		{
-			MsgBoxAsGui("Not a valid entry.")
+			MsgBox("Not a valid entry.")
 			return
 		}
 		this.gui["CodeEdit"].Value := this.adjustSleepTime(code, d.Value, e.Value)
@@ -209,7 +209,7 @@ class MacroRecorder {
 	static AddCodeToScript(*) {
 		code := this.gui["CodeEdit"].Value
 		if (!Instr(code, "::")) {
-			MsgBoxAsGui("Problem while adding", "No Hotkey found.")
+			MsgBox("Problem while adding", "No Hotkey found.")
 			return
 		}
 		hkey := SubStr(Code, 1, InStr(Code, "::") - 1)
@@ -221,18 +221,22 @@ class MacroRecorder {
 		catch Error
 			flag := 0
 		else {
-			MsgBoxAsGui("This hotkey already exists and adding it will result in an error.")
+			MsgBox("This hotkey already exists and adding it will result in an error.")
 			return
 		}
 		msgBoxtext := "This will add the recorded Macro with the " . (hkey == "^Insert" ? "DEFAULT " : " ") . "Hotkey `n " . hkey . "`nto the script.`nProceed anyway?"
-		if (MsgBoxAsGui(msgBoxtext,"Add to Script",4,,true) == "No")
+		if (MsgBox(msgBoxtext,"Add to Script",4) == "No")
 			return
 		FileAppend("`n" . code, A_ScriptFullPath)
-		MsgBoxAsGui("Added to script. Reload?", "Reload?", 4,,, (r) => (r == "Yes" ? Reload() : ""))
+		if (MsgBox("Added to script. Reload?", "Reload?", 4) == "Yes")
+			Reload()
 	}
 
 	static guiClose(guiObj) {	; Close GUI
-		MsgBoxAsGui("Close GUI and delete recording?", "Delete Macro?", 1,,, (r) => (r == "OK" ? (this.gui.destroy(), this.gui := 0) : ""))
+		if (MsgBox("Close GUI and delete recording?", "Delete Macro?") == "OK") {
+			this.gui.destroy()
+			this.gui := 0
+		}
 		return true ; necessary to stop it from hiding
 	}
 }
