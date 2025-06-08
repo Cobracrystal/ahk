@@ -2,11 +2,10 @@
 ; TODO 3: Add Settings for excluded windows (with editable list, like in PATH native settings), automatically form that into regex
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
 ; add rightclick menu option to show command line only for this window
-; add search that allows default ahk syntax via "wintitle ahk_exe test.exe"
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 #Include "*i A_LineFile%\..\..\LibrariesV2\CustomWindowFunctions.ahk"
-; Usage:
+; Usage (if including this file as a library):
 ; ^+F11::WindowManager.windowManager("T")
 
 /*
@@ -59,7 +58,7 @@ class WindowManager {
 			"Activate Window", "Reset Window Position", "Minimize Window", "Maximize Window",
 			"Borderless Fullscreen", "Restore Window", "Close Window",
 			0,
-			"Copy Window Title", "View Properties", "View Program Folder"
+			"Copy Window Title", "View Command Line", "View Properties", "View Program Folder"
 		]
 		this.menus.SubMenuFunctionNames := [
 			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Spread Windows on all Screens", "Spread Windows per Screen"]
@@ -178,24 +177,38 @@ class WindowManager {
 		search := this.gui["EditFilterWindows"].Value
 		if (search == "")
 			return true
-		tags := ["handle", "title", "process", "mmx", "x", "xpos", "y", "ypos", "w", "width", "h", "height", "class", "pid", "path", "cmd", "command", "commandline"]
-		tagMap := Map(
-			"handle", "hwnd", "title", "title",	"process", "process", "mmx", "state",
-			"x", "xpos", "xpos", "xpos", "y", "ypos", "ypos", "ypos", "w", "width", "width", "width", "h", "height", "height", "height",
-			"class", "class", "pid", "pid", "path", "processPath", "cmd", "commandLine", "command", "commandLine", "commandline", "commandLine"
+		tagMap := Map()
+		mapOfMaps := Map(
+			["handle", "id", "hwnd", "ahk_id"], "hwnd",
+			["title", "ahk_title"], "title",
+			["process", "ahk_process"], "process",
+			["mmx", "state", "ahk_state"], "state",
+			["x", "xpos", "ahk_x"], "xpos",
+			["y", "ypos", "ahk_y"], "ypos",
+			["w", "width", "ahk_w"], "width",
+			["h", "height", "ahk_h"], "height",
+			["class", "ahk_class"], "class",
+			["pid", "processID", "ahk_pid"], "pid",
+			["processPath", "path", "ahk_exe"], "processPath",
+			["command", "cmdl", "cmd", "commandLine", "ahk_cmd"], "commandLine"
 		)
+		for keys, value in mapOfMaps
+			for key in keys
+				tagMap[key] := value
+		
 		searches := Map()
-		for tag in tags {
-			RegexMatch(search, "(?:^|\s)" tag . ":([^\s]+)", &o)
+		for tag, tagMapped in tagMap {
+			flagAHKSyntax := (SubStr(tag, 1, 4) == "ahk_")
+			RegexMatch(search, "(?:^|\s)" tag . (flagAHKSyntax ? "(?::|\s+)" : ":") . "([^\s]+)", &o)
 			if (o) {
-				searches[tag] := o[1]
-				search := RegExReplace(search, "\s*" tag . ":[^\s]+\s*")
+				searches[tagMapped] := o[1]
+				search := RegExReplace(search, "\s*" tag . (flagAHKSyntax ? "(?::|\s+)" : ":") . "[^\s]+")
 			}
 		}
 		freeSearch := search
 		flagInclude := true
-		for tag, search in searches
-			if (tagMap.Has(tag) && !InStr(win.%tagMap[tag]%, search))
+		for tag, s in searches
+			if (!InStr(win.%tag%, s))
 				return false
 		if freeSearch == ""
 			return true
@@ -424,7 +437,7 @@ class WindowManager {
 		}
 		for i, cFunc in rowNums
 			wHandles.push(Integer(this.LV.GetText(cFunc, 1)))
-		basicTasks := Map(
+		static basicTasks := Map(
 			"Reset Window Position", resetWindowPosition,
 			"Minimize Window", WinMinimize,
 			"Maximize Window", WinMaximize,
@@ -440,6 +453,7 @@ class WindowManager {
 			"Toggle Visibility", (wHandle) => (WinGetStyle(wHandle) & this.windowStyles.WS_VISIBLE ? WinHide(wHandle) : WinShow(wHandle)),
 			"Show Window", WinShow,
 			"Hide Window", WinHide,
+			"View Command Line", (wHandle) => (MsgBoxAsGui(this.winmgmt("CommandLine", "Where ProcessId = " . WinGetPID(wHandle))[1],,,,,,this.gui.hwnd,1)),
 			"View Properties", (wHandle) => (Run('properties "' WinGetProcessPath(wHandle) '"')),
 			"View Program Folder", (wHandle) => (Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"'))
 		)
