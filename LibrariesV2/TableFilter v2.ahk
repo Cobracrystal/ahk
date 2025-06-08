@@ -48,9 +48,8 @@ class TableFilter {
 		this.config.useConfig := useConfig ?? this.config.useConfig ; if a config uses this, it will only load once and not save.
 
 		if (A_ScriptFullPath == A_LineFile) {
-			A_TrayMenu.Delete()
-			A_TrayMenu.Add("TableFilter", (*) => this.guiCreate())
-			A_TrayMenu.AddStandard()
+			TrayMenu.TrayMenu.Insert("1&", "TableFilter", (*) => this.guiCreate())
+			TrayMenu.TrayMenu.Default := "TableFilter"
 		}
 		else {
 			(gMenu := TrayMenu.submenus["GUIs"]).Add("Open TableFilter (" this.config.guiHotkey ")", (*) => this.guiCreate())
@@ -742,6 +741,21 @@ class TableFilter {
 	}
 
 	guiClose(guiObj) {
+		if (!this.data.isSaved) {
+			guiObj.Opt("+Disabled")
+			if (this.config.autoSaving)
+				this.saveFile(this.data.openFile, false)
+			else {
+				res := MsgBox("Do you want to save the Changes in " this.data.openFile " before closing?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
+				if (res == "Cancel")
+					return 1
+				if (res == "No")
+					return 0
+				if (res == "Yes")
+					this.saveFile(this.data.openFile, false)
+			}
+			guiObj.Opt("-Disabled")
+		}
 		objRemoveValue(this.guis, guiObj)
 		guiObj.Destroy()
 	}
@@ -757,7 +771,7 @@ class TableFilter {
 			if (this.config.autoSaving)
 				this.saveFile(this.data.openFile, false)
 			else {
-				res := MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes before loading " (filePath ? filePath : "a new File") "?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
+				res := MsgBox("Do you want to save the Changes in " this.data.openFile " before loading " (filePath ? filePath : "a new File") "?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
 				if (res == "Cancel")
 					return
 				else if (res == "Yes")
@@ -1216,11 +1230,11 @@ class TableFilter {
 	}
 
 	exit(exitReason, exitCode, *) {
-		if ((exitReason == "Logoff" || exitReason == "Shutdown") && !this.data.isSaved) {
+		if (!this.data.isSaved) {
 			if (this.config.autoSaving)
 				this.saveFile(this.data.openFile, false)
 			else {
-				res := MsgBox("You have unsaved Changes in " this.data.openFile "`nSave Changes and shutdown?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
+				res := MsgBox("Do you want to save the Changes in " this.data.openFile " before exiting?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
 				if (res == "Cancel")
 					return 1
 				if (res == "No")
