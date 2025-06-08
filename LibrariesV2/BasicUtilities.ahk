@@ -8,6 +8,7 @@ class TrayMenu {
 	static __New() {
 		this.menus := Map()
 		this.menus.CaseSense := 0
+		this.TrayMenu := A_TrayMenu
 		this.menus["traymenu"] := A_TrayMenu
 		this.menus[A_TrayMenu] := A_TrayMenu
 	}
@@ -483,14 +484,14 @@ RegExEscape(str) => "\Q" StrReplace(str, "\E", "\E\\E\Q") "\E"
  * @param to Array containing strings that are the replacements for values in @from, in same order
  * @returns {string} 
  */
-recursiveReplaceMap(string, from, to) {
-	return __recursiveReplaceMap(string, from, to)
+recursiveReplaceMap(text, from, to) {
+	return __recursiveReplaceMap(text, from, to)
 
-	__recursiveReplaceMap(string, from, to, __index := 1) {
+	__recursiveReplaceMap(text, from, to, __index := 1) {
 		replacedString := ""
 		if (__index == from.Length)
-			return StrReplace(string, from[__index], to[__index])
-		strArr := StrSplit(string, from[__index])
+			return StrReplace(text, from[__index], to[__index])
+		strArr := StrSplit(text, from[__index])
 		for i, e in strArr
 			replacedString .= __recursiveReplaceMap(e, from, to, __index + 1) . (i == strArr.Length ? "" : to[__index])
 		return replacedString
@@ -764,9 +765,7 @@ ExecScript(expression, Wait := true, void := false) {
 	input .= '#Include "*i ' A_LineFile '"`n'
 	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\MathUtilities.ahk"`n'
 	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\FileUtilities.ahk"`n'
-	if (RegexMatch(expression, 'i)print\(.*\)'))
-		expression := RegexReplace(expression, "print\((.*)?\)", 'FileAppend(objToString($1), "*")')
-	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox\(.+\)') || RegExMatch(expression, 'i)MsgBoxAsGui\(.+\)'))
+	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print\(.*\)'))
 		input .= expression
 	else
 		input .= 'FileAppend(objToString(' . expression . '), "*")'
@@ -1105,9 +1104,9 @@ colorPreviewGUI(color) {
 
 timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 	ToolTip(text, x?, y?, whichTooltip?)
-	SetTimer(stopTooltip, -1 * durationMS)
+	SetTimer(IsSet(whichTooltip) ? stopTooltip.bind(whichTooltip) : stopTooltip, -1 * durationMS)
 
-	stopTooltip() {
+	stopTooltip(whichTooltip?) {
 		ToolTip(, , , whichTooltip?)
 	}
 }
@@ -1462,4 +1461,11 @@ StrCountStr(HayStack, SearchText, CaseSense := false) {
 	return count
 }
 
-print(i, options?, options2?) => FileAppend(objToString(i, options2?) "`n", "*", options ?? "UTF-8")
+print(msg, options?, compact := true, compress := false, spacer := "`n") {
+	if !(msg is String)
+		msg := objToString(msg, compact, compress, spacer)
+	try 
+		FileAppend(msg "`n", "*", options ?? "UTF-8")
+	catch Error 
+		MsgBoxAsGui(msg)
+}
