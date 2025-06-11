@@ -1,11 +1,12 @@
 ; this should never be used in a serious setting, its a shitty temporary solution
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-auth := jsongo.Parse(FileRead("C:\Users\Simon\Desktop\programs\Files\DTUauth.json"))
+auth := FileRead(A_Desktop "\programs\Files\openDTUAuth.pw")
+onlineURL := FileRead(A_Desktop "\programs\Files\openDTUurl.dt")
 
 
 openDTUman := openDTU("http://192.168.178.48", 80, auth["username"], auth["password"])
-; openDTUman2 := openDTU("http://8yr4kxxugswnbadg.myfritz.net", 81)
+; openDTUman2 := openDTU(onlineURL, 81)
 FileAppend(jsongo.Stringify(openDTUman.getInverterList(),,"`t") "`n", "*","UTF-8")
 ; FileAppend(jsongo.Stringify(openDTUman.setInverterLimitConfig(openDTUman.getInverterSerialNumber(1),{limit_type:1, limit_value:100}),,"`t") "`n", "*","UTF-8")
 ; FileAppend(jsongo.Stringify(openDTUman.getInverterLimitConfig(),,"`t") "`n", "*","UTF-8")
