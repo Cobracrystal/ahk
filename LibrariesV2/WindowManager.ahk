@@ -58,7 +58,7 @@ class WindowManager {
 			"Activate Window", "Reset Window Position", "Minimize Window", "Maximize Window",
 			"Borderless Fullscreen", "Restore Window", "Close Window",
 			0,
-			"Copy Window Title", "View Command Line", "View Properties", "View Program Folder"
+			"Copy Window Title", "View Command Line", "View Window Text", "View Properties", "View Program Folder"
 		]
 		this.menus.SubMenuFunctionNames := [
 			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Spread Windows on all Screens", "Spread Windows per Screen"]
@@ -500,6 +500,16 @@ class WindowManager {
 				for i, wHandle in wHandles
 					str .= (WinExist(wHandle) ? WinGetTitle(wHandle) : "") . (i == wHandles.Length ? "" : "`n")
 				A_Clipboard := str
+			case "View Window Text":
+				for i, wHandle in wHandles {
+					ctrls := WinGetControlsHwnd(wHandle)
+					text .= "=== " WinGetTitle(wHandle) " ===`n"
+					for i, ctrlHwnd in ctrls {
+						if (ControlGetText(ctrlHwnd) != "")
+							text .= "--- " ControlGetClassNN(ctrlHwnd) " ---: " ControlGetText(ctrlHwnd) "`n"
+					}
+				}
+				MsgBoxAsGui(text,,,0,,,this.gui.hwnd,true)
 			case "Change Window Transparency":
 				this.transparencyGUI(wHandles)
 			; this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
