@@ -1188,9 +1188,9 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	buttonX := guiWidth - (rightMargin + buttonWidth) * (buttonNames.Length + (addCopyButton ? 1 : 0))
 	buttonY := whiteBoxHeight + bottomGap
 	for i, e in buttonNames
-		mbgui.AddButton("vButton" i " x" (buttonX + (i - 1) * (buttonWidth + rightMargin)) " y" buttonY " w" buttonWidth " h" buttonHeight, e).OnEvent("Click", finalEvent.bind(buttonStyle, i))
+		mbgui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * (buttonWidth + rightMargin), buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(buttonStyle, i))
 	if (addCopyButton)
-		mbgui.AddButton("vButtonCopy x" (buttonX + buttonNames.Length * (buttonWidth + rightMargin)) " y" buttonY " w" buttonWidth " h" buttonHeight, "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := guiCtrl.gui["TextBox"].Value))
+		mbgui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * (buttonWidth + rightMargin), buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := guiCtrl.gui["TextBox"].Value))
 	mbGui["Button" defaultButton].Focus()
 	guiHeight := whiteBoxHeight + BottomHeight
 	if (buttonStyle != 2 && buttonStyle != 4)
