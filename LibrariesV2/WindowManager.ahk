@@ -4,7 +4,7 @@
 ; add rightclick menu option to show command line only for this window
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
-#Include "*i A_LineFile%\..\..\LibrariesV2\CustomWindowFunctions.ahk"
+#Include "*i %A_LineFile%\..\..\LibrariesV2\CustomWindowFunctions.ahk"
 ; Usage (if including this file as a library):
 ; ^+F11::WindowManager.windowManager("T")
 
