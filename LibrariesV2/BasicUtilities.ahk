@@ -908,29 +908,29 @@ windowGetCoordinates(wHandle) {
 resetWindowPosition(wHandle := Winexist("A"), sizePercentage?, monitorNum?) {
 	NumPut("Uint", 40, monitorInfo := Buffer(40))
 	if (IsSet(monitorNum)) {
-		MonitorGetWorkArea(monitorNum, &workLeft, &workTop, &workRight, &workBottom)
+		MonitorGetWorkArea(monitorNum, &monLeft, &monTop, &monRight, &monBottom)
 	} else {
 		monitorHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
 		DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
-			workLeft := NumGet(monitorInfo, 20, "Int") ; Left
-			workTop := NumGet(monitorInfo, 24, "Int") ; Top
-			workRight := NumGet(monitorInfo, 28, "Int") ; Right
-			workBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
+			monLeft := NumGet(monitorInfo, 20, "Int") ; Left
+			monTop := NumGet(monitorInfo, 24, "Int") ; Top
+			monRight := NumGet(monitorInfo, 28, "Int") ; Right
+			monBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
 	}
 	WinRestore(wHandle)
-	WinGetPos(&wx, &wy, &ww, &wh, wHandle)
+	WinGetPos(&x, &y, &w, &h, wHandle)
 	if (IsSet(sizePercentage))
 		WinMove(
-			workLeft + (workRight - workLeft) * (1 - sizePercentage) / 2, ; left edge of screen + half the width of it - half the width of the window, to center it.
-			workTop + (workBottom - workTop) * (1 - sizePercentage) / 2,  ; same as above but with top bottom
-			(workRight - workLeft) * sizePercentage,	; width
-			(workBottom - workTop) * sizePercentage,	; height
+			monLeft + (monRight - monLeft) * (1 - sizePercentage) / 2, ; left edge of screen + half the width of it - half the width of the window, to center it.
+			monTop + (monBottom - monTop) * (1 - sizePercentage) / 2,  ; same as above but with top bottom
+			(monRight - monLeft) * sizePercentage,	; width
+			(monBottom - monTop) * sizePercentage,	; height
 			wHandle
 		)
 	else
 		WinMove(
-			workLeft + (workRight - workLeft) / 2 - ww / 2, 
-			workTop + (workBottom - workTop) / 2 - wh / 2, , , wHandle
+			monLeft + (monRight - monLeft) / 2 - w / 2, 
+			monTop + (monBottom - monTop) / 2 - h / 2, , , wHandle
 		)
 }
 

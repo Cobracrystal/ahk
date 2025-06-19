@@ -209,8 +209,12 @@ class AltDrag {
 		win_mmx := WinGetMinMax(wHandle)
 		if (win_mmx)
 			WinRestore(wHandle)
-		else
-			WinMaximize(wHandle)
+		else {
+			if (this.isBorderlessFullscreen(wHandle))
+				this.resetWindowPosition(wHandle)
+			else
+				WinMaximize(wHandle)
+		}
 	}
 
 	static borderlessFullscreenWindow(wHandle := WinExist("A"), overrideBlacklist := false) {
@@ -236,6 +240,22 @@ class AltDrag {
 			monitor.bottom - monitor.top + (h - ch),
 			wHandle
 		)
+	}
+
+	static isBorderlessFullscreen(wHandle) {
+		WinGetPos(&x, &y, &w, &h, wHandle)
+		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+		NumPut("Uint", 40, monitorInfo := Buffer(40))
+		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
+			monLeft := NumGet(monitorInfo, 4, "Int"),
+			monTop := NumGet(monitorInfo, 8, "Int"),
+			monRight := NumGet(monitorInfo, 12, "Int"),
+			monBottom := NumGet(monitorInfo, 16, "Int")
+		if (monLeft == cx && monTop == cy && monRight == monLeft + cw && monBottom == monTop + ch)
+			return true
+		else 
+			return false
 	}
 
 	/**

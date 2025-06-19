@@ -42,10 +42,14 @@ class WindowManager {
 
 	static __New() {
 		CUSTOM_FUNCTIONS := [vlcMinimalViewingMode]
+		this.gui := -1
+		this.data := {
+			coords: {x: 300, y: 200, w: 1022, h: 432, mmx: 0}
+		}
 		; Tray Menu
-		guiMenu := TrayMenu.submenus["GUIs"]
-		guiMenu.Add("Open Window Manager", this.windowManager.Bind(this))
-		A_TrayMenu.Add("GUIs", guiMenu)
+		subMenu := TrayMenu.submenus["GUIs"]
+		subMenu.Add("Open Window Manager", this.windowManager.Bind(this))
+		A_TrayMenu.Insert("1&", "GUIs", subMenu)
 		; window menu
 		this.currentWinInfo := []
 		this.menus := {}
@@ -89,14 +93,9 @@ class WindowManager {
 		Hotkey("^d", (*) => (this.LV.Focus()))
 		Hotkey("^BackSpace", (*) => Send("^+{Left}{Delete}"))
 		HotIfWinactive()
-		if (A_LineFile == A_ScriptFullPath)
-			Hotkey("^F11", this.windowManager("T"))
-		; init class variables
-		this.gui := -1
-		this.data := {
-			coords: {x: 300, y: 200, w: 1022, h: 432, mmx: 0}
-		}
 		this.settings := WindowManager.defaultSettings
+		if (A_LineFile == A_ScriptFullPath)
+			Hotkey("^F11", this.windowManager.bind(this, "T"))
 	}
 
 	static guiCreate() {
@@ -266,6 +265,43 @@ class WindowManager {
 		}
 	}
 
+	static borderlessFullscreenWindow(wHandle) {
+		WinGetPos(&x, &y, &w, &h, wHandle)
+		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+		NumPut("Uint", 40, monitorInfo := Buffer(40))
+		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
+		monitor := {
+			left: NumGet(monitorInfo, 4, "Int"),
+			top: NumGet(monitorInfo, 8, "Int"),
+			right: NumGet(monitorInfo, 12, "Int"),
+			bottom: NumGet(monitorInfo, 16, "Int")
+		}
+		WinMove(
+			monitor.left + (x - cx),
+			monitor.top + (y - cy),
+			monitor.right - monitor.left + (w - cw),
+			monitor.bottom - monitor.top + (h - ch),
+			wHandle
+		)
+	}
+
+	static isBorderlessFullscreen(wHandle) {
+		WinGetPos(&x, &y, &w, &h, wHandle)
+		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+		NumPut("Uint", 40, monitorInfo := Buffer(40))
+		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
+			monLeft := NumGet(monitorInfo, 4, "Int"),
+			monTop := NumGet(monitorInfo, 8, "Int"),
+			monRight := NumGet(monitorInfo, 12, "Int"),
+			monBottom := NumGet(monitorInfo, 16, "Int")
+		if (monLeft == cx && monTop == cy && monRight == monLeft + cw && monBottom == monTop + ch)
+			return true
+		else 
+			return false
+	}
+
 	static winmgmt(v, w, d := "Win32_Process", m := "winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2") {
 		local i, s := []
 		for i in ComObjGet(m).ExecQuery("Select " . (IsSet(v) ? v : "*") . " from " . d . (IsSet(w) ? " " . w : ""))
@@ -288,15 +324,17 @@ class WindowManager {
 			this.LV.Delete(rowN)
 			return
 		}
-		if (WinGetExStyle(wHandle) & this.windowExStyles.WS_EX_TOPMOST)
+		style := WinGetStyle(wHandle)
+		exStyle := WinGetExStyle(wHandle)
+		if (exStyle & this.windowExStyles.WS_EX_TOPMOST)
 			this.menus.submenu.Check("Toggle Window Lock")
 		else
 			this.menus.submenu.Uncheck("Toggle Window Lock")
-		if (WinGetStyle(wHandle) & this.windowStyles.WS_CAPTION)
+		if (style & this.windowStyles.WS_CAPTION)
 			this.menus.submenu.Check("Toggle Title Bar")
 		else
 			this.menus.submenu.Uncheck("Toggle Title Bar")
-		if (WinGetStyle(wHandle) & this.windowStyles.WS_VISIBLE)
+		if (style & this.windowStyles.WS_VISIBLE)
 			this.menus.submenu.Check("Toggle Visibility")
 		else
 			this.menus.submenu.Uncheck("Toggle Visibility")
@@ -441,7 +479,7 @@ class WindowManager {
 			"Reset Window Position", resetWindowPosition,
 			"Minimize Window", WinMinimize,
 			"Maximize Window", WinMaximize,
-			"Restore Window", WinRestore,
+			"Restore Window", (wHandle) => this.isBorderlessFullscreen(wHandle) ? resetWindowPosition(wHandle, 5/7) : WinRestore(wHandle),
 			"Move Windows to Monitor 1", resetWindowPosition.bind(,,1),
 			"Move Windows to Monitor 2", resetWindowPosition.bind(,,2),
 			"Toggle Window Lock", (wHandle) => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & 0x8 ? 0 : 1, wHandle)),
@@ -465,26 +503,8 @@ class WindowManager {
 				for i, wHandle in arrayReverse(wHandles)
 					try WinActivate(wHandle)
 			case "Borderless Fullscreen":
-				for i, wHandle in wHandles {
-					WinGetPos(&x, &y, &w, &h, wHandle)
-					WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
-					mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-					NumPut("Uint", 40, monitorInfo := Buffer(40))
-					DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-					monitor := {
-						left: NumGet(monitorInfo, 4, "Int"),
-						top: NumGet(monitorInfo, 8, "Int"),
-						right: NumGet(monitorInfo, 12, "Int"),
-						bottom: NumGet(monitorInfo, 16, "Int")
-					}
-					WinMove(
-						monitor.left + (x - cx),
-						monitor.top + (y - cy),
-						monitor.right - monitor.left + (w - cw),
-						monitor.bottom - monitor.top + (h - ch),
-						wHandle
-					)
-				}
+				for i, wHandle in wHandles
+					this.borderlessFullscreenWindow(wHandle)
 			case "Close Window":
 				if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
 					return
