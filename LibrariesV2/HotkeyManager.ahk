@@ -191,7 +191,7 @@ class HotkeyManager {
 
 	static getIncludePath(line, from := A_ScriptFullPath) {
 		static currentWorkingDirectory := A_ScriptDir
-		RegexMatch(line, '^\s*#Include (?<quot>"|`')?(?<path>.*)(?P=quot)', &m)
+		RegexMatch(line, '^\s*#Include (?<quot>"|`')?(?<ignore>\*i )?(?<path>.*)(?P=quot)', &m)
 		path := m["path"]
 		for i, e in ["A_AhkPath", "A_AppData", "A_AppDataCommon", "A_ComputerName", "A_ComSpec", "A_Desktop", "A_DesktopCommon", "A_IsCompiled", "A_MyDocuments", "A_ProgramFiles", "A_Programs", "A_ProgramsCommon", "A_ScriptDir", "A_ScriptFullPath", "A_ScriptName", "A_Space", "A_StartMenu", "A_StartMenuCommon", "A_Startup", "A_StartupCommon", "A_Tab", "A_Temp", "A_UserName", "A_WinDir"]
 			path := StrReplace(path, "%" e "%", %e%)
