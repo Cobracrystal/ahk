@@ -26,7 +26,11 @@ class HotkeyManager {
 	static __New() {
 		this.gui := -1
 		this.LV := [-1,-1,-1]
-		this.data := { coords: {x: 300, y: 135}, savedHotkeysPath: A_WorkingDir "\HotkeyManager\SavedHotkeys.txt", thisScript:""}
+		this.data := { 
+			coords: {x: 300, y: 135}, 
+			savedHotkeysPath: A_WorkingDir "\HotkeyManager\SavedHotkeys.txt", 
+			thisScript:""
+		}
 		; Tray Menu
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Hotkey Manager", this.hotkeyManager.Bind(this))
@@ -59,7 +63,7 @@ class HotkeyManager {
 		this.tabObj.UseTab(3)
 			this.lv[3] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Options", "Text", "Correction", "Comment", "Source"])
 			this.guiListviewCreate(3, true, true)
-			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' obj.GetText(rowN, 1)) : 0)
+			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN && IsDigit(obj.GetText(rowN, 1)) ? tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' obj.GetText(rowN, 1)) : 0)
 		this.tabObj.UseTab(4)
 		this.gui.AddText(,"SETTINGS HERE LATER")
 		this.tabObj.UseTab()
@@ -275,6 +279,22 @@ class HotkeyManager {
 					if RegexMatch(modifiers, ".*b0.*")
 						rString := hString . rString
 					hotstrings.Push({line:A_Index, options:modifiers, hotstring:hString, replacestring:rString, comment:match[4], file:e.path})
+				}
+			}
+		}
+		if (IsSet(HotstringLoader)) {
+			for name, e in HotstringLoader.hotstrings {
+				if e.status == 1 {
+					for hString in e.obj {
+						hotstrings.Push({
+							line: "/", 
+							options: hString.Has("options") ? hString["options"] : "", 
+							hotstring: hString["string"], 
+							replacestring: hString["replacement"], 
+							comment: "Group: " name, 
+							file: e.file
+						})		
+					}
 				}
 			}
 		}

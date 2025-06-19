@@ -75,7 +75,7 @@ internetConnectionLogger("Init")
 openDTUScript("Init")
 ; Load LaTeX Hotstrings
 
-try HotstringLoader.load(FileRead(A_WorkingDir "\everything\LatexHotstrings.json", "UTF-8"), "LaTeX",,,false)
+try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX",,,false)
 expressionCalculator.setWolframAlphaToken(FileRead(A_WorkingDir "\everything\wolframalphaQueries.token", "UTF-8"))
 ; loadTableAsHotstrings(A_WorkingDir "\TableFilter\Kayoogis.json")
 ; replace the tray menu with my own

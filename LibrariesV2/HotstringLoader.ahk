@@ -11,10 +11,10 @@ class HotstringLoader {
 		this.defaultMenutext := "Enable Hotstring Group: {}"
 	}
 
-	static load(jsonAsStr, name?, addMenu := true, register := true, startOff := true, skipError := false) {
-		hotstringObj := jsongo.Parse(jsonAsStr)
+	static load(fileName, name?, addMenu := true, register := true, startOff := true, skipError := false) {
+		hotstringObj := jsongo.Parse(FileRead(fileName, "UTF-8"))
 		index := name ?? this.hotstrings.Count + 1
-		this.hotstrings[index] := {obj: hotstringObj, status: -1, hasMenu: addMenu} ; -1 = unregistered, 0 = off, 1 = on
+		this.hotstrings[index] := {obj: hotstringObj, status: -1, hasMenu: addMenu, file:fileName} ; -1 = unregistered, 0 = off, 1 = on
 		if (register) {
 			this.registerHotstrings(index, startOff, skipError)
 			this.hotstrings[index].status := startOff ? 0 : 1
