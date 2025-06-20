@@ -19,13 +19,12 @@ class expressionCalculator {
 		; READ THE ERROR STREAM. IF THERE'S SOME ERROR IN THERE, ALSO GIVE IT TO WOLFRAMALPHA
 		; ADD A CONTEXT MENU OPTION FOR THIS, EITHER WOLFRAM OR SOMETHING ELSE OR LOCAL
 	;	result := this.giveUpAndCallWolframalpha(expression)
-		endSymbol := " = "
 		if (result = "")
 			return
 		Send("{Right}")
 		switch (SubStr(mode, 1, 1)) {
 			case "p":
-				fastPrint(endSymbol . result)
+				fastPrint((InStr(result, "`n") ? "`n" : " = ") . result)
 			case "c":
 				A_Clipboard := result
 			default:

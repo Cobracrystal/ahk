@@ -235,30 +235,42 @@ objCollect(obj, fn := ((a, b) => (a . objToString(b))), value := 0, conditional 
 /**
  * 
  * @param obj Object, Map, Array Value etc.
- * @param {Integer} compact Whether to use spacer value to separate objects within objects (default true)
- * @param {Integer} compress Whether to omit spaces (default false)
- * @param {String} spacer Spacer value (default newline)
+ * @param {Integer} compact Whether to use spacer value and use newline to separate nested objects (default true)
+ * @param {Integer} compress Whether to omit spaces and minimize the string length (default false)
+ * @param {String} spacer Value used to indent nested objects (if not compact)
+ * @param {String} strEscape Whether to escape strings with quotes (JSON Style) 
  * @returns {String} 
  */
-objToString(obj, compact := true, compress := false, spacer := "`n") {
-	if !(obj is Object)
-		return String(obj)
-	isArr := obj is Array
-	isMap := obj is Map
-	isObj := !(isArr || isMap)
-	str := ""
-	separator := (trspace := compress ? "" : A_Space)
-	for key, val in (isObj ? obj.OwnProps() : obj) {
-		separator := compact ? trspace : ((val??"") is Object ? spacer : trspace)
-		if !(IsSet(val))
-			str := RTrim(str, separator) "," separator
-		else if (isArr)
-			str .= objToString(val ?? "", compact, spacer) "," separator
-		else
-			str .= objToString(key, compact, spacer) ":" trspace objToString(val ?? "", compact, spacer) "," separator
+objToString(obj, compact := false, compress := true, spacer := "`t", strEscape := true) {
+	return _objToString(obj, 0)
+
+	_objToString(obj, indentLevel) {
+		qt := strEscape ? '"' : ''
+		if !(obj is Object)
+			return obj is Integer ? String(obj) : qt String(obj) qt
+		isArr := obj is Array
+		isMap := obj is Map
+		isObj := !(isArr || isMap)
+		str := ""
+		indent := (compress || compact)  ? '' : strMultiply(spacer, indentLevel + 1)
+		trspace := compress ? "" : A_Space
+		separator := (!compact && !compress ? '`n' indent : trspace)
+		count := isObj ? ObjOwnPropCount(obj) : (isMap ? obj.Count : obj.Length)
+		for key, val in (isObj ? obj.OwnProps() : obj) {
+			if (!compact && compress)
+				separator := (val??"") is Object && count > 1 ? '`n' : trspace
+			if !(IsSet(val))
+				str := RTrim(str, separator) "," separator
+			else if (isArr)
+				str .= _objToString(val ?? "", indentLevel + 1) "," separator
+			else
+				str .= _objToString(key ?? "", indentLevel + 1) ":" trspace _objToString(val ?? "", indentLevel + 1) "," separator
+		}
+		sep2 := !compact && !compress ? '`n' strMultiply(spacer, indentLevel) : separator
+		return ( isArr ? "[" : isMap ? "Map(" : "{" ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( isArr ? "]" : isMap ? ")" : "}" )
 	}
-	return ( isArr ? "[" : isMap ? "Map(" : "{" ) RegExReplace(str, "," separator "$") ( isArr ? "]" : isMap ? ")" : "}" )
 }
+objtostring(Gui, false, true)
 
 arrayMerge(array1, array2) {
 	arr2 := []
@@ -420,6 +432,13 @@ strReverse(str) {
 strRotate(str, offset := 0) {
 	offset := Mod(offset, StrLen(str))
 	return SubStr(str, -1 * offset + 1) . SubStr(str, 1, -1 * offset)
+}
+
+strMultiply(str, count) {
+	s := ""
+	Loop(count)
+		s .= str
+	return s
 }
 
 StrSplitUTF8(str, delim := "", omit := "") {
@@ -768,7 +787,7 @@ ExecScript(expression, Wait := true, void := false) {
 	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print\(.*\)'))
 		input .= expression
 	else
-		input .= 'FileAppend(objToString(' . expression . '), "*")'
+		input .= 'FileAppend(objToString(' . expression . ',,,,false), "*")'
 	shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
 	exec.StdIn.Write(input)
