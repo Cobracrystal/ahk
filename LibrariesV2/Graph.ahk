@@ -25,25 +25,25 @@ WHAT IF YOU HAVE A SOLITARY NODE WITH NO NEIGHBOURS.
 class GraphUtils {
 
 	/**
-	 * Finds path between start and end with minimal amount of edges crossed.
+	 * Finds path between start and end with smallest weight (or smallest # of edges).
 	 * @param {Graph} g 
 	 * @param {Graph.Node} start 
 	 * @param {Graph.Node} end 
 	 * @returns {Bool} 
 	 */
-	static findPath(g, start, end) {
+	static shortestPath(g, start, end, useWeight := true) {
 		reverseTree := Graph(true) 
 		reverseTree.addNode(start.id)
 		stack := [start]
-		visited := Map()
+		seen := Map(start.id, true)
 		while (stack.Length > 0) {
 			node := stack.RemoveAt(1)
-			visited[node.id] := true
 			for nID, nNode in node.neighbours {
-				if (!visited.Has(nID)) {
+				if (!seen.Has(nID)) {
 					stack.Push(nNode)
 					rtNode := reverseTree.addNode(nID)
 					rtNode.addEdge(reverseTree.nodes[node.id])
+					seen[nID] := true
 				}
 				if (nID == end.id) { ; rtNode.id == end.id == nID
 					local path := []
@@ -62,6 +62,51 @@ class GraphUtils {
 		return false
 	}
 
+	/**
+	 * Finds path between start and end with smallest weight (or smallest # of edges).
+	 * @param {Graph} g 
+	 * @param {Graph.Node} start 
+	 * @param {Graph.Node} end 
+	 * @returns {Bool} 
+	 */
+	static bestPath(g, start, end, useWeight := true) {
+		distances := Map()
+		distances[start.id] := 0
+		prev := Map()
+		stack := [start]
+		visited := Map()
+		while (stack.Length > 0) {
+			minim := distances[stack[1].id]
+			mIndex := 1
+			for i, e in stack {
+				if (distances[e.id] < minim) {
+					minim := distances[e.id]
+					mIndex := i
+				}
+			}
+			node := stack.RemoveAt(mIndex)
+			if (node.id == end.id) {
+				local path := [end.id]
+				nodeID := end.id
+				while(nodeID != start.id) {
+					nodeID := prev[nodeID]
+					path.InsertAt(1, nodeID)
+				}
+				return [distances[end.id], path]
+			}
+			visited[node.id] := true
+			for nID, edge in node.getEdges() {
+				altDistance := distances[node.id] + (useWeight ? edge.weight : 1)
+				if (!distances.Has(nID) || distances.has(nID) && altDistance < distances[nID]) {
+					stack.push(edge.tail)
+					distances[nID] := altDistance
+					prev[nID] := node.id
+				}
+			}
+		}
+		return false
+	}
+
 
 	/**
 	 * Returns whether there is a path between node start and node end. Optionally specify whether to use DFS or BFS.
@@ -73,15 +118,16 @@ class GraphUtils {
 	 */
 	static isReachable(graph, start, end, dfs := 0) {
 		stack := [start]
-		visited := Map()
+		seen := Map(start.id, true)
 		while (stack.Length > 0) {
 			node := (dfs ? stack.Pop() : stack.RemoveAt(1)) ; only difference between bfs and dfs
-			visited[node.id] := true
 			for nID, nNode in node.neighbours {
 				if (nID == end.id)
 					return true
-				if (!visited.Has(nID))
+				if (!seen.Has(nID)) {
 					stack.Push(nNode)
+					seen[node.id] := true
+				}
 			}
 		}
 		return false
@@ -93,16 +139,18 @@ class GraphUtils {
 	 * @returns {Bool} 
 	 */
 	static isConnected(g) {
-		stack := [node]
-		visited := Map()
+		stack := [g.getNode()]
+		seen := Map(stack[0].id, true)
 		while (stack.Length > 0) {
 			node := stack.Pop()
-			visited[node.id] := true
-			for nID, nNode in node.neighbours
-				if (!visited.Has(nID))
+			for nID, nNode in node.neighbours {
+				if (!seen.Has(nID)) {
 					stack.Push(nNode)
+					seen[nID] := true
+				}
+			}
 		}
-		return g.nodes.Count == visited.Count
+		return g.nodes.Count == seen.Count
 	}
 
 	/**
@@ -114,17 +162,19 @@ class GraphUtils {
 	static getConnectedInstance(g, node) {
 		cgi := Graph(g.isDirected)
 		stack := [node]
-		visited := Map()
+		seen := Map(node.id, node)
 		while (stack.Length > 0) {
 			node := stack.Pop()
-			visited[node.id] := node
-			for nID, nNode in node.neighbours
-				if (!visited.Has(nID))
+			for nID, nNode in node.neighbours {
+				if (!seen.Has(nID)) {
 					stack.Push(nNode)
+					seen[nID] := nNode
+				}
+			}
 		}
-		for nodeID, n in visited
+		for nodeID, n in seen
 			cgi.addNode(nodeID)
-		for nodeID, n in visited
+		for nodeID, n in seen
 			cgi.projectNode(n)
 		return cgi
 	}
@@ -149,10 +199,134 @@ class GraphUtils {
 					stack.Push(nNode)
 					nNodeAr := arborescence.addNode(nID)
 					edge := node.getEdge(nNode)
-					arborescence.addEdge(nodeAr, nNodeAr, edge.getProperties()*)
+					arborescence.addEdge(nodeAr, nNodeAr, edge.getAllProperties()*)
 				}
 		}
 		return arborescence
+	}
+
+	class FibonacciHeap {
+		__New() {
+			this.nodes := Map()       ; all nodes by ID
+			this.minNode := unset     ; pointer to min node
+			this.rootList := []       ; top-level trees
+			this.nodeCount := 0
+		}
+
+		insert(value, key) {
+			node := this.createNode(value, key)
+			this.rootList.Push(node)
+			this.nodes[value] := node
+			if (!IsSet(this.minNode) || node.key < this.minNode.key)
+				this.minNode := node
+		}
+
+		createNode(value, key) {
+			return {
+				value: value,
+				key: key,
+				parent: unset,
+				children: [],
+				degree: 0,
+				mark: false
+			}
+		}
+
+		getMin() {
+			return IsSet(this.minNode) ? this.minNode.value : ""
+		}
+
+		extractMin() {
+			local min := this.minNode
+			if !IsSet(min)
+				return ""
+
+			; Promote min’s children to root list
+			for child in min.children {
+				child.parent := unset
+				this.rootList.Push(child)
+			}
+
+			; Remove min from root list
+			this.rootList := this.rootList.Filter((n) => n.value != min.value)
+			this.nodes.Delete(min.value)
+
+			; Consolidate trees
+			this.consolidate()
+
+			return min.value
+		}
+
+		decreaseKey(value, newKey) {
+			node := this.nodes[value]
+			if (!IsSet(node) || newKey > node.key)
+				return  ; invalid
+
+			node.key := newKey
+			parent := node.parent
+			if IsSet(parent) && node.key < parent.key {
+				this.cut(node, parent)
+				this.cascadingCut(parent)
+			}
+			if node.key < this.minNode.key
+				this.minNode := node
+		}
+
+		cut(child, parent) {
+			parent.children := parent.children.Filter((n) => n.value != child.value)
+			parent.degree -= 1
+			this.rootList.Push(child)
+			child.parent := unset
+			child.mark := false
+		}
+
+		cascadingCut(node) {
+			p := node.parent
+			if !IsSet(p)
+				return
+			if !node.mark
+				node.mark := true
+			else {
+				this.cut(node, p)
+				this.cascadingCut(p)
+			}
+		}
+
+		consolidate() {
+			degreeTable := Map()
+			newRootList := []
+
+			for node in this.rootList {
+				d := node.degree
+				while degreeTable.Has(d) {
+					other := degreeTable[d]
+					if node.key > other.key {
+						temp := node, node := other, other := temp
+					}
+					this.link(other, node)
+					degreeTable.Delete(d)
+					d += 1
+				}
+				degreeTable[d] := node
+			}
+
+			this.minNode := unset
+			for d, node in degreeTable {
+				newRootList.Push(node)
+				if !IsSet(this.minNode) || node.key < this.minNode.key
+					this.minNode := node
+			}
+
+			this.rootList := newRootList
+		}
+
+		link(child, parent) {
+			this.rootList := this.rootList.Filter((n) => n.value != child.value)
+			child.parent := parent
+			parent.children.Push(child)
+			parent.degree += 1
+			child.mark := false
+		}
 	}
 }
 
@@ -162,9 +336,31 @@ class Graph {
 	isWeighted := false
 	hasFlow := false
 
-	__New(isDirected := true) {
-		this.isDirected := isDirected
+	/**
+	 * Creates new Graph Instance 
+	 * @param {Integer} isDirected Whether the Graph is directed 
+	 * @param filePath a path to a file containing a compatible graph format
+	 */
+	__New(isDirected?, filePath?, isWeighted?, hasFlow?) {
+		if (IsSet(filePath))
+			this.loadFromFile(filePath, isDirected, isWeighted, hasFlow)
+		else {
+			if (IsSet(isDirected))
+				this.isDirected := isDirected
+			if (IsSet(isWeighted))
+				this.isWeighted := isWeighted
+			if (IsSet(hasFlow))
+				this.hasFlow := hasFlow
+		}
 	}
+
+	getNode(id?) {
+		if (IsSet(id))
+			return this.nodes[id]
+		for i, node in this.nodes
+			return node
+	}
+	
 
 	/**
 	 * @returns {Graph.Node} 
@@ -179,7 +375,7 @@ class Graph {
 				nodeID := this.nodes.Count + 1
 			else
 				Loop(this.nodes.Count) {
-					if !(this.nodes.Has(A_Index)) {
+					if !(this.nodes.Has(this.nodes.Count + A_Index + 1)) {
 						nodeID := A_Index
 						break
 					}
@@ -190,7 +386,7 @@ class Graph {
 
 	/**
 	 * Projects a node from other graph H onto this graph, removing any edges to nodes which do not exist here.
-	 * Node with same ID may already exist, in which case the edges are updated accordingly.
+	 * A node with the same ID may already exist, in which case the edges are updated accordingly.
 	 * @param {Graph.Node} node 
 	 */
 	projectNode(node) {
@@ -202,7 +398,7 @@ class Graph {
 		}
 		for nID, edge in node.getEdges()
 			if (this.nodes.Has(nID))
-				this.addEdge(newNode, this.nodes[nID], edge.getProperties()*)
+				this.addEdge(newNode, this.nodes[nID], edge.getAllProperties()*)
 		return newNode
 	}
 	
@@ -232,9 +428,21 @@ class Graph {
 		return this
 	}
 
-	loadFromFile(fileName) {
+	loadFromFile(fileName, asDirected?, asWeighted?, withFlow?) {
 		f := FileOpen(fileName, "r")
 		options := f.ReadLine()
+		if (IsSet(asDirected))
+			this.isDirected := asDirected
+		else if (InStr(options, "directed") && !InStr(options, "undirected"))
+			this.isDirected := true
+		if (IsSet(asWeighted))
+			this.isWeighted := asWeighted
+		else if (InStr(options, "weighted") && !InStr(options, "unweighted"))
+			this.isWeighted := true
+		if (IsSet(withFlow))
+			this.hasFlow := withFlow
+		else if (InStr(options, "Flow"))
+			this.hasFlow := true
 		neighbours := Map()
 		while (line := f.ReadLine()) {
 			if (line = "")
@@ -245,8 +453,18 @@ class Graph {
 				nodeNeighbours := StrSplit(arr[2], "-")
 			else
 				nodeNeighbours := []
-			for i, e in nodeNeighbours
-				nodeNeighbours[i] := Integer(e) ; ERROR CHECKING CAN COME LATER.
+			if (arr.Length > 2)
+				this.isWeighted := true
+			for i, e in nodeNeighbours {
+				nodeNeighbours[i] := {id: Integer(e)}
+				if (this.isWeighted)
+					nodeNeighbours[i].weight := arr.Has(3) ? Number(arr[3]) : 1
+				if (this.hasFlow) {
+					j := this.isWeighted ? 4 : 3
+					nodeNeighbours[i].capacity := arr.Has(j) ? Number(arr[j]) : 1
+					nodeNeighbours[i].flow := arr.Has(j+1) ? Number(arr[j+1]) : 1
+				}
+			}
 			if (this.nodes.Has(nodeID))
 				neighbours[nodeID].push(nodeNeighbours*)
 			else {
@@ -255,12 +473,12 @@ class Graph {
 			}
 		}
 		for nodeID, nodeNeighbours in neighbours
-			for neighbourID in nodeNeighbours {
-				if !(this.nodes.Has(neighbourID))
-					this.nodes[neighbourID] := Graph.Node(neighbourID)
-				this.nodes[nodeID].addEdge(this.nodes[neighbourID])
+			for nInfo in nodeNeighbours {
+				if !(this.nodes.Has(nInfo.id))
+					this.nodes[nInfo.id] := Graph.Node(nInfo.id)
+				this.nodes[nodeID].addEdge(this.nodes[nInfo.id], this.isWeighted ? nInfo.weight : unset, this.hasFlow ? nInfo.capacity : unset, this.hasFlow ? nInfo.flow : unset)
 				if (!this.isDirected)
-					this.nodes[neighbourID].addEdge(this.nodes[nodeID])
+					this.nodes[nInfo.id].addEdge(this.nodes[nodeID], this.isWeighted ? nInfo.weight : unset, this.hasFlow ? nInfo.capacity : unset, this.hasFlow ? nInfo.flow : unset)
 			}
 	}
 	; load in graph
@@ -268,9 +486,38 @@ class Graph {
 	; -> then, when we have all node objects, we initialize the node objects with their connected nodes by iterating over their saved node IDs.
 	; -> then, we iterate over all edges and add them to the graph
 
+	toString() {
+		str := this.nodes.Count ", " (this.isDirected ? "Directed" : "Undirected") ", " (this.isWeighted ? "Weighted" : "Unweighted") ", " (this.hasFlow ? "Flow" : "No Flow") "`n"
+		seenNodes := Map()
+		for id, node in this.nodes {
+			uniqueEdges := Map()
+			seenNodes[id] := true
+			for j, edge in node.edges {
+				edgeProperties := (edge.HasOwnProp("weight") ? edge.weight ' ' : "") . (this.HasOwnProp("capacity") ? edge.capacity ' ' : "") . (this.HasOwnProp("flow") ? edge.flow : "")
+				if (uniqueEdges.Has(edgeProperties))
+					uniqueEdges[edgeProperties].push(edge.tail.id)
+				else
+					uniqueEdges[edgeProperties] := [edge.tail.id]
+			}
+			nodeStr := node.allNeighbours.Count > 0 ? "" : id
+			for edgeProperties, edges in uniqueEdges {
+				edgeStr := ""
+				for tailID in edges {
+					seenNodes[tailID] := true
+					edgeStr .= tailID "-"
+				}
+				nodeStr .= id ' ' RTrim(edgeStr, "-") ' ' edgeProperties "`n"
+			}
+			str .= nodeStr == "" ? "" : RTrim(nodeStr, "`n") "`n"
+		}
+		return RTrim(str, "`n")
+	}
+
 	class Node {
 		edges := Map()
 		neighbours := Map()
+		allNeighbours := Map()
+		
 
 		__New(id, name?) {
 			this.id := id
@@ -289,12 +536,14 @@ class Graph {
 			if (this.neighbours.Has(tail.id))
 				return 0
 			this.neighbours[tail.id] := tail ; this exists solely to make it easier to access connected nodes.
+			this.allNeighbours[tail.id] := tail ; this is for collecting in- and out-neighbours in the same basket
+			tail.allNeighbours[this.id] := this
 			this.edges[tail.id] := Graph.Edge(this, tail, weight?, capacity?, flow?)
 			return 1
 		}
 
 		/**
-		 * Removes the given *directed* edge
+		 * Removes the given edge
 		 * @param {Graph.Node} tail 
 		 * @returns {Integer} 
 		 */
@@ -302,6 +551,14 @@ class Graph {
 			if (this.hasNeighbour(tail.id)) {
 				node := this.neighbours.Delete(tail.id)
 				this.edges.Delete(tail.id)
+				if (!isDirected) {
+					tail.neighbours.delete(this.id)
+					tail.edges.delete(this.id)
+				}
+				if !(tail.hasNeighbour(this.id)) {
+					this.allNeighbours.Delete(tail.id)
+					tail.allNeighbours.Delete(this.id)
+				}
 				return 1
 			}
 			return 0
@@ -324,8 +581,16 @@ class Graph {
 			return this.neighbours
 		}
 
+		getAllNeighbours() {
+			return this.allNeighbours
+		}
+
 		hasNeighbour(node) { ; -> boolean
 			return this.neighbours.Has(node)
+		}
+
+		isAdjacent(node) {
+			return this.allNeighbours.Has(node)
 		}
 	}
 
@@ -339,7 +604,7 @@ class Graph {
 			this.flow := flow ?? unset
 		}
 
-		getProperties() {
+		getAllProperties() {
 			return [this.HasOwnProp("weight") ? this.weight : unset,
 					this.HasOwnProp("capacity") ? this.capacity : unset,
 					this.HasOwnProp("flow") ? this.flow : unset	]
