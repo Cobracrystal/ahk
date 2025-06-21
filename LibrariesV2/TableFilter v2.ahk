@@ -404,7 +404,7 @@ class TableFilter {
 		for i, e in this.data.keys {
 			if (this.config.useDefaultValues && (row[e] == "") && this.data.defaultValues.Has(e))
 				row[e] := this.data.defaultValues[e]
-			if (e == "Runen" && this.config.autoTranslateRunic && IsSet(TextEditMenu) && IsObject(TextEditMenu))
+			if (e == "Runen" && (row[e] == "") && this.config.autoTranslateRunic && IsSet(TextEditMenu) && IsObject(TextEditMenu))
 				row[e] := TextEditMenu.runify(row["Kayoogis"], "DE")
 			if (this.config.formatValues) {
 				switch e {
@@ -747,10 +747,14 @@ class TableFilter {
 				this.saveFile(this.data.openFile, false)
 			else {
 				res := MsgBox("Do you want to save the Changes in " this.data.openFile " before closing?", this.base.__Class, "0x3 Owner" A_ScriptHwnd)
-				if (res == "Cancel")
+				if (res == "Cancel") {
+					guiObj.Opt("-Disabled")
 					return 1
-				if (res == "No")
+				}
+				if (res == "No") {
+					guiObj.Opt("-Disabled")
 					return 0
+				}
 				if (res == "Yes")
 					this.saveFile(this.data.openFile, false)
 			}
