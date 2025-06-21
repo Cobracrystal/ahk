@@ -223,6 +223,10 @@ objForEach(obj, fn := ((a) => (objToString(a))), value := 0, conditional := ((a,
 	return obj
 }
 
+objGetMinimum(obj) => objCollect(obj, (a,b) => (a > b ? b : a))
+objGetMaximum(obj) => objCollect(obj, (a,b) => (a >= b ? a : b))
+objGetAverage(obj) => objCollect(obj, (a,b) => (a+b)) / (obj is Array ? obj.Length : obj.Count)
+
 objCollect(obj, fn := ((a, b) => (a . objToString(b))), value := 0, conditional := ((a,b) => (true))) {
 	if !(obj is Array || obj is Map)
 		throw(Error("objForEach does not handle type " . Type(obj)))
@@ -382,6 +386,7 @@ arrayDuplicateIndices(arr, key?, isMap := 0) {
 	}
 	return duplicates
 }
+
 
 ; gets a map of maps. sorts it by a key of the submap, returns it as array
 ; requires all contents of mapInner[key] to be of the same type (number or string)
