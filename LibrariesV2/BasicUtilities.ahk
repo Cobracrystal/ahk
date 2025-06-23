@@ -214,23 +214,25 @@ objRemoveValues(obj, values, removeAll := true, comparator := ((a,b) => (a = b))
 }
 
 objForEach(obj, fn := ((a) => (objToString(a))), value := 0, conditional := ((a,b) => (true))) {
-	if !(obj is Array || obj is Map)
+	isArrLike := (obj is Array || obj is Map)
+	if !(isArrLike || obj is Object)
 		throw(Error("objForEach does not handle type " . Type(obj)))
 	queue := []
-	for i, e in obj
+	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (conditional(e, value))
-			obj[i] := fn(e)
+			(isArrLike ? obj[i] := fn(e) : obj.%i% := fn(e))
 	return obj
 }
 
-objGetMinimum(obj) => objCollect(obj, (a,b) => (a > b ? b : a))
-objGetMaximum(obj) => objCollect(obj, (a,b) => (a >= b ? a : b))
+objGetMinimum(obj) => objCollect(obj, (a,b) => Min(a,b))
+objGetMaximum(obj) => objCollect(obj, (a,b) => Max(a,b))
 objGetAverage(obj) => objCollect(obj, (a,b) => (a+b)) / (obj is Array ? obj.Length : obj.Count)
 
 objCollect(obj, fn := ((a, b) => (a . objToString(b))), value := 0, conditional := ((a,b) => (true))) {
-	if !(obj is Array || obj is Map)
+	isArrLike := (obj is Array || obj is Map)
+	if !(isArrLike || obj is Object)
 		throw(Error("objForEach does not handle type " . Type(obj)))
-	for i, e in obj
+	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (conditional(e, value))
 			base := IsSet(base) ? fn(base, e) : e
 	return base ?? ""
@@ -239,19 +241,19 @@ objCollect(obj, fn := ((a, b) => (a . objToString(b))), value := 0, conditional 
 /**
  * 
  * @param obj Object, Map, Array Value etc.
- * @param {Integer} compact Whether to use spacer value and use newline to separate nested objects (default true)
- * @param {Integer} compress Whether to omit spaces and minimize the string length (default false)
+ * @param {Integer} compact Whether to use spacer value and use newline to separate nested objects (default false)
+ * @param {Integer} compress Whether to omit spaces and minimize the string length (default true)
  * @param {String} spacer Value used to indent nested objects (if not compact)
  * @param {String} strEscape Whether to escape strings with quotes (JSON Style) 
  * @returns {String} 
  */
-objToString(obj, compact := false, compress := true, spacer := "`t", strEscape := true) {
+objToString(obj, compact := false, compress := true, strEscape := true, spacer := "`t") {
 	return _objToString(obj, 0)
 
 	_objToString(obj, indentLevel) {
 		qt := strEscape ? '"' : ''
 		if !(obj is Object)
-			return obj is Integer ? String(obj) : qt String(obj) qt
+			return obj is Integer ? String(obj) : qt String(strEscape ? StrReplace(StrReplace(obj, "'", "\'"), '"', '\"') : obj) qt
 		isArr := obj is Array
 		isMap := obj is Map
 		isObj := !(isArr || isMap)
@@ -274,7 +276,6 @@ objToString(obj, compact := false, compress := true, spacer := "`t", strEscape :
 		return ( isArr ? "[" : isMap ? "Map(" : "{" ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( isArr ? "]" : isMap ? ")" : "}" )
 	}
 }
-objtostring(Gui, false, true)
 
 arrayMerge(array1, array2) {
 	arr2 := []
@@ -792,7 +793,7 @@ ExecScript(expression, Wait := true, void := false) {
 	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print\(.*\)'))
 		input .= expression
 	else
-		input .= 'FileAppend(objToString(' . expression . ',,,,false), "*")'
+		input .= 'print(' expression ',,false)'
 	shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
 	exec.StdIn.Write(input)
@@ -1487,11 +1488,11 @@ StrCountStr(HayStack, SearchText, CaseSense := false) {
 	return count
 }
 
-print(msg, options?, compact := true, compress := false, spacer := "`n") {
+print(msg, options?, putNewline?, compact := false, compress := true, strEscape := true, spacer := "`t") {
 	if !(msg is String)
-		msg := objToString(msg, compact, compress, spacer)
+		msg := objToString(msg, compact, compress, strEscape, spacer)
 	try 
-		FileAppend(msg "`n", "*", options ?? "UTF-8")
+		FileAppend(msg . (IsSet(putNewline) ? (putNewline ? '`n' : '') : InStr(msg, '`n') ? '`n' : ''), "*", options ?? "UTF-8")
 	catch Error 
 		MsgBoxAsGui(msg,,,,,,,1)
 }

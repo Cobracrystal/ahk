@@ -6,7 +6,7 @@ mainfunc()
 mainfunc() {
 	; input := A_Clipboard
 	input := "PIGS SAND MAIL DATE HEAD CLAM PEAK HEAT JOYA WELL TOAD CARD WILL TAPE LEGS TREE ROAD MAID SLAB ROCK HAND VASE SAFE CLAY TOES"
-	print(objToString(solveCores(input),,false))
+	print(objToString(solveCores(input),false,true))
 }
 
 solveCores(str) {
