@@ -69,7 +69,7 @@ class GraphUtils {
 	 * @param {Graph.Node} end 
 	 * @returns {Bool} 
 	 */
-	static bestPath(g, start, end, useWeight := true) {
+	static minimalPath(g, start, end, useWeight := true) {
 		distances := Map()
 		distances[start.id] := 0
 		prev := Map()
@@ -207,63 +207,63 @@ class GraphUtils {
 
 	class FibonacciHeap {
 		__New() {
-			this.nodes := Map()       ; all nodes by ID
-			this.minNode := unset     ; pointer to min node
-			this.rootList := []       ; top-level trees
-			this.nodeCount := 0
+			this.graph := Graph(true)
+			this.minNode := unset
+			this.rootList := []
+			this.nodeRefs := Map() 
+			this.nextNodeID := 1
 		}
 
 		insert(value, key) {
-			node := this.createNode(value, key)
+			id := this.nextNodeID++
+			node := this.graph.addNode(id)
+			node.value := value
+			node.key := key
+			node.degree := 0
+			node.mark := false
+			node.parent := unset
+			node.children := []
+
 			this.rootList.Push(node)
-			this.nodes[value] := node
-			if (!IsSet(this.minNode) || node.key < this.minNode.key)
+			this.nodeRefs[value] := id
+
+			if (!this.HasOwnProp("minNode") || key < this.minNode.key)
 				this.minNode := node
 		}
 
-		createNode(value, key) {
-			return {
-				value: value,
-				key: key,
-				parent: unset,
-				children: [],
-				degree: 0,
-				mark: false
-			}
-		}
-
 		getMin() {
-			return IsSet(this.minNode) ? this.minNode.value : ""
+			return this.HasOwnProp("minNode") ? this.minNode.value : ""
 		}
 
 		extractMin() {
-			local min := this.minNode
-			if !IsSet(min)
+			minNode := this.minNode
+			if !IsSet(minNode)
 				return ""
 
-			; Promote min’s children to root list
-			for child in min.children {
+			for child in minNode.children {
 				child.parent := unset
 				this.rootList.Push(child)
 			}
 
-			; Remove min from root list
-			this.rootList := this.rootList.Filter((n) => n.value != min.value)
-			this.nodes.Delete(min.value)
+			this.rootList := this.rootList.Filter((n) => n != minNode)
+			this.graph.nodes.Delete(minNode.id)
+			this.nodeRefs.Delete(minNode.value)
 
-			; Consolidate trees
 			this.consolidate()
 
-			return min.value
+			return minNode.value
 		}
 
 		decreaseKey(value, newKey) {
-			node := this.nodes[value]
-			if (!IsSet(node) || newKey > node.key)
-				return  ; invalid
+			if !this.nodeRefs.Has(value)
+				return
+
+			node := this.graph.nodes[this.nodeRefs[value]]
+			if (newKey > node.key)
+				return
 
 			node.key := newKey
-			parent := node.parent
+			parent := node.HasOwnProp("parent") ? node.parent : unset
 			if IsSet(parent) && node.key < parent.key {
 				this.cut(node, parent)
 				this.cascadingCut(parent)
@@ -273,61 +273,61 @@ class GraphUtils {
 		}
 
 		cut(child, parent) {
-			parent.children := parent.children.Filter((n) => n.value != child.value)
-			parent.degree -= 1
+			parent.children := parent.children.Filter((n) => n != child)
+			parent.degree--
 			this.rootList.Push(child)
 			child.parent := unset
 			child.mark := false
 		}
 
 		cascadingCut(node) {
-			p := node.parent
-			if !IsSet(p)
+			parent := node.HasOwnProp("parent") ? node.parent : unset
+			if !IsSet(parent)
 				return
 			if !node.mark
 				node.mark := true
 			else {
-				this.cut(node, p)
-				this.cascadingCut(p)
+				this.cut(node, parent)
+				this.cascadingCut(parent)
 			}
 		}
 
 		consolidate() {
-			degreeTable := Map()
-			newRootList := []
+			table := Map()
+			newRoots := []
 
 			for node in this.rootList {
 				d := node.degree
-				while degreeTable.Has(d) {
-					other := degreeTable[d]
+				while table.Has(d) {
+					other := table[d]
 					if node.key > other.key {
 						temp := node, node := other, other := temp
 					}
 					this.link(other, node)
-					degreeTable.Delete(d)
-					d += 1
+					table.Delete(d)
+					d++
 				}
-				degreeTable[d] := node
+				table[d] := node
 			}
 
 			this.minNode := unset
-			for d, node in degreeTable {
-				newRootList.Push(node)
-				if !IsSet(this.minNode) || node.key < this.minNode.key
+			for _, node in table {
+				newRoots.Push(node)
+				if !this.HasOwnProp("minNode") || node.key < this.minNode.key
 					this.minNode := node
 			}
 
-			this.rootList := newRootList
+			this.rootList := newRoots
 		}
 
 		link(child, parent) {
-			this.rootList := this.rootList.Filter((n) => n.value != child.value)
+			this.rootList := this.rootList.Filter((n) => n != child)
 			child.parent := parent
 			parent.children.Push(child)
-			parent.degree += 1
+			parent.degree++
 			child.mark := false
 		}
-	}
+	}  
 }
 
 class Graph {
@@ -343,7 +343,7 @@ class Graph {
 	 */
 	__New(isDirected?, filePath?, isWeighted?, hasFlow?) {
 		if (IsSet(filePath))
-			this.loadFromFile(filePath, isDirected, isWeighted, hasFlow)
+			this.loadFromFile(filePath, isDirected?, isWeighted?, hasFlow?)
 		else {
 			if (IsSet(isDirected))
 				this.isDirected := isDirected
