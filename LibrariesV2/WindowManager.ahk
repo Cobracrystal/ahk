@@ -3,13 +3,12 @@
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
 ; add rightclick menu option to show command line only for this window
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 #Include "*i %A_LineFile%\..\..\LibrariesV2\CustomWindowFunctions.ahk"
 ; Usage (if including this file as a library):
 ; ^+F11::WindowManager.windowManager("T")
 
 /*
-hotkeys:
+hotkeys: (only active within window)
 F5 to refresh view
 Enter to activate
 Del to close window
@@ -411,7 +410,7 @@ class WindowManager {
 							commandLine: this.settings.getCommandLine ? this.LV.GetText(rowN, 12) : unset
 						})
 					}
-					A_Clipboard := jsongo.Stringify(wInfoArray, , "`t")
+					A_Clipboard := objToString(wInfoArray, false, false)
 				} else if (GetKeyState("Ctrl") && GetKeyState("Alt")) { ; ctrl + alt C to get title only
 					for rowN in rowNums
 						str .= this.LV.GetText(rowN, 2) "`n"
