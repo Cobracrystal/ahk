@@ -253,7 +253,7 @@ objToString(obj, compact := false, compress := true, strEscape := true, spacer :
 	_objToString(obj, indentLevel) {
 		qt := strEscape ? '"' : ''
 		if !(obj is Object)
-			return obj is Integer ? String(obj) : qt String(strEscape ? StrReplace(StrReplace(obj, "'", "\'"), '"', '\"') : obj) qt
+			return obj is Number ? String(obj) : qt String(strEscape ? StrReplace(StrReplace(obj, "'", "\'"), '"', '\"') : obj) qt
 		isArr := obj is Array
 		isMap := obj is Map
 		isObj := !(isArr || isMap)
@@ -469,6 +469,39 @@ StrSplitUTF8(str, delim := "", omit := "") {
 	return arr
 }
 
+strMaxCharsPerLine(str, maxCharsPerLine) {
+	nStr := ""
+	loops := strCountStr(str, '`n') + 1
+	Loop Parse str, "`n", "`r" {
+		line := A_LoopField
+		fWidthLines := ""
+		fWidthLine := ""
+		pos := 0
+		Loop Parse line, " `t" {
+			word := A_LoopField
+			pos += StrLen(word) + 1
+			wLen := StrLen(word)
+			if (StrLen(fWidthLine) + wLen <= maxCharsPerLine)
+				fWidthLine .= word . SubStr(line, pos, 1)
+			else {
+				if (fWidthLine != "")
+					fWidthLines .= fWidthLine '`n'
+				if (wLen <= maxCharsPerLine)
+					fWidthLine := word . SubStr(line, pos, 1)
+				else {
+					Loop(iters := wLen//maxCharsPerLine)
+						fWidthLines .= SubStr(word, (A_Index - 1) * maxCharsPerLine + 1, maxCharsPerLine) . "`n"
+					if (wLen > iters * maxCharsPerLine)
+						fWidthLine := SubStr(word, iters * maxCharsPerLine + 1)
+				}
+			}
+		}
+		fWidthLines := ( fWidthLine == "" ? SubStr(fWidthLines, 1, StrLen(fWidthLines) - 1) : fWidthLines . fWidthLine)
+		nStr .= fWidthLines . (A_Index == loops ? '' : '`n')
+	}
+	return nStr
+}
+
 ; only works in 2.0.9
 BoundFnName(Obj) {
 	Address := ObjPtr(Obj)
@@ -509,7 +542,7 @@ RegExEscape(str) => "\Q" StrReplace(str, "\E", "\E\\E\Q") "\E"
  * @param to Array containing strings that are the replacements for values in @from, in same order
  * @returns {string} 
  */
-recursiveReplaceMap(text, from, to) {
+strRecursiveReplace(text, from, to) {
 	return __recursiveReplaceMap(text, from, to)
 
 	__recursiveReplaceMap(text, from, to, __index := 1) {
@@ -1203,8 +1236,9 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	if (buttonStyle == 2 || buttonStyle == 4)
 		mbgui.Opt("-SysMenu")
 	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
-	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, text)
-	mbgui.AddText("x" leftMargin " y" gap " BackgroundTrans vTextBox", text)
+	nText := strMaxCharsPerLine(text, 80)
+	mbgui.AddText("x0 y0 w400 vWhiteBoxTop " SS_WHITERECT, nText)
+	mbgui.AddText("x" leftMargin " y" gap " w400 BackgroundTrans vTextBox", nText)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
 	guiWidth := leftMargin + buttonOffset + Max(TBw, (buttonWidth + rightMargin) * (buttonNames.Length + (addCopyButton ? 1 : 0))) + 1
 	guiWidth := (guiWidth < minGuiWidth ? minGuiWidth : guiWidth)
@@ -1215,7 +1249,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	for i, e in buttonNames
 		mbgui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * (buttonWidth + rightMargin), buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(buttonStyle, i))
 	if (addCopyButton)
-		mbgui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * (buttonWidth + rightMargin), buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := guiCtrl.gui["TextBox"].Value))
+		mbgui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * (buttonWidth + rightMargin), buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := text))
 	mbGui["Button" defaultButton].Focus()
 	guiHeight := whiteBoxHeight + BottomHeight
 	if (buttonStyle != 2 && buttonStyle != 4)
@@ -1483,7 +1517,7 @@ splitRecursive(n, splits := StrLen(n)) {
 	return arr
 }
 
-StrCountStr(HayStack, SearchText, CaseSense := false) {
+strCountStr(HayStack, SearchText, CaseSense := false) {
 	StrReplace(HayStack, SearchText,,CaseSense, &count)
 	return count
 }
