@@ -484,7 +484,7 @@ class WindowManager {
 			"Toggle Window Lock", (wHandle) => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & 0x8 ? 0 : 1, wHandle)),
 			"Set Window Lock", WinSetAlwaysOnTop.bind(true),
 			"Remove Window Lock", WinSetAlwaysOnTop.bind(false),
-			"Toggle Title Bar", (wHandle) => (WinSetStyle((WinGetStyle(wHandle) & this.windowStyles.WS_CAPTION ? "-" : "+" ) . this.windowStyles.WS_CAPTION, wHandle)),
+			"Toggle Title Bar", WinSetStyle.bind('^' this.windowStyles.WS_CAPTION),
 			"Add Title Bar", WinSetStyle.bind("+" this.windowStyles.WS_CAPTION),
 			"Remove Title Bar", WinSetStyle.bind("-" this.windowStyles.WS_CAPTION),
 			"Toggle Visibility", (wHandle) => (WinGetStyle(wHandle) & this.windowStyles.WS_VISIBLE ? WinHide(wHandle) : WinShow(wHandle)),
