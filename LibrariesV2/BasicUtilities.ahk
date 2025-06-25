@@ -1216,15 +1216,13 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 
 	bottomGap := leftMargin
 	BottomHeight := buttonHeight + 2 * bottomGap
-	gStr := ""
 	if !(MB_TEXT_MAP.Has(buttonStyle))
 		throw Error("Invalid button Style")
 	if (buttonNames.Length == 0)
 		buttonNames := MB_TEXT_MAP[buttonStyle]
 	else if (MB_TEXT_MAP[buttonStyle].Length != buttonNames.Length)
 		throw Error("Invalid Button Names for given Button Style")
-	if (owner)
-		gStr := "+Owner" owner
+	gStr := owner ? "+Owner" owner : ''
 	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT (MB_FONTISITALIC ? " italic" : "") : ""
 	mbgui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " gStr, title)
 	mbgui.Opt("+0x94C80000")
@@ -1232,9 +1230,9 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	if (buttonStyle == 2 || buttonStyle == 4)
 		mbgui.Opt("-SysMenu")
 	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
-	nText := strMaxCharsPerLine(text, 80)
-	mbgui.AddText("x0 y0 w400 vWhiteBoxTop " SS_WHITERECT, nText)
-	mbgui.AddText("x" leftMargin " y" gap " w400 BackgroundTrans vTextBox", nText)
+	nText := textCtrlAdjustSize(400,, text,, guiFontOptions, MB_FONTNAME)
+	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, nText)
+	mbgui.AddText("x" leftMargin " y" gap " BackgroundTrans vTextBox", nText)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
 	guiWidth := leftMargin + buttonOffset + Max(TBw, (buttonWidth + rightMargin) * (buttonNames.Length + (addCopyButton ? 1 : 0))) + 1
 	guiWidth := (guiWidth < minGuiWidth ? minGuiWidth : guiWidth)
@@ -1294,6 +1292,66 @@ getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
 	weight   := NumGet(NCM.Ptr + MsgFont_Offset + Weight_Offset, "Int")             ; Get the font weight (400 is normal and 700 is bold)
 	isItalic := NumGet(NCM.Ptr + MsgFont_Offset + Italic_Offset, "UChar")           ; Get the italic state of the font
 	return true
+}
+
+
+textCtrlAdjustSize(width, textCtrl?, str?, onlyCalculate := false, fontOptions?, fontName?) {
+	if (!IsSet(textCtrl) && !IsSet(str))
+		throw Error("Both textCtrl and str were not set")
+	if (!IsSet(str))
+		str := textCtrl.Value
+	else if (!IsSet(textCtrl)) {
+		local temp := Gui()
+		temp.SetFont(fontOptions ?? unset, fontName ?? unset)
+		textCtrl := temp.AddText()
+	}
+	fixedWidthStr := ""
+	pos := 0
+	loop parse str, " `t" {
+		line := A_LoopField
+		lLen := StrLen(A_LoopField)
+		pos += lLen + 1
+		strWidth := guiGetTextSize(textCtrl, fixedWidthStr . line)
+		if (strWidth[1] <= width)
+			fixedWidthStr .= line . substr(str, pos, 1)
+		else { ; reached max width, begin new line
+			fixedWidthStr := SubStr(fixedWidthStr, 1, -1)
+			if (guiGetTextSize(textCtrl, line)[1] <= width) 
+				fixedWidthStr .= '`n' . line . substr(str, pos, 1)
+			else { ; A_Loopfield is by itself wider than width
+				fixedWidthWord := ""
+				linePart := ""
+				loop parse line { ; thus iterate char by char
+					curWidth := guiGetTextSize(textCtrl, linePart . A_LoopField)
+					if (curWidth[1] <= width) ; reached max width, begin new line
+						linePart .= A_LoopField
+					else {
+						fixedWidthWord .= '`n' linePart
+						linePart := A_LoopField
+					}
+				}
+				fixedWidthStr .= (fixedWidthStr == "" ? SubStr(fixedWidthWord, 2) : fixedWidthWord) . (linePart == "" ? '' : '`n' linePart)
+			}
+		}
+	}
+	if (!onlyCalculate) {
+		textCtrl.Move(,,guiGetTextSize(textCtrl, fixedWidthStr)*)
+		textCtrl.Value := fixedWidthStr
+	}
+	return fixedWidthStr
+}
+
+guiGetTextSize(txtCtrlObj, str) {
+	static WM_GETFONT := 0x0031
+	static DT_CALCRECT := 0x400
+	DC := DllCall("GetDC", "Ptr", txtCtrlObj.Hwnd, "Ptr")
+	hFont := SendMessage(WM_GETFONT,,, txtCtrlObj)
+	hOldObj := DllCall("SelectObject", "Ptr", DC, "Ptr", hFont, "Ptr")
+	height := DllCall("DrawText", "Ptr", DC, "Str", str, "Int", -1, "Ptr", rect := Buffer(16, 0), "UInt", DT_CALCRECT)
+	width := NumGet(rect, 8, "Int") - NumGet(rect, "Int")
+	DllCall("SelectObject", "Ptr", DC, "Ptr", hOldObj, "Ptr")
+	DllCall("ReleaseDC", "Ptr", txtCtrlObj.Hwnd, "Ptr", DC)
+	return [width, height]
 }
 
 scrollbarGetPosition(ctrlHwnd) {
@@ -1518,11 +1576,15 @@ strCountStr(HayStack, SearchText, CaseSense := false) {
 	return count
 }
 
-print(msg, options?, putNewline?, compact := false, compress := true, strEscape := true, spacer := "`t") {
+print(msg, options?, putNewline := true, compact := false, compress := true, strEscape := true, spacer := "`t") {
 	if !(msg is String)
 		msg := objToString(msg, compact, compress, strEscape, spacer)
+	if (putNewline == true || (putNewline == -1 && InStr(msg, '`n')))
+		finalChar := '`n'
+	else
+		finalChar := ''
 	try 
-		FileAppend(msg . (IsSet(putNewline) ? (putNewline ? '`n' : '') : InStr(msg, '`n') ? '`n' : ''), "*", options ?? "UTF-8")
+		FileAppend(msg . finalChar, "*", options ?? "UTF-8")
 	catch Error 
 		MsgBoxAsGui(msg,,,,,,,1)
 }
