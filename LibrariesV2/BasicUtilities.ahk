@@ -516,14 +516,10 @@ replaceCharacters(text, replacer) {
 	result := ""
 	isMap := replacer is Map
 	for i, e in StrSplitUTF8(text) {
-		if (isMap) {
-			if replacer.Has(e)
-				result .= replacer[e]
-			else
-				result .= e
-		} else {
+		if (isMap)
+			result .= (replacer.Has(e) ? replacer[e] : e)
+		else
 			result .= replacer(e)
-		}
 	}
 	return result
 }
@@ -1257,8 +1253,8 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	mbGui.OnEvent("Close", (*) => finalEvent(buttonStyle, 0, 0, 0))
 	mbgui.Show("Center w" guiWidth " h" guiHeight)
 	if (wait) {
-		WinWait(mbgui.hwnd)
-		WinWaitClose(mbgui.hwnd)
+		WinWait(hwnd := mbgui.hwnd)
+		WinWaitClose(hwnd)
 		return retValue
 	}
 	return mbgui
