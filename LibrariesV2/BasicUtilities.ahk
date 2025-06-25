@@ -1576,10 +1576,10 @@ strCountStr(HayStack, SearchText, CaseSense := false) {
 	return count
 }
 
-print(msg, options?, putNewline := true, compact := false, compress := true, strEscape := true, spacer := "`t") {
+print(msg, options?, putNewline?, compact := false, compress := true, strEscape := true, spacer := "`t") {
 	if !(msg is String)
 		msg := objToString(msg, compact, compress, strEscape, spacer)
-	if (putNewline == true || (putNewline == -1 && InStr(msg, '`n')))
+	if (IsSet(putNewline) && putNewline == true || (!IsSet(putNewline) && InStr(msg, '`n')))
 		finalChar := '`n'
 	else
 		finalChar := ''
