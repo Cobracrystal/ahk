@@ -1068,17 +1068,31 @@ class TableFilter {
 					ctrl.gui.editDialogPath.Value := newPath
 				}
 			case "EditCustomThemeColor":
+				color := ctrl.Value
+				if (!InStr(color, "0x"))
+					color := "0x" . color
+				if (!RegExMatch(color, "^0x[[:xdigit:]]{1,6}$"))
+					return
+				color := Format("0x{1:06X}", color)
+				this.config.customThemeColor := color
+				ctrl.Opt("+Background" this.config.customThemeColor)
+				ctrl.SetFont(isDark(this.config.customThemeColor) ? "c0xFFFFFF" : "c0x000000")
+				if (this.config.colorTheme == 2) {
+					for i, g in this.guis
+						this.applyColorScheme(g)
+				}
+			case "ButtonCustomThemeColor":
 				color := colorDialog(this.config.customThemeColor, ctrl.gui.hwnd, true)
 				if (color == -1)
 					return
 				this.config.customThemeColor := Format("0x{1:06X}", color)
-				ctrl.Text := Format("{1:06X}", this.config.customThemeColor)
+				ctrl.gui.editCustomThemeColor.Text := Format("0x{1:06X}", this.config.customThemeColor)
 				if (this.config.colorTheme == 2) {
 					for i, g in this.guis
 						this.applyColorScheme(g)
 				} else {
-					ctrl.Opt("+Background" this.config.customThemeColor)
-					ctrl.SetFont(isDark(this.config.customThemeColor) ? "c0xFFFFFF" : "c0x000000")
+					ctrl.gui.editCustomThemeColor.Opt("+Background" this.config.customThemeColor)
+					ctrl.gui.editCustomThemeColor.SetFont(isDark(this.config.customThemeColor) ? "c0xFFFFFF" : "c0x000000")
 				}
 			case "HotkeyOpenGui":
 				hkey := ctrl.Value
@@ -1113,6 +1127,7 @@ class TableFilter {
 	}
 
 	createSettingsGui(guiObj, *) {
+		static WM_LBUTTONDOWN := 0x0201
 		if (guiObj is Gui.Control)
 			guiObj := guiObj.gui
 		for i, g in this.guis
@@ -1124,45 +1139,48 @@ class TableFilter {
 		settingsGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 		settingsGui.AddText("Center Section", "Settings for YoutubeDL Gui")
 
-
+		; color theme
 		settingsGui.AddText("xs 0x200 R1.45", "GUI Color Theme:")
-		settingsGui.AddDropDownList("vDDLColorTheme xs+260 yp r7 w125 Choose" . this.config.colorTheme + 1, ["Light Theme", "Dark Theme", "Custom Theme"]).OnEvent("Change", this.configGuiHandler.bind(this))
-
-		settingsGui.AddText("xs R1.45", "Custom theme color (Experimental feature):")
-		settingsGui.editCustomThemeColor := settingsGui.AddEdit("xs+285 yp vEditCustomThemeColor w100 ReadOnly", Format("{1:06X}", this.config.customThemeColor))
-		settingsGui.editCustomThemeColor.OnEvent("Focus", this.configGuiHandler.bind(this))
-
-		settingsGui.AddText("xs R1.45", "GLOBAL Hotkey to open main GUI:")
+		settingsGui.AddDropDownList("vDDLColorTheme xs+225 yp r7 w160 Choose" . this.config.colorTheme + 1, ["Light Theme", "Dark Theme", "Custom Theme"]).OnEvent("Change", this.configGuiHandler.bind(this))
+		; custom theme color
+		settingsGui.AddText("xs 0x200 R1.45", "Custom theme color:")
+		settingsGui.editCustomThemeColor := settingsGui.AddEdit("xs+225 yp vEditCustomThemeColor w70 Center", Format("0x{1:06X}", this.config.customThemeColor))
+		settingsGui.editCustomThemeColor.OnEvent("Change", this.configGuiHandler.bind(this))
+		settingsGui.editCustomThemeColor.OnEvent("LoseFocus", (ctrl, *) => ctrl.Value := this.config.customThemeColor)
+		settingsGui.AddButton("xs+300 yp-1 vButtonCustomThemeColor w86", "Pick Color").OnEvent("Click", this.configGuiHandler.bind(this))
+		; hotkey to open GUI
+		settingsGui.AddText("xs 0x200 R1.45", "Hotkey to open main GUI:")
 		settingsGui.AddHotkey("xs+210 yp vHotkeyOpenGui w175", this.config.guiHotkey).OnEvent("Change", this.configGuiHandler.bind(this))
-
+		; autosaving + backups
 		settingsGui.AddCheckbox("xs vCBAutoSaving Checked" this.config.autoSaving, "Autosave when exiting").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBUseBackups Checked" this.config.useBackups, "Backup opened files in %APPDATA%\Autohotkey\Tablefilter\Backups").OnEvent("Click", this.configGuiHandler.bind(this))
+		; custom dialog path
 		settingsGui.AddCheckbox("xs vCBUseCustomDialogPath Checked" this.config.useCustomDialogPath, "Always open dialogs in directory set below. Uses last used file otherwise.").OnEvent("Click", this.configGuiHandler.bind(this))
-
 		settingsGui.AddText("xs 0x200 R1.45", "Dialog Path:")
 		settingsGui.editDialogPath := settingsGui.AddEdit("xs+70 yp r1 w250 -Multi Readonly", this.config.customDialogPath)
 		settingsGui.AddButton("vButtonDialogPath yp-1 xs+325 w60", "Browse...").OnEvent("Click", this.configGuiHandler.bind(this))
-
+		; default values, auto runic, autoformat values
 		settingsGui.AddCheckbox("xs vCBUseDefaultValues Checked" this.config.useDefaultValues, "Insert placeholder values into empty fields when editing rows").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBAutoTranslateRunic Checked" this.config.autoTranslateRunic, "Automatically translate Kayoogis into runes").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBFormatValues Checked" this.config.formatValues, "Format first row to uppercase").OnEvent("Click", this.configGuiHandler.bind(this))
+		; case sense in filter, remain included in search when editing even if edited doesn't match search
 		settingsGui.AddCheckbox("xs vCBFilterCaseSense Checked" this.config.filterCaseSense, "Case-sensitive search").OnEvent("Click", this.configGuiHandler.bind(this))
 		settingsGui.AddCheckbox("xs vCBRemainIncludedOnModify Checked" this.config.remainIncludedOnModify, "Always show newly edited entries in current search").OnEvent("Click", this.configGuiHandler.bind(this))
-
+		; duplicate filter column
 		settingsGui.AddText("xs 0x200 R1.45", "Column to search duplicates in:")
 		settingsGui.dropdownDuplicateColumn := settingsGui.AddDropDownList("vDDLDuplicateColumn xs+260 yp r7 w125 Choose" . this.config.duplicateColumn, this.data.keys).OnEvent("Change", this.configGuiHandler.bind(this))
-
+		; tagging column
 		settingsGui.AddText("xs 0x200 R1.45", "Column to `"tag`" from context menu:")
 		settingsGui.AddDropDownList("vDDLTaggingColumn xs+260 yp r7 w125 Choose" . objContainsValue(this.data.keys, this.config.taggingColumn), this.data.keys).OnEvent("Change", this.configGuiHandler.bind(this))
-
+		; copy column
 		settingsGui.AddText("xs 0x200 R1.45", "Column to copy when pressing Ctrl+C:")
 		settingsGui.AddDropDownList("vDDLCopyColumn xs+260 yp r7 w125 Choose" . this.config.copyColumn, this.data.keys).OnEvent("Change", this.configGuiHandler.bind(this))
 		settingsGui.AddText("xs 0x200 R1.45", "(Press Ctrl+Shift+C to copy all contents of the selected row)")
-
+		; debug
 		settingsGui.AddCheckbox("xs vCBDebug Checked" this.config.debug, "Debugging mode").OnEvent("Click", this.configGuiHandler.bind(this))
-
+		; reset settings + backup folder
 		settingsGui.AddButton("xs", "Reset Settings").OnEvent("Click", resetSettings)
-		settingsGui.AddButton("xs+260 yp w125", "Open Backup Folder").OnEvent("Click", (*) => Run('explorer.exe "' this.data.appdataPath "\Backups" '"'))
+		settingsGui.AddButton("xs+261 yp w125", "Open Backup Folder").OnEvent("Click", (*) => Run('explorer.exe "' this.data.appdataPath "\Backups" '"'))
 		if (!guiObj.HasOwnProp("children"))
 			guiObj.children := []
 		guiObj.children.push(settingsGui)
