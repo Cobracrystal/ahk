@@ -163,19 +163,36 @@ objContainsValue(obj, value, comparator := ((a,b) => (a = b))) {
 }
 
 /**
+ * Returns a deep copy of a given object.
+ * @param obj A .Clone()-able object
+ * @returns {Object} A deep clone of the given object
+ */
+objClone(obj) {
+	copy := obj.Clone()
+	for i, e in copy
+		copy[i] := objClone(e)
+	return copy
+}
+
+/**
  * Deletes given Value from Object, either on first encounter or on all encounters. Returns count of removed values
  * @param {Array | Map} obj
  * @param value 
- * @param {Integer} removeAll 
+ * @param {Integer} limit if 0, removes all
  * @returns {Integer} count
  */
-objRemoveValue(obj, value := "", removeAll := true, comparator := ((iterator,value) => (iterator = value))) {
+objRemoveValue(obj, value := "", limit := 0, comparator := ((iterator,value) => (iterator = value))) {
 	if !(obj is Array || obj is Map)
 		throw(Error("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
+	count := 0
 	for next, e in obj
-		if (comparator(e, value))
-			queue.push(next)
+		if (comparator(e, value)) {
+			if (!limit || count++ < limit)
+				queue.push(next)
+			else
+				break
+		}
 	n := queue.Length
 	while (queue.Length != 0) {
 		next := queue.Pop()
@@ -194,14 +211,19 @@ objRemoveValue(obj, value := "", removeAll := true, comparator := ((iterator,val
  * @param {Integer} removeAll 
  * @returns {Integer} count
  */
-objRemoveValues(obj, values, removeAll := true, comparator := ((a,b) => (a = b))) {
+objRemoveValues(obj, values, limit := 0, comparator := ((iterator,value) => (iterator = value))) {
 	if !(obj is Array || obj is Map)
 		throw(Error("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
+	count := 0
 	for next, e in obj
 		for i, f in values
-			if (comparator(e, f))
-				queue.push(next)
+			if (comparator(e, f)) {
+				if (!limit || count++ < limit)
+					queue.push(next)
+				else
+					break
+			}
 	n := queue.Length
 	while (queue.Length != 0) {
 		next := queue.Pop()
@@ -213,7 +235,7 @@ objRemoveValues(obj, values, removeAll := true, comparator := ((a,b) => (a = b))
 	return n
 }
 
-objForEach(obj, fn := ((a) => (objToString(a))), value := 0, conditional := ((a,b) => (true))) {
+objForEach(obj, fn := ((a) => (objToString(a))), value := 0, conditional := ((iterator,value) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(Error("objForEach does not handle type " . Type(obj)))
@@ -228,7 +250,7 @@ objGetMinimum(obj) => objCollect(obj, (a,b) => Min(a,b))
 objGetMaximum(obj) => objCollect(obj, (a,b) => Max(a,b))
 objGetAverage(obj) => objCollect(obj, (a,b) => (a+b)) / (obj is Array ? obj.Length : obj.Count)
 
-objCollect(obj, fn := ((a, b) => (a . objToString(b))), value := 0, conditional := ((a,b) => (true))) {
+objCollect(obj, fn := ((base, iterator) => (base . objToString(iterator))), value := 0, conditional := ((iterator,value) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(Error("objForEach does not handle type " . Type(obj)))
@@ -828,7 +850,7 @@ ExecScript(expression, Wait := true, void := false) {
 	exec.StdIn.Write(input)
 	exec.StdIn.Close()
 	if Wait
-		return exec.StdOut.ReadAll()
+		return RTrim(exec.StdOut.ReadAll(), " `t`n")
 }
 
 cmdRet(sCmd, callBackFuncObj := "", encoding := 'UTF-8') {
@@ -1146,7 +1168,7 @@ format_argb(color, reverse := true, alpha?) {
 
 ; 0xFF00F9
 colorPreviewGUI(color) {
-	if (!RegexMatch(color, "i)(?:0x)?[0-9A-F]{6}"))
+	if (!RegexMatch(color, "(?:0x)?[[:xdigit:]]{1,6}"))
 		return
 	CoordMode("Mouse")
 	MouseGetPos(&x, &y)
@@ -1192,6 +1214,26 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 		MB_CUSTOM5BTNS,	[1,2,3,4,5],
 		MB_CUSTOM6BTNS,	[1,2,3,4,5,6]
 	)
+
+	/*
+    Icon
+	static Error      => 0x10
+	static Question   => 0x20
+	static Warning    => 0x30
+	static Info       => 0x40
+
+    static Default2       => 0x100
+    static Default3       => 0x200
+    static Default4       => 0x300
+
+    static SystemModal    => 0x1000
+    static TaskModal      => 0x2000
+    static AlwaysOnTop    => 0x40000
+
+    static HelpButton     => 0x4000
+    static RightJustified => 0x80000
+    static RightToLeft    => 0x100000
+	*/
 
 	static MB_ICONHANDERROR				:= 16
 	static MB_ICONQUESTION 				:= 32
@@ -1375,6 +1417,65 @@ scrollbarGetPosition(ctrlHwnd) {
 	nPage := NumGet(ScrollInfo, 16, "uint")
 	curPos := NumGet(ScrollInfo, 20, "uint")
 	return curPos ? curPos / (nMax - nPage + 1 - nMin) : 0
+}
+
+class DataListView { ; this is (mostly) based on Pulover's LV_Rows class, ignoring LV_EX. See https://github.com/Pulover/Class_LV_Rows
+	
+	__New(LV) {
+		this.LV := LV
+		this.rows := {}
+		this.headers := []
+		return this
+	}
+	
+	Add(Options?, Cols*) => this.LV.Add(options?, cols*)
+	Insert(RowNumber , Options?, Cols*)  => this.LV.Insert(RowNumber , Options?, Cols*) 
+	Modify(RowNumber, Options?, NewCols*)  => this.LV.Modify(RowNumber, Options?, NewCols*) 
+	Delete(RowNumber?) => this.LV.Delete(rowNumber?)
+	
+	InsertCol(ColumnNumber, Options?, ColumnTitle?)  => this.LV.InsertCol(ColumnNumber, Options?, ColumnTitle?) 
+	ModifyCol(ColumnNumber?, Options?, ColumnTitle?)  => this.LV.ModifyCol(ColumnNumber?, Options?, ColumnTitle?) 
+	DeleteCol(ColumnNumber) => this.LV.DeleteCol(ColumnNumber)
+	
+	GetCount(Mode?)  => this.LV.GetCount(Mode?) 
+	GetNext(StartingRowNumber?, RowType?)  => this.LV.GetNext(StartingRowNumber?, RowType?) 
+	GetText(RowNumber, ColumnNumber?) => this.LV.GetText(RowNumber, ColumnNumber?)
+	
+	SetImageList(ImageListID, IconType?)  => this.LV.SetImageList(ImageListID, IconType?)
+
+	OnEvent(EventName, Callback, AddRemove?) => (this.LV.OnEvent(EventName, Callback, AddRemove?), this)
+
+	Copy() {
+		return 0
+	}
+
+	Cut() {
+		return 0
+	}
+
+	Paste() {
+		return 0
+	}
+
+	Duplicate() {
+		return 0
+	}
+
+	; Delete() {
+	; 	return 0
+	; }
+
+	MoveUp() {
+		return 0
+	}
+
+	MoveDown() {
+		return 0
+	}
+
+	Drag() {
+		return 0
+	}
 }
 
 base64Encode(str, encoding := "UTF-8") {
@@ -1576,10 +1677,10 @@ strCountStr(HayStack, SearchText, CaseSense := false) {
 	return count
 }
 
-print(msg, options?, putNewline?, compact := false, compress := true, strEscape := true, spacer := "`t") {
+print(msg, options?, putNewline := true, compact := false, compress := true, strEscape := true, spacer := "`t") {
 	if !(msg is String)
 		msg := objToString(msg, compact, compress, strEscape, spacer)
-	if (IsSet(putNewline) && putNewline == true || (!IsSet(putNewline) && InStr(msg, '`n')))
+	if (putNewline == true || putNewline == -1 && InStr(msg, '`n'))
 		finalChar := '`n'
 	else
 		finalChar := ''
