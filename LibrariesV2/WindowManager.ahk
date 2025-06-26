@@ -1,7 +1,9 @@
 ﻿; https://github.com/cobracrystal/ahk
 ; TODO 3: Add Settings for excluded windows (with editable list, like in PATH native settings), automatically form that into regex
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
-; add rightclick menu option to show command line only for this window
+; cache command lines to reuse
+; when refreshing, selected lines should remain selected.
+; add general updates
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "*i %A_LineFile%\..\..\LibrariesV2\CustomWindowFunctions.ahk"
 ; Usage (if including this file as a library):
@@ -28,9 +30,8 @@ class WindowManager {
 				WinActivate(this.gui.hwnd)
 			else {
 				this.data.coords := windowGetCoordinates(this.gui.hwnd)
-				this.data.coords.mmx := (this.data.coords.mmx == 3 ? 1 : (this.data.coords.mmx == 2 ? -1 : 0))
 				this.gui.destroy()
-				this.gui := -1
+				this.gui := 0
 			}
 		}
 		else if (mode != "C")
@@ -40,128 +41,135 @@ class WindowManager {
 	;------------------------------------------------------------------------
 
 	static __New() {
-		CUSTOM_FUNCTIONS := [vlcMinimalViewingMode]
-		this.gui := -1
+		this.customFunctions := ["vlcMinimalViewingMode"]
+		this.gui := 0
+		this.settingsGui := 0
 		this.data := {
-			coords: {x: 300, y: 200, w: 1022, h: 432, mmx: 0}
+			coords: {x: 300, y: 200, cw: 1018, ch: 410, mmx: 0},
+			currentWinInfo: [],
 		}
-		; Tray Menu
-		subMenu := TrayMenu.submenus["GUIs"]
-		subMenu.Add("Open Window Manager", this.windowManager.Bind(this))
-		A_TrayMenu.Insert("1&", "GUIs", subMenu)
 		; window menu
-		this.currentWinInfo := []
-		this.menus := {}
-		this.menus.menu := Menu()
-		this.menus.subMenu := Menu()
-		this.menus.customFunctions := Map()
-		for cFunc in CUSTOM_FUNCTIONS ; define custom function map
-			this.menus.customFunctions[cFunc.Name] := cFunc
-		this.menus.MenuFunctionNames := [
-			"Activate Window", "Reset Window Position", "Minimize Window", "Maximize Window",
-			"Borderless Fullscreen", "Restore Window", "Close Window",
-			0,
-			"Copy Window Title", "View Command Line", "View Window Text", "View Properties", "View Program Folder"
-		]
-		this.menus.SubMenuFunctionNames := [
-			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Spread Windows on all Screens", "Spread Windows per Screen"]
-		this.menus.subMenuToggles := [
-			["Toggle Window Lock", "Set Window Lock", "Remove Window Lock"],
-			["Toggle Title Bar", "Add Title Bar", "Remove Title Bar"],
-			["Toggle Visibility", "Hide Window", "Show Window"]
-		]
-		handler := this.menuHandler.Bind(this)
-		for toggle in this.menus.subMenuToggles {
-			toggleMenu := Menu()
-			toggleMenu.Add(toggle[1], handler)
-			toggleMenu.Add(toggle[2], handler)
-			toggleMenu.Add(toggle[3], handler)
-			toggleMenu.Default := toggle[1]
-			this.menus.submenu.Add(toggle[1], toggleMenu)
-		}
-		for fName in this.menus.SubMenuFunctionNames ; add submenu standard functions
-			this.menus.submenu.Add(fName, handler)
-		this.menus.submenu.Add() ; add submenu separator
-		for fName, cFunc in this.menus.customFunctions ; add submenu custom functions
-			this.menus.submenu.Add(fName, handler)
-		for fName in this.menus.MenuFunctionNames ; add menu functions
-			this.menus.menu.Add(fName ? fName : unset, fName ? handler : unset)
-		this.menus.menu.Insert(objContainsValue(this.menus.MenuFunctionNames, 0) . "&", "Other Options", this.menus.submenu)
 		HotIfWinactive("Window Manager ahk_class AutoHotkeyGUI")
 		Hotkey("^f", (*) => (this.gui["EditFilterWindows"].Focus()))
 		Hotkey("^d", (*) => (this.LV.Focus()))
-		Hotkey("^BackSpace", (*) => Send("^+{Left}{Delete}"))
+		Hotkey("^BackSpace", (*) => Send("^{Left}^{Delete}"))
 		HotIfWinactive()
-		this.settings := WindowManager.defaultSettings
-		if (A_LineFile == A_ScriptFullPath)
-			Hotkey("^F11", this.windowManager.bind(this, "T"))
+		this.config := this.defaultConfig
+		this.menus := this.buildContextMenu()
+		try Hotkey(this.config.guiHotkey, this.windowManager.bind(this, "T"))
+		menuText := "Open Window Manager (" this.config.guiHotkey ")"
+		if (A_LineFile == A_ScriptFullPath) {
+			A_TrayMenu.Insert("1&", menuText, this.windowManager.Bind(this))
+			A_TrayMenu.Default := menuText
+		} else {
+			subMenu := TrayMenu.submenus["GUIs"]
+			subMenu.Add(menuText, this.windowManager.Bind(this))
+			A_TrayMenu.Insert("1&", "GUIs", subMenu)
+		}
 	}
 
 	static guiCreate() {
+		static LVS_EX_DOUBLEBUFFER := 0x10000
+		static LVWidth := 1000
 		this.gui := Gui("+OwnDialogs +Resize", "Window Manager")
 		this.gui.OnEvent("Close", (*) => this.windowManager("Close"))
 		this.gui.OnEvent("Escape", (*) => this.windowManager("Close"))
 		this.gui.OnEvent("Size", this.onResize.bind(this))
 		this.gui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
-		this.gui.AddCheckbox("Section vCheckboxHiddenWindows Checked" . this.settings.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
-		this.gui.AddCheckbox("ys vCheckboxExcludedWindows Checked" . !this.settings.useBlacklist, "Show Excluded Windows?").OnEvent("Click", this.settingCheckboxHandler.bind(this))
-		this.gui.AddCheckbox("ys vCheckboxGetCommandLine Checked" . this.settings.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.settingCheckboxHandler.bind(this))
-		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false))
-		this.gui.AddText("ys xs+890 w110 vWindowCount", "Window Count: 0")
-		this.LV := this.gui.AddListView("xs R20 w1000 +Multi", ["handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "PID", "Process Path", "Command Line"])
-		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
-		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
-		this.LV.OnEvent("DoubleClick", (obj, rowN) => rowN == 0 ? 0 : WinActivate(Integer(obj.GetText(rowN, 1))))
+		this.gui.AddCheckbox("Section R1.45 vCBHiddenWindows Checked" . this.config.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.configGuiHandler.bind(this))
+		this.gui.AddCheckbox("ys R1.45 vCBExcludedWindows Checked" . !this.config.useBlacklist, "Show Excluded Windows?").OnEvent("Click", this.configGuiHandler.bind(this))
+		this.gui.AddCheckbox("ys R1.45 vCBGetCommandLine Checked" . this.config.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.configGuiHandler.bind(this))
+		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false, false))
+		this.gui.AddText("ys+2 0x200 R1.45 xs+" LVWidth-160 " w100 vWindowCount", "Window Count: 0")
+		this.gui.AddButton("xs+" LVWidth-50 " ys w50 vBTNSettings", "Settings").OnEvent("Click", this.createSettingsGui.bind(this))
+		this.LV := this.gui.AddListView("xs R20 w1000 +Multi", ["#z", "handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "PID", "Process Path", "Command Line"])
+		this.LV.Opt("+LV" LVS_EX_DOUBLEBUFFER)
+		this.LV.OnNotify(-155, this.LV_Event.bind(this, "Key"))
+		this.LV.OnEvent("ContextMenu", this.LV_Event.bind(this, "ContextMenu"))
+		this.LV.OnEvent("DoubleClick", this.LV_Event.bind(this, "DoubleClick"))
 		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", this.activateButton.bind(this))
-		;	this.LV.OnEvent("ColClick", this.onColClick.bind(this)) ; store sorting state for refresh?
 		this.guiListviewCreate(true, true)
-		if (this.settings.darkMode)
-			this.toggleGuiDarkMode(this.settings.darkMode)
-		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.data.coords.x, this.data.coords.y, this.data.coords.w - 2 - 14, this.data.coords.h - 32 - 7, this.data.coords.mmx == 1 ? "Maximize" : "Restore"))
+		this.applyColorScheme(this.gui)
+		; this.gui.show("Autosize")
+		this.gui.Show(Format("x{1}y{2}w{3}h{4} {5}", this.data.coords.x, this.data.coords.y, this.data.coords.cw, this.data.coords.ch, this.data.coords.mmx == 1 ? "Maximize" : "Restore"))
 		this.LV.Focus()
 	}
 
-	; this function was frankenstein'd by combining things from a variety of different people that are too numerous to name
-	static toggleGuiDarkMode(dark) {
-		static WM_THEMECHANGED := 0x031A
-		; // title bar dark
-		if (VerCompare(A_OSVersion, "10.0.17763")) {
-			attr := 19
-			if (VerCompare(A_OSVersion, "10.0.18985")) {
-				attr := 20
-			}
-			DllCall("dwmapi\DwmSetWindowAttribute", "ptr", this.gui.hwnd, "int", attr, "int*", dark ? true : false, "int", 4)
+
+	static applyColorScheme(guiObj?) {
+		bgColor := this.config.colorTheme ? (this.config.colorTheme == 2 ? this.config.customThemeColor : this.colors.DARK) : "0xFFFFFF"
+		dark := isDark(bgColor)
+		fontColor := this.config.colorTheme == 2 ? this.config.customThemeFontColor : (dark ? "0xFFFFFF" : "0x000000")
+		if (!IsSet(guiObj)) {
+			this.applyColorScheme(this.gui)
+			this.applyColorScheme(this.settingsGui)
+			return
 		}
-		this.gui.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
-		font := (dark ? "c" this.settings.darkThemeFontColor : "cDefault")
-		this.gui.SetFont(font)
-		for cHandle, ctrl in this.gui {
-			ctrl.Opt(dark ? "+Background" this.settings.darkThemeColor : "-Background")
-			ctrl.SetFont(font)
-			if (ctrl is Gui.Button || ctrl is Gui.ListView) {
-				; todo: listview headers dark -> https://www.autohotkey.com/boards/viewtopic.php?t=115952
-				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
-				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
-				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
+		this.toggleGuiColorScheme(guiObj, dark, bgColor, fontColor)
+		if (this.settingsGui == guiObj) {
+			for ctrlName in ["editCustomThemeColor", "editCustomThemeFontColor"] {
+				guiObj.%ctrlName%.Opt("+Background" this.config.customThemeColor)
+				guiObj.%ctrlName%.SetFont('c' this.config.customThemeFontColor)
 			}
 		}
 	}
 
-	static guiListviewCreate(resize := false, firstCall := false, guiCtrl := false, *) {
+	static toggleGuiColorScheme(guiObj, dark, color, fontColor) {
+		static WM_THEMECHANGED := 0x031A
+		;// title bar dark
+		if (VerCompare(A_OSVersion, "10.0.17763")) {
+			attr := 19
+			if (VerCompare(A_OSVersion, "10.0.18985"))
+				attr := 20
+			DllCall("dwmapi\DwmSetWindowAttribute", "ptr", guiObj.hwnd, "int", attr, "int*", (dark ? true : false), "int", 4)
+		}
+		guiObj.BackColor := color
+		font := 'c' . fontColor
+		guiObj.SetFont(font)
+		for cHandle, ctrl in guiObj {
+			if (ctrl is Gui.Hotkey || ctrl is Gui.Slider)
+				continue
+			ctrl.Opt("+Background" color)
+			ctrl.SetFont(font)
+			if (ctrl is Gui.Button || ctrl is Gui.ListView)
+				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
+			if (ctrl is Gui.DDL)
+				DllCall("uxtheme\SetWindowTheme", "Ptr", ctrl.hWnd, "Str", (dark ? "DarkMode_CFD" : "CFD"), "Ptr", 0)
+			ctrl.Redraw()
+		}
+		return
+	}
+
+	static guiListviewCreate(resize := false, firstCall := false, update := true, *) {
 		this.gui.Opt("+Disabled")
 		this.LV.Opt("-Redraw")
-		this.LV.Delete()
-		if (!guiCtrl) {
-			this.currentWinInfo := this.getAllWindowInfo(this.settings.detectHiddenWindows, this.settings.useBlacklist)
-			if (firstCall)
-				this.currentWinInfo.InsertAt(1, this.getWindowInfo(this.gui.Hwnd))
+		wHandles := [], lastRow := 0
+		focusedRow := this.LV.GetNext(0, "F")
+		focusedHandle := focusedRow ? Integer(this.LV.GetText(focusedRow, 2)) : 0
+		Loop {
+			lastRow := this.LV.GetNext(lastRow)
+			if (lastRow == 0)
+				break
+			wHandles.push(Integer(this.LV.GetText(lastRow, 2)))
 		}
-		for i, win in this.currentWinInfo
-			if (this.isIncludedInSearch(win))
-				this.LV.Add(, win.hwnd, win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
-		this.gui["WindowCount"].Value := Format("Window Count: {:5}", this.LV.GetCount())
+		this.LV.Delete()
+		if (update) {
+			this.data.currentWinInfo := this.getAllWindowInfo(this.config.detectHiddenWindows, this.config.useBlacklist)
+			if (firstCall)
+				this.data.currentWinInfo.InsertAt(1, this.getWindowInfo(this.gui.Hwnd))
+		}
+		for i, win in this.data.currentWinInfo
+			if (this.isIncludedInSearch(win)) {
+				options := ""
+				if (objRemoveValue(wHandles, win.hwnd, 1))
+					options .= "Select"
+				if (win.hwnd == focusedHandle)
+					options .= " Focus"
+				this.LV.Add(options, i, win.hwnd, win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
+			}
+		this.gui["WindowCount"].Value := Format("Window Count: {:4}", this.LV.GetCount())
 		if (firstCall)
-			for i in [1, 4, 5, 6, 7, 8, 10]
+			for i in [1, 2, 5, 6, 7, 8, 9, 11]
 				this.LV.ModifyCol(i, "+Integer")
 		if (resize) {
 			Loop (this.LV.GetCount("Col"))
@@ -172,25 +180,25 @@ class WindowManager {
 	}
 
 	static isIncludedInSearch(win) {
+		static aliases := Map(
+			"hwnd",			["handle", "id", "hwnd", "ahk_id"],
+			"title",		["title", "ahk_title"],
+			"process",		["process", "ahk_process"],
+			"state",		["mmx", "state", "ahk_state"],
+			"xpos",			["x", "xpos", "ahk_x"],
+			"ypos",			["y", "ypos", "ahk_y"],
+			"width",		["w", "width", "ahk_w"],
+			"height",		["h", "height", "ahk_h"],
+			"class",		["class", "ahk_class"],
+			"pid",			["pid", "processID", "ahk_pid"],
+			"processPath",	["processPath", "path", "ahk_exe"],
+			"commandLine",	["command", "cmdl", "cmd", "commandLine", "ahk_cmd"]
+		)
 		search := this.gui["EditFilterWindows"].Value
 		if (search == "")
 			return true
 		tagMap := Map()
-		mapOfMaps := Map(
-			["handle", "id", "hwnd", "ahk_id"], "hwnd",
-			["title", "ahk_title"], "title",
-			["process", "ahk_process"], "process",
-			["mmx", "state", "ahk_state"], "state",
-			["x", "xpos", "ahk_x"], "xpos",
-			["y", "ypos", "ahk_y"], "ypos",
-			["w", "width", "ahk_w"], "width",
-			["h", "height", "ahk_h"], "height",
-			["class", "ahk_class"], "class",
-			["pid", "processID", "ahk_pid"], "pid",
-			["processPath", "path", "ahk_exe"], "processPath",
-			["command", "cmdl", "cmd", "commandLine", "ahk_cmd"], "commandLine"
-		)
-		for keys, value in mapOfMaps
+		for value, keys in aliases
 			for key in keys
 				tagMap[key] := value
 		
@@ -206,12 +214,12 @@ class WindowManager {
 		freeSearch := search
 		flagInclude := true
 		for tag, s in searches
-			if (!InStr(win.%tag%, s))
+			if (!InStr(win.%tag%, s, this.config.filterCaseSense))
 				return false
 		if freeSearch == ""
 			return true
 		for i, e in win.OwnProps()
-			if (InStr(e, freeSearch))
+			if (InStr(e, freeSearch, this.config.filterCaseSense))
 				return true
 		return false
 	}
@@ -224,7 +232,7 @@ class WindowManager {
 			wHandles := WinGetList()
 		for i, wHandle in wHandles {
 			if useBlacklist
-				for e in this.settings.blacklist
+				for e in this.config.blacklist
 					if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == ""))
 						continue 2
 			windows.push(this.getWindowInfo(wHandle))
@@ -245,7 +253,7 @@ class WindowManager {
 		try	processName := WinGetProcessName(wHandle)
 		try	processPath := WinGetProcessPath(wHandle)
 		try	pid := WinGetPID(wHandle)
-			if (this.settings.getCommandLine)
+			if (this.config.getCommandLine)
 				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
 			; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
 		return {
@@ -308,120 +316,129 @@ class WindowManager {
 		return (s.length > 0 ? s : [""])
 	}
 
-	static onResize(gui, mmx, w, h) {
+	static onResize(g, mmx, w, h) {
 		if (mmx == -1) ; minimized
 			return
-		this.LV.Move(,,w-20,h-35)
-		this.gui["WindowCount"].Move(w-111)
+		this.lv.getpos(,,&lvw, &lvh)
+		this.LV.Move(,,w-18,h-42)
+		this.lv.getpos(,,&lvnw, &lvnh)
+		deltaX := lvnw - lvw
+		for ctrlName in ["WindowCount", "BTNSettings"] {
+			this.gui[ctrlName].GetPos(&ox)
+			this.gui[ctrlName].Move(ox+deltaX)
+			this.gui[ctrlName].Redraw()
+		}
 	}
 
-	static onContextMenu(ctrlObj, rowN, isRightclick, x, y) {
-		if (rowN == 0 || rowN > this.LV.GetCount())
-			return
-		wHandle := Integer(this.LV.GetText(rowN, 1))
-		if (!WinExist(wHandle)) {
-			this.LV.Delete(rowN)
-			return
-		}
-		style := WinGetStyle(wHandle)
-		exStyle := WinGetExStyle(wHandle)
-		if (exStyle & this.windowExStyles.WS_EX_TOPMOST)
-			this.menus.submenu.Check("Toggle Window Lock")
-		else
-			this.menus.submenu.Uncheck("Toggle Window Lock")
-		if (style & this.windowStyles.WS_CAPTION)
-			this.menus.submenu.Check("Toggle Title Bar")
-		else
-			this.menus.submenu.Uncheck("Toggle Title Bar")
-		if (style & this.windowStyles.WS_VISIBLE)
-			this.menus.submenu.Check("Toggle Visibility")
-		else
-			this.menus.submenu.Uncheck("Toggle Visibility")
-		this.menus.menu.show()
-	}
-
-	static onKeyPress(ctrlObj, lParam) {
-		vKey := NumGet(lParam, 24, "ushort")
-		rowNFocused := this.LV.GetNext(0,"F")
-		rowNums := []
-		wHandles := []
-		Loop {
-			nextRow := this.LV.GetNext(A_Index == 1 ? 0 : rowNums[rowNums.Length])
-			if (nextRow == 0)
-				break
-			rowNums.push(nextRow)
-		}
-		if (rowNums.Length == 0 && vKey != "65" && vKey != "116")
-			return
-		for e in rowNums
-			wHandles.push(Integer(this.LV.GetText(e, 1)))
-		DetectHiddenWindows(this.settings.detectHiddenWindows)
-		switch vKey {
-			case "46": 	;// Del/Entf Key -> Close that window
-				if (GetKeyState("Shift"))
-					flagKill := true
-					if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
-						return
-				rWH := arrayReverse(wHandles)
-				for i, wHandle in rWH {
-					try {
-						if (flagKill ?? false)
-							WinKill(wHandle)
-						else
-							WinClose(wHandle)
-					}
+	static LV_Event(eventType, LVObj, param, *) {
+		switch eventType {
+			case "Key":
+				vKey := NumGet(param, 24, "ushort")
+				rowNFocused := this.LV.GetNext(0,"F")
+				rowNums := []
+				wHandles := []
+				Loop {
+					nextRow := this.LV.GetNext(A_Index == 1 ? 0 : rowNums[rowNums.Length])
+					if (nextRow == 0)
+						break
+					rowNums.push(nextRow)
 				}
-				for i, wHandle in rWH
-					if WinWaitClose(wHandle, , 0.5) {
-						try this.LV.Delete(rowNums[rowNums.Length - i + 1])
-						try objRemoveValue(this.currentWinInfo, wHandle,, (iterator, wHandle) => (iterator.hwnd == wHandle))
-					}
-			case "65": ; ctrl A
-				if (!GetKeyState("Ctrl"))
+				if (rowNums.Length == 0 && vKey != "65" && vKey != "116")
 					return
-				guiRowIndex := 0
-				if !GetKeyState("Shift")
-					Loop(this.LV.GetCount())
-						if (this.LV.GetText(A_Index, 1) == this.gui.Hwnd) {
-							guiRowIndex := A_Index
-							break
+				for e in rowNums
+					wHandles.push(Integer(this.LV.GetText(e, 2)))
+				DetectHiddenWindows(this.config.detectHiddenWindows)
+				switch vKey {
+					case "46": 	;// Del/Entf Key -> Close that window
+						cFunction := GetKeyState("Shift") ? WinKill : WinClose
+						if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
+							return
+						rWH := arrayReverse(wHandles)
+						for i, wHandle in rWH
+							try cFunction(wHandle)
+						for i, wHandle in rWH
+							if WinWaitClose(wHandle, , 0.5) {
+								try this.LV.Delete(rowNums[rowNums.Length - i + 1])
+								try objRemoveValue(this.data.currentWinInfo, wHandle,, (iterator, wHandle) => (iterator.hwnd == wHandle))
+							}
+					case "65": ; ctrl A
+						if (!GetKeyState("Ctrl"))
+							return
+						guiRowIndex := 0
+						if !GetKeyState("Shift")
+							Loop(this.LV.GetCount())
+								if (this.LV.GetText(A_Index, 2) == this.gui.Hwnd) {
+									guiRowIndex := A_Index
+									break
+								}
+						if (guiRowIndex)
+							this.LV.Modify(guiRowIndex, "-Select")
+						Loop this.LV.GetCount()
+							if (A_Index != guiRowIndex)
+								this.LV.Modify(A_Index, "+Select")
+					case "67": ; ctrl C
+						if (GetKeyState("Ctrl") && GetKeyState("Shift")) { ; ctrl shift C to get all info
+							wInfoArray := []
+							for rowN in rowNums {
+								wInfoArray.Push({
+									hwnd: 	 this.LV.GetText(rowN, 2),
+									title: 	 this.LV.GetText(rowN, 3),
+									process: this.LV.GetText(rowN, 4),
+									state: 	 this.LV.GetText(rowN, 5),
+									xpos: 	 this.LV.GetText(rowN, 6),
+									ypos: 	 this.LV.GetText(rowN, 7),
+									width: 	 this.LV.GetText(rowN, 8),
+									height:  this.LV.GetText(rowN, 9),
+									class: 	 this.LV.GetText(rowN, 10),
+									pid: 	 this.LV.GetText(rowN, 11),
+									processPath: this.LV.GetText(rowN, 12),
+									commandLine: this.config.getCommandLine ? this.LV.GetText(rowN, 13) : unset
+								})
+							}
+							A_Clipboard := objToString(wInfoArray, false, false)
+						} else if (GetKeyState("Ctrl") && GetKeyState("Alt")) { ; ctrl + alt C to get title only
+							for rowN in rowNums
+								str .= this.LV.GetText(rowN, 3) "`n"
+							A_Clipboard := Trim(str, "`n")
+						} else if (GetKeyState("Ctrl")) { ; ctrl C to get identifier
+							for rowN in rowNums
+								str .= this.LV.GetText(rowN, 3) " ahk_exe " this.LV.GetText(rowN, 4) " ahk_class " this.LV.GetText(rowN, 10) . "`n"
+							A_Clipboard := Trim(str, "`n")
 						}
-				if (guiRowIndex)
-					this.LV.Modify(guiRowIndex, "-Select")
-				Loop this.LV.GetCount()
-					if (A_Index != guiRowIndex)
-						this.LV.Modify(A_Index, "+Select")
-			case "67": ; ctrl C
-				if (GetKeyState("Ctrl") && GetKeyState("Shift")) { ; ctrl shift C to get all info
-					wInfoArray := []
-					for rowN in rowNums {
-						wInfoArray.Push({
-							hwnd: 	 this.LV.GetText(rowN, 1),
-							title: 	 this.LV.GetText(rowN, 2),
-							process: this.LV.GetText(rowN, 3),
-							state: 	 this.LV.GetText(rowN, 4),
-							xpos: 	 this.LV.GetText(rowN, 5),
-							ypos: 	 this.LV.GetText(rowN, 6),
-							width: 	 this.LV.GetText(rowN, 7),
-							height:  this.LV.GetText(rowN, 8),
-							class: 	 this.LV.GetText(rowN, 9),
-							pid: 	 this.LV.GetText(rowN, 10),
-							processPath: this.LV.GetText(rowN, 11),
-							commandLine: this.settings.getCommandLine ? this.LV.GetText(rowN, 12) : unset
-						})
-					}
-					A_Clipboard := objToString(wInfoArray, false, false)
-				} else if (GetKeyState("Ctrl") && GetKeyState("Alt")) { ; ctrl + alt C to get title only
-					for rowN in rowNums
-						str .= this.LV.GetText(rowN, 2) "`n"
-					A_Clipboard := Trim(str, "`n")
-				} else if (GetKeyState("Ctrl")) { ; ctrl C to get identifier
-					for rowN in rowNums
-						str .= this.LV.GetText(rowN, 2) " ahk_exe " this.LV.GetText(rowN, 3) " ahk_class " this.LV.GetText(rowN, 9) . "`n"
-					A_Clipboard := Trim(str, "`n")
+					case "77":
+						for rowN in rowNums
+							WinMaximize(Integer(this.LV.GetText(rowN, 2)))
+					case "116":	; F5 Key -> Refresh LV
+						this.guiListviewCreate()
 				}
-			case "116":	; F5 Key -> Refresh LV
-				this.guiListviewCreate()
+			case "ContextMenu":
+				rowN := param
+				if (rowN == 0 || rowN > this.LV.GetCount())
+					return
+				wHandle := Integer(this.LV.GetText(rowN, 2))
+				if (!WinExist(wHandle)) {
+					this.LV.Delete(rowN)
+					return
+				}
+				style := WinGetStyle(wHandle)
+				exStyle := WinGetExStyle(wHandle)
+				if (exStyle & this.windowExStyles.WS_EX_TOPMOST)
+					this.menus.submenu.Check("Toggle Window Lock")
+				else
+					this.menus.submenu.Uncheck("Toggle Window Lock")
+				if (style & this.windowStyles.WS_CAPTION)
+					this.menus.submenu.Check("Toggle Title Bar")
+				else
+					this.menus.submenu.Uncheck("Toggle Title Bar")
+				if (style & this.windowStyles.WS_VISIBLE)
+					this.menus.submenu.Check("Toggle Visibility")
+				else
+					this.menus.submenu.Uncheck("Toggle Visibility")
+				this.menus.menu.show()
+			case "DoubleClick":
+				rowN := param
+				if (rowN != 0)
+					WinActivate(Integer(LVObj.GetText(rowN, 2)))
 			default:
 				return
 		}
@@ -435,7 +452,7 @@ class WindowManager {
 			lastRow := this.LV.GetNext(lastRow)
 			if (lastRow == 0)
 				break
-			wHandles.push(Integer(this.LV.GetText(lastRow, 1)))
+			wHandles.push(Integer(this.LV.GetText(lastRow, 2)))
 		}
 		if (wHandles.Length == 0)
 			return
@@ -443,26 +460,9 @@ class WindowManager {
 			try WinActivate(wHandle)
 	}
 
-
-	static settingCheckboxHandler(guiCtrlObj, *) {
-		switch guiCtrlObj.Name {
-			case "CheckboxHiddenWindows":
-				this.settings.detectHiddenWindows := !this.settings.detectHiddenWindows
-			case "CheckboxExcludedWindows":
-				this.settings.useBlacklist := !this.settings.useBlacklist
-			case "CheckboxGetCommandLine":
-				this.settings.getCommandLine := !this.settings.getCommandLine
-				if (this.settings.getCommandLine)
-					this.LV.ModifyCol(12, "0")
-			default:
-				return
-		}
-		this.guiListviewCreate(true)
-	}
-
 	; ------------------------- MENU FUNCTIONS -------------------------
 
-	static menuHandler(itemName, itemPos, menuObj) {
+	static menuHandler(itemName, itemPos?, menuObj?) {
 		rowNFocused := this.LV.GetNext(0,"F")
 		rowNums := []
 		wHandles := []
@@ -473,7 +473,7 @@ class WindowManager {
 			rowNums.push(nextRow)
 		}
 		for i, cFunc in rowNums
-			wHandles.push(Integer(this.LV.GetText(cFunc, 1)))
+			wHandles.push(Integer(this.LV.GetText(cFunc, 2)))
 		static basicTasks := Map(
 			"Reset Window Position", resetWindowPosition,
 			"Minimize Window", WinMinimize,
@@ -494,10 +494,10 @@ class WindowManager {
 			"View Properties", (wHandle) => (Run('properties "' WinGetProcessPath(wHandle) '"')),
 			"View Program Folder", (wHandle) => (Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"'))
 		)
-		if (basicTasks.Has(itemName))
+		if (basicTasks.Has(itemName)) {
 			for i, wHandle in wHandles
 				try basicTasks[itemName](wHandle)
-		switch itemName {
+		} else switch itemName {
 			case "Activate Window":
 				for i, wHandle in arrayReverse(wHandles)
 					try WinActivate(wHandle)
@@ -513,7 +513,7 @@ class WindowManager {
 				for i, wHandle in rWH
 					if WinWaitClose(wHandle, , 0.5) {
 						try this.LV.Delete(rowNums[rowNums.Length - i + 1])
-						try objRemoveValue(this.currentWinInfo, wHandle,, (iterator, wHandle) => (iterator.hwnd == wHandle))
+						try objRemoveValue(this.data.currentWinInfo, wHandle,, (iterator, wHandle) => (iterator.hwnd == wHandle))
 					}
 			case "Copy Window Title":
 				for i, wHandle in wHandles
@@ -540,17 +540,19 @@ class WindowManager {
 					for i, wHandle in wHandles
 						try this.menus.customFunctions[itemName](wHandle)
 		}
+		; this.guiListviewCreate()
 	}
 
 	static transparencyGUI(wHandles) {
 		tp := WinGetTransparent(wHandles[1])
 		tp := (tp == "" ? 255 : tp)
 		transparencyGUI := Gui("Border -SysMenu +Owner" this.gui.hwnd, "Transparency Menu")
-		transparencyGUI.AddText("x32", "Change Transparency")
+		transparencyGUI.AddText("x10 w120 Center", "Change Transparency")
 		transparencyGUI.AddSlider("x10 yp+20 AltSubmit Range0-255 NoTicks Page16 ToolTip", tp).OnEvent("Change", (obj, *) => (changeTransparency(obj.Value)))
-		transparencyGUI.AddButton("w80 yp+30 xp+20 Default", "OK").OnEvent("Click", transparencyGUIClose)
+		transparencyGUI.AddButton("x30 yp+30 w80 Default", "OK").OnEvent("Click", transparencyGUIClose)
 		transparencyGUI.OnEvent("Escape", transparencyGUIClose)
 		transparencyGUI.OnEvent("Close", transparencyGUIClose)
+		this.applyColorScheme(transparencyGUI)
 		this.gui.Opt("+Disabled")
 		transparencyGUI.Show()
 
@@ -568,13 +570,244 @@ class WindowManager {
 		}
 	}
 
-	static defaultSettings => {
+	static createSettingsGui(*) {
+		this.gui.Opt("+Disabled")
+		Hotkey(this.config.guiHotkey, "Off")
+		sGui := Gui("+Border +OwnDialogs +Owner" this.gui.hwnd, "Settings")
+		sGui.OnEvent("Escape", settingsGUIClose)
+		sGui.OnEvent("Close", settingsGUIClose)
+		sGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
+		handler := this.configGuiHandler.bind(this)
+		sGui.AddText("Center Section", "Settings for Window Manager")
+		; color theme
+		sGui.AddText("xs 0x200 R1.45", "GUI Color Theme:")
+		sGui.AddDropDownList("vDDLColorTheme xs+260 yp r7 w125 Choose" . this.config.colorTheme + 1, ["Light Theme", "Dark Theme", "Custom Theme"]).OnEvent("Change", handler)
+		; custom theme color
+		sGui.AddText("xs 0x200 R1.45", "Custom theme color:")
+		sGui.editCustomThemeColor := sGui.AddEdit("xs+225 yp vEditCustomThemeColor w70 Center", Format("0x{1:06X}", this.config.customThemeColor))
+		sGui.editCustomThemeColor.OnEvent("Change", handler)
+		sGui.editCustomThemeColor.OnEvent("LoseFocus", (ctrl, *) => ctrl.Value := this.config.customThemeColor)
+		sGui.AddButton("xs+300 yp-1 vButtonCustomThemeColor w86", "Pick Color").OnEvent("Click", handler)
+		; custom font color
+		sGui.AddText("xs 0x200 R1.45", "Custom font color:")
+		sGui.editCustomThemeFontColor := sGui.AddEdit("xs+225 yp vEditCustomThemeFontColor w70 Center", Format("0x{1:06X}", this.config.customThemeFontColor))
+		sGui.editCustomThemeFontColor.OnEvent("Change", handler)
+		sGui.editCustomThemeFontColor.OnEvent("LoseFocus", (ctrl, *) => ctrl.Value := this.config.customThemeFontColor)
+		sGui.AddButton("xs+300 yp-1 vButtonCustomThemeFontColor w86", "Pick Color").OnEvent("Click", handler)
+		
+		; main hotkey
+		sGui.AddText("xs R1.45", "Hotkey to open GUI:")
+		sGui.AddHotkey("xs+210 yp vHotkeyOpenGui w175", this.config.guiHotkey).OnEvent("Change", handler)
+		; filter case sense
+		sGui.AddCheckbox("xs vCBFilterCaseSense Checked" this.config.filterCaseSense, "Case-sensitive search").OnEvent("Click", handler)
+		; pause updates while focused
+		; update interval
+		; blacklist (as a listview? idk)
+		; debug
+		sGui.AddCheckbox("xs vCBDebug Checked" this.config.debug, "Debugging mode").OnEvent("Click", handler)
+		; reset settings
+		sGui.AddButton("xs", "Reset Settings").OnEvent("Click", resetSettings)
+		; hotkey (and general info)
+		sGui.AddButton("xs+260 yp w125", "Help and Info").OnEvent("Click", tinyHotkeyInfoGui)
+		this.settingsGui := sGui
+		this.gui.GetPos(&gx, &gy)
+		this.applyColorScheme(sGui)
+		sGui.Show(Format("x{1}y{2} Autosize", gx + 100, gy + 60))
+		return
+
+		; updateInterval: 1000, ; in milliseconds, how often to update all info in the window
+		; pauseUpdatesWhileFocused: true, ; whether to suspend updates while user has keyboard focus on a row
+		; getCommandLine: 0,
+		; blacklist: [
+		; 	"Default IME",
+		; 	"MSCTFIME UI",
+		; 	"NVIDIA GeForce Overlay",
+		; 	"Microsoft Text Input Application",
+		; 	"Program Manager",
+		; 	""
+		; ]
+		resetSettings(*) {
+			if (MsgBoxAsGui("Are you sure? This will reset all settings to their default values.", "Reset Settings", 0x1, 2, true,, sGui.Hwnd) == "Cancel")
+				return
+			useConfig := this.config.useConfig
+			this.config := this.defaultConfig
+			this.config.useConfig := useConfig
+			settingsGUIClose()
+			this.createSettingsGui()
+			this.applyColorScheme()
+			if (this.config.useConfig)
+				this.configManager("Save")
+		}
+
+		settingsGUIClose(*) {
+			this.gui.Opt("-Disabled")
+			Hotkey(this.config.guiHotkey, "On")
+			this.settingsGui.Destroy()
+			this.settingsGui := 0
+			WinActivate(this.gui)
+		}
+
+		tinyHotkeyInfoGui(*) {
+			MsgBoxAsGui("poggies")
+		}
+	}
+
+	static configGuiHandler(ctrl, *) {
+		switch ctrl.Name {
+			case "DDLColorTheme":
+				this.config.colorTheme := ctrl.Value - 1 ; ctrl is 1, 2, 3, we want 0, 1, 2
+				this.applyColorScheme()
+			case "CBDebug":
+				this.config.debug := ctrl.Value
+				this.menus := this.buildContextMenu()
+			case "CBFilterCaseSense":
+				this.config.filterCaseSense := ctrl.Value
+				if (this.gui["EditFilterWindows"].Value != "")
+					this.guiListviewCreate(false, false, false)
+			case "CBHiddenWindows":
+				this.config.detectHiddenWindows := !this.config.detectHiddenWindows
+				this.guiListviewCreate(true)
+			case "CBExcludedWindows":
+				this.config.useBlacklist := !this.config.useBlacklist
+				this.guiListviewCreate(true)
+			case "CBGetCommandLine":
+				this.config.getCommandLine := !this.config.getCommandLine
+				if (this.config.getCommandLine)
+					this.LV.ModifyCol(13, "0")
+				this.guiListviewCreate(true)
+			case "EditCustomThemeColor", "EditCustomThemeFontColor":
+				property := SubStr(ctrl.Name, 5)
+				color := ctrl.Value
+				if (!InStr(color, "0x"))
+					color := "0x" . color
+				if (!RegExMatch(color, "^0x[[:xdigit:]]{1,6}$"))
+					return
+				color := Format("0x{1:06X}", color)
+				this.config.%property% := color
+				ctrl.Opt("+Background" this.config.%property%)
+				ctrl.SetFont(isDark(this.config.%property%) ? "c0xFFFFFF" : "c0x000000")
+				if (this.config.colorTheme == 2)
+					this.applyColorScheme()
+			case "ButtonCustomThemeColor", "ButtonCustomThemeFontColor":
+				property := SubStr(ctrl.Name, 7)
+				editName := "edit" . property
+				color := colorDialog(this.config.%property%, ctrl.gui.hwnd, true, this.colors.DARK, this.config.customThemeColor, this.config.customThemeFontColor)
+				if (color == -1)
+					return
+				this.config.%property% := Format("0x{1:06X}", color)
+				ctrl.gui.%editName%.Text := Format("0x{1:06X}", this.config.%property%)
+				if (this.config.colorTheme == 2)
+					this.applyColorScheme()
+				else {
+					ctrl.gui.%editName%.Opt("+Background" this.config.%property%)
+					ctrl.gui.%editName%.SetFont(isDark(this.config.%property%) ? "c0xFFFFFF" : "c0x000000")
+				}
+			case "HotkeyOpenGui":
+				hkey := ctrl.Value
+				if (RegExReplace(hkey, "\!|\^|\+") == "" || hkey == this.config.guiHotkey)
+					return
+				try
+					Hotkey(hkey, this.guiCreate.bind(this))
+				catch Error {
+					MsgBox("Specified Hotkey already in use (or a different error occured. Try a different one)")
+					return
+				}
+				Hotkey(hkey, "Off")
+				if (A_LineFile == A_ScriptFullPath)
+					A_TrayMenu.Rename("Open Window Manager (" this.config.guiHotkey ")", "Open Window manager (" hkey ")")
+				else
+					TrayMenu.submenus["GUIs"].Rename("Open Window Manager (" this.config.guiHotkey ")", "Open Window Manager (" hkey ")")
+				this.config.guiHotkey := hkey
+			default:
+				return
+				; throw (Error("This setting doesn't exist (yet): " . ctrl.Name))
+		}
+		if (this.config.useConfig)
+			this.configManager("Save")
+	}
+
+	static configManager(mode := "Save") {
+		mode := Substr(mode, 1, 1)
+		if (!Instr(FileExist(this.appdataPath), "D"))
+			DirCreate(this.appdataPath)
+		configPath := this.appdataPath "\config.json"
+		if (mode == "S") {
+			f := FileOpen(configPath, "w", "UTF-8")
+			f.Write(jsongo.Stringify(this.config, , "`t"))
+			f.Close()
+			return 1
+		}
+		else if (mode == "L") {
+			this.config := {}, config := Map()
+			if (FileExist(configPath))
+				try config := jsongo.Parse(FileRead(configPath, "UTF-8"))
+			; remove unused config values
+			for i, e in config
+				if (this.defaultConfig.HasOwnProp(i))
+					this.config.%i% := e
+			; populate unset config values with defaults
+			for i, e in this.defaultConfig.OwnProps()
+				if !(this.config.HasOwnProp(i))
+					this.config.%i% := e
+			return 1
+		}
+		return 0
+	}
+	
+	static buildContextMenu() {
+		menus := {}
+		menus.menu := Menu()
+		menus.subMenu := Menu()
+		menus.customFunctions := Map()
+		for cFunc in this.customFunctions ; define custom function map
+			menus.customFunctions[cFunc] := %cFunc%
+		menus.MenuFunctionNames := [
+			"Activate Window", "Reset Window Position", "Minimize Window", "Maximize Window",
+			"Borderless Fullscreen", "Restore Window", "Close Window",
+			0,
+			"Copy Window Title", "View Command Line", "View Window Text", "View Properties", "View Program Folder"
+		]
+		menus.subMenuFunctionNames := [
+			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Spread Windows on all Screens", "Spread Windows per Screen"]
+		menus.subMenuToggles := [
+			["Toggle Window Lock", "Set Window Lock", "Remove Window Lock"],
+			["Toggle Title Bar", "Add Title Bar", "Remove Title Bar"],
+			["Toggle Visibility", "Hide Window", "Show Window"]
+		]
+		handler := this.menuHandler.Bind(this)
+		for toggle in menus.subMenuToggles {
+			toggleMenu := Menu()
+			toggleMenu.Add(toggle[1], handler)
+			toggleMenu.Add(toggle[2], handler)
+			toggleMenu.Add(toggle[3], handler)
+			toggleMenu.Default := toggle[1]
+			menus.submenu.Add(toggle[1], toggleMenu)
+		}
+		for fName in menus.subMenuFunctionNames ; add submenu standard functions
+			menus.submenu.Add(fName, handler)
+		menus.submenu.Add() ; add submenu separator
+		for fName, cFunc in menus.customFunctions ; add submenu custom functions
+			menus.submenu.Add(fName, handler)
+		for fName in menus.MenuFunctionNames ; add menu functions
+			menus.menu.Add(fName ? fName : unset, fName ? handler : unset)
+		menus.menu.Insert(objContainsValue(menus.MenuFunctionNames, 0) . "&", "Other Options", menus.submenu)
+		if (this.config.debug) {
+			menus.menu.add()
+			; add debug options here
+		}
+		return menus
+	}
+
+	static defaultConfig => {
 		useConfig: true,
 		debug: false,
 		guiHotkey: "^F11", ; hotkey to open GUI (always)
-		darkMode: 1,
-		darkThemeColor: "0x002b36",
-		darkThemeFontColor: "0x109698",
+		colorTheme: 2, ; 0 = white, 1 = dark, 2 = custom
+		customThemeColor: "0x002b36",
+		customThemeFontColor: "0x109698",
+		filterCaseSense: false, ; for searching/filtering, 
+		updateInterval: 1000, ; in milliseconds, how often to update all info in the window
+		pauseUpdatesWhileFocused: true, ; whether to suspend updates while user has keyboard focus on a row
 		getCommandLine: 0,
 		detectHiddenWindows: 0,
 		useBlacklist: 1,
@@ -615,6 +848,13 @@ class WindowManager {
 
 	static windowExStyles => {
 		WS_EX_TOPMOST: 0x8
+	}
+	
+	static appdataPath => A_AppData "\Autohotkey\WindowManager"
+	static colors => {
+		DARK: "0x1E1E1E",
+		BLACK: "0x000000",
+		WHITE: "0xFFFFFF"
 	}
 }
 
