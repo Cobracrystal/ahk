@@ -134,7 +134,7 @@ return
 }
 
 ^F11:: { ; Shows a list of all Windows
-	WindowManager.windowManager("T")
+	WindowManager.windowManager("T") ; this is actually decorative and only for hotkeymanager
 }
 
 ^F10::{	; Shows DTU Script
