@@ -144,19 +144,21 @@ parseHeaders(str) {
  * @returns {Integer} Count of how many instances of value were encountered
  */
 objCountValue(obj, value, comparator := ((a,b) => (a = b))) {
-	if !(obj is Array || obj is Map)
-		throw(Error("objCountValue does not handle type " . Type(obj)))
+	isArrLike := (obj is Array || obj is Map)
+	if !(isArrLike || obj is Object)
+		throw(TypeError("objCountValue does not handle type " . Type(obj)))
 	count := 0
-	for i, e in obj
+	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (comparator(e, value))
 			count++
 	return count
 }
 
 objContainsValue(obj, value, comparator := ((a,b) => (a = b))) {
-	if !(obj is Array || obj is Map)
-		throw(Error("objContains does not handle type " . Type(obj)))
-	for i, e in obj
+	isArrLike := (obj is Array || obj is Map)
+	if !(isArrLike || obj is Object)
+		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
+	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (comparator(e, value))
 			return i
 	return 0
@@ -175,18 +177,19 @@ objClone(obj) {
 }
 
 /**
- * Deletes given Value from Object, either on first encounter or on all encounters. Returns count of removed values
+ * Deletes given Value from Object {limit} times. Returns count of removed values
  * @param {Array | Map} obj
- * @param value 
+ * @param value the value to remove
  * @param {Integer} limit if 0, removes all
  * @returns {Integer} count
  */
 objRemoveValue(obj, value := "", limit := 0, comparator := ((iterator,value) => (iterator = value))) {
-	if !(obj is Array || obj is Map)
-		throw(Error("objRemoveValue does not handle type " . Type(obj)))
+	isArrLike := ((isArr := obj is Array) || obj is Map)
+	if !(isArrLike || obj is Object)
+		throw(TypeError("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
 	count := 0
-	for next, e in obj
+	for next, e in (isArrLike ? obj : obj.OwnProps())
 		if (comparator(e, value)) {
 			if (!limit || count++ < limit)
 				queue.push(next)
@@ -195,11 +198,12 @@ objRemoveValue(obj, value := "", limit := 0, comparator := ((iterator,value) => 
 		}
 	n := queue.Length
 	while (queue.Length != 0) {
-		next := queue.Pop()
-		if (obj is Array)
-			obj.RemoveAt(next)
+		if (isArr)
+			obj.RemoveAt(queue.Pop())
+		else if (isArrLike)
+			obj.Delete(queue.Pop())
 		else
-			obj.Delete(next)
+			obj.DeleteProp(queue.Pop())
 	}
 	return n
 }
@@ -212,11 +216,12 @@ objRemoveValue(obj, value := "", limit := 0, comparator := ((iterator,value) => 
  * @returns {Integer} count
  */
 objRemoveValues(obj, values, limit := 0, comparator := ((iterator,value) => (iterator = value))) {
-	if !(obj is Array || obj is Map)
-		throw(Error("objRemoveValue does not handle type " . Type(obj)))
+	isArrLike := ((isArr := obj is Array) || obj is Map)
+	if !(isArrLike || obj is Object)
+		throw(TypeError("objRemoveValues does not handle type " . Type(obj)))
 	queue := []
 	count := 0
-	for next, e in obj
+	for next, e in (isArrLike ? obj : obj.OwnProps())
 		for i, f in values
 			if (comparator(e, f)) {
 				if (!limit || count++ < limit)
@@ -226,19 +231,19 @@ objRemoveValues(obj, values, limit := 0, comparator := ((iterator,value) => (ite
 			}
 	n := queue.Length
 	while (queue.Length != 0) {
-		next := queue.Pop()
-		if (obj is Array)
-			obj.RemoveAt(next)
-		else
-			obj.Delete(next)
+		if (isArr)
+			obj.RemoveAt(queue.Pop())
+		else if isArrLike
+			obj.Delete(queue.Pop())
+		else obj.DeleteProp(queue.Pop())
 	}
 	return n
 }
 
-objForEach(obj, fn := ((a) => (objToString(a))), value := 0, conditional := ((iterator,value) => (true))) {
+objDoForEach(obj, fn := ((a) => (objToString(a))), value := 0, conditional := ((iterator,value) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
-		throw(Error("objForEach does not handle type " . Type(obj)))
+		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	queue := []
 	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (conditional(e, value))
@@ -253,15 +258,28 @@ objGetAverage(obj) => objCollect(obj, (a,b) => (a+b)) / (obj is Array ? obj.Leng
 objCollect(obj, fn := ((base, iterator) => (base . objToString(iterator))), value := 0, conditional := ((iterator,value) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
-		throw(Error("objForEach does not handle type " . Type(obj)))
+		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (conditional(e, value))
 			base := IsSet(base) ? fn(base, e) : e
 	return base ?? ""
 }
+	
+objZip(obj1, obj2, stopAtAnyEnd := true) {
+	obj1Enum := obj1, obj2Enum := obj2, index := 1
+	try obj1Enum := obj1Enum.__Enum(1)
+	try obj2Enum := obj2Enum.__Enum(1)
+	return (&n, &m, &o := -1) => (
+		flagO := !IsSet(o), ; if for-loop passes o to this function, then it is unset. otherwise it is set.
+		flagO ? n := index++ 			: flag1 := obj1Enum(&n),
+		flagO ? flag1 := obj1Enum(&m)	: flag2 := obj2Enum(&m),
+		flagO ? flag2 := obj2Enum(&o)	: 0,
+		stopAtAnyEnd ? flag1 && flag2	: flag1 || flag2
+	)
+}
 
 /**
- * 
+ * Return a json-like representation of the given object, without altering (escaping) the data itself.
  * @param obj Object, Map, Array Value etc.
  * @param {Integer} compact Whether to use spacer value and use newline to separate nested objects (default false)
  * @param {Integer} compress Whether to omit spaces and minimize the string length (default true)
@@ -308,6 +326,7 @@ arrayMerge(array1, array2) {
 
 arraySlice(arr, from := 1, to := arr.Length) {
 	arr2 := []
+	to := to > arr.Length ? arr.Length : to
 	Loop(to) {
 		i := from + A_Index - 1
 		arr2.push(arr[i])
@@ -417,7 +436,7 @@ objSortByKey(tmap, key, mode := "") {
 	isArr := tMap is Array
 	isMap := tMap is Map
 	if !(tmap is Object)
-		throw(ValueError("Expected Object, but got " tmap.Prototype.Name))
+		throw(TypeError("Expected Object, but got " tmap.Prototype.Name))
 	isObj := !(isArr || isMap)
 	arr2 := Map()
 	arr3 := []
@@ -581,8 +600,10 @@ strRecursiveReplace(text, from, to) {
  * @returns {Map} 
  */
 mapFromArrays(keyArray, valueArray) {
-	if (keyArray.Length != valueArray.Length || !(keyArray is Array) || !(valueArray is Array))
-		throw(Error("Expected Arrays of equal Length, got " Type(keyArray) ", " Type(valueArray)))
+	if (!(keyArray is Array) || !(valueArray is Array))
+		throw(TypeError("mapFromArrays expected Arrays, got " Type(keyArray) ", " Type(valueArray)))
+	else if (keyArray.Length != valueArray.Length)
+		throw(ValueError("mapFromArrays expected Arrays of equal Length, got Lengths " keyArray.Length ", " valueArray.Length))
 	newMap := Map()
 	for i, e in keyArray
 		newMap[e] := valueArray[i]
@@ -691,7 +712,7 @@ DateAddW(dateTime, value, timeUnit) {
 			else
 				return year . month . SubStr(dateTime, 7)
 		default:
-			throw(Error("Invalid Time Unit: " timeUnit))
+			throw(ValueError("Invalid Time Unit: " timeUnit))
 	}
 }
 /*
@@ -1124,9 +1145,9 @@ colorGradientArr(amount, colors*) {
 
 rainbowArr(num, intensity := 0xFF) {
 	if (num < 7)
-		throw(Error("Invalid num"))
+		throw(ValueError("Invalid num"))
 	if (intensity < 0 || intensity > 255)
-		throw(Error("Invalid Intensity"))
+		throw(ValueError("Invalid Intensity"))
 	intensity := format("{:#x}", intensity)
 	r := intensity * 0x010000
 	g := intensity * 0x000100
@@ -1423,7 +1444,8 @@ class DataListView { ; this is (mostly) based on Pulover's LV_Rows class, ignori
 	
 	__New(LV) {
 		this.LV := LV
-		this.rows := {}
+		this.Base := LV ; !!!!!!!!!!!!!!!!!!!!
+		this.rowData := {}
 		this.headers := []
 		return this
 	}
@@ -1444,6 +1466,16 @@ class DataListView { ; this is (mostly) based on Pulover's LV_Rows class, ignori
 	SetImageList(ImageListID, IconType?)  => this.LV.SetImageList(ImageListID, IconType?)
 
 	OnEvent(EventName, Callback, AddRemove?) => (this.LV.OnEvent(EventName, Callback, AddRemove?), this)
+
+	Rows() {
+		; enumerator
+		index := 1
+		return (&n) => (
+			; this.rowData ; enumerate this
+			index++
+			true 
+		)
+	}
 
 	Copy() {
 		return 0
