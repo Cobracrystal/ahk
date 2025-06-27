@@ -2,7 +2,6 @@
 ; TODO 3: Add Settings for excluded windows (with editable list, like in PATH native settings), automatically form that into regex
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
 ; cache command lines to reuse
-; when refreshing, selected lines should remain selected.
 ; add general updates
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "*i %A_LineFile%\..\..\LibrariesV2\CustomWindowFunctions.ahk"
@@ -165,7 +164,7 @@ class WindowManager {
 					options .= "Select"
 				if (win.hwnd == focusedHandle)
 					options .= " Focus"
-				this.LV.Add(options, i, win.hwnd, win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
+				this.LV.Add(options, i, Format("0x{:06X}", win.hwnd), win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
 			}
 		this.gui["WindowCount"].Value := Format("Window Count: {:4}", this.LV.GetCount())
 		if (firstCall)
@@ -367,7 +366,7 @@ class WindowManager {
 						guiRowIndex := 0
 						if !GetKeyState("Shift")
 							Loop(this.LV.GetCount())
-								if (this.LV.GetText(A_Index, 2) == this.gui.Hwnd) {
+								if (Integer(this.LV.GetText(A_Index, 2)) == this.gui.Hwnd) {
 									guiRowIndex := A_Index
 									break
 								}
