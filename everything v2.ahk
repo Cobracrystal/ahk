@@ -34,6 +34,7 @@ A_TrayMenu.Delete()
 #Include "BasicUtilities.ahk"
 #Include "HotstringLoader.ahk"
 #Include "TableFilter v2.ahk"
+#Include "openDTU.ahk"
 ; #Include "%A_ScriptDir%\not_mine_or_examples\AquaHotkey\AquaHotkey.ahk"
 ; #Include "jsongo.ahk"
 ; for windows in which ctrl+ should replace scrolling
@@ -73,6 +74,7 @@ SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't in
 ; Initialize Internet Logging Script
 internetConnectionLogger("Init")
 openDTUScript("Init")
+openDTUman := openDTU("http://192.168.178.48", 80, "admin", FileRead(A_Desktop "\programs\Files\openDTUAuth.pw"))
 ; Load LaTeX Hotstrings
 
 try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX",,,false)
@@ -128,6 +130,8 @@ return
 ^!+NumpadSub:: {	; Record Macro
 	MacroRecorder.createMacro(A_ThisHotkey)
 }
+
+#g::Run("notepad.exe")
 
 ^F12:: { ; Toggle Hotkey Manager
 	HotkeyManager.hotkeyManager("T")
@@ -524,7 +528,7 @@ openDTUScript(mode := "T") {
 		consolePID := WinGetPID("ahk_id " flagExist)
 	else {
 		Run(consoleString, , "Hide", &consolePID)
-		if !(WinWait("ahk_pid " consolePID, , 1))
+		if !(WinWait("ahk_pid " consolePID, , 2))
 			return
 		WinSetAlwaysOnTop(1, "ahk_pid " consolePID)
 		WinSetStyle(-0x70000, "ahk_pid " consolePID)
@@ -657,8 +661,16 @@ trayMenuHandler(itemName, *) {
 	}
 }
 
-
 customExit(ExitReason, ExitCode) {
+	global openDTUman
+	if (ExitReason == "Shutdown" || ExitReason == "Logoff") {
+		DetectHiddenWindows(1)
+		id := WinExist("openDTU NetZero ahk_exe cmd.exe")
+		if (id)
+			WinKill(id)
+		main_inverter := openDTUman.getInverterList()["inverter"][1]["serial"]
+		openDTUman.setInverterLimitConfig(main_inverter, {limit_type:1, limit_value:30})
+	}
 	ExitApp() ; this is technically unnecessary.
 }
 

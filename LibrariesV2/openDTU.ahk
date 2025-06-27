@@ -1,13 +1,14 @@
 ; this should never be used in a serious setting, its a shitty temporary solution
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-auth := FileRead(A_Desktop "\programs\Files\openDTUAuth.pw")
-onlineURL := FileRead(A_Desktop "\programs\Files\openDTUurl.dt")
+
+; password := FileRead(A_Desktop "\programs\Files\openDTUAuth.pw")
+; onlineURL := FileRead(A_Desktop "\programs\Files\openDTUurl.dt")
 
 
-openDTUman := openDTU("http://192.168.178.48", 80, auth["username"], auth["password"])
+; openDTUman := openDTU("http://192.168.178.48", 80, "admin", password)
 ; openDTUman2 := openDTU(onlineURL, 81)
-FileAppend(jsongo.Stringify(openDTUman.getInverterList(),,"`t") "`n", "*","UTF-8")
+; FileAppend(jsongo.Stringify(openDTUman.getInverterList(),,"`t") "`n", "*","UTF-8")
 ; FileAppend(jsongo.Stringify(openDTUman.setInverterLimitConfig(openDTUman.getInverterSerialNumber(1),{limit_type:1, limit_value:100}),,"`t") "`n", "*","UTF-8")
 ; FileAppend(jsongo.Stringify(openDTUman.getInverterLimitConfig(),,"`t") "`n", "*","UTF-8")
 ; Sleep(2000)
@@ -15,16 +16,11 @@ FileAppend(jsongo.Stringify(openDTUman.getInverterList(),,"`t") "`n", "*","UTF-8
 
 class openDTU {
 
-	__New(url, port, username?, password?) {
-		if (IsSet(username) && IsSet(password)) {
-			this.username := username
-			this.password := password
-			this.useAuth := true
-		}
-		else
-			this.useAuth := false
-		this.domain := RTrim(url, "`t /")
-		this.port := port
+	__New(url?, port?, username?, password?) {
+		this.username := username ?? openDTU.defaultConfig.username
+		this.password := password ?? openDTU.defaultConfig.password
+		this.domain := IsSet(url) ? RTrim(url, "`t /") : openDTU.defaultConfig.url
+		this.port := port ?? openDTU.defaultConfig.port
 		this.baseURL := this.domain . ":" this.port . "/api/"
 	}
 
@@ -78,8 +74,7 @@ class openDTU {
 	callApi(method, endPoint, content := "") {
 		http := ComObject("WinHTTP.WinHTTPRequest.5.1")
 		http.Open(method, this.BaseURL . endpoint, true)
-		if (this.useAuth)
-			http.SetRequestHeader("Authorization", "Basic " . base64Encode(this.username . ":" . this.password))
+		http.SetRequestHeader("Authorization", "Basic " . base64Encode(this.username . ":" . this.password))
 		http.SetRequestHeader("User-Agent", "Bad Local AHK-Bot")
 		http.SetRequestHeader("Content-Type", content ? "application/x-www-form-urlencoded" : "application/json")
 		http.Send(content ? 'data=' jsongo.Stringify(content) : unset)
@@ -96,5 +91,12 @@ class openDTU {
 		if (http.status != 200 && http.status != 204)
 			return Map("Status", http.status, "Response", http.responseText, "Endpoint", endPoint, "Content", 'data=' jsongo.Stringify(content))
 		return jsongo.Parse(responseText)
+	}
+
+	static defaultConfig => {
+		username: "admin",
+		password: "openDTU42",
+		url: "http://192.168.178.48",
+		port: 80
 	}
 }
