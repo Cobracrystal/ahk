@@ -107,6 +107,8 @@ class focusSwitch {
 		arr2 := Map()
 		arr3 := []
 		l := isArr ? tmap.Length : isMap ? tmap.Count : ObjOwnPropCount(tmap)
+		if !l
+			return []
 		for i, e in (isObj ? tmap.OwnProps() : tmap) {
 			if (!IsSet(innerIsObj))
 				innerIsObj := !(e is Map || e is Array)
