@@ -19,6 +19,7 @@ shift+del to forcefully close window (skipping warnings etc)
 ctrl+C to copy identifier
 ctrl+alt+c to copy title only
 ctrl+shift+c to copy all window data in json format
+ctrl+shift+alt+c to copy hwnd
 */
 
 class WindowManager {
@@ -164,7 +165,8 @@ class WindowManager {
 					options .= "Select"
 				if (win.hwnd == focusedHandle)
 					options .= " Focus"
-				this.LV.Add(options, i, Format("0x{:06X}", win.hwnd), win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
+				this.LV.Add(options, i, this.config.formatWindowHandles ? Format("0x{:06X}", win.hwnd) : win.hwnd, 
+					win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
 			}
 		this.gui["WindowCount"].Value := Format("Window Count: {:4}", this.LV.GetCount())
 		if (firstCall)
@@ -376,7 +378,12 @@ class WindowManager {
 							if (A_Index != guiRowIndex)
 								this.LV.Modify(A_Index, "+Select")
 					case "67": ; ctrl C
-						if (GetKeyState("Ctrl") && GetKeyState("Shift")) { ; ctrl shift C to get all info
+						if (GetKeyState("Ctrl") && GetKeyState("Alt") && GetKeyState("Shift")) {
+							for rowN in rowNums
+								str .= this.LV.GetText(rowN, 2) "`n"
+							A_Clipboard := RTrim(str, "`n")
+						}
+						else if (GetKeyState("Ctrl") && GetKeyState("Shift")) { ; ctrl shift C to get all info
 							wInfoArray := []
 							for rowN in rowNums {
 								wInfoArray.Push({
@@ -533,7 +540,7 @@ class WindowManager {
 			; this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
 			; this.winSubMenu.Add("Spread Windows per Screen", this.menuHandler.Bind(this))
 			case "Spread Windows":
-				return
+				tileWindows(wHandles)
 			default: ; custom functions
 				if (this.menus.customFunctions.Has(itemName))
 					for i, wHandle in wHandles
@@ -599,6 +606,8 @@ class WindowManager {
 		sGui.AddHotkey("xs+210 yp vHotkeyOpenGui w175", this.config.guiHotkey).OnEvent("Change", handler)
 		; filter case sense
 		sGui.AddCheckbox("xs vCBFilterCaseSense Checked" this.config.filterCaseSense, "Case-sensitive search").OnEvent("Click", handler)
+		; show HWNDs as Hex
+		sGui.AddCheckbox("xs vCBFormatWindowHandles Checked" this.config.formatWindowHandles, "Display HWNDs as Hex Values").OnEvent("Click", handler)
 		; pause updates while focused
 		; update interval
 		; blacklist (as a listview? idk)
@@ -663,6 +672,9 @@ class WindowManager {
 				this.config.filterCaseSense := ctrl.Value
 				if (this.gui["EditFilterWindows"].Value != "")
 					this.guiListviewCreate(false, false, false)
+			case "CBFormatWindowHandles":
+				this.config.formatWindowHandles := !this.config.formatWindowHandles
+				this.guiListviewCreate(true)
 			case "CBHiddenWindows":
 				this.config.detectHiddenWindows := !this.config.detectHiddenWindows
 				this.guiListviewCreate(true)
@@ -767,7 +779,7 @@ class WindowManager {
 			"Copy Window Title", "View Command Line", "View Window Text", "View Properties", "View Program Folder"
 		]
 		menus.subMenuFunctionNames := [
-			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Spread Windows on all Screens", "Spread Windows per Screen"]
+			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Spread Windows", "Spread Windows on all Screens", "Spread Windows per Screen"]
 		menus.subMenuToggles := [
 			["Toggle Window Lock", "Set Window Lock", "Remove Window Lock"],
 			["Toggle Title Bar", "Add Title Bar", "Remove Title Bar"],
@@ -805,6 +817,7 @@ class WindowManager {
 		customThemeColor: "0x002b36",
 		customThemeFontColor: "0x109698",
 		filterCaseSense: false, ; for searching/filtering, 
+		formatWindowHandles: true,
 		updateInterval: 1000, ; in milliseconds, how often to update all info in the window
 		pauseUpdatesWhileFocused: true, ; whether to suspend updates while user has keyboard focus on a row
 		getCommandLine: 0,
