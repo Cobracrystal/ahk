@@ -143,7 +143,7 @@ parseHeaders(str) {
  * @param value value to check for
  * @returns {Integer} Count of how many instances of value were encountered
  */
-objCountValue(obj, value, comparator := ((a,b) => (a = b))) {
+objCountValue(obj, value, comparator := ((iterator,value) => (iterator = value))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objCountValue does not handle type " . Type(obj)))
@@ -154,7 +154,14 @@ objCountValue(obj, value, comparator := ((a,b) => (a = b))) {
 	return count
 }
 
-objContainsValue(obj, value, comparator := ((a,b) => (a = b))) {
+/**
+ * Checks whether obj contains given value and returns index if found, else 0
+ * @param obj 
+ * @param value 
+ * @param {Func} comparator 
+ * @returns {Integer} 
+ */
+objContainsValue(obj, value, comparator := ((iterator,value) => (iterator = value))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
@@ -276,6 +283,25 @@ objZip(obj1, obj2, stopAtAnyEnd := true) {
 		flagO ? flag2 := obj2Enum(&o)	: 0,
 		stopAtAnyEnd ? flag1 && flag2	: flag1 || flag2
 	)
+}
+
+range(startEnd, end?, step?, inclusive := true) {
+	start := IsSet(end) ? startEnd : 1
+	end := end ?? startEnd
+	step := step ?? 1
+	index := 1
+	return (&n, &m := -1) => (
+		!IsSet(m) ? 
+			(n := index++, m := start, start := roundProper(start + step), inclusive ? m <= end : m < end) : 
+			(n := start, start := roundProper(start + step), inclusive ? n <= end : n < end)
+	)
+}
+
+rangeA(startEnd, end?, step?, inclusive := true) {
+	a := []
+	for e in range(startEnd, end?, step?, inclusive)
+		a.push(e)
+	return a
 }
 
 /**
@@ -429,19 +455,28 @@ arrayDuplicateIndices(arr, key?, isMap := 0) {
 	return duplicates
 }
 
-
+/** */
 ; gets a map of maps. sorts it by a key of the submap, returns it as array
 ; requires all contents of mapInner[key] to be of the same type (number or string)
-objSortByKey(tmap, key, mode := "") {
-	isArr := tMap is Array
-	isMap := tMap is Map
-	if !(tmap is Object)
-		throw(TypeError("Expected Object, but got " tmap.Prototype.Name))
+/**
+ * Given an enumerable object whos values itself are objects, sorts it by value of the inner objects key.
+ * @param tObj Object, Array or Map to be used for sorting. tObj must contain Objects which itself have accessable values (that of key)
+ * @param key key whos matching value will be used for sorting
+ * @param {String} mode Sorting mode. equivalent to sorting options in Sort [String]
+ * @returns {Array} The sorted array, where each entry in the array is an object with the original index as property .index and value as .value
+ */
+objSortByKey(tObj, key, mode := "") {
+	isArr := tObj is Array
+	isMap := tObj is Map
+	if !(tObj is Object)
+		throw(TypeError("Expected Object, but got " tObj.Prototype.Name))
 	isObj := !(isArr || isMap)
 	arr2 := Map()
 	arr3 := []
-	l := isArr ? tmap.Length : isMap ? tmap.Count : ObjOwnPropCount(tmap)
-	for i, e in (isObj ? tmap.OwnProps() : tmap) {
+	l := isArr ? tObj.Length : isMap ? tObj.Count : ObjOwnPropCount(tObj)
+	if !l
+		return []
+	for i, e in (isObj ? tObj.OwnProps() : tObj) {
 		if (!IsSet(innerIsObj))
 			innerIsObj := !(e is Map || e is Array)
 		tv := innerIsObj ? e.%key% : e[key]
@@ -462,7 +497,7 @@ objSortByKey(tmap, key, mode := "") {
 			break
 		el := isString ? strArr[counter] . "" : Number(strArr[counter])
 		for j, f in arr2[el] {
-			arr3.push({ index: f, value: isObj ? tmap.%f% : tmap[f] })
+			arr3.push({ index: f, value: isObj ? tObj.%f% : tObj[f] })
 		}
 		counter += arr2[el].Length
 	}
@@ -1440,6 +1475,19 @@ scrollbarGetPosition(ctrlHwnd) {
 	return curPos ? curPos / (nMax - nPage + 1 - nMin) : 0
 }
 
+structRectCreate(x1, y1, x2, y2) {
+	NumPut("UInt", x1, "UInt", y1, "UInt", x2, "UInt", y2, llrectA := Buffer(16, 0), 0)
+	return llrectA
+}
+
+structRectGet(rect) {
+	x1 := NumGet(rect, 0, "int")
+	y1 := NumGet(rect, 4, "int")
+	x2 := NumGet(rect, 8, "int")
+	y2 := NumGet(rect, 12, "int")
+	return [x1, y1, x2, y2]
+}
+
 class DataListView { ; this is (mostly) based on Pulover's LV_Rows class, ignoring LV_EX. See https://github.com/Pulover/Class_LV_Rows
 	
 	__New(LV) {
@@ -1709,6 +1757,15 @@ strCountStr(HayStack, SearchText, CaseSense := false) {
 	return count
 }
 
+roundProper(num, precision := 12) {
+	if (!IsNumber(num))
+		return num
+	if (IsInteger(num) || Round(num) == num)
+		return Integer(num)
+	else
+		return Number(RTrim(Round(num, precision), "0."))
+}
+
 print(msg, options?, putNewline := true, compact := false, compress := true, strEscape := true, spacer := "`t") {
 	if !(msg is String)
 		msg := objToString(msg, compact, compress, strEscape, spacer)
@@ -1720,4 +1777,42 @@ print(msg, options?, putNewline := true, compact := false, compress := true, str
 		FileAppend(msg . finalChar, "*", options ?? "UTF-8")
 	catch Error 
 		MsgBoxAsGui(msg,,,,,,,1)
+}
+
+/**
+ * tiles given or all windows
+ * @param windowArray array of window HWNDs to be tiled
+ * @param {Integer} tilingMode 0 or 1, vertical or horizontal
+ * @param tileArea Area in which windows will be tiled. Given in the form [x1, y1, x2, y2]
+ * @param {Integer} hwndParent HWND of parent window of the windows to be tiled
+ * @returns {Integer} Count of tiled windows 
+ */
+tileWindows(windowArray?, tilingMode := 0x0000, tileArea?, hwndParent := 0)  {
+	static MDITILE_VERTICAL 	:= 0x0000
+	static MDITILE_HORIZONTAL 	:= 0x0001
+	static MDITILE_SKIPDISABLED := 0x0002
+	static MDITILE_ZORDER 		:= 0x0004
+	flagTileArea := IsSet(tileArea)
+	if (flagTileArea)
+		lpRect := structRectCreate(tileArea*)
+	else
+		lpRect := 0
+	flagCustomWindows := IsSet(windowArray) && windowArray is Array
+	if (flagCustomWindows) {
+		cKids := windowArray.Length
+		lpKids := Buffer(windowArray.Length * 4) ; sizeof(int) == 4
+		for i, hwnd in windowArray
+			NumPut("Int", hwnd, lpKids, 4 * (i-1))
+	}
+	else {
+		cKids := 0
+		lpKids := 0
+	}
+	return DllCall("TileWindows", 
+		"Int", hwndParent, 
+		"UInt", tilingMode, 
+		"UInt", flagTileArea ? lpRect.Ptr : 0, 
+		"Int", cKids, 
+		"Int", flagCustomWindows ? lpKids.Ptr : 0
+	)
 }

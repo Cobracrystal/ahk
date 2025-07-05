@@ -120,15 +120,6 @@ class expressionCalculator {
 	-> recursively call function until no brackets are left.
 */
 
-roundProper(number, precision := 12) {
-	if (!IsNumber(number) || IsSpace(number))
-		return number
-	if (IsInteger(number) || Round(number) == number)
-		return Integer(number)
-	else
-		return RTrim(Round(number, precision), "0.")
-}
-
 /**
  * Given integer, returns array of its prime factors. Includes 1 and n itself
  * @param n integer
