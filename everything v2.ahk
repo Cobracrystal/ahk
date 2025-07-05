@@ -77,6 +77,7 @@ openDTUScript("Init")
 openDTUman := openDTU("http://192.168.178.48", 80, "admin", FileRead(A_Desktop "\programs\Files\openDTUAuth.pw"))
 ; Load LaTeX Hotstrings
 
+; TODO: ADD WINDOW OPTION FOR HOTSTRINGLOADER. IE GIVEN AHK CRITERIA IT ADDS HOTIF BEFORE REGISTERING THEM (makes editing harder tho)
 try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX",,,false)
 expressionCalculator.setWolframAlphaToken(FileRead(A_WorkingDir "\everything\wolframalphaQueries.token", "UTF-8"))
 ; loadTableAsHotstrings(A_WorkingDir "\TableFilter\Kayoogis.json")
@@ -1095,4 +1096,3 @@ b::{	; Revo Idle: Buy
 ^!9::] ; GTNH: Fix Ctrl Alt
 ^!0::} ; GTNH: Fix Ctrl Alt
 #HotIf
-
