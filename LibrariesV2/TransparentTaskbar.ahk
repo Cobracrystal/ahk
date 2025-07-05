@@ -167,8 +167,9 @@ class TransparentTaskbar {
 	static get_window_monitor_number(hwnd) {
 		WinGetPos(&xpos, &ypos, &width, &height, hwnd)
 		winMiddleX := xpos + width/2
+		winMiddleY := ypos + height/2
 		for i, e in this.monitors
-			if (winMiddleX > e.Left && winMiddleX < e.Right)
+			if (winMiddleX > e.Left && winMiddleX < e.Right && winMiddleY > e.Top && winMiddleY < e.Bottom)
 				return e.MonitorNumber
 	}
 
