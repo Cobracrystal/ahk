@@ -1,5 +1,8 @@
 ﻿; https://github.com/cobracrystal/ahk
-; TODO 3: Add Settings for excluded windows (with editable list, like in PATH native settings), automatically form that into regex
+; TODO 3: Add Settings for excluded windows (with editable list, like in PATH native settings)
+; add option to resize and position windows, including multiple windows. make inputbox gui for xywh for that.
+; fix spread windows
+; add "show system info" somewhere in settings to show monitor sizes etc
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
 ; cache command lines to reuse
 ; add general updates
@@ -824,12 +827,17 @@ class WindowManager {
 		detectHiddenWindows: 0,
 		useBlacklist: 1,
 		blacklist: [
-			"Default IME",
-			"MSCTFIME UI",
+			"",
 			"NVIDIA GeForce Overlay",
-			"Microsoft Text Input Application",
-			"Program Manager",
-			""
+			"ahk_class MultitaskingViewFrame ahk_exe explorer.exe",
+			"ahk_class Windows.UI.Core.CoreWindow",
+			"ahk_class WorkerW ahk_exe explorer.exe",
+			"ahk_class Progman ahk_exe explorer.exe",
+			"ahk_class Shell_TrayWnd ahk_exe explorer.exe",
+			"ahk_class Shell_SecondaryTrayWnd ahk_exe explorer.exe",
+			; "Microsoft Text Input Application",
+			; "Default IME",
+			; "MSCTFIME UI"
 		]
 	}
 
