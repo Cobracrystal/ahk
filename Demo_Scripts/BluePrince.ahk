@@ -13,13 +13,13 @@ solveCores(str) {
 	arr := []
 	str := StrReplace(str, "`n", " ")
 	for i, e in StrSplitUTF8(str, " ")
-		arr.push(objForEach(StrSplitUTF8(e), (char) => (ord(char) - ord("A") + 1)))
+		arr.push(objDoForEach(StrSplitUTF8(e), (char) => (ord(char) - ord("A") + 1)))
 	solutions := []
 	for i, e in arr {
 		core := numericCore(e*)
 		solutions.push(core)
 	}
-	return objForEach(solutions, (a) => (a.insertAt(1, Chr(a[1] + Ord("A") - 1)), a))
+	return objDoForEach(solutions, (a) => (a.insertAt(1, Chr(a[1] + Ord("A") - 1)), a))
 }
 
 bestNumericCorePermutative(n,m,o,p) {
