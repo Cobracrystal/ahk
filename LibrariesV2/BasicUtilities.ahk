@@ -488,9 +488,8 @@ objSortByKey(tObj, key, mode := "") {
 			arr2[tv] := [i]
 		str .= tv . "`n"
 	}
-	newStr := Sort(str ?? "", mode)
+	newStr := Sort(IsSet(str) ? SubStr(str, 1, -1) : "", mode)
 	strArr := StrSplit(newStr, "`n")
-	strArr.Pop()
 	counter := 1
 	Loop (strArr.Length) {
 		if (counter > strArr.Length)
