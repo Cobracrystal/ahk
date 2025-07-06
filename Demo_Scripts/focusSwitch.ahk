@@ -1,4 +1,5 @@
 #SingleInstance Force
+#Include ..\LibrariesV2\BasicUtilities.ahk
 ; switch focus, limited per monitor
 !Up::		focusSwitch.moveFocus("U")
 !Down::		focusSwitch.moveFocus("D")
@@ -46,19 +47,26 @@ class focusSwitch {
 		sortedByY := this.objSortByKey(coordinates, "y", "N")
 		switch direction, 0 {
 			case "L", "R":
-				nextIndex := (direction == "L" ? -1 : 1) + this.objContainsValue(sortedByX, activeHwnd, (a, b) => (a.value.hwnd == b))
-				if (nextIndex > sortedByX.Length || nextIndex < 1)
-					return
-				newHwnd := sortedByX[nextIndex].value.hwnd
+				arr := sortedByX
+				axis := "x"
+				direction := (direction == "L" ? -1 : 1)
 			case "U", "D":
-				nextIndex := (direction == "U" ? -1 : 1) + this.objContainsValue(sortedByY, activeHwnd, (a, b) => (a.value.hwnd == b))
-				if (nextIndex > sortedByY.Length || nextIndex < 1)
-					return
-				newHwnd := sortedByY[nextIndex].value.hwnd
+				arr := sortedByY
+				axis := "y"
+				direction := (direction == "U" ? -1 : 1)
 			default: 
 				return
 		}
-		; FileAppend(newHwnd ": " WinGetTitle(newHwnd), "*", "UTF-8")
+		index := this.objContainsValue(arr, activeHwnd, (a, b) => (a.value.hwnd == b))
+		curVal := arr[index].value.%axis%
+		while(true) {
+			index += direction
+			if (index > arr.Length || index < 1)
+				return
+			if (direction == 1 && arr[index].value.%axis% > curVal) || (direction == -1 && arr[index].value.%axis% < curVal)
+				break
+		}
+		newHwnd := arr[index].value.hwnd
 		WinActivate(newHwnd)
 	}
 
