@@ -48,26 +48,40 @@ class focusSwitch {
 		switch direction, 0 {
 			case "L", "R":
 				arr := sortedByX
-				axis := "x"
+				axis := "x", axis2 := "y"
 				direction := (direction == "L" ? -1 : 1)
 			case "U", "D":
 				arr := sortedByY
-				axis := "y"
+				axis := "y", axis2 := "x"
 				direction := (direction == "U" ? -1 : 1)
 			default: 
 				return
 		}
 		index := this.objContainsValue(arr, activeHwnd, (a, b) => (a.value.hwnd == b))
+		if !(index)
+			return
 		curVal := arr[index].value.%axis%
-		while(true) {
+		axis2Val := arr[index].value.%axis2%
+		selectableWindows := []
+		while(true) { ; there may be multiple windows with same x/y-coord
 			index += direction
 			if (index > arr.Length || index < 1)
-				return
-			if (direction == 1 && arr[index].value.%axis% > curVal) || (direction == -1 && arr[index].value.%axis% < curVal)
 				break
+			if (direction == 1 && arr[index].value.%axis% > curVal) || (direction == -1 && arr[index].value.%axis% < curVal)
+				selectableWindows.push(arr[index].value)
 		}
-		newHwnd := arr[index].value.hwnd
-		WinActivate(newHwnd)
+		if !selectableWindows.Length
+			return
+		nextWindow := selectableWindows[1]
+		for o in selectableWindows { ; if multiple windows are same distance from current one, but one is on same axis, prefer that one
+			if nextWindow.%axis% != o.%axis%
+				break
+			else if o.%axis2% == axis2Val {
+				nextWindow := o
+				break
+			}
+		}
+		WinActivate(nextWindow.hwnd)
 	}
 
 	static getDesktopWindows(monitor := 0) {
@@ -129,14 +143,13 @@ class focusSwitch {
 				arr2[tv] := [i]
 			str .= tv . "`n"
 		}
-		newStr := Sort(str ?? "", mode)
+		newStr := Sort(IsSet(str) ? SubStr(str, 1, -1) : "", mode)
 		strArr := StrSplit(newStr, "`n")
-		strArr.Pop()
 		counter := 1
 		Loop (strArr.Length) {
 			if (counter > strArr.Length)
 				break
-			el := isString ? strArr[counter] . "" : Number(strArr[counter])
+			el := isString ? String(strArr[counter]) : Number(strArr[counter])
 			for j, f in arr2[el] {
 				arr3.push({ index: f, value: isObj ? tmap.%f% : tmap[f] })
 			}
