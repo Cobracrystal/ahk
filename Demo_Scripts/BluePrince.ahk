@@ -1,6 +1,6 @@
 #Requires AutoHotkey >=v2.0
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\MathUtilities.ahk"
+#Include %A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk
+#Include %A_LineFile%\..\..\LibrariesV2\MathUtilities.ahk
 mainfunc()
 
 mainfunc() {

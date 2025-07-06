@@ -1,7 +1,6 @@
 ﻿; https://github.com/cobracrystal/ahk
 
-#Requires Autohotkey v2+
-#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include %A_LineFile%\..\..\LibrariesV2\jsongo.ahk
 
 class TrayMenu {
 	; ADD TRACKING FOR CHILD MENUS
