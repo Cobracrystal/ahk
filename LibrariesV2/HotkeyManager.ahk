@@ -161,21 +161,18 @@ class HotkeyManager {
 			{
 				line := A_LoopField
 				if (flagComment) {
-					if (!RegExMatch(line, "^\s*\*\/")) {
-						cleanScript .= "`n"
-						continue
-					}
-					flagComment := false
-					; if the comment ends, then there cannot be a new /* on the same line. Then, the rest is at worst a comment with ; 
-					line := RegExReplace(line, "^\s*\*\/")
+					if (RegexMatch(line, "\*\/\s*$"))
+						flagComment := false
+					cleanScript .= "`n"
+					continue
 				}
-				if (RegExMatch(line, "^\s*\/\*")) { ; /* comments MUST be at start of line
+				else if (RegExMatch(line, "^\s*\/\*")) { ; /* comments MUST be at start of line
 					if (!RegexMatch(line, "^\s*\/*.*\*\/\h*$")) ; these lines are ENTIRELY comments regardless. /* */ [text] is the same as ; [text]
 						flagComment := true
 					cleanScript .= "`n"
 					continue
 				}
-				if (InStr(line, "#Include") && RegexMatch(line, "^\s*#Include")) {
+				else if (RegexMatch(line, "^\s*#Include")) {
 					path := this.getIncludePath(line, p) ; keep track of include working directory. THIS IS PER FILE.)
 					if (path && !objContainsValue(stack, path))
 						stack.push(path)
@@ -191,7 +188,7 @@ class HotkeyManager {
 
 	static getIncludePath(line, from := A_ScriptFullPath) {
 		static currentWorkingDirectory := A_ScriptDir
-		RegexMatch(line, '^\s*#Include (?<quot>"|`')?(?<ignore>\*i )?(?<path>.*)(?P=quot)', &m)
+		RegexMatch(line, '^\s*#Include (?<quot>"?|`'?)(?<ignore>(?:\*i)?\s*)(?<path>.*)(?P=quot)', &m)
 		path := m["path"]
 		for i, e in ["A_AhkPath", "A_AppData", "A_AppDataCommon", "A_ComputerName", "A_ComSpec", "A_Desktop", "A_DesktopCommon", "A_IsCompiled", "A_MyDocuments", "A_ProgramFiles", "A_Programs", "A_ProgramsCommon", "A_ScriptDir", "A_ScriptFullPath", "A_ScriptName", "A_Space", "A_StartMenu", "A_StartMenuCommon", "A_Startup", "A_StartupCommon", "A_Tab", "A_Temp", "A_UserName", "A_WinDir"]
 			path := StrReplace(path, "%" e "%", %e%)
