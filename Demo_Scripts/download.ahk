@@ -141,9 +141,8 @@ betterFileNames(linkArray) {
 	newLinkArray := []
 	dupeURLs := arrayDuplicateIndices(linkArray, "url", false)
 	for i, e in dupeURLs
-		if (e.Length > 1)
-			Loop(e.Length - 1)
-				linkArray[e[A_Index + 1]].status := "Duplicate URL (URL " e[1] ")"
+		Loop(e.Length - 1)
+			linkArray[e[A_Index + 1]].status := "Duplicate URL (URL " e[1] ")"
 	; get duplicates of filenames while ignoring duplicate urls.
 	dupeFileNames := Map()
 	for i, e in linkArray {

@@ -1,6 +1,6 @@
 ﻿; https://github.com/cobracrystal/ahk
 
-#Include %A_LineFile%\..\..\LibrariesV2\jsongo.ahk
+#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 class TrayMenu {
 	; ADD TRACKING FOR CHILD MENUS
@@ -176,6 +176,8 @@ objContainsValue(obj, value, comparator := ((iterator,value) => (iterator = valu
  * @returns {Object} A deep clone of the given object
  */
 objClone(obj) {
+	if !(obj is Object)
+		return obj
 	copy := obj.Clone()
 	for i, e in copy
 		copy[i] := objClone(e)
@@ -250,7 +252,6 @@ objDoForEach(obj, fn := ((a) => (objToString(a))), value := 0, conditional := ((
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
-	queue := []
 	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (conditional(e, value))
 			(isArrLike ? obj[i] := fn(e) : obj.%i% := fn(e))
@@ -261,16 +262,87 @@ objGetMinimum(obj) => objCollect(obj, (a,b) => Min(a,b))
 objGetMaximum(obj) => objCollect(obj, (a,b) => Max(a,b))
 objGetAverage(obj) => objCollect(obj, (a,b) => (a+b)) / (obj is Array ? obj.Length : obj.Count)
 
-objCollect(obj, fn := ((base, iterator) => (base . objToString(iterator))), value := 0, conditional := ((iterator,value) => (true))) {
+/**
+ * 
+ * @param obj 
+ * @param {Func} fn function responsible for collecting objects. Equivalent to fn(fn(....fn(fn(base,obj[1]),obj[2])...,obj[n-1]),obj[n])
+ * @param {Any} initialBase Initial value of the base on which fn operates. If not given, first element in object becomes base. Set this if fn operators onto properties or items of enumerable values.
+ * @param {Any} value Optional Value to check conditional upon
+ * @param {Func} conditional Optional Comparator to determine which values to include in collection.
+ * @returns {Any} Collected Value
+ */
+objCollect(obj, fn := ((base, iterator) => (base . objToString(iterator))), initialBase?, value := 0, conditional := ((iterator,value) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
+	if (IsSet(initialBase))
+		base := initialBase
 	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (conditional(e, value))
 			base := IsSet(base) ? fn(base, e) : e
 	return base ?? ""
 }
-	
+
+/**
+ * 
+ * @param obj Object to search duplicates in
+ * @param {(a) => (a)} fn Function to get value to compare for duplications. Ie for [{x:1,y:5},{x:4,y:5}] specify (a) => (a.y) to get entries where y is the same
+ * @returns {Array} Array of indices of duplicates in ascending order
+ */
+objGetDuplicates(obj, fn := (a => a), caseSense := true) {
+	isArrLike := (obj is Array || obj is Map)
+	if !(isArrLike || obj is Object)
+		throw(TypeError("objForEach does not handle type " . Type(obj)))
+	duplicateMap := Map()
+	duplicateIndices := []
+	duplicateMap.CaseSense := caseSense
+	for i, e in (isArrLike ? obj : obj.OwnProps()) {
+		v := fn(e)
+		if (duplicateMap.Has(v))
+			duplicateMap[v].push([i, e])
+		else
+			duplicateMap[v] := [[i, e]]
+	}
+	for i, e in (isArrLike ? obj : obj.OwnProps()) {
+		v := fn(e)
+		if (duplicateMap[v].Length > 1) {
+			duplicateMap[v].HasOwnProp("counter") ? duplicateMap[v].counter++ : duplicateMap[v].counter := 1
+			duplicateIndices.push(duplicateMap[v][duplicateMap[v].counter][1])
+		}
+	}
+	return duplicateIndices
+}
+
+/**
+ * 
+ * @param obj Object to search duplicates in
+ * @param {(a) => (a)} fn Function to get value to compare for duplications. Ie for [{x:1,y:5},{x:4,y:5}] specify (a) => (a.y) to get entries where y is the same
+ * @returns {Object} CLONE of obj without duplicates
+ */
+objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
+	isArrLike := (obj is Array || obj is Map)
+	isMap := (obj is Map)
+	if !(isArrLike || obj is Object)
+		throw(TypeError("objForEach does not handle type " . Type(obj)))
+	duplicateMap := Map()
+	duplicateIndices := []
+	duplicateMap.CaseSense := caseSense
+	for i, e in (isArrLike ? obj : obj.OwnProps()) {
+		v := fn(e)
+		if (duplicateMap.Has(v))
+			duplicateMap[v].push([i, e])
+		else
+			duplicateMap[v] := [[i, e]]
+	}
+	newObj := %Type(obj)%()
+	for i, e in (isArrLike ? obj : obj.OwnProps()) {
+		v := fn(e)
+		if (duplicateMap[v].Length == 1)
+			isArrLike ? (isMap ? newObj[i] := e : newObj.push(e)) : newObj.%i% := e
+	}
+	return newObj
+}
+
 objZip(obj1, obj2, stopAtAnyEnd := true) {
 	obj1Enum := obj1, obj2Enum := obj2, index := 1
 	try obj1Enum := obj1Enum.__Enum(1)
@@ -284,24 +356,6 @@ objZip(obj1, obj2, stopAtAnyEnd := true) {
 	)
 }
 
-range(startEnd, end?, step?, inclusive := true) {
-	start := IsSet(end) ? startEnd : 1
-	end := end ?? startEnd
-	step := step ?? 1
-	index := 1
-	return (&n, &m := -1) => (
-		!IsSet(m) ? 
-			(n := index++, m := start, start := roundProper(start + step), inclusive ? m <= end : m < end) : 
-			(n := start, start := roundProper(start + step), inclusive ? n <= end : n < end)
-	)
-}
-
-rangeA(startEnd, end?, step?, inclusive := true) {
-	a := []
-	for e in range(startEnd, end?, step?, inclusive)
-		a.push(e)
-	return a
-}
 
 /**
  * Return a json-like representation of the given object, without altering (escaping) the data itself.
@@ -312,12 +366,12 @@ rangeA(startEnd, end?, step?, inclusive := true) {
  * @param {String} strEscape Whether to escape strings with quotes (JSON Style) 
  * @returns {String} 
  */
-objToString(obj, compact := false, compress := true, strEscape := true, spacer := "`t") {
+objToString(obj, compact := false, compress := true, strEscape := false, spacer := "`t") {
 	return _objToString(obj, 0)
 
 	_objToString(obj, indentLevel) {
 		qt := strEscape ? '"' : ''
-		if !(obj is Object)
+		if !(IsObject(obj))
 			return obj is Number ? String(obj) : qt String(strEscape ? StrReplace(StrReplace(obj, "'", "\'"), '"', '\"') : obj) qt
 		isArr := obj is Array
 		isMap := obj is Map
@@ -340,6 +394,25 @@ objToString(obj, compact := false, compress := true, strEscape := true, spacer :
 		sep2 := !compact && !compress ? '`n' strMultiply(spacer, indentLevel) : separator
 		return ( isArr ? "[" : isMap ? "Map(" : "{" ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( isArr ? "]" : isMap ? ")" : "}" )
 	}
+}
+
+range(startEnd, end?, step?, inclusive := true) {
+	start := IsSet(end) ? startEnd : 1
+	end := end ?? startEnd
+	step := step ?? 1
+	index := 1
+	return (&n, &m := -1) => (
+		!IsSet(m) ? 
+			(n := index++, m := start, start := roundProper(start + step), inclusive ? m <= end : m < end) : 
+			(n := start, start := roundProper(start + step), inclusive ? n <= end : n < end)
+	)
+}
+
+rangeA(startEnd, end?, step?, inclusive := true) {
+	a := []
+	for e in range(startEnd, end?, step?, inclusive)
+		a.push(e)
+	return a
 }
 
 arrayMerge(array1, array2) {
@@ -374,7 +447,7 @@ arrayFunctionMask(arr, maskFunc := (a) => (IsSet(a)), keepEmpty := true) {
 	return arr2
 }
 
-arrayBinaryMask(arr, mask, keepEmpty := true) {
+arrayMask(arr, mask, keepEmpty := true) {
 	if arr.Length != mask.Length
 		throw Error("Invalid mask given")
 	arr2 := []
@@ -388,6 +461,12 @@ arrayBinaryMask(arr, mask, keepEmpty := true) {
 				arr2.push(arr[i])
 		}
 	}
+	return arr2
+}
+
+arrayIgnoreIndex(arr, index) {
+	arr2 := arr.Clone()
+	arr2.RemoveAt(index)
 	return arr2
 }
 
@@ -451,6 +530,9 @@ arrayDuplicateIndices(arr, key?, isMap := 0) {
 		else
 			duplicates[el] := [i]
 	}
+	for i, e in duplicates
+		if e.Length == 1
+			duplicates.Delete(i)
 	return duplicates
 }
 
