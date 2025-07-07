@@ -670,7 +670,7 @@ customExit(ExitReason, ExitCode) {
 		if (id)
 			WinKill(id)
 		main_inverter := openDTUman.getInverterList()["inverter"][1]["serial"]
-		openDTUman.setInverterLimitConfig(main_inverter, {limit_type:1, limit_value:30})
+		openDTUman.setInverterLimitConfig(main_inverter, {limit_type:1, limit_value:20})
 	}
 	ExitApp() ; this is technically unnecessary.
 }
