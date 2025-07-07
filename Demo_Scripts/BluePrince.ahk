@@ -4,19 +4,32 @@
 mainfunc()
 
 mainfunc() {
+	global beStupid := true
 	; input := A_Clipboard
-	input := "PIGS SAND MAIL DATE HEAD CLAM PEAK HEAT JOYA WELL TOAD CARD WILL TAPE LEGS TREE ROAD MAID SLAB ROCK HAND VASE SAFE CLAY TOES"
-	print(objToString(solveCores(input),false,true))
+	coatOfArms := [1000, 200, 11, 2]
+	bigPuzzle := "PIGS SAND MAIL DATE HEAD CLAM PEAK HEAT JOYA WELL TOAD CARD WILL TAPE LEGS TREE ROAD MAID SLAB ROCK HAND VASE SAFE CLAY TOES"
+	test := "HEAT"
+	print(numericCore(coatOfArms*))
+	print(solveCores(test))
+	beStupid := false
+	print(solveCores(test))
 }
 
-solveCores(str) {
+solveCores(str, beStupid := true) {
 	arr := []
 	str := StrReplace(str, "`n", " ")
 	for i, e in StrSplitUTF8(str, " ")
 		arr.push(objDoForEach(StrSplitUTF8(e), (char) => (ord(char) - ord("A") + 1)))
 	solutions := []
-	for i, e in arr {
+	arr2 := objClone(arr)
+	objDoForEach(arr2, objCollect)
+	objDoForEach(arr2, Number)
+	for i, e, f in objZip(arr, arr2) {
 		core := numericCore(e*)
+		; core2 := bestNumericCorePermutative(e*)
+		; core3 := bestNumericCore(f)
+		; core.push(core2*)
+		; core.push(core3*)
 		solutions.push(core)
 	}
 	return objDoForEach(solutions, (a) => (a.insertAt(1, Chr(a[1] + Ord("A") - 1)), a))
@@ -66,7 +79,7 @@ bestNumericCore(n) {
 }
 
 numericCore(m,n,o,p) {
-	static beStupid := false
+	global beStupid
 	static calcStrings := Map(1, "{}-{}*{}/{}",	2, "{}-{}/{}*{}", 3, "{}*{}-{}/{}", 4, "{}*{}/{}-{}", 5, "{}/{}*{}-{}", 6, "{}/{}-{}*{}")
 	m := Integer(m), n := Integer(n), o := Integer(o), p := Integer(p), arr := []
 	a1 := p = 0 ? -1 : (m - n) * o / p
