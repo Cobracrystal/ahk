@@ -194,11 +194,10 @@ permutations(arr) {
 	if arr.Length == 1
 		return [arr]
 	local permutationArr := []
-	Loop(arr.Length) {
-		cValue := arr[A_Index]
-		perms := permutations(arrayIgnoreIndices(arr, A_Index))
-		for i, e in perms
-			permutationArr.push([cValue, e*])
+	for i, e in arr {
+		perms := permutations(arrayIgnoreIndex(arr, i))
+		for f in perms
+			permutationArr.push([e, f*])
 	}
 	return permutationArr
 }
