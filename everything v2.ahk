@@ -1,7 +1,7 @@
 ﻿; ###########################################################################
 ; ############################# INITIALIZATION ##############################
 ; ###########################################################################
-#Requires AutoHotkey v2+
+#Requires AutoHotkey 2
 #SingleInstance Force
 KeyHistory(500)
 #UseHook
@@ -50,7 +50,6 @@ GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND
 GroupAdd("nonMenuWindows", "ahk_exe cs2.exe")
 GroupAdd("nonMenuWindows", "Satisfactory ahk_class UnrealWindow")
 GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
-youtubeDL := YoutubeDLGui()
 reminders := ReminderManager(, , token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
 try reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBALVAR_WASRELOADED)
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "CHANNELID"))
@@ -76,7 +75,6 @@ internetConnectionLogger("Init")
 openDTUScript("Init")
 openDTUman := openDTU("http://192.168.178.48", 80, "admin", FileRead(A_Desktop "\programs\Files\openDTUAuth.pw"))
 ; Load LaTeX Hotstrings
-
 ; TODO: ADD WINDOW OPTION FOR HOTSTRINGLOADER. IE GIVEN AHK CRITERIA IT ADDS HOTIF BEFORE REGISTERING THEM (makes editing harder tho)
 try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX",,,false)
 expressionCalculator.setWolframAlphaToken(FileRead(A_WorkingDir "\everything\wolframalphaQueries.token", "UTF-8"))
@@ -165,6 +163,7 @@ return
 }
 
 ^+F10:: {	; YTDL GUI
+	static youtubeDL := YoutubeDLGui()
 	youtubeDL.YoutubeDLGui("T")
 }
 
@@ -800,6 +799,12 @@ customExit(ExitReason, ExitCode) {
 	controlY := vlcH - 40
 	ControlSend("{Esc}", , vlcid)
 	ControlClick("X212 Y" controlY, vlcid, , , , "Pos NA")
+}
+#HotIf
+
+#HotIf WinActive("Mozilla Firefox ahk_exe firefox.exe")
+^D:: {		; Firefox: Expand Tab Sidebar
+	ControlClick("X70 Y20", WinExist("Mozilla Firefox ahk_exe firefox.exe"), , , , "Pos NA")
 }
 #HotIf
 
