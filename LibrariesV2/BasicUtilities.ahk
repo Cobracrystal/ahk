@@ -176,11 +176,12 @@ objContainsValue(obj, value, comparator := ((iterator,value) => (iterator = valu
  * @returns {Object} A deep clone of the given object
  */
 objClone(obj) {
+	isArrLike := (obj is Array || obj is Map)
 	if !(obj is Object)
 		return obj
 	copy := obj.Clone()
-	for i, e in copy
-		copy[i] := objClone(e)
+	for i, e in (isArrLike ? obj : obj.OwnProps())
+		isArrLike ? copy[i] := objClone(e) : copy.%i% := objClone(e)
 	return copy
 }
 
@@ -342,7 +343,7 @@ objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 	}
 	return newObj
 }
-
+	
 objZip(obj1, obj2, stopAtAnyEnd := true) {
 	obj1Enum := obj1, obj2Enum := obj2, index := 1
 	try obj1Enum := obj1Enum.__Enum(1)
