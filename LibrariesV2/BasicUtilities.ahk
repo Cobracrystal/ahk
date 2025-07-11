@@ -978,7 +978,7 @@ ExecScript(expression, Wait := true, void := false) {
 	input .= '#Include "*i ' A_LineFile '"`n'
 	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\MathUtilities.ahk"`n'
 	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\FileUtilities.ahk"`n'
-	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print\(.*\)'))
+	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print\(.*\)') || RegexMatch(expression, 'i)\.Show\(.*\)'))
 		input .= expression
 	else
 		input .= 'print(' expression ',,false)'
