@@ -698,6 +698,10 @@ customExit(ExitReason, ExitCode) {
 :X:from:me:: fastPrint("from:245189840470147072 ")
 #HotIf
 
+^::Send("{Text}^")
+´::Send("{Text}´")
+`::Send("{Text}``")
+
 :*?:=/=::≠
 :*?:+-::±
 :*?:~=::≈
