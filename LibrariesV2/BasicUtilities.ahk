@@ -367,13 +367,24 @@ objZip(obj1, obj2, stopAtAnyEnd := true) {
  * @param {String} strEscape Whether to escape strings with quotes (JSON Style) 
  * @returns {String} 
  */
-objToString(obj, compact := false, compress := true, strEscape := false, spacer := "`t") {
+objToString(obj, compact := false, compress := true, strEscape := false, mapAsObject := true, spacer := "`t") {
 	return _objToString(obj, 0)
 
 	_objToString(obj, indentLevel) {
+		static escapes := [["\", "\\"], ['"', '\"'], ["`n", "\n"], ["`t", "\t"]]
 		qt := strEscape ? '"' : ''
-		if !(IsObject(obj))
-			return obj is Number ? String(obj) : qt String(strEscape ? StrReplace(StrReplace(obj, "'", "\'"), '"', '\"') : obj) qt
+		if !(IsObject(obj)) {
+			if (obj is Number)
+				return String(obj)
+			if (IsNumber(obj))
+				return qt obj qt
+			if (strEscape) {
+				for e in escapes
+					obj := StrReplace(obj, e[1], e[2])
+				return qt String(obj) qt
+			}
+			return obj
+		}
 		isArr := obj is Array
 		isMap := obj is Map
 		isObj := !(isArr || isMap)
@@ -387,13 +398,13 @@ objToString(obj, compact := false, compress := true, strEscape := false, spacer 
 				separator := (val??"") is Object && count > 1 ? '`n' : trspace
 			if !(IsSet(val))
 				str := RTrim(str, separator) "," separator
-			else if (isArr)
+			else if (isArr || (isMap && !mapAsObject))
 				str .= _objToString(val ?? "", indentLevel + 1) "," separator
 			else
 				str .= _objToString(key ?? "", indentLevel + 1) ":" trspace _objToString(val ?? "", indentLevel + 1) "," separator
 		}
 		sep2 := !compact && !compress ? '`n' strMultiply(spacer, indentLevel) : separator
-		return ( isArr ? "[" : isMap ? "Map(" : "{" ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( isArr ? "]" : isMap ? ")" : "}" )
+		return ( isArr ? "[" : (isMap && !mapAsObject) ? "Map(" : "{" ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( isArr ? "]" : (isMap && !mapAsObject) ? ")" : "}" )
 	}
 }
 
@@ -1328,7 +1339,7 @@ useIfSet(value, default := unset) {
 	return IsSet(value) ? value : default
 }
 
-MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, owner := 0, addCopyButton := 0, buttonNames := [], icon := 0, timeout := 0) {
+MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, owner := 0, addCopyButton := 0, buttonNames := [], icon := 0, timeout := 0, maxCharsVisible?) {
 	static MB_OK 						:= 0
 	static MB_OKCANCEL 					:= 1
 	static MB_ABORTRETRYIGNORE 			:= 2
@@ -1409,7 +1420,8 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	if (buttonStyle == 2 || buttonStyle == 4)
 		mbgui.Opt("-SysMenu")
 	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
-	nText := textCtrlAdjustSize(400,, text,, guiFontOptions, MB_FONTNAME)
+	width := (StrLen(text) > 10000 && !IsSet(maxCharsVisible)) ? 1500 : 400 
+	nText := textCtrlAdjustSize(width,, IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text,, guiFontOptions, MB_FONTNAME)
 	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, nText)
 	mbgui.AddText("x" leftMargin " y" gap " BackgroundTrans vTextBox", nText)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
@@ -1483,20 +1495,26 @@ textCtrlAdjustSize(width, textCtrl?, str?, onlyCalculate := false, fontOptions?,
 		local temp := Gui()
 		temp.SetFont(fontOptions ?? unset, fontName ?? unset)
 		textCtrl := temp.AddText()
+		onlyCalculate := true
 	}
 	fixedWidthStr := ""
+	fixedWidthLine := ""
 	pos := 0
 	loop parse str, " `t" {
 		line := A_LoopField
 		lLen := StrLen(A_LoopField)
 		pos += lLen + 1
-		strWidth := guiGetTextSize(textCtrl, fixedWidthStr . line)
+		strWidth := guiGetTextSize(textCtrl, fixedWidthLine . line)
+		if (pos > 65535)
+			break
 		if (strWidth[1] <= width)
-			fixedWidthStr .= line . substr(str, pos, 1)
+			fixedWidthLine .= line . substr(str, pos, 1)
 		else { ; reached max width, begin new line
-			fixedWidthStr := SubStr(fixedWidthStr, 1, -1)
-			if (guiGetTextSize(textCtrl, line)[1] <= width) 
-				fixedWidthStr .= '`n' . line . substr(str, pos, 1)
+			fixedWidthLine := SubStr(fixedWidthLine, 1, -1)
+			if (guiGetTextSize(textCtrl, line)[1] <= width) {
+				fixedWidthStr .= (fixedWidthStr ? '`n' : '') fixedWidthLine . substr(str, pos, 1) 
+				fixedWidthLine := ""
+			}
 			else { ; A_Loopfield is by itself wider than width
 				fixedWidthWord := ""
 				linePart := ""
@@ -1513,6 +1531,7 @@ textCtrlAdjustSize(width, textCtrl?, str?, onlyCalculate := false, fontOptions?,
 			}
 		}
 	}
+	fixedWidthStr .= (fixedWidthStr ? '`n' : '') fixedWidthLine . substr(str, pos, 1)
 	if (!onlyCalculate) {
 		textCtrl.Move(,,guiGetTextSize(textCtrl, fixedWidthStr)*)
 		textCtrl.Value := fixedWidthStr
