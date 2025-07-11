@@ -19,9 +19,11 @@ class SongDownloader {
 			trySelectFile: 0,
 			currentTodo: 70,
 			outputBaseFolder: "C:\Users\Simon\Music\Collections",
+			outputSubFolder: "p001",
 			ffmpegPath: "C:\Users\Simon\Music\ConvertMusic\ytdl\ffmpeg.exe",
 			ytdlPath: "C:\Users\Simon\Music\ConvertMusic\ytdl\yt-dlp.exe",
 		}
+		this.settings.outputSubFolder := Format("p{:03}", this.settings.currentTodo) 
 		this.options := this.getOptions()
 	}
 
@@ -37,13 +39,16 @@ class SongDownloader {
 	}
 
 	static getMetaData(songLink) {
-		command := '"' this.settings.ytdlPath '" --ignore-config --no-playlist --write-info-json --skip-download --dump-json ' . songLink
-		fn := (sOutPut) => (timedTooltip(SubStr(sOutPut, 1, 40)))
-		videoData := jsongo.parse(cmdRet(command, fn))
+		command := '"' this.settings.ytdlPath '" --ignore-config --verbose --no-playlist --write-info-json --skip-download --dump-json ' . songLink
+		fn := (sOutPut) => (RegExMatch(SubStr(sOutPut, 1, 20), "^\[[[:alnum:]]+\]") ? timedTooltip(SubStr(sOutPut, 1, 40)) : 0)
+		fullOutputStr := cmdRet(command, fn)
+		jsonStr := SubStr(fullOutputStr, InStr(Trim(fullOutputStr," `t`r`n"), "`n",,-1))
+		videoData := jsongo.parse(jsonStr)
 		title := videoData.Has("track") ? videoData["track"] : videoData["title"]
 		artist := videoData.Has("artists") ? objCollect(videoData["artists"], (a,b) => a ", " b) : (videoData.Has("creator") ? videoData["creator"] : videoData["uploader"])
 		album := videoData.Has("album") ? videoData["album"] : ""
 		genre := ""
+		; A_Clipboard := objToString(videoData, 0, 0, 1, 1)
 		if (InStr(title, "Nightcore")) {
 			if RegExMatch(title, "i)Nightcore\s*-\s*") 
 				title := RegExReplace(title, "i)Nightcore\s*-\s*")
@@ -68,7 +73,8 @@ class SongDownloader {
 			title: title,
 			artist: artist,
 			album: album,
-			genre: genre
+			genre: genre,
+			description: videoData["description"]
 		}
 	}
 
@@ -76,8 +82,10 @@ class SongDownloader {
 		g := Gui("+Border +OwnDialogs", "Download Song")
 		g.OnEvent("Escape", this.finishGui.bind(this))
 		g.OnEvent("Close", (*) => g.Destroy())
-		g.AddText("", "Links")
-		g.AddEdit("w250 R1 vLink", data.link)
+		g.AddText("Section 0x200 R1.45", "Links | Current Folder: " this.settings.outputSubFolder)
+		if data.description
+			g.AddButton("xs+150 yp-1", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1))
+		g.AddEdit("xs w250 R1 vLink", data.link)
 		g.AddText("", "Title")
 		g.AddEdit("w250 vTitle", data.title)
 		g.AddText("", "Artist")
@@ -88,7 +96,7 @@ class SongDownloader {
 		g.AddEdit("w250 vGenre", data.genre)
 		g.AddCheckbox("vEmbedThumbnail Checked1", "Embed Thumbnail").OnEvent("Click", (g, *) => (g.gui["CMD"].Value := this.cmdStringBuilder()))
 		str := this.cmdStringBuilder()
-		g.AddText("", "Current Command Line")
+		g.AddText("xs", "Current Command Line")
 		g.AddEdit("vCMD w250 R1 Readonly", str)
 		g.AddButton("xs-1 h35 w250 Default", "Launch yt-dlp").OnEvent("Click", this.finishGui.bind(this))
 		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
@@ -114,8 +122,7 @@ class SongDownloader {
 		title := songData.title ? songData.title : this.TEMPLATE.TITLE
 		artist := songData.artist ? songData.artist : this.TEMPLATE.ARTIST
 		fileName := artist " - " title "." this.TEMPLATE.EXT
-		folder := Format("{:03}", this.settings.currentTodo)
-		cmd := StrReplace(cmd, "{REPLACE_TEMPLATE_OUTPUT_IDENTIFER}", folder "\" fileName)
+		cmd := StrReplace(cmd, "{REPLACE_TEMPLATE_OUTPUT_IDENTIFER}", this.settings.outputSubFolder "\" fileName)
 		arr := []
 		if (songData.title)
 			arr.push([songData.title, '%(meta_title)s'])
@@ -130,12 +137,19 @@ class SongDownloader {
 			str1 .= e[1] "##", str2 .= e[2] "##"
 		cmd := StrReplace(cmd, "{REPLACE_TEMPLATE_METADATA_IDENTIFER}", str1 ":" str2)
 		fullCommand := cmd . '"' songData.link '"'
-		if (this.settings.runHidden)
-			output := cmdRet(fullCommand, , "UTF-8")
-		else if (this.settings.keepOpen)
-			Run(A_ComSpec " /k mode con: cols=100 lines=30 && echo " fullCommand " && " fullCommand)
+		if (this.settings.runHidden) {
+			; Run(A_ComSpec " /c " fullCommand,,'Hide')
+			output := strMultiply("=", 20) . cmdRet(fullCommand) . '`n'
+			FileAppend(output, this.settings.outputBaseFolder "\" this.settings.outputSubFolder "\log.txt", "UTF-8")
+			return
+		}
+		if (this.settings.keepOpen)
+			Run(A_ComSpec " /k mode con: cols=100 lines=30 && echo " fullCommand " && " fullCommand,,'Hide', &cmdPID)
 		else
-			RunWait(A_ComSpec " /c mode con: cols=100 lines=30 && " fullCommand)
+			Run(A_ComSpec " /c mode con: cols=100 lines=30 && " fullCommand,, 'Hide', &cmdPID)
+		ProcessWait(cmdPID)
+		Sleep(500)
+		WinShow("ahk_pid " cmdPID)
 	}
 
 	static cmdStringBuilder(option := 0, select := -1, param := -1) {
