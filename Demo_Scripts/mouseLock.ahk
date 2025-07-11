@@ -49,6 +49,7 @@ clipCursor(mode := true, window := "A") {
 	return DllCall("ClipCursor", "Ptr", llrectA)
 }
 
+#HotIf !WinActive("PUBG")
 *Capslock:: {
 	Send("{Capslock down}")
 	KeyWait("Capslock", "P")
@@ -62,6 +63,7 @@ clipCursor(mode := true, window := "A") {
 	SetNumlockState(1)
 	Send("{Numlock up}")
 }
+#HotIf 
 
 Base64toHICON(Base64PNG, height := 16) {
     nBytes := StrLen(RTrim(Base64PNG, '='))*3//4
