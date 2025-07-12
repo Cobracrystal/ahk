@@ -22,8 +22,8 @@ solveCores(str, beStupid := true) {
 		arr.push(objDoForEach(StrSplitUTF8(e), (char) => (ord(char) - ord("A") + 1)))
 	solutions := []
 	arr2 := objClone(arr)
-	objDoForEach(arr2, objCollect)
-	objDoForEach(arr2, Number)
+	arr2 := objDoForEach(arr2, objCollect)
+	arr2 := objDoForEach(arr2, Number)
 	for i, e, f in objZip(arr, arr2) {
 		core := numericCore(e*)
 		; core2 := bestNumericCorePermutative(e*)

@@ -219,43 +219,46 @@ objRemoveValue(obj, value := "", limit := 0, comparator := ((iterator,value) => 
 
 /**
  * Deletes given Value from Object, either on first encounter or on all encounters. Returns count of removed values
- * @param {Array | Map} obj
- * @param value 
- * @param {Integer} removeAll 
- * @returns {Integer} count
+ * @param obj 
+ * @param values 
+ * @param {Integer} limit 
+ * @param {(iterator, value) => Number} comparator 
+ * @param emptyValue If this is set, all encountered values are not removed, but instead replaced by this value.
+ * @returns {Integer} 
  */
-objRemoveValues(obj, values, limit := 0, comparator := ((iterator,value) => (iterator = value))) {
+objRemoveValues(obj, values, limit := 0, comparator := ((itKey,itVal,setVal?) => (itVal = setVal)), emptyValue?) {
 	isArrLike := ((isArr := obj is Array) || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objRemoveValues does not handle type " . Type(obj)))
 	queue := []
 	count := 0
-	for next, e in (isArrLike ? obj : obj.OwnProps())
-		for i, f in values
-			if (comparator(e, f)) {
+	for i, e in (isArrLike ? obj : obj.OwnProps())
+		for f in values
+			if (comparator(i, e, f)) {
 				if (!limit || count++ < limit)
-					queue.push(next)
+					queue.push(i)
 				else
 					break
 			}
 	n := queue.Length
-	while (queue.Length != 0) {
-		if (isArr)
-			obj.RemoveAt(queue.Pop())
-		else if isArrLike
-			obj.Delete(queue.Pop())
-		else obj.DeleteProp(queue.Pop())
-	}
+	if (IsSet(emptyValue))
+		for e in queue
+			isArrLike ? obj[e] := emptyValue : obj.%e% := emptyValue
+	else
+		while (queue.Length != 0)
+			isArr ? (isArrLike ? obj.Delete(queue.Pop()) : obj.RemoveAt(queue.Pop())) : obj.DeleteProp(queue.Pop())
 	return n
 }
 
-objDoForEach(obj, fn := ((a) => (objToString(a))), value := 0, conditional := ((iterator,value) => (true))) {
+objDoForEach(obj, fn := ((e) => (objToString(e))), value := 0, conditional := ((iterator,value) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
+	isMap := (obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
+	clone := %Type(obj)%()
 	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (conditional(e, value))
-			(isArrLike ? obj[i] := fn(e) : obj.%i% := fn(e))
+			(isArrLike ? (isMap ? obj[i] := fn(e) : obj.push(fn(e))) : obj.%i% := fn(e))
 	return obj
 }
 
@@ -295,21 +298,22 @@ objGetDuplicates(obj, fn := (a => a), caseSense := true) {
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	duplicateMap := Map()
+	counterMap := Map()
 	duplicateIndices := []
 	duplicateMap.CaseSense := caseSense
 	for i, e in (isArrLike ? obj : obj.OwnProps()) {
 		v := fn(e)
-		if (duplicateMap.Has(v))
+		if (duplicateMap.Has(v)) {
 			duplicateMap[v].push([i, e])
+			counterMap[v] := 1
+		}
 		else
 			duplicateMap[v] := [[i, e]]
 	}
 	for i, e in (isArrLike ? obj : obj.OwnProps()) {
 		v := fn(e)
-		if (duplicateMap[v].Length > 1) {
-			duplicateMap[v].HasOwnProp("counter") ? duplicateMap[v].counter++ : duplicateMap[v].counter := 1
-			duplicateIndices.push(duplicateMap[v][duplicateMap[v].counter][1])
-		}
+		if (duplicateMap[v].Length > 1)
+			duplicateIndices.push(duplicateMap[v][counterMap[v]++][1])
 	}
 	return duplicateIndices
 }
@@ -335,13 +339,13 @@ objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 		else
 			duplicateMap[v] := [[i, e]]
 	}
-	newObj := %Type(obj)%()
+	clone := %Type(obj)%()
 	for i, e in (isArrLike ? obj : obj.OwnProps()) {
 		v := fn(e)
 		if (duplicateMap[v].Length == 1)
-			isArrLike ? (isMap ? newObj[i] := e : newObj.push(e)) : newObj.%i% := e
+			isArrLike ? (isMap ? clone[i] := e : clone.push(e)) : clone.%i% := e
 	}
-	return newObj
+	return clone
 }
 	
 objZip(obj1, obj2, stopAtAnyEnd := true) {
@@ -1339,7 +1343,7 @@ useIfSet(value, default := unset) {
 	return IsSet(value) ? value : default
 }
 
-MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, owner := 0, addCopyButton := 0, buttonNames := [], icon := 0, timeout := 0, maxCharsVisible?) {
+MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, owner := 0, addCopyButton := 0, buttonNames := [], icon := 0, timeout := 0, maxCharsVisible?, maxTextWidth := 400) {
 	static MB_OK 						:= 0
 	static MB_OKCANCEL 					:= 1
 	static MB_ABORTRETRYIGNORE 			:= 2
@@ -1420,8 +1424,8 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	if (buttonStyle == 2 || buttonStyle == 4)
 		mbgui.Opt("-SysMenu")
 	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
-	width := (StrLen(text) > 10000 && !IsSet(maxCharsVisible)) ? 1500 : 400 
-	nText := textCtrlAdjustSize(width,, IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text,, guiFontOptions, MB_FONTNAME)
+	maxTextWidth := (StrLen(text) > 10000 && !IsSet(maxCharsVisible) && maxTextWidth < 1500) ? 1500 : maxTextWidth
+	nText := textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text,, guiFontOptions, MB_FONTNAME)
 	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, nText)
 	mbgui.AddText("x" leftMargin " y" gap " BackgroundTrans vTextBox", nText)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
