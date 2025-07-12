@@ -25,6 +25,7 @@ A_TrayMenu.Delete()
 #Include "WindowManager.ahk"
 #Include "ReminderManager.ahk"
 #Include "YoutubeDLGui.ahk"
+#Include "SongDownloader.ahk"
 #Include "TextEditMenu.ahk"
 #Include "MacroRecorder.ahk"
 #Include "TimestampConverter.ahk"
@@ -1020,6 +1021,10 @@ loadTableAsHotstrings(filePath) {
 	}
 	hotstringsAsJsonStr := jsongo.Stringify(hotstrings, , "`t")
 	try HotstringLoader.load(hotstringsAsJsonStr, "Kayoogis", , , , true)
+}
+
+^+d::{ ; Download currently copied link through yt-dlp as a song
+	SongDownloader.downloadSong(A_Clipboard)
 }
 
 ^+!d::{	; Run download script for list of links to image/video sites

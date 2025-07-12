@@ -1,8 +1,12 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 
 ; todo: for nightcore, match original song from description (we have title and know its nightcore - title, so search in description for artist etc)
+; todo: split videos via chapters
 ; a much simpler class than youtubeDL to instantly download music
-SongDownloader.downloadSong("https://www.youtube.com/watch?v=P-TPx8lcoZ4&list=WL&index=3&pp=gAQBiAQB")
+if (A_LineFile == A_ScriptFullPath) {
+	SongDownloader.downloadSong("Never Gonna Give You Up")
+	; SongDownloader.downloadSong("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=WL&index=3&pp=gAQBiAQB")
+}
 class SongDownloader {
 	
 	static __New() {
@@ -13,7 +17,7 @@ class SongDownloader {
 		this.settings := {
 			useInlineConsole: 1,
 			useAliases: 1,
-			runHidden: 0,
+			runHidden: 1,
 			keepOpen: 1,
 			openExplorer: 1,
 			trySelectFile: 0,
@@ -28,22 +32,27 @@ class SongDownloader {
 	}
 
 	static downloadSong(songLink) {
-		songLink := RegExReplace(songLink, "music\.youtube", "youtube")
-		if (RegExMatch(songLink, "youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})", &o))
-			songLink := "https://youtube.com/watch?v=" . o[1]
-		if (RegExMatch(songLink, "^[A-Za-z0-9_-]{11}$"))
-			songLink := "https://youtube.com/watch?v=" . songLink
+		songLink := this.formLink(songLink)
 		timedTooltip("Loading Metadata...")
-		firstMetadata := this.getMetaData(songLink)
-		this.songDLGui(firstMetadata)
+		if firstMetadata := this.getMetaData(songLink)
+			this.songDLGui(firstMetadata)
 	}
 
 	static getMetaData(songLink) {
-		command := '"' this.settings.ytdlPath '" --ignore-config --verbose --no-playlist --write-info-json --skip-download --dump-json ' . songLink
+		command := '"' this.settings.ytdlPath '" --default-search "ytsearch" --ignore-config --verbose --no-playlist --write-info-json --skip-download --dump-json "' . songLink '"'
 		fn := (sOutPut) => (RegExMatch(SubStr(sOutPut, 1, 20), "^\[[[:alnum:]]+\]") ? timedTooltip(SubStr(sOutPut, 1, 40)) : 0)
 		fullOutputStr := cmdRet(command, fn)
-		jsonStr := SubStr(fullOutputStr, InStr(Trim(fullOutputStr," `t`r`n"), "`n",,-1))
-		videoData := jsongo.parse(jsonStr)
+		loop parse Trim(fullOutputStr," `t`r`n"), "`n", "`r" {
+			if (RegExMatch(SubStr(A_LoopField, 1, 20), "^\[[[:alnum:]]+\]"))
+				continue
+			jsonStr := Trim(A_LoopField)
+		}
+		try 
+			videoData := jsongo.parse(jsonStr)
+		catch {
+			MsgBoxAsGui("Failed to get Metadata. Aborting. Copy Response?",,0x1,,, (response) => (response == "Copy" ? A_Clipboard := fullOutputStr : 0),A_ScriptHwnd,,["Copy", "Exit"])
+			return 0
+		}
 		title := videoData.Has("track") ? videoData["track"] : videoData["title"]
 		artist := videoData.Has("artists") ? objCollect(videoData["artists"], (a,b) => a ", " b) : (videoData.Has("creator") ? videoData["creator"] : videoData["uploader"])
 		album := videoData.Has("album") ? videoData["album"] : ""
@@ -68,14 +77,26 @@ class SongDownloader {
 			title := RegExReplace(title, "(?:feat|ft)\.?\s+(.*)$")
 			artist .= " ft " o[1]
 		}
+		objRemoveValues(videoData, ["automatic_captions", "formats", "heatmap", "requested_formats", "thumbnails", "subtitles"],,(i,e,v) => (i=v),"MANUALLY REMOVED")
 		return  {
-			link: songLink,
+			input: songLink,
+			link: this.formLink(videoData["id"]),
 			title: title,
 			artist: artist,
 			album: album,
 			genre: genre,
-			description: videoData["description"]
+			description: videoData["description"],
+			shortJson: videoData
 		}
+	}
+
+	static formLink(input) {
+		input := RegExReplace(input, "music\.youtube", "youtube")
+		if (RegExMatch(input, "youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})", &o))
+			input := "https://youtube.com/watch?v=" . o[1]
+		if (RegExMatch(input, "^[A-Za-z0-9_-]{11}$"))
+			input := "https://youtube.com/watch?v=" . input
+		return input
 	}
 
 	static songDLGui(data) {
@@ -84,10 +105,11 @@ class SongDownloader {
 		g.OnEvent("Close", (*) => g.Destroy())
 		g.AddText("Section 0x200 R1.45", "Links | Current Folder: " this.settings.outputSubFolder)
 		if data.description
-			g.AddButton("xs+150 yp-1", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1))
+			g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
 		g.AddEdit("xs w250 R1 vLink", data.link)
-		g.AddText("", "Title")
-		g.AddEdit("w250 vTitle", data.title)
+		g.AddText("0x200 R1.45", "Title")
+		g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
+		g.AddEdit("xs w250 vTitle", data.title)
 		g.AddText("", "Artist")
 		g.AddEdit("w250 vArtist", data.artist)
 		g.AddText("", "Album")
@@ -95,10 +117,11 @@ class SongDownloader {
 		g.AddText("", "Genre")
 		g.AddEdit("w250 vGenre", data.genre)
 		g.AddCheckbox("vEmbedThumbnail Checked1", "Embed Thumbnail").OnEvent("Click", (g, *) => (g.gui["CMD"].Value := this.cmdStringBuilder()))
+		g.AddCheckbox("yp vLaunchHidden Checked" this.settings.runHidden, "Launch Hidden")
 		str := this.cmdStringBuilder()
 		g.AddText("xs", "Current Command Line")
 		g.AddEdit("vCMD w250 R1 Readonly", str)
-		g.AddButton("xs-1 h35 w250 Default", "Launch yt-dlp").OnEvent("Click", this.finishGui.bind(this))
+		g.AddButton("xs-1 h30 w251 Default", "Launch yt-dlp").OnEvent("Click", this.finishGui.bind(this))
 		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 	}
 	
@@ -106,19 +129,20 @@ class SongDownloader {
 	static finishGui(g, info?) {
 		if (g is Gui.Button)
 			g := g.gui
-		metadata := {
+		data := {
 			link: g["Link"].Value,
 			title: g["Title"].Value,
 			artist: g["Artist"].Value,
 			album: g["Album"].Value,
 			genre: g["Genre"].Value,
+			embedThumbnail: g["EmbedThumbnail"].Value
 		}
 		cmd := g["CMD"].Value
 		g.destroy()
-		this.launchYTDL(cmd, metadata)
+		this.launchYTDL(cmd, data, g["LaunchHidden"].Value)
 	}
 
-	static launchYTDL(cmd, songData) {
+	static launchYTDL(cmd, songData, runHidden) {
 		title := songData.title ? songData.title : this.TEMPLATE.TITLE
 		artist := songData.artist ? songData.artist : this.TEMPLATE.ARTIST
 		fileName := artist " - " title "." this.TEMPLATE.EXT
@@ -137,7 +161,7 @@ class SongDownloader {
 			str1 .= e[1] "##", str2 .= e[2] "##"
 		cmd := StrReplace(cmd, "{REPLACE_TEMPLATE_METADATA_IDENTIFER}", str1 ":" str2)
 		fullCommand := cmd . '"' songData.link '"'
-		if (this.settings.runHidden) {
+		if (runHidden) {
 			; Run(A_ComSpec " /c " fullCommand,,'Hide')
 			output := strMultiply("=", 20) . cmdRet(fullCommand) . '`n'
 			FileAppend(output, this.settings.outputBaseFolder "\" this.settings.outputSubFolder "\log.txt", "UTF-8")
