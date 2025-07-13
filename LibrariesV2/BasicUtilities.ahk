@@ -192,27 +192,26 @@ objClone(obj) {
  * @param {Integer} limit if 0, removes all
  * @returns {Integer} count
  */
-objRemoveValue(obj, value := "", limit := 0, comparator := ((iterator,value) => (iterator = value))) {
+objRemoveValue(obj, value := "", limit := 0, comparator := ((itKey, itVal, val) => (itVal = val)), emptyValue?) {
 	isArrLike := ((isArr := obj is Array) || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
 	count := 0
-	for next, e in (isArrLike ? obj : obj.OwnProps())
-		if (comparator(e, value)) {
+	for i, e in (isArrLike ? obj : obj.OwnProps())
+		if (comparator(i, e, value)) {
 			if (!limit || count++ < limit)
-				queue.push(next)
+				queue.push(i)
 			else
 				break
 		}
 	n := queue.Length
-	while (queue.Length != 0) {
-		if (isArr)
-			obj.RemoveAt(queue.Pop())
-		else if (isArrLike)
-			obj.Delete(queue.Pop())
-		else
-			obj.DeleteProp(queue.Pop())
+	if (IsSet(emptyValue)) {
+		for e in queue
+			isArrLike ? obj[e] := emptyValue : obj.%e% := emptyValue
+	} else {
+		while (queue.Length != 0)
+			isArr ? (isArrLike ? obj.Delete(queue.Pop()) : obj.RemoveAt(queue.Pop())) : obj.DeleteProp(queue.Pop())
 	}
 	return n
 }
@@ -226,7 +225,7 @@ objRemoveValue(obj, value := "", limit := 0, comparator := ((iterator,value) => 
  * @param emptyValue If this is set, all encountered values are not removed, but instead replaced by this value.
  * @returns {Integer} 
  */
-objRemoveValues(obj, values, limit := 0, comparator := ((itKey,itVal,setVal?) => (itVal = setVal)), emptyValue?) {
+objRemoveValues(obj, values, limit := 0, comparator := ((itKey,itVal,setVal) => (itVal = setVal)), emptyValue?) {
 	isArrLike := ((isArr := obj is Array) || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objRemoveValues does not handle type " . Type(obj)))
@@ -241,12 +240,13 @@ objRemoveValues(obj, values, limit := 0, comparator := ((itKey,itVal,setVal?) =>
 					break
 			}
 	n := queue.Length
-	if (IsSet(emptyValue))
+	if (IsSet(emptyValue)) {
 		for e in queue
 			isArrLike ? obj[e] := emptyValue : obj.%e% := emptyValue
-	else
+	} else {
 		while (queue.Length != 0)
 			isArr ? (isArrLike ? obj.Delete(queue.Pop()) : obj.RemoveAt(queue.Pop())) : obj.DeleteProp(queue.Pop())
+	}
 	return n
 }
 
@@ -254,12 +254,12 @@ objDoForEach(obj, fn := ((e) => (objToString(e))), value := 0, conditional := ((
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || obj is Object)
-		throw(TypeError("objForEach does not handle type " . Type(obj)))
+		throw(TypeError("objDoForEach does not handle type " . Type(obj)))
 	clone := %Type(obj)%()
 	for i, e in (isArrLike ? obj : obj.OwnProps())
 		if (conditional(e, value))
-			(isArrLike ? (isMap ? obj[i] := fn(e) : obj.push(fn(e))) : obj.%i% := fn(e))
-	return obj
+			(isArrLike ? (isMap ? clone[i] := fn(e) : clone.push(fn(e))) : clone.%i% := fn(e))
+	return clone
 }
 
 objGetMinimum(obj) => objCollect(obj, (a,b) => Min(a,b))
@@ -347,20 +347,54 @@ objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 	}
 	return clone
 }
-	
-objZip(obj1, obj2, stopAtAnyEnd := true) {
-	obj1Enum := obj1, obj2Enum := obj2, index := 1
-	try obj1Enum := obj1Enum.__Enum(1)
-	try obj2Enum := obj2Enum.__Enum(1)
-	return (&n, &m, &o := -1) => (
-		flagO := !IsSet(o), ; if for-loop passes o to this function, then it is unset. otherwise it is set.
-		flagO ? n := index++ 			: flag1 := obj1Enum(&n),
-		flagO ? flag1 := obj1Enum(&m)	: flag2 := obj2Enum(&m),
-		flagO ? flag2 := obj2Enum(&o)	: 0,
-		stopAtAnyEnd ? flag1 && flag2	: flag1 || flag2
-	)
+
+/**
+ * Returns true if obj1 and obj2 share the same keys and primitive values, 0 otherwise.
+ * objCompare([1,2], [1,2]) => true
+ * objCompare({x: 1, y: Map(1,2)}, {x: 1, y: Map(1,2)}) => true
+ * objCompare(Number, {__Prototypex: 1, y: Map(1,2)}) => true
+ * @param obj1 
+ * @param obj2 
+ */
+objCompare(obj1, obj2) {
+	if (Type(obj1) != Type(obj2))
+		return 0
+	if !(IsObject(obj1))
+		return (obj1 == obj2)
+	isObj := !(obj1 is Array || obj1 is Map)
+	isMap := (obj1 is Map)
+	count1 := isObj ? ObjOwnPropCount(obj1) : (isMap ? obj1.Count : obj1.Length)
+	count2 := isObj ? ObjOwnPropCount(obj2) : (isMap ? obj2.Count : obj2.Length)
+	if (count1 != count2)
+		return 0
+	for i, j, e, f in objZip(obj1, obj2) {
+		if (i != j)
+			return 0
+		if !objCompare(e, f)
+			return 0
+	}
+	return 1
 }
 
+objZip(obj1, obj2, stopAtAnyEnd := true) {
+	if (Type(obj1) != Type(obj2))
+		throw(TypeError("obj1 and obj2 are not of equal type, instead " Type(obj1) ", " Type(obj2)))
+	if (obj1 is Array || obj1 is Map)
+		obj1Enum := obj1, obj2Enum := obj2
+	else
+		obj1Enum := obj1.OwnProps(), obj2Enum := obj2.OwnProps()
+	index := 1
+	try obj1Enum := obj1Enum.__Enum(2)
+	try obj2Enum := obj2Enum.__Enum(2)
+	return (&i, &j, &n := -1, &m := -1) => (
+		flagN := !IsSet(n), ; if for-loop passes n to this function, then it is unset. otherwise it is set.
+		flagM := !IsSet(m),
+		flagN ? (flagM ? flag1 := obj1Enum(&i, &n)	: i := index++ )			 : flag1 := obj1Enum(&_, &i),
+		flagN ? (flagM ? flag2 := obj2Enum(&j, &m)	: flag1 := obj1Enum(&_, &j)) : flag2 := obj2Enum(&_, &j),
+		flagN ? (flagM ? 0 							: flag2 := obj2Enum(&_, &n)) : 0,
+		stopAtAnyEnd ? flag1 && flag2 : flag1 || flag2
+	)
+}
 
 /**
  * Return a json-like representation of the given object, without altering (escaping) the data itself.
@@ -397,6 +431,8 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 		trspace := compress ? "" : A_Space
 		separator := (!compact && !compress ? '`n' indent : trspace)
 		count := isObj ? ObjOwnPropCount(obj) : (isMap ? obj.Count : obj.Length)
+		if (Type(obj) == "Prototype")
+			return _objToString({}, indentLevel + 1)
 		for key, val in (isObj ? obj.OwnProps() : obj) {
 			if (!compact && compress)
 				separator := (val??"") is Object && count > 1 ? '`n' : trspace
@@ -429,6 +465,45 @@ rangeA(startEnd, end?, step?, inclusive := true) {
 	for e in range(startEnd, end?, step?, inclusive)
 		a.push(e)
 	return a
+}
+
+/**
+ * Given a function fn, returns the largest possible value in given range where fn does not throw an error.
+ * @param fn 
+ * @param {Integer} lower 
+ * @param {Integer} upper 
+ */
+tryCatchBinarySearch(fn, lower := 1, upper := 100000) {
+	return binarySearch(newFn, lower, upper)
+	
+	newFn(param) {
+		try {
+			fn(param)
+			return true
+		}
+		catch 
+			return false
+	}
+}
+
+/**
+ * Given a function fn, returns the largest possible value in given range where fn returns true.
+ * @param fn 
+ * @param {Integer} lower 
+ * @param {Integer} upper 
+ */
+binarySearch(fn, lower := 0, upper := 100000) {
+	n := lower + (upper - lower)//2
+	while(true) {
+		if (Abs(lower - upper) <= 1)
+			break
+		if (fn(n))
+			lower := n
+		else
+			upper := n
+		n := lower + (upper - lower)//2
+	}
+	return n
 }
 
 arrayMerge(array1, array2) {
@@ -518,11 +593,11 @@ arraySort(arr, mode := "") {
  * @param arr 
  * @returns {Array} 
  */
-arrayUniques(arr, key?, isMap := 0) {
+arrayUniques(arr, fn := (v => v)) {
 	arr2 := []
 	uniques := Map()
 	for i, e in arr {
-		el := IsSet(key) ? (isMap ? e[key] : e.%key%) : e
+		el := fn(e)
 		if !(uniques.Has(el)) {
 			uniques[el] := true
 			arr2.push(e)
@@ -552,9 +627,6 @@ arrayDuplicateIndices(arr, key?, isMap := 0) {
 	return duplicates
 }
 
-/** */
-; gets a map of maps. sorts it by a key of the submap, returns it as array
-; requires all contents of mapInner[key] to be of the same type (number or string)
 /**
  * Given an enumerable object whos values itself are objects, sorts it by value of the inner objects key.
  * @param tObj Object, Array or Map to be used for sorting. tObj must contain Objects which itself have accessable values (that of key)
@@ -568,36 +640,30 @@ objSortByKey(tObj, key, mode := "") {
 	if !(tObj is Object)
 		throw(TypeError("Expected Object, but got " tObj.Prototype.Name))
 	isObj := !(isArr || isMap)
-	arr2 := Map()
-	arr3 := []
+	indexMap := Map()
+	retArr := []
 	l := isArr ? tObj.Length : isMap ? tObj.Count : ObjOwnPropCount(tObj)
+	removeDuplicates := InStr(mode, "U")
 	if !l
 		return []
-	for i, e in (isObj ? tObj.OwnProps() : tObj) {
+	for i, sortKey in (isObj ? tObj.OwnProps() : tObj) {
 		if (!IsSet(innerIsObj))
-			innerIsObj := !(e is Map || e is Array)
-		tv := innerIsObj ? e.%key% : e[key]
+			innerIsObj := !(sortKey is Map || sortKey is Array)
+		tv := innerIsObj ? sortKey.%key% : sortKey[key]
 		if (!IsSet(isString))
 			isString := (tv is String)
-		if (arr2.Has(tv))
-			arr2[tv].push(i)
+		if (indexMap.Has(tv) && !removeDuplicates)
+			indexMap[tv].push(i)
 		else
-			arr2[tv] := [i]
+			indexMap[tv] := [i]
 		str .= tv . "`n"
 	}
-	newStr := Sort(IsSet(str) ? SubStr(str, 1, -1) : "", mode)
+	newStr := Sort(IsSet(str) ? SubStr(str, 1, -1) : "", removeDuplicates ? mode : mode . ' U')
 	strArr := StrSplit(newStr, "`n")
-	counter := 1
-	Loop (strArr.Length) {
-		if (counter > strArr.Length)
-			break
-		el := isString ? strArr[counter] . "" : Number(strArr[counter])
-		for j, f in arr2[el] {
-			arr3.push({ index: f, value: isObj ? tObj.%f% : tObj[f] })
-		}
-		counter += arr2[el].Length
-	}
-	return arr3
+	for sortKey in strArr
+		for index in indexMap[isString ? String(sortKey) : Number(sortKey)]
+			retArr.push({ index: index, value: isObj ? tObj.%index% : tObj[index] })
+	return retArr
 }
 
 strReverse(str) {
@@ -619,10 +685,35 @@ strMultiply(str, count) {
 	return s
 }
 
-StrSplitUTF8(str, delim := "", omit := "") {
+strUniqueSubstrings(str, delim := " `t") {
+	return objCollect(arrayUniques(StrSplitUTF8(str, delim,,true), v => Substr(v,1,-1)))
+}
+
+strRemoveConsecutiveDuplicates(str, delim := "`n") {
+	pos := 0
+	str2 := ""
+	loop parse str, delim, "" {
+		pos += StrLen(A_LoopField) + 1
+		if (lastField == A_LoopField)
+			continue
+		str2 .= A_LoopField . SubStr(str, pos, 1) 
+		lastField := A_LoopField
+	}
+	return str2
+}
+
+/**
+ * Behaves exactly as strsplit except that if it is called without a delim and thus parses char by char, doesn't split unicode characters in two.
+ * @param str 
+ * @param {String} delim 
+ * @param {String} omit 
+ * @param {Integer} withDelim 
+ * @returns {Array} 
+ */
+StrSplitUTF8(str, delim := "", omit := "", withDelim := false) {
 	arr := []
 	skip := false
-	count := 1
+	count := 0
 	Loop Parse, str, delim, omit {
 		char := A_LoopField
 		if (skip) {
@@ -630,13 +721,13 @@ StrSplitUTF8(str, delim := "", omit := "") {
 			continue
 		}
 		if (StrLen(A_LoopField) == 1 && Ord(A_LoopField) > 0xD7FF && Ord(A_LoopField) < 0xDC00) {
+			arr.push(A_Loopfield . SubStr(str, count + 1, 1) . (withDelim ? SubStr(str, count+2, 1): ''))
 			skip := true
-			arr.push(A_Loopfield . SubStr(str, count + 1, 1))
 			count += 2
 			continue
 		}
-		arr.push(A_LoopField)
-		count += StrLen(A_LoopField) + StrLen(delim)
+		count += StrLen(A_LoopField) + 1
+		arr.push(A_LoopField . (withDelim ? SubStr(str, count, 1) : ''))
 	}
 	return arr
 }

@@ -271,7 +271,7 @@ return
 		switch MsgBoxAsGui("Tile Windows?", "Confirm Dialog", 0x7, 4, true,,,, ["Vertically", "Horizontally", "Cascade", "No"]) {
 			case "Vertically":
 				list := WindowManager.getAllWindowInfo()
-				objRemoveValue(list,,,(a,b) => (WinGetMinMax(a) == -1))
+				objRemoveValue(list,,,(key,a,b) => (WinGetMinMax(a) == -1))
 				; msgbox(objToString(list, false))
 				Loop(list.Length) {
 					a := 5
