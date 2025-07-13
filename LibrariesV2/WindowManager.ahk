@@ -363,7 +363,7 @@ class WindowManager {
 						for i, wHandle in rWH
 							if WinWaitClose(wHandle, , 0.5) {
 								try this.LV.Delete(rowNums[rowNums.Length - i + 1])
-								try objRemoveValue(this.data.currentWinInfo, wHandle,, (iterator, wHandle) => (iterator.hwnd == wHandle))
+								try objRemoveValue(this.data.currentWinInfo, wHandle,, (it, itV, wHandle) => (itV.hwnd == wHandle))
 							}
 					case "65": ; ctrl A
 						if (!GetKeyState("Ctrl"))
@@ -522,7 +522,7 @@ class WindowManager {
 				for i, wHandle in rWH
 					if WinWaitClose(wHandle, , 0.5) {
 						try this.LV.Delete(rowNums[rowNums.Length - i + 1])
-						try objRemoveValue(this.data.currentWinInfo, wHandle,, (iterator, wHandle) => (iterator.hwnd == wHandle))
+						try objRemoveValue(this.data.currentWinInfo, wHandle,, (it, itVal, wHandle) => (itVal.hwnd == wHandle))
 					}
 			case "Copy Window Title":
 				for i, wHandle in wHandles
