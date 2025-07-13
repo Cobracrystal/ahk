@@ -4,12 +4,12 @@
 
 ; note: does not acknowledge summer/winter time. will interpret locale time, if affected by summer/winter time, as ±1 timezone.
 textTimestampConverter() {
-	text := fastCopy()
+	text := fastCopy(0.1)
 	text := Trim(text)
 	unix := 0
 	if (IsSpace(text)) {
 		valid := A_Now
-		unix := DateDiff(A_NowUTC, "19700101000000", "S")
+		unix := unixTimeStamp(A_NowUTC)
 		flag := 25
 	}
 	else {
@@ -31,59 +31,55 @@ unixTimeStamp(timestamp) {
 	return DateDiff(timestamp, "19700101000000", "S")
 }
 
+formatUnixTimeStamp(unixTimeStamp) {
+	if !IsDigit(unixTimeStamp)
+		throw TypeError("Invalid Unix Timestamp")
+	return DateAdd("19700101000000", unixTimeStamp, "S")
+}
+
 getTimestampFromText(text) {
 	return Format(parseToTimeFormat(text)[1], "yyyyMMddHHmmss")
 }
 
 createTimeStampMenu(flag, unix, valid) {
-	l := 	FormatTime(valid, "dd.MM.yyyy, HH:mm")
-	d := 	FormatTime(valid, "dd/MM/yyyy")
-	bigD := FormatTime(valid, "MMMM dd, yyyy")
-	t := 	FormatTime(valid, "HH:mm")
-	bigT := FormatTime(valid, "HH:mm:ss")
-	f := 	FormatTime(valid, "MMMM dd, yyyy HH:mm")
-	bigF := FormatTime(valid, "dddd, MMMM dd, yyyy HH:mm")
+	formats := {
+		unix: unix,
+		fullDateTime:		FormatTime(valid, "dd.MM.yyyy, HH:mm"),
+		dateTimeUSA:		FormatTime(valid, "dd/MM/yyyy"),
+		longDate:			FormatTime(valid, "MMMM dd, yyyy"),
+		time:				FormatTime(valid, "HH:mm"),
+		fullTime:			FormatTime(valid, "HH:mm:ss"),
+		longDateTime:		FormatTime(valid, "MMMM dd, yyyy HH:mm"),
+		fullLongDateTime: 	FormatTime(valid, "dddd, MMMM dd, yyyy HH:mm")
+	}
 	timestampMenu := Menu()
 	; timestampMenu.Add("Flags: " . flag, doNothing)
-	SetTitleMatchMode("RegEx")
 ;// Flags: 1 = no year, 2 = no date, 3 = no seconds, 4 = only hours, 5 = no time, 6 = invalid date
 	if (flag == 6) {
 		timestampMenu.Add("Invalid Date", doNothing)
 		timestampMenu.Disable("Invalid Date")
 	}
 	else {
-		o := timestampHandler
-		if (WinActive("Discord ahk_exe Discord.*\.exe")) {
-			if (flag = 23)
-				timestampMenu.Add("Paste short time (" t ")", o.Bind("<t:" unix ":t>"))
-			else {
-				if (flag = 5 || flag = 15 || flag = 25)
-					timestampMenu.Add("Paste short date (" d ")", o.Bind("<t:" unix ":d>"))
-				if (flag = 5 || flag = 15)
-					timestampMenu.Add("Paste long date (" bigD ")", o.Bind("<t:" unix ":D>"))
-				if (flag = 2 || flag = 25)
-					timestampMenu.Add("Paste long time (" bigT ")", o.Bind("<t:" unix ":tT>"))
-				if (flag = 1 || flag = 4 || flag = 3 || flag = 13 || flag = 14 || flag = 25 || flag = "") {
-					timestampMenu.Add("Paste full date (" f ")", o.Bind("<t:" unix ":f>"))
-					timestampMenu.Add("Paste long full date (" bigF ")", o.Bind("<t:" unix ":F>"))
-				}
-			}
-			if (flag == 25)
-				timestampMenu.Add("Paste formatted current date (" l ")", o.Bind(l))
-			else
-				timestampMenu.Add("Paste 'related' format (<t:" unix ":R>)", o.Bind("<t:" unix ":R>"))
-			timestampMenu.Add("Paste numeric Timestamp (" unix ")", o.Bind(unix))
-		}
-		else if (flag == 25) {
-			timestampMenu.Add("Paste numeric Timestamp (" unix ")", o.Bind(unix))
-			timestampMenu.Add("Paste current date (" d ")", o.Bind(d))
-			timestampMenu.Add("Paste current date (" l ")", o.Bind(l))
-			timestampMenu.Add("Paste current date (" bigF ")", o.Bind(bigF))
-			timestampMenu.Add("Paste current time (" bigT ")", o.Bind(bigT))
-		}
-		else {
-			timestampMenu.Add("Paste numeric Timestamp (" unix ")", o.Bind(unix))
-			timeStampMenu.Add("Paste long date (" bigF ")", o.Bind(bigF))
+		printer := timestampHandler
+		if (WinActive("Discord ahk_exe Discord.exe")) {
+			timestampMenu.Add("Paste numeric Timestamp (" formats.unix ")", 				printer.Bind(unix))
+			timestampMenu.Add("Paste short time (" formats.time ")", 						printer.Bind("<t:" unix ":t>"))
+			timestampMenu.Add("Paste long time (" formats.fullTime ")", 					printer.Bind("<t:" unix ":tT>"))
+			timestampMenu.Add("Paste short date (" formats.dateTimeUSA ")", 				printer.Bind("<t:" unix ":d>"))
+			timestampMenu.Add("Paste long date (" formats.longDate ")", 					printer.Bind("<t:" unix ":D>"))
+			timestampMenu.Add("Paste full date (" formats.fullLongDateTime ")", 			printer.Bind("<t:" unix ":f>"))
+			timestampMenu.Add("Paste long full date (" formats.fullLongDateTime ")", 		printer.Bind("<t:" unix ":F>"))
+			timestampMenu.Add("Paste formatted current date (" formats.fullDateTime ")",	printer.Bind(formats.fullDateTime))
+			timestampMenu.Add("Paste 'related' format (<t:" formats.unix ":R>)", 			printer.Bind("<t:" unix ":R>"))
+		} else {
+			timestampMenu.Add("Paste Unix Timestamp (" formats.unix ")", 			printer.Bind(formats.unix))
+			timestampMenu.Add("Paste american date (" formats.dateTimeUSA ")", 		printer.Bind(formats.dateTimeUSA))
+			timestampMenu.Add("Paste current date (" formats.fullDateTime ")", 		printer.Bind(formats.fullDateTime))
+			timestampMenu.Add("Paste current date (" formats.fullLongDateTime ")", 	printer.Bind(formats.fullLongDateTime))
+			timestampMenu.Add("Paste current date (" formats.longDate ")", 			printer.Bind(formats.longDate))
+			timestampMenu.Add("Paste current time (" formats.fullTime ")", 			printer.Bind(formats.fullTime))
+			timestampMenu.Add("Paste numeric Timestamp (" formats.unix ")", 		printer.Bind(formats.unix))
+			timeStampMenu.Add("Paste long date (" formats.fullLongDateTime ")", 	printer.Bind(formats.fullLongDateTime))
 		}
 	}
 	timestampMenu.Show()
@@ -116,8 +112,13 @@ parseToTimeFormat(text) {
 				flag .= 1
 			}
 			else {
-				yyyymmdd := A_Year . A_MM . A_DD
-				flag .= 2
+				if (IsDigit(text)) {
+					yyyymmdd := SubStr(formatUnixTimeStamp(text), 1, 8)
+				}
+				else {
+					yyyymmdd := A_Year . A_MM . A_DD
+					flag .= 2
+				}
 			}
 		}
 	}
