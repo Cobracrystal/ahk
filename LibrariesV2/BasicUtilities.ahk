@@ -39,11 +39,11 @@ class BetterMenu extends Menu {
 	}
 }
 
-fastCopy() {
+fastCopy(timeout := 1) {
 	ClipboardOld := ClipboardAll()
 	A_Clipboard := "" ; free clipboard so that ClipWait is more reliable
 	Send("^c")
-	if !ClipWait(1) {
+	if !ClipWait(timeout) {
 		A_Clipboard := ClipboardOld
 		return
 	}
@@ -142,13 +142,13 @@ parseHeaders(str) {
  * @param value value to check for
  * @returns {Integer} Count of how many instances of value were encountered
  */
-objCountValue(obj, value, comparator := ((iterator,value) => (iterator = value))) {
+objCountValue(obj, value, comparator := (itKey,itVal,setVal) => (itVal = setVal)) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objCountValue does not handle type " . Type(obj)))
 	count := 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (comparator(e, value))
+		if (comparator(i, e, value))
 			count++
 	return count
 }
@@ -160,12 +160,12 @@ objCountValue(obj, value, comparator := ((iterator,value) => (iterator = value))
  * @param {Func} comparator 
  * @returns {Integer} 
  */
-objContainsValue(obj, value, comparator := ((iterator,value) => (iterator = value))) {
+objContainsValue(obj, value, comparator := (itKey,itVal,setVal) => (itVal = setVal)) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (comparator(e, value))
+		if (comparator(i, e, value))
 			return i
 	return 0
 }
@@ -211,7 +211,7 @@ objRemoveValue(obj, value := "", limit := 0, comparator := ((itKey, itVal, val) 
 			isArrLike ? obj[e] := emptyValue : obj.%e% := emptyValue
 	} else {
 		while (queue.Length != 0)
-			isArr ? (isArrLike ? obj.Delete(queue.Pop()) : obj.RemoveAt(queue.Pop())) : obj.DeleteProp(queue.Pop())
+			isArrLike ? (isArr ? obj.RemoveAt(queue.Pop()) : obj.Delete(queue.Pop())) : obj.DeleteProp(queue.Pop())
 	}
 	return n
 }
@@ -245,19 +245,19 @@ objRemoveValues(obj, values, limit := 0, comparator := ((itKey,itVal,setVal) => 
 			isArrLike ? obj[e] := emptyValue : obj.%e% := emptyValue
 	} else {
 		while (queue.Length != 0)
-			isArr ? (isArrLike ? obj.Delete(queue.Pop()) : obj.RemoveAt(queue.Pop())) : obj.DeleteProp(queue.Pop())
+			isArrLike ? (isArr ? obj.RemoveAt(queue.Pop()) : obj.Delete(queue.Pop())) : obj.DeleteProp(queue.Pop())
 	}
 	return n
 }
 
-objDoForEach(obj, fn := ((e) => (objToString(e))), value := 0, conditional := ((iterator,value) => (true))) {
+objDoForEach(obj, fn := ((e) => (objToString(e))), value := 0, conditional := ((itKey, itVal, setVal) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objDoForEach does not handle type " . Type(obj)))
 	clone := %Type(obj)%()
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (conditional(e, value))
+		if (conditional(i, e, value))
 			(isArrLike ? (isMap ? clone[i] := fn(e) : clone.push(fn(e))) : clone.%i% := fn(e))
 	return clone
 }
@@ -275,14 +275,14 @@ objGetAverage(obj) => objCollect(obj, (a,b) => (a+b)) / (obj is Array ? obj.Leng
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
  * @returns {Any} Collected Value
  */
-objCollect(obj, fn := ((base, iterator) => (base . objToString(iterator))), initialBase?, value := 0, conditional := ((iterator,value) => (true))) {
+objCollect(obj, fn := ((base, iterator) => (base . objToString(iterator))), initialBase?, value := 0, conditional := ((itKey, itVal, setVal) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	if (IsSet(initialBase))
 		base := initialBase
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (conditional(e, value))
+		if (conditional(i, e, value))
 			base := IsSet(base) ? fn(base, e) : e
 	return base ?? ""
 }
@@ -1428,10 +1428,6 @@ timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 	stopTooltip(whichTooltip?) {
 		ToolTip(, , , whichTooltip?)
 	}
-}
-
-useIfSet(value, default := unset) {
-	return IsSet(value) ? value : default
 }
 
 MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, owner := 0, addCopyButton := 0, buttonNames := [], icon := 0, timeout := 0, maxCharsVisible?, maxTextWidth := 400) {
