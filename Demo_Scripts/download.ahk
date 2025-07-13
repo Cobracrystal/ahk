@@ -119,24 +119,27 @@ betterFileNames(linkArray) {
 	for i, e in linkArray {
 		; if we have a landing page, we can extract the title of the page and use that as the filename
 		; if we have a direct link to a file, we can extract the filename from the URL
-		if (InStr(e.fileName, "|")) {
-			arr := StrSplit(e.fileName, "|", " `t")
-			finfo := arr[1]
+		arr := StrSplit(e.fileName, "|", " `t")
+		newFileName := (arr.Length > 1) ? arr[1] : e.fileName
+		for badName in ["Rule 34 - "]
+			newFileName := StrReplace(newFileName, badName)
+		flagHasUrlComponent := false
+		for url, urlFileComponent in Map("rule34", "Rule34_", "redgif", "RedGifs_") {
+			if InStr(e.url, url) {
+				newFileName := urlFileComponent . newFileName
+				flagHasUrlComponent := true
+				break
+			}
 		}
-		else
-			finfo := e.fileName
-		if (InStr(e.fileName, "Rule 34")) {
-			finfo := arr[2] "_" arr[1]
-		} else if (InStr(e.fileName, "RedGIFs")) {
-			finfo := (RegexMatch(e.url, "([^\/\?]*?)\.[a-z]{3}", &rgFN) ? rgFN[1] : "" ) . finfo
-		}
-		finfo := StrReplace(finfo, "Rule 34 - ")
-		finfo := RegExReplace(finfo, "(?<!,) ", "_")
-		finfo := SubStr(finfo, 1, 100)
+		if (arr.Length > 1 && !flagHasUrlComponent)
+			newFileName := StrReplace(arr[2], " ") "_" arr[1]
+		newFileName := RegExReplace(newFileName, "(?<!,) ", "_")
+		newFileName := SubStr(newFileName, 1, 150)
 		for i, e in Map(":", "-", "/", ",", "\", "", "*", "_", "?", "!", '"', "'", "<", "", ">", "", "|", ",")
-			finfo := StrReplace(finfo, i, e)
-		finfo := Trim(finfo, " `t,-_,")
-		linkArray[i].fileName := finfo
+			newFileName := StrReplace(newFileName, i, e)
+		newFileName := strUniqueSubstrings(newFileName, "-,_")
+		newFileName := Trim(newFileName, " `t-_,")
+		linkArray[i].fileName := newFileName
 	}
 	newLinkArray := []
 	dupeURLs := arrayDuplicateIndices(linkArray, "url", false)
