@@ -412,7 +412,7 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 		static escapes := [["\", "\\"], ['"', '\"'], ["`n", "\n"], ["`t", "\t"]]
 		static builtInObjectTypes := Map(
 			"RegExMatchInfo", { properties: ["Len", "Count", "Mark"], enumerable: 1 },
-			"Prototype", {properties: ["Base"], enumerable: 0 }
+			"Prototype", {properties: ["Base", "__Class"], enumerable: 0 }
 		)
 		qt := strEscape ? '"' : ''
 		if !(IsObject(obj)) {

@@ -245,7 +245,7 @@ class WebSocket {
 				if (DllCall("FormatMessage", "uint", 0x900, "ptr", module, "uint", err, "uint", 0, "ptr*", &pstr := 0, "uint", 0, "ptr", 0), pstr)
 					err := (msg := StrGet(pstr), DllCall('LocalFree', 'ptr', pstr), msg)
 				else err := OSError(err).Message
-			super.__New(err, what)
+			super(err, what)
 		}
 	}
 
