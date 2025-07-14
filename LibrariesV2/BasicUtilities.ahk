@@ -405,11 +405,15 @@ objZip(obj1, obj2, stopAtAnyEnd := true) {
  * @param {String} strEscape Whether to escape strings with quotes (JSON Style) 
  * @returns {String} 
  */
-objToString(obj, compact := false, compress := true, strEscape := false, mapAsObject := true, spacer := "`t") {
+objToString(obj, compact := false, compress := true, strEscape := false, mapAsObject := true, spacer := "`t", escapeNativeObjects := true) {
 	return _objToString(obj, 0)
 
 	_objToString(obj, indentLevel) {
 		static escapes := [["\", "\\"], ['"', '\"'], ["`n", "\n"], ["`t", "\t"]]
+		static builtInObjectTypes := Map(
+			"RegExMatchInfo", { properties: ["Len", "Count", "Mark"], enumerable: 1 },
+			"Prototype", {properties: ["Base"], enumerable: 0 }
+		)
 		qt := strEscape ? '"' : ''
 		if !(IsObject(obj)) {
 			if (obj is Number)
@@ -423,28 +427,62 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 			}
 			return obj
 		}
+		objType := Type(obj)
 		isArr := obj is Array
 		isMap := obj is Map
 		isObj := !(isArr || isMap)
-		str := ""
 		indent := (compress || compact)  ? '' : strMultiply(spacer, indentLevel + 1)
 		trspace := compress ? "" : A_Space
 		separator := (!compact && !compress ? '`n' indent : trspace)
+		sep2 := (compact || compress) ? separator : '`n' SubStr(indent, 1, -1 * StrLen(spacer))
 		count := isObj ? ObjOwnPropCount(obj) : (isMap ? obj.Count : obj.Length)
-		if (Type(obj) == "Prototype")
-			return _objToString({}, indentLevel + 1)
-		for key, val in (isObj ? obj.OwnProps() : obj) {
-			if (!compact && compress)
-				separator := (val??"") is Object && count > 1 ? '`n' : trspace
-			if !(IsSet(val))
-				str := RTrim(str, separator) "," separator
-			else if (isArr || (isMap && !mapAsObject))
-				str .= _objToString(val ?? "", indentLevel + 1) "," separator
-			else
-				str .= _objToString(key ?? "", indentLevel + 1) ":" trspace _objToString(val ?? "", indentLevel + 1) "," separator
+		str := ""
+		if builtInObjectTypes.Has(objType) && obj.__Class != "Any"
+			for key in builtInObjectTypes[objType].properties
+				strFromCurrentEnums(key, obj.%key%)
+		if (objType != "Prototype" && objType != "Class") {
+			for k, v in obj.HasMethod("__Enum") ? obj : ObjOwnProps(obj)
+				strFromCurrentEnums(k, v)
 		}
-		sep2 := !compact && !compress ? '`n' strMultiply(spacer, indentLevel) : separator
+		for k in ObjOwnProps(obj) {
+			if (k == "Prototype" || objType == "Class") {
+				strFromCurrentEnums(k, obj.%k%)
+				continue ; THIS IS MEH
+			}
+			if (obj.HasMethod("GetOwnPropDesc")) {
+				v := obj.GetOwnPropDesc(k)
+				if (v.HasProp("Value"))
+					continue
+				if (Type(v) == Type(obj))
+					escapeNativeObjects ? strFromCurrentEnums(k, Type(v)) : typeStrFromCurrentEnums(k, Type(v))
+				else
+					strFromCurrentEnums(k, v)
+			}
+			else if (IsObject(obj.%k%))
+				escapeNativeObjects ? strFromCurrentEnums(k, Type(obj.%k%)) : typeStrFromCurrentEnums(k, Type(obj.%k%))
+			else
+				strFromCurrentEnums(k, obj.%k%)
+		}
+		if (str == '' && isObj)
+			return escapeNativeObjects ? _objToString(objType, indentLevel+1) : objType
 		return ( isArr ? "[" : (isMap && !mapAsObject) ? "Map(" : "{" ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( isArr ? "]" : (isMap && !mapAsObject) ? ")" : "}" )
+
+		strFromCurrentEnums(k, v) {
+			if (!compact && compress)
+				separator := IsObject(v??"") && count > 1 ? '`n' : trspace
+			if !(IsSet(v))
+				str .= RTrim(str, separator) "," separator
+			else if (isArr)
+				str .= _objToString(v ?? "", indentLevel + 1) "," separator
+			else
+				str .= _objToString(k ?? "", indentLevel + 1) (isMap && !mapAsObject ? "," : ":") trspace _objToString(v ?? "", indentLevel + 1) "," separator
+		}
+
+		typeStrFromCurrentEnums(k, v) {
+			if (!compact && compress)
+				separator := trspace
+			str .= _objToString(k ?? "", indentLevel + 1) (isMap && !mapAsObject ? "," : ":") trspace v "," separator
+		}
 	}
 }
 
