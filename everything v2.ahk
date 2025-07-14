@@ -120,7 +120,7 @@ return
 #HotIf
 
 ^U:: {	; Time/Date Converter
-	textTimestampConverter()
+	TimestampConverter.textTimestampConverter()
 }
 
 ^!I:: {	; Show Hex code as Color
