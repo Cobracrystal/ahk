@@ -5,7 +5,8 @@
 ; todo for profile adjusting: function that compares objects deeply, then remove the ones that match
 ; a much simpler class than youtubeDL to instantly download music
 if (A_LineFile == A_ScriptFullPath) {
-	SongDownloader.downloadSong("https://www.youtube.com/watch?v=MzsBwcXkghQ")
+	SongDownloader.downloadSong("https://www.youtube.com/watch?v=KH89fk-0qks")
+	; SongDownloader.downloadSong("https://www.youtube.com/watch?v=MzsBwcXkghQ")
 	; SongDownloader.downloadSong("Never Gonna Give You Up")
 	; SongDownloader.downloadSong("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=WL&index=3&pp=gAQBiAQB")
 }
@@ -43,17 +44,17 @@ class SongDownloader {
 	}
 
 	static downloadFromJson(jsonAsStr, outputSubFolder := this.settings.outputSubFolder, embedThumbnail := true) {
-		data := jsongo.Parse(jsonAsStr)
-		data := MapToObj(data)
-		cmd := this.cmdStringBuilder(this.PROFILE_MUSIC, true)
-		for i, dataPoint in data
-			str .= this.launchYTDL(cmd, dataPoint, true) "`n==============================`n"
+		data := MapToObj(jsongo.Parse(jsonAsStr))
+		for i, dataPoint in data {
+			profile := this.PROFILE_MUSIC[this.constructParseMetadataString(dataPoint), this.constructOutputPatternString(dataPoint), outputSubFolder]
+			str .= this.launchYTDL(profile, dataPoint.link, this.settings.launchHidden, true) "`n==============================`n"
+		}
 		return str
 	}
 
 	static getMetaData(songLink, keepJsonData := true, printIntermediateSteps := false) {
 		if !(songLink is Array)
-			songLink := StrSplitUTF8(Trim(songLink, "`n`r`t "), "`n", "`r")
+			songLink := StrSplitUTF8(Trim(songLink, "`n`r"), "`n", "`r")
 		songLink := objDoForEach(songLink, (e => this.constructLink(e)))
 		linkString := objCollect(songLink, (b, i) => (b . '"' i '" '), "")
 		command := this.cmdStringBuilder(this.PROFILE_GETMETADATA[printIntermediateSteps]) . linkString
@@ -75,7 +76,7 @@ class SongDownloader {
 			; A_Clipboard := objToString(videoData, 0, 0, 1, 1)
 			if (InStr(title, "Nightcore")) {
 				if RegExMatch(title, "i)Nightcore\s*-\s*")
-					title := RegExReplace(title, "i)Nightcore\s*-\s*")
+					title := RegExReplace(title, "i)\s*Nightcore\s*-\s*")
 				else
 					title := RegExReplace(title, "\(\s*Nightcore\s*\)")
 				genre := "Nightcore"
@@ -85,11 +86,11 @@ class SongDownloader {
 				artist := StrLen(artist) > 1 ? artist : Trim(SubStr(title, 1, pos))
 				title := SubStr(title, pos+3)
 			}
-			if (RegExMatch(title, "\((?:feat|ft)\.?\s*(.*?)\)", &o)) {
-				title := RegExReplace(title, "\((?:feat|ft)\.?\s*.*?\)")
+			if (RegExMatch(title, "\s*\(\s*(?:feat|ft)\.?\s*(.*?)\)", &o)) {
+				title := RegExReplace(title, "\s*\(\s*(?:feat|ft)\.?\s*.*?\)")
 				artist .= " ft " o[1]
 			} else if (RegExMatch(title, "(?:feat|ft)\.?\s+(.*)$", &o)) {
-				title := RegExReplace(title, "(?:feat|ft)\.?\s+(.*)$")
+				title := RegExReplace(title, "\s*(?:feat|ft)\.?\s+(.*)$")
 				artist .= " ft " o[1]
 			}
 			objRemoveValues(videoData, ["automatic_captions", "formats", "heatmap", "requested_formats", "thumbnails", "subtitles"],,(i,e,v) => (i=v),"MANUALLY REMOVED")
@@ -116,8 +117,9 @@ class SongDownloader {
 		g.AddText("Section 0x200 R1.45", "Links | Current Folder: " )
 		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", (subOutputFolder := this.settings.outputSubFolder)).OnEvent("Change", adjustCMDField)
 		if data.description
-			g.AddButton("xs+151 ys-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
+			g.AddButton("xs+151 vButtonDescription ys-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
 		g.AddEdit("xs w250 R1 ReadOnly vLink", data.link)
+		g["Link"].Focus()
 		g.AddText("0x200 R1.45", "Title")
 		g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
 		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", adjustCMDField)
@@ -145,10 +147,12 @@ class SongDownloader {
 			val := guiCtrlObj.Value
 			switch name {
 				case "Title", "Artist", "Album", "Genre":
+					rem := [{ option: this.options.output, param: this.constructOutputPatternString(data)},
+							{ option: this.options.output, param: this.constructOutputPatternString(data)}]
 					data.%name% := val
-					mergeProfile := [	{ option: this.options.parse_metadata, param: this.constructParseMetadataString(data)}, 
-										{ option: this.options.output, param: this.constructOutputPatternString(data)}]
-					profile := this.mergeProfile(profile, mergeProfile)
+					add := [{ option: this.options.output, param: this.constructOutputPatternString(data)},
+							{ option: this.options.output, param: this.constructOutputPatternString(data)}]
+					profile := this.addRemoveProfile(profile, rem, add, true, true)
 				case "OutputFolder":
 					rem := [{ option: this.options.paths, param: this.settings.outputBaseFolder "\" subOutputFolder }]
 					add := [{ option: this.options.paths, param: this.settings.outputBaseFolder "\" val }]
@@ -160,7 +164,7 @@ class SongDownloader {
 										{ option: this.options.postprocessor_args, param: 'ThumbnailsConvertor+FFmpeg_o:-c:v mjpeg -qmin 1 -qscale:v 1 -vf crop=\"min(iw\,ih)\":\"min(iw\,ih)\"' }]
 					profile := this.toggleProfile(profile, toggleProfile)
 			}
-			g["CMD"].Value := this.cmdStringBuilder(profile)
+			g["CMD"].Value := this.cmdStringBuilder(profile) '"' data.link '"'
 		}
 	}
 
@@ -186,8 +190,8 @@ class SongDownloader {
 	}
 
 	static launchYTDL(profile, link, runHidden, runAsync := true, logFolder?) {
+		profile := this.toggleProfile(profile, this.PROFILE_SPLIT_CHAPTERS)
 		fullCommand := this.cmdStringBuilder(profile) . '"' link '"'
-		MsgBox(fullCommand)
 		if (runHidden) {
 			if (runAsync) {
 				Run(A_ComSpec " /c title SongDownloader && " fullCommand,,'Hide')
@@ -198,10 +202,11 @@ class SongDownloader {
 				return output
 			}
 		}
+		conOptions := "title SongDownloader && mode con: cols=100 lines=30"
 		if (this.settings.keepOpen)
-			Run(A_ComSpec " /k title SongDownloader && mode con: cols=100 lines=30 && echo " fullCommand " && " fullCommand,,'Hide', &cmdPID)
+			Run(A_ComSpec " /k " conOptions " && echo " fullCommand " && " fullCommand,,'Hide', &cmdPID)
 		else
-			Run(A_ComSpec " /c title SongDownloader && mode con: cols=100 lines=30 && " fullCommand,, 'Hide', &cmdPID)
+			Run(A_ComSpec " /c " conOptions " && " fullCommand,, 'Hide', &cmdPID)
 		ProcessWait(cmdPID)
 		Sleep(500)
 		WinShow("ahk_pid " cmdPID)
@@ -296,6 +301,7 @@ class SongDownloader {
 		{ option: this.options.paths, param: this.settings.outputBaseFolder "\" outputSubFolder},
 		{ option: this.options.no_overwrites },
 		{ option: this.options.no_playlist },
+		{ option: this.options.no_vid },
 		{ option: this.options.retries, param: 1 },
 		{ option: this.options.limit_rate, param: "5M" },
 		{ option: this.options.format, param: "bestaudio/best" },
@@ -305,6 +311,13 @@ class SongDownloader {
 		{ option: this.options.extract_audio },
 		{ option: this.options.audio_quality, param: 0},
 		{ option: this.options.audio_format, param: "mp3"}
+	]
+
+	static PROFILE_SPLIT_CHAPTERS => [
+		{ option: this.options.split_chapters },
+		{ option: this.options.output, param: "chapter:%(meta_artist)s - " this.TEMPLATE.SECTION_TITLE "." this.TEMPLATE.EXT },
+		{ option: this.options.parse_metadata, param: "%(chapter_number)s:%(meta_disc)s" },
+		{ option: this.options.force_keyframes_at_cuts }
 	]
 
 	static PROFILE_GETMETADATA[with_intermediate_steps] {
@@ -343,6 +356,8 @@ class SongDownloader {
 		restrict_filenames: { name: "--restrict-filenames", param: false },
 		limit_rate: { name: "--limit-rate",  alias: "-r", param: true },
 		format: { name: "--format",  alias: "-f", param: true },
+		no_vid: { name: "--no-vid", param: false },
+		force_keyframes_at_cuts: { name: "--force-keyframes-at-cuts", param: false },
 		split_chapters: { name: "--split-chapters", param: false },
 		; Extra Data Options
 		skip_download: { name: "--skip-download", param: false },
@@ -376,6 +391,7 @@ class SongDownloader {
 	static TEMPLATE => {
 		EXT: "%(ext)s",
 		ARTIST: "%(uploader)s",
-		TITLE: "%(title)s"
+		TITLE: "%(title)s",
+		SECTION_TITLE: "%(section_title)s"
 	}
 }
