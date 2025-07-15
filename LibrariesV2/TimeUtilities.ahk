@@ -194,7 +194,7 @@ getNextPeriodicTimestamp(time, intervalLength, intervalUnit) {
 	secsDiff := DateDiff(Now, time, "Seconds")
 	if secsDiff < 0
 		return time
-	if intervalLength < 0
+	if intervalLength <= 0
 		throw ValueError("Huh")
 	switch intervalUnit, 0 {
 		case "Seconds", "Minutes", "Hours", "Days", "Weeks":

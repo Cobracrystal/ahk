@@ -82,73 +82,10 @@ class ReminderManager {
 	 */
 	setPeriodicTimerOn(time, period := 1, periodUnit := "Days", message := "", function := "", fparams*) {
 		MSec := A_Msec
-		if (!IsTime(String(time)))
-			throw(Error("Invalid Timestamp: " . time))
-		if (period <= 0)
-			throw(Error("Invalid Period: " period))
-		switch periodUnit, 0 {
-			case "S", "Seconds", "Second":
-				periodUnit := "Seconds"
-			case "M", "Minutes", "Minute":
-				periodUnit := "Minutes"
-			case "H", "Hours", "Hour":
-				periodUnit := "Hours"
-			case "D", "Days", "Day":
-				periodUnit := "Days"
-			case "W", "Weeks", "Week":
-				periodUnit := "Weeks"
-			case "Mo", "Months", "Month":
-				periodUnit := "Months"
-			case "Y", "Years", "Year":
-				periodUnit := "Years"
-			default:
-				throw(Error("Invalid Period Unit: " . periodUnit))
-		}
-		timeDiff := DateDiff(time, Now := A_Now, "Seconds")
-		if (timeDiff < 0) {
-			switch periodUnit, 0 {
-				case "Seconds", "Minutes", "Hours", "Days":
-					secs := DateDiff(DateAdd("1998", period, periodUnit), "1998", "Seconds")
-					timeDiff := Mod(timeDiff, secs) + secs
-				case "Weeks":
-					secs := DateDiff(DateAdd("1998", period * 7, "D"), "1998", "Seconds")
-					timeDiff := Mod(timeDiff, secs) + secs
-				case "Months":
-					monthDiff := Mod((SubStr(time, 1, 4) - A_YYYY) * 12 + (SubStr(time, 5, 2) - A_MM), period)
-					if (monthDiff == 0) { ; if given time + n*period is current month
-						guessTime := A_YYYY . A_MM . SubStr(time, 7)
-						if (!IsTime(guessTime)) { ; if it is current month, but invalid date
-							nextMonth := Format("{:02}", Mod(A_MM, 12) + 1) ; cannot result in december->january, since dec has 31 days
-							rolledOverDays := Format("{:02}", SubStr(time, 7, 2) - DateDiff(A_YYYY . nextMonth, A_YYYY . A_MM, "D"))
-							guessTime := A_YYYY . nextMonth . rolledOverDays . SubStr(time, 9)
-							; since all invalid dates are at the end of a month, rolling over a month means we are definitely in the future.
-							if (!IsTime(guessTime))
-								throw(Error("0xD37824 - This should never happen " . guessTime ". Certified to never occur, again."))
-						}
-						else if (DateDiff(guessTime, Now, "Seconds") < 0) {
-							monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
-							guessTime := DateAddW(time, monthDiffFull + monthDiff + period, "Months")
-						}
-					}
-					else {
-						monthDiffFull := (A_YYYY - SubStr(time, 1, 4)) * 12 + A_MM - SubStr(time, 5, 2)
-						guessTime := DateAddW(time, monthDiffFull + monthDiff + period, "Months")
-					}
-					timeDiff := DateDiff(guessTime, Now, "Seconds")
-				case "Years":
-					yearDiff := Mod(SubStr(time, 1, 4) - A_YYYY, period)
-					if (yearDiff == 0) {
-						guessTime := A_YYYY . SubStr(time, 5)
-						if (!IsTime(guessTime)) ; if leap year
-							guessTime := A_YYYY . SubStr(DateAdd(time, 1, "D"), 5)
-						if (DateDiff(guessTime, Now, "Seconds") < 0)
-							guessTime := DateAddW(time, A_YYYY - SubStr(time, 1, 4) + period, "Years")
-					}
-					else
-						guessTime := DateAddW(time, A_YYYY - SubStr(time, 1, 4) + yearDiff + period, "Years")
-					timeDiff := DateDiff(guessTime, Now, "Seconds")
-			}
-		}
+		Now := A_Now
+		periodUnit := validateTimeUnit(periodUnit)
+		nextTime := getNextPeriodicTimestamp(time, period, periodUnit)
+		timeDiff := DateDiffW(nextTime, Now, "Seconds")
 		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
 		if (nextTimeMS < -4294967295)
 			return
@@ -161,8 +98,8 @@ class ReminderManager {
 		SetTimer(timerObj, nextTimeMS)
 	}
 
-	setPeriodicTimerOnParser(years?, months?, days?, hours?, minutes?, seconds?, period := 1, periodUnit := "Days", message := "", function := "", fparams*) => this.setPeriodicTimerOn(parseTime(years?, months?, days?, hours?, minutes?, seconds?), period, periodUnit, message, function, fparams*)
-	setTimerOnParser(years?, months?, days?, hours?, minutes?, seconds?, message := "", function := "", fparams*) => this.setTimerOn(parseTime(years?, months?, days?, hours?, minutes?, seconds?), message, function, fparams*) 
+	setPeriodicTimerOnParser(years?, months?, days?, hours?, minutes?, seconds?, period := 1, periodUnit := "Days", message := "", function := "", fparams*) => this.setPeriodicTimerOn(nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?), period, periodUnit, message, function, fparams*)
+	setTimerOnParser(years?, months?, days?, hours?, minutes?, seconds?, message := "", function := "", fparams*) => this.setTimerOn(nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?), message, function, fparams*) 
 
 
 	generateFuncObj(message, function, fparams*) {
@@ -355,7 +292,7 @@ class ReminderManager {
 		if !(t[1]) && (MsgBox("You have not set a reminder message. Proceed?", "Reminder", 0x1) == "Cancel")
 			return
 		try
-			time := parseTime(,				t[6] != "" ? t[6] : unset, 
+			time := nextMatchingTime(,				t[6] != "" ? t[6] : unset, 
 				t[5] != "" ? t[5] : unset, t[4] != "" ? t[4] : unset, 
 				t[3] != "" ? t[3] : unset, t[2] != "" ? t[2] : unset)
 		catch Error {
@@ -388,7 +325,7 @@ class ReminderManager {
 			m := rObj.units.HasOwnProp("minutes") ? rObj.units.minutes : unset
 			s := rObj.units.HasOwnProp("seconds") ? rObj.units.seconds : unset
 			fparArr := rObj.HasOwnProp("fparams") ? rObj.fparams : []
-			if (ignoreMissedReminders && Abs(DateDiff(parseTime(y?,mo?,d?,h?,m?,s?), A_Now, "Seconds")) <= 1)
+			if (ignoreMissedReminders && Abs(DateDiff(nextMatchingTime(y?,mo?,d?,h?,m?,s?), A_Now, "Seconds")) <= 1)
 				continue
 			if (rObj.multi)
 				this.setPeriodicTimerOnParser(y?,mo?,d?,h?,m?,s?, rObj.period, rObj.periodUnit, rObj.message, rObj.function, fparArr*)			
