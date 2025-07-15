@@ -147,48 +147,6 @@ BoundFnName(Obj) {
 	return Obj.Name
 }
 
-replaceCharacters(text, replacer) {
-	if !(replacer is Map || replacer is Func)
-		return text
-	result := ""
-	isMap := replacer is Map
-	for i, e in StrSplitUTF8(text) {
-		if (isMap)
-			result .= (replacer.Has(e) ? replacer[e] : e)
-		else
-			result .= replacer(e)
-	}
-	return result
-}
-
-/**
- * Makes a string literal for regex usage
- * @param str 
- * @returns {string} 
- */
-RegExEscape(str) => "\Q" StrReplace(str, "\E", "\E\\E\Q") "\E"
-
-/**
- * Replaces Strings in [string] from strings in [from] into strings in [to], in strict order of appearance in [from]
- * @param string String in which to replace the strings
- * @param from Array containing strings that are to be replaced in decreasing priority order
- * @param to Array containing strings that are the replacements for values in @from, in same order
- * @returns {string} 
- */
-strRecursiveReplace(text, from, to) {
-	return __recursiveReplaceMap(text, from, to)
-
-	__recursiveReplaceMap(text, from, to, __index := 1) {
-		replacedString := ""
-		if (__index == from.Length)
-			return StrReplace(text, from[__index], to[__index])
-		strArr := StrSplit(text, from[__index])
-		for i, e in strArr
-			replacedString .= __recursiveReplaceMap(e, from, to, __index + 1) . (i == strArr.Length ? "" : to[__index])
-		return replacedString
-	}
-}
-
 /**
  * Given a function fn, returns the largest possible value in given range where fn does not throw an error.
  * @param fn 
