@@ -161,7 +161,7 @@ factors(n) {
 			f *= k
 		factors.push(f)
 	}
-	factors := arraySort(arrayUniques(factors), "N")
+	factors := arraySort(objGetUniques(factors), "N")
 	return factors
 }
 
@@ -187,15 +187,15 @@ powerset(arr) {
 }
 
 /**
- * Given array, returns array of all permutations of its members
+ * Given a list of parameters, returns array of all permutations of its members
  * @param arr 
  */
-permutations(arr) {
-	if arr.Length == 1
-		return [arr]
+permutations(variables*) {
+	if variables.Length == 1
+		return [variables]
 	local permutationArr := []
-	for i, e in arr {
-		perms := permutations(arrayIgnoreIndex(arr, i))
+	for i, e in variables {
+		perms := permutations(arrayIgnoreIndex(variables, i))
 		for f in perms
 			permutationArr.push([e, f*])
 	}
@@ -250,20 +250,22 @@ lcd(nums*) {
 }
 
 /**
- * Returns greatest common multiple of given numbers.
+ * Returns greatest common multiple of given numbers. (Why is this function here?)
  * @param nums 
  * @returns {Number} 
  */
 gcm(nums*) {
 	n := lcm(nums*)
-	return 2**63 - 1
+	while (n < 2**62)
+		n *= 2
+	return n
 }
 
 
 /**
  * Given an Integer, returns whether it is prime.
  * @param n Integer
- * @returns {Integer} 
+ * @returns {Integer} true or false 
  */
 primetest(n) {
 	if !IsInteger(n)
@@ -329,11 +331,7 @@ getClosestRectangle(num, direction := 0) {
 		for i, e in facts
 			diffs.push(Abs(minV - e))
 		bestDiff := Min(diffs*)
-		for i, e in diffs
-			if (e == bestDiff) {
-				index := i
-				break
-			}
+		index := objContainsValue(diffs, bestDiff)
 		f1 := facts[index]
 		f2 := k // f1
 		return [f1, f2]
@@ -396,7 +394,7 @@ streetInDice(streetLen, diceAmount, filePath) {
 		strDice := "["
 		Loop(sequence.Length)
 			strDice .= sequence[A_Index] . ","
-		seq := arraySort(arrayUniques(sequence), "N")
+		seq := arraySort(objGetUniques(sequence), "N")
 		strDice .= "] sorted ["
 		Loop(seq.Length)
 			strDice .= seq[A_Index] . ","

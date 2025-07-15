@@ -142,8 +142,8 @@ betterFileNames(linkArray) {
 		linkArray[i].fileName := newFileName
 	}
 	newLinkArray := []
-	dupeURLs := arrayDuplicateIndices(linkArray, "url", false)
-	for i, e in dupeURLs
+	dupeURLs := objGetDuplicates(linkArray, "url", false)
+	for e in dupeURLs
 		Loop(e.Length - 1)
 			linkArray[e[A_Index + 1]].status := "Duplicate URL (URL " e[1] ")"
 	; get duplicates of filenames while ignoring duplicate urls.
