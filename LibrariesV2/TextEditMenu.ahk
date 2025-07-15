@@ -1,6 +1,7 @@
 ﻿; https://github.com/cobracrystal/ahk
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+
 class TextEditMenu {
 
 	static __New() {
@@ -60,7 +61,7 @@ class TextEditMenu {
 		textModifyMenu.Add("Reverse", (*) => modifySelectedText(strReverse))
 		textModifyMenu.Add("Mirror", (*) => modifySelectedText(this.mirror.bind(this)))
 		textModifyMenu.Add("Flip", (*) => modifySelectedText(this.flip.bind(this)))
-		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(this.spreadString.bind(this), " "))
+		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(strDoPerChar, " "))
 		textModifyMenu.Add("Add Zalgo", (*) => modifySelectedText(this.zalgo.bind(this), 5))
 		;	menu_RemoveSpace(textModifyMenu.Handle) ; this also decreases vertical spacing.
 		this.menu := textModifyMenu
@@ -122,13 +123,6 @@ class TextEditMenu {
 		if !(this.dictionary["toAlphabet"].Has(alphnameTo))
 			return serif
 		return replaceCharacters(serif, this.dictionary["toAlphabet"][alphnameTo])
-	}
-
-	static spreadString(text, delimiter) {
-		result := ""
-		for i, e in StrSplitUTF8(text)
-			result .= e . delimiter
-		return RTrim(result, delimiter)
 	}
 
 	static mirror(text) => this.replaceCharacters(strReverse(text), "mixed", "mirror")
