@@ -127,8 +127,11 @@ class ReminderManager {
 			}
 			else {
 				name := StrReplace(function.Name, ".Prototype")
-				if (Instr(name, ".")) ; bind fake @this parameter for classes.
-					function := function.bind(0)
+				if (Instr(name, ".")) {
+					loop((cNames := StrSplit(name, ".")).Length)
+						classObj := A_Index == 1 ? %cNames[1]% : classObj.%cNames[A_Index]%
+					function := function.bind(classObj)
+				}
 				else if (name == "")
 					name := "/ (Lambda)"
 			}
