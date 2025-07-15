@@ -35,6 +35,28 @@ objContainsValue(obj, value, comparator := (itKey,itVal,setVal) => (itVal = setV
 }
 
 /**
+ * Returns ObjOwnPropCount if obj is Object, else .Length or .Count for Array/Map
+ * @param obj 
+ * @returns {Integer} 
+ */
+objGetValueCount(obj) {
+	return obj is Map ? obj.Count : (obj is Array ? obj.Length : ObjOwnPropCount(obj))
+}
+
+objGetRandomValue(obj) {
+	isArrLike := (obj is Array || obj is Map)
+	isArr := obj is Array
+	if !(isArrLike || obj is Object)
+		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
+	r := Random(1, objGetValueCount(obj))
+	if isArr
+		return obj[r]
+	for i, e in isArrLike ? obj : obj.ownprops()
+		if A_Index == r
+			return e
+}
+
+/**
  * Returns a deep copy of a given object.
  * @param obj A .Clone()-able object
  * @returns {Object} A deep clone of the given object
@@ -290,6 +312,14 @@ objZip(obj1, obj2, stopAtAnyEnd := true) {
 	)
 }
 
+objGetBaseChain(obj) {
+	base := obj
+	arr := [base]
+	while (base)
+		arr.push(base := ObjGetBase(base))
+	return arr
+}
+
 
 /*
 we have an object.
@@ -347,100 +377,120 @@ The Prototype contains only instance methods (And inherited properties). __Class
 Method counts as OwnProp
 The class Object contains only static properties and static methods. __Class is inherited from class class and thus contains "Class"
 static methods count as OwnProps
-------
-
-
 */
+
+; Aliases for shorthand options
+objToStringNoBases(obj, detailedFunctions := false)	=>	objToString(obj, , false, , , , true, detailedFunctions, true, false)
+objToStringFull(obj, detailedFunctions := false)	=>	objToString(obj, , false, , , , true, detailedFunctions, true, true)
+objToStringClass(obj, detailedFunctions := false)	=>	objToString(obj, , false, , , , true, detailedFunctions, false, false)
 /**
- * Return a json-like representation of the given object, without altering (escaping) the data itself.
- * @param obj Object, Map, Array Value etc.
- * @param {Integer} compact Whether to use spacer value and use newline to separate nested objects (default false)
- * @param {Integer} compress Whether to omit spaces and minimize the string length (default true)
- * @param {String} spacer Value used to indent nested objects (if not compact)
- * @param {String} strEscape Whether to escape strings with quotes (JSON Style) 
- * @returns {String} 
+ * Return a json-like representation of the given variable, with selectable level of detail.
+ * @param {Any} obj Any Value.
+ * @param {Integer} [compact] If true, returned String will not contain newlines of any kind. Otherwise, obj will be expanded by its inner values, with the level of expansion set by compress
+ * @param {Integer} [compress] If true, returned String will not contain spaces (or indent) and objects with only primitive values or only one inner value will not be expanded.
+ * @param {Integer} [strEscape] If true, will escape any values with quotation marks (with the exception of pure numbers). If not set, is false only when obj is an instance and the other flags are false or not set
+ * @param {Integer} [anyAsObj] If true, all objects will be printed in the form of { key: value, ... }. Note that if either withInheritedProps or withClassOrPrototype are set to true, then this will default to true, since it is not feasible to put both enumerated values in map form (Map("key", "value")) and properties (Map().CaseSense: "On") or Array Form ([1,2,3]) and properties (Array().Length) in the same object.
+ * @param {String} [spacer] String used to indent nested objects (if not compressed)
+ * @param {Boolean} [withInheritedProps] Whether to print Values of Properties that are not OwnProps, but inherited from class- or Prototype-Objects. If not set, automaticaly chosen depending on if obj has any values to print and if it is an instance of a class
+ * @param {Boolean} [detailedFunctions] Whether to print functions as "Name": "Func" or whether to print Func properties such as MinParams, IsVariadic etc.
+ * @param {Boolean} [withClassOrPrototype] Whether to print the class object of an instance, and the Prototype of a class Object
+ * @param {Boolean} [withBases] Whether to print the .Base property. If true,any object will have its Base Chain printed up to Any.Prototype. Does NOT print class.Prototype.base, instead only class.base.Prototype (to avoid printing duplicate information), and furthermore does not print Class.Prototype, Object.Prototype, Any.Prototype at all (since they are included in the base chain anyway, since Any.Base == Class.Prototype)
+ * @returns {String} The string representing the object
  */
-objToString(obj, compact := false, compress := true, strEscape := false, mapAsObject := true, spacer := "`t", withInheritedProps?, detailedFunctions?, withClassOrPrototype?, withBases?) {
+objToString(obj, compact := false, compress := true, strEscape?, anyAsObj := false, spacer := "`t", withInheritedProps?, detailedFunctions?, withClassOrPrototype?, withBases?) {
 	if IsObject(obj) {
+		origin := obj
 		flagFirstIsInstance := (Type(obj) != "Prototype" && Type(obj) != "Class" && Type(objgetbase(obj)) == "Prototype") ; equivalent to line below
 		; if obj is an instance of a class, and it isnt enumerable, and it doesn't have any own props, then try getting inheritables
-		flagIncludeInheritedProps :=	withInheritedProps		?? ((flagFirstIsInstance && !obj.HasMethod("__Enum") && ObjOwnPropCount(obj) == 0) ? 1 : 0)
-		flagDetailedFunctions := 		detailedFunctions	 	?? !flagFirstIsInstance
-		flagIncludeClassOrPrototype := 	withClassOrPrototype 	?? !flagFirstIsInstance
+		flagIncludeInheritedProps :=	withInheritedProps		?? (flagFirstIsInstance && !obj.HasMethod("__Enum") && ObjOwnPropCount(obj) == 0 ? 1 : 0)
+		flagDetailedFunctions := 		detailedFunctions		?? !flagFirstIsInstance ; (flagFirstIsInstance && Type(obj) != "Func" ? 0 : 1)
+		flagIncludeClassOrPrototype := 	withClassOrPrototype	?? !flagFirstIsInstance
 		flagWithBases := 				withBases 				?? !flagFirstIsInstance
+		strEscape := 					strEscape				?? (!flagFirstIsInstance || flagIncludeClassOrPrototype || flagWithBases)
+		if (flagIncludeClassOrPrototype || flagIncludeInheritedProps)
+			anyAsObj := true
 	}
 	return _objToString(obj, 0)
 
-	_objToString(obj, indentLevel) {
+	_objToString(obj, indentLevel, overrideStrEscape := false) {
 		static escapes := [["\", "\\"], ['"', '\"'], ["`n", "\n"], ["`t", "\t"]]
-		qt := strEscape ? '"' : ''
-		if !(IsObject(obj)) {
+		qt := strEscape || overrideStrEscape ? '"' : ''
+		if !(IsObject(obj)) { ; if obj is Primitive, no need for the entire rest.
 			if (obj is Number)
 				return String(obj)
 			if (IsNumber(obj))
 				return qt obj qt
-			if (strEscape) {
+			if (strEscape || overrideStrEscape) {
 				for e in escapes
 					obj := StrReplace(obj, e[1], e[2])
 				return qt String(obj) qt
 			}
 			return obj
 		}
+		; for very small objects, this may be expensive to do, but it would be very messy otherwise
 		objType := Type(obj)
-		isMap := obj is Map
-		isArr := obj is Array
-		flagIsObj := ((!isArr && !isMap) || objType == "Prototype" ? 1 : 0)
+		flagIsMap := obj is Map
+		flagIsArr := obj is Array
+		flagIsObj := ((!flagIsArr && !flagIsMap) || objType == "Prototype" ? 1 : 0)
 		flagIsInstance := (objType != "Prototype" && objType != "Class" && Type(ObjGetBase(obj)) == "Prototype") ; we could also check whether obj doesn't have the proprety Prototype, but that relies on the object not being Primitive/Any
 		indent := (compress || compact)  ? '' : strMultiply(spacer, indentLevel + 1)
 		trspace := compress ? "" : A_Space
 		separator := (!compact && !compress ? '`n' indent : trspace)
 		sep2 := (compact || compress) ? separator : '`n' SubStr(indent, 1, -1 * StrLen(spacer))
-		count := flagIsObj ? ObjOwnPropCount(obj) : (isMap ? obj.Count : obj.Length)
+		count := objGetValueCount(obj)
 		className := obj.__Class
 		str := ""
 		if (flagIsInstance) {
-			if (obj.HasMethod("__Enum"))
+			if (obj.HasMethod("__Enum")) ; enumerate own properties
 				for k, v in obj
 					strFromCurrentEnums(k, v)
-			strFromInheritedProperties(flagIncludeInheritedProps ? -1 : 0) ; this ignores Prototype and __Class. This is safe because Any cannot be an instance
-			if (flagIncludeClassOrPrototype)
-				strFromCurrentEnums("__Class", className) ; this was not enumerated since its inherited (and ignored there)
-			; ONLY DO THIS IF WE ARE NOT THE RESULT OF A GetOwnPropDesc OPERATION
+			; get OwnProps and inherited Properties (depending on the flag)
+			; Ignores .Prototype and .__Class (Prototype later and .__Class is present multiple times)
+			strFromAllProperties(flagIncludeInheritedProps ? -1 : 0)
 			flagIsOwnPropDescObject := (objType == "Object" && (obj.HasMethod("Get") || obj.HasMethod("Call")))
-			flagIsBadFunction := objType == "Func"
+			; now, add .__Class for the current object
+			if (flagIncludeClassOrPrototype && !flagIsOwnPropDescObject)
+				strFromCurrentEnums("__Class", className)
+			flagIsBadFunction := (objType == "Func" && obj != origin) ; only do this if the original object was a function. otherwise we loop infinitely
 			if !(flagIsOwnPropDescObject || flagIsBadFunction || !flagIncludeClassOrPrototype) {
-				loop((cNames := StrSplit(className, ".")).Length)
+				loop((cNames := StrSplit(className, ".")).Length) ; if className is eg. Gui.Control, we can't do %Gui.Control%, instead do %Gui%.%Control%
 					classObj := A_Index == 1 ? %cNames[1]% : classObj.%cNames[A_Index]%
-				strFromCurrentEnums("Class", classObj) ; since we are an instance, get the class object
+				strFromCurrentEnums("Class", classObj) ; get the class object of the instance.
 			}
 		} else {
 			for k in ObjOwnProps(obj) {
 				if (!flagIncludeClassOrPrototype && k == "Prototype")
 					continue
 				if (obj.HasMethod("GetOwnPropDesc") && (propertyObject := obj.GetOwnPropDesc(k)).HasMethod("Get") && (propertyObject.get.MinParams > 1 || objType == "Prototype"))
-					strFromCurrentEnums(k, propertyObject)
+					strFromCurrentEnums(k, propertyObject) ; cannot get obj.%k% since it requires parameters. If we don't have getownpropdesc, there will not be issues (unless this is a primitive value with a property that requires params ?)
+				else if (k == "Prototype" && (obj.Prototype.__Class == "Class" || obj.Prototype.__Class == "Object" || obj.Prototype.__Class == "Any"))
+					strFromCurrentEnums(k, obj.Prototype.__Class ".Prototype")
 				else
 					strFromCurrentEnums(k, (!flagDetailedFunctions && Type(obj.%k%) == "Func") ? Type(obj.%k%) : obj.%k%)
 			}
 			; non-prototypes (class objects) should get their base. for class.prototype, object.prototype we need their base since there isn't a way to get it otherwise. any.prototype is empty and is also enumerated above.
 			flagIsGoodPrototype := (objType == "Prototype" && (className == "Class" || className == "Object"))
-			if (flagWithBases && (objType != "Prototype" || flagIsGoodPrototype))
-				strFromCurrentEnums("Base", ObjGetBase(obj))
+			if (flagWithBases) {
+				if (objType != "Prototype" || (flagIsGoodPrototype))
+					strFromCurrentEnums("Base", ObjGetBase(obj))
+				else if className != "Any" ; we are a bad prototype and only get a String base. If we are Any.Prototype, we get no base at all. D:
+					strFromCurrentEnums("Base", obj.base.__Class ".Prototype")
+			}
 		}
-		return ( isArr ? "[" : (isMap && !mapAsObject) ? "Map(" : "{" ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( isArr ? "]" : (isMap && !mapAsObject) ? ")" : "}" )
+		return ( (flagIsObj || anyAsObj) ? "{" : (flagIsArr ? "[" : "Map(") ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( (flagIsObj || anyAsObj) ? "}" : (flagIsArr ? "]" : ")") )
 
 		strFromCurrentEnums(k, v) {
 			if (!compact && compress)
-				separator := IsObject(v??"") && count > 1 ? '`n' : trspace
+				separator := isSimple(v) ? trspace : '`n'
 			if !(IsSet(v))
 				str .= RTrim(str, separator) "," separator
-			else if (isArr)
-				str .= _objToString(v ?? "", indentLevel + 1) "," separator
+			else if (flagIsObj || anyAsObj )
+				str .= _objToString(k ?? "", indentLevel + 1, true) (flagIsMap && !anyAsObj ? "," : ":") trspace _objToString(v ?? "", indentLevel + 1) "," separator
 			else
-				str .= _objToString(k ?? "", indentLevel + 1) (isMap && !mapAsObject ? "," : ":") trspace _objToString(v ?? "", indentLevel + 1) "," separator
+				str .= _objToString(v ?? "", indentLevel + 1) "," separator
 		}
 
-		strFromInheritedProperties(maxDepth := -1) {
+		strFromAllProperties(maxDepth := -1) {
 			base := obj
 			depth := 0 ; maxDepth == -1 -> get all properties, maxDepth == 0 -> get only own, == n -> get own and n level deep
 			while (base) {
@@ -452,12 +502,22 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 					d := base.GetOwnPropDesc(k)
 					flag := d.HasProp("Value") || (d.HasMethod("get") && d.get.MinParams < 2) ; 1 or 0 because class Methods have (this)
 					if flag
-						strFromCurrentEnums(k, obj.%k%)
+						strFromCurrentEnums(k, (!flagDetailedFunctions && Type(obj.%k%) == "Func") ? Type(obj.%k%) : obj.%k%)
 				}
 				if (maxDepth == depth++)
 					break
 				base := ObjGetBase(base)
 			}
+		}
+
+		isSimple(v?) {
+			if !IsSet(v)
+				return 1
+			if !IsObject(v)
+				return 1
+			if count == 1 && objGetValueCount(v) < 2
+				return 1
+			return 0
 		}
 	}
 }
@@ -562,6 +622,7 @@ arraySort(arr, mode := "") {
 	}
 	return arr2
 }
+
 
 
 /**
