@@ -355,7 +355,7 @@ class TableFilter {
 				offset := 0
 				for j, matchIndex in sortedRows {
 					if (dataIndex > matchIndex) {
-						offset := sortedRows.Length - j + 1 ; eg sortedRows is 16 7 4 3 2 1, dataIndex is 5: offset should be 4, because 5 > (4,3,2,1). Thus offset = Length of sortedrows - (amount of indeces in sortedrows larger than 5)
+						offset := sortedRows.Length - j + 1 ; eg sortedRows is 16 7 4 3 2 1, dataIndex is 5: offset should be 4, because 5 > (4,3,2,1). Thus offset = Length of sortedrows - (amount of indices in sortedrows larger than 5)
 						break
 					}
 				}
