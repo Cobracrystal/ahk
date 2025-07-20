@@ -195,7 +195,7 @@ permutations(variables*) {
 		return [variables]
 	local permutationArr := []
 	for i, e in variables {
-		perms := permutations(arrayIgnoreIndex(variables, i))
+		perms := permutations(arrayIgnoreIndex(variables, i)*)
 		for f in perms
 			permutationArr.push([e, f*])
 	}
