@@ -76,16 +76,11 @@ downloadLinks(folder, linkArray) {
 	for i, e in linkArray {
 		if (e.url = "") {
 			downloadLog.Push({ result: "Error", message: "Empty URL", origin: e.origin, url: e.url, fileName: e.fileName, extension: e.extension })
-			continue
-		}
-		else if (InStr(e.status, "Duplicate URL")) {
+		} else if (InStr(e.status, "Duplicate URL")) {
 			downloadLog.Push({ result: "Error", message: e.status, origin: e.origin, url: e.url, fileName: e.fileName, extension: e.extension })
-			continue
-		}
-		else if (FileExist(folder "\" e.fileName "." e.extension)) {
-				downloadLog.Push({ result: "Error", message: "File already exists", origin: e.origin, url: e.url, fileName: e.fileName, extension: e.extension })
-		}	
-		else {
+		} else if (FileExist(folder "\" e.fileName "." e.extension)) {
+			downloadLog.Push({ result: "Error", message: "File already exists", origin: e.origin, url: e.url, fileName: e.fileName, extension: e.extension })
+		} else {
 			if (RegexMatch(e.url, "(.*)/samples/(.*)/sample_(.*)", &m)) {
 				tooltiptext := "Downloading Sample " i "/" linkArray.Length ": " e.filename "." e.extension
 				downloadLog.Push({ result: "Warning", message: "Thumbnail URL", origin: e.origin, url: e.url, fileName: e.fileName, extension: e.extension })
