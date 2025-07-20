@@ -485,23 +485,23 @@ class WindowManager {
 			wHandles.push(Integer(this.LV.GetText(cFunc, 2)))
 		static basicTasks := Map(
 			"Reset Window Position", resetWindowPosition,
-			"Minimize Window", WinMinimize,
-			"Maximize Window", WinMaximize,
-			"Restore Window", (wHandle) => this.isBorderlessFullscreen(wHandle) ? resetWindowPosition(wHandle, 5/7) : WinRestore(wHandle),
+			"Minimize Window", 		WinMinimize,
+			"Maximize Window", 		WinMaximize,
+			"Restore Window", 		(wHandle) => this.isBorderlessFullscreen(wHandle) ? resetWindowPosition(wHandle, 5/7) : WinRestore(wHandle),
 			"Move Windows to Monitor 1", resetWindowPosition.bind(,,1),
 			"Move Windows to Monitor 2", resetWindowPosition.bind(,,2),
-			"Toggle Window Lock", (wHandle) => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & 0x8 ? 0 : 1, wHandle)),
-			"Set Window Lock", WinSetAlwaysOnTop.bind(true),
-			"Remove Window Lock", WinSetAlwaysOnTop.bind(false),
-			"Toggle Title Bar", WinSetStyle.bind('^' this.windowStyles.WS_CAPTION),
-			"Add Title Bar", WinSetStyle.bind("+" this.windowStyles.WS_CAPTION),
-			"Remove Title Bar", WinSetStyle.bind("-" this.windowStyles.WS_CAPTION),
-			"Toggle Visibility", (wHandle) => (WinGetStyle(wHandle) & this.windowStyles.WS_VISIBLE ? WinHide(wHandle) : WinShow(wHandle)),
-			"Show Window", WinShow,
-			"Hide Window", WinHide,
-			"View Command Line", (wHandle) => (MsgBoxAsGui(this.winmgmt("CommandLine", "Where ProcessId = " . WinGetPID(wHandle))[1],,,,,,this.gui.hwnd,1)),
-			"View Properties", (wHandle) => (Run('properties "' WinGetProcessPath(wHandle) '"')),
-			"View Program Folder", (wHandle) => (Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"'))
+			"Toggle Window Lock", 	(wHandle) => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & 0x8 ? 0 : 1, wHandle)),
+			"Set Window Lock", 		WinSetAlwaysOnTop.bind(true),
+			"Remove Window Lock", 	WinSetAlwaysOnTop.bind(false),
+			"Toggle Title Bar",		WinSetStyle.bind('^' this.windowStyles.WS_CAPTION),
+			"Add Title Bar", 		WinSetStyle.bind("+" this.windowStyles.WS_CAPTION),
+			"Remove Title Bar", 	WinSetStyle.bind("-" this.windowStyles.WS_CAPTION),
+			"Toggle Visibility", 	(wHandle) => (WinGetStyle(wHandle) & this.windowStyles.WS_VISIBLE ? WinHide(wHandle) : WinShow(wHandle)),
+			"Show Window", 			WinShow,
+			"Hide Window", 			WinHide,
+			"View Command Line", 	(wHandle) => (MsgBoxAsGui(this.winmgmt("CommandLine", "Where ProcessId = " . WinGetPID(wHandle))[1],,,,,,this.gui.hwnd,1)),
+			"View Properties", 		(wHandle) => (Run('properties "' WinGetProcessPath(wHandle) '"')),
+			"View Program Folder", 	(wHandle) => (Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"'))
 		)
 		if (basicTasks.Has(itemName)) {
 			for i, wHandle in wHandles
