@@ -3,8 +3,8 @@
 ; ###########################################################################
 #Requires AutoHotkey 2
 #SingleInstance Force
-KeyHistory(500)
 #UseHook
+KeyHistory(500)
 InstallKeybdHook(true, true)
 ; Set Correct Working Dir
 if !InStr(FileExist(A_ScriptDir "\script_files\everything"), "D")
@@ -85,9 +85,6 @@ customTrayMenu()
 ; Synchronize nextDNS IP
 if (!GLOBALVAR_WASRELOADED)
 	connectNextDNS()
-; use suspendexempt for the reload hotkey. (and others) TODO!
-return
-
 ; ###########################################################################
 ; ############################# CONTROL HOTKEYS #############################
 ; ###########################################################################
@@ -327,39 +324,31 @@ return
 
 toggleNumpadMouseMove() {
 	static init := 0
+	static keyMap := { 
+		moveKeys: Map("Numpad1", [-1,1], "Numpad2", [0,1], "Numpad3", [1,1], "Numpad4", [-1,0], "Numpad6", [1,0], "Numpad7", [-1,-1], "Numpad8", [0,-1], "Numpad9", [1,-1]), 
+		clickKeys: Map("Numpad5", ["L", 0], "NumpadEnter", ["L", 0], "NumpadAdd", ["L", 1], "NumpadSub", ["R", 0], "NumpadMult", ["M", 0], "NumpadDiv", ["M", 1])
+	}
 	if !(init) {
-		Hotkey("Numpad1", moveMousePixel.bind(-1, 1))
-		Hotkey("Numpad2", moveMousePixel.bind(0, 1))
-		Hotkey("Numpad3", moveMousePixel.bind(1, 1))
-		Hotkey("Numpad4", moveMousePixel.bind(-1, 0))
-		Hotkey("Numpad6", moveMousePixel.bind(1, 0))
-		Hotkey("Numpad7", moveMousePixel.bind(-1, -1))
-		Hotkey("Numpad8", moveMousePixel.bind(0, -1))
-		Hotkey("Numpad9", moveMousePixel.bind(1, -1))
-		Hotkey("NumpadEnter", clickMouse.Bind("L", 0))
-		Hotkey("NumpadAdd", clickMouse.Bind("L", 1))
+		for i, e in keyMap.moveKeys
+			Hotkey(i, moveMousePixel.bind(e*))
+		for i, e in keyMap.clickKeys
+			Hotkey(i, clickMouse.bind(e*))
 		init := 1
 		return
 	}
-	Hotkey("Numpad1", "Toggle")
-	Hotkey("Numpad2", "Toggle")
-	Hotkey("Numpad3", "Toggle")
-	Hotkey("Numpad4", "Toggle")
-	Hotkey("Numpad6", "Toggle")
-	Hotkey("Numpad7", "Toggle")
-	Hotkey("Numpad8", "Toggle")
-	Hotkey("Numpad9", "Toggle")
-	Hotkey("NumpadEnter", "Toggle")
-	Hotkey("NumpadAdd", "Toggle")
+	for i, e in keyMap.moveKeys
+		Hotkey(i, "Toggle")
+	for i, e in keyMap.clickKeys
+		Hotkey(i, "Toggle")
 }
 
 moveMousePixel(x, y, *) {
 	MouseMove(x, y, 0, "R")
 }
 
-clickMouse(b, press := 0, *) {
+clickMouse(b, hold := 0, *) {
 	b := SubStr(b, 1, 1)
-	if (press)
+	if (hold)
 		st := GetKeyState(b . "Button") ? "U" : "D"
 	MouseClick(b, , , , , st?)
 }
@@ -702,6 +691,11 @@ customExit(ExitReason, ExitCode) {
 ^::Send("{Text}^")
 ´::Send("{Text}´")
 `::Send("{Text}``")
+
+^^:: { ; Toggle ^, `, ´ Hotkeys
+	for e in ["^", "´", "``"]
+		Hotkey(e, "Toggle")
+}
 
 :*?:=/=::≠
 :*?:+-::±
