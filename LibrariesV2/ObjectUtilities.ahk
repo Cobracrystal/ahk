@@ -320,6 +320,12 @@ objGetBaseChain(obj) {
 	return arr
 }
 
+objGetClassObject(obj) {
+	loop((cNames := StrSplit(obj.__Class, ".")).Length) ; if className is eg. Gui.Control, we can't do %Gui.Control%, instead do %Gui%.%Control%
+		classObj := A_Index == 1 ? %cNames[1]% : classObj.%cNames[A_Index]%
+	return classObj
+}
+
 
 /*
 we have an object.
@@ -373,7 +379,8 @@ class Thing {
 
 The Instance contains only instance properties. Instance methods are inherited from Prototype. __Class is inherited from Prototype and contains the class name 
 Method counts as Prop, not an OwnProp
-The Prototype contains only instance methods (And inherited properties). __Class is defined here and is the class name
+The Prototype contains only instance methods and Properties (that exist in the class. Properties assigned via New/Init/Assignments in class Body are not included) 
+. __Class is defined here and is the class name
 Method counts as OwnProp
 The class Object contains only static properties and static methods. __Class is inherited from class class and thus contains "Class"
 static methods count as OwnProps
@@ -397,7 +404,7 @@ objToStringClass(obj, detailedFunctions := false)	=>	objToString(obj, , false, ,
  * @param {Boolean} [withBases] Whether to print the .Base property. If true,any object will have its Base Chain printed up to Any.Prototype. Does NOT print class.Prototype.base, instead only class.base.Prototype (to avoid printing duplicate information), and furthermore does not print Class.Prototype, Object.Prototype, Any.Prototype at all (since they are included in the base chain anyway, since Any.Base == Class.Prototype)
  * @returns {String} The string representing the object
  */
-objToString(obj, compact := false, compress := true, strEscape?, anyAsObj := false, spacer := "`t", withInheritedProps?, detailedFunctions?, withClassOrPrototype?, withBases?) {
+objToString(obj, compact := false, compress := true, strEscape := false, anyAsObj := false, spacer := "`t", withInheritedProps?, detailedFunctions?, withClassOrPrototype?, withBases?) {
 	if IsObject(obj) {
 		origin := obj
 		flagFirstIsInstance := (Type(obj) != "Prototype" && Type(obj) != "Class" && Type(objgetbase(obj)) == "Prototype") ; equivalent to line below
@@ -412,15 +419,15 @@ objToString(obj, compact := false, compress := true, strEscape?, anyAsObj := fal
 	}
 	return _objToString(obj, 0)
 
-	_objToString(obj, indentLevel, overrideStrEscape := false) {
+	_objToString(obj, indentLevel, flagOverrideStrEscape := false, flagIsOwnPropDescObject := false) {
 		static escapes := [["\", "\\"], ['"', '\"'], ["`n", "\n"], ["`t", "\t"]]
-		qt := strEscape || overrideStrEscape ? '"' : ''
+		qt := strEscape || flagOverrideStrEscape ? '"' : ''
 		if !(IsObject(obj)) { ; if obj is Primitive, no need for the entire rest.
 			if (obj is Number)
 				return String(obj)
-			if (IsNumber(obj))
+			if (IsNumber(obj) || obj is String)
 				return qt obj qt
-			if (strEscape || overrideStrEscape) {
+			if (strEscape || flagOverrideStrEscape) {
 				for e in escapes
 					obj := StrReplace(obj, e[1], e[2])
 				return qt String(obj) qt
@@ -443,26 +450,25 @@ objToString(obj, compact := false, compress := true, strEscape?, anyAsObj := fal
 		if (flagIsInstance) {
 			if (obj.HasMethod("__Enum")) ; enumerate own properties
 				for k, v in obj
-					strFromCurrentEnums(k, v)
+					strFromCurrentEnums(k, v, true)
 			; get OwnProps and inherited Properties (depending on the flag)
 			; Ignores .Prototype and .__Class (Prototype later and .__Class is present multiple times)
 			strFromAllProperties(flagIncludeInheritedProps ? -1 : 0)
-			flagIsOwnPropDescObject := (objType == "Object" && (obj.HasMethod("Get") || obj.HasMethod("Call")))
 			; now, add .__Class for the current object
 			if (flagIncludeClassOrPrototype && !flagIsOwnPropDescObject)
 				strFromCurrentEnums("__Class", className)
 			flagIsBadFunction := (objType == "Func" && obj != origin) ; only do this if the original object was a function. otherwise we loop infinitely
-			if !(flagIsOwnPropDescObject || flagIsBadFunction || !flagIncludeClassOrPrototype) {
-				loop((cNames := StrSplit(className, ".")).Length) ; if className is eg. Gui.Control, we can't do %Gui.Control%, instead do %Gui%.%Control%
-					classObj := A_Index == 1 ? %cNames[1]% : classObj.%cNames[A_Index]%
-				strFromCurrentEnums("Class", classObj) ; get the class object of the instance.
-			}
+			if (flagWithBases && !flagIsOwnPropDescObject && !flagIsBadFunction)
+				strFromCurrentEnums("Base", obj.base)
+			; this would get the class object from an instance. why would we need this?
+			; if !(flagIsOwnPropDescObject || flagIsBadFunction || !flagIncludeClassOrPrototype)
+			;	strFromCurrentEnums("Class_Object", objGetClassObject(obj))
 		} else {
 			for k in ObjOwnProps(obj) {
 				if (!flagIncludeClassOrPrototype && k == "Prototype")
 					continue
 				if (obj.HasMethod("GetOwnPropDesc") && (propertyObject := obj.GetOwnPropDesc(k)).HasMethod("Get") && (propertyObject.get.MinParams > 1 || objType == "Prototype"))
-					strFromCurrentEnums(k, propertyObject) ; cannot get obj.%k% since it requires parameters. If we don't have getownpropdesc, there will not be issues (unless this is a primitive value with a property that requires params ?)
+					strFromCurrentEnums(k, propertyObject,, true) ; cannot get obj.%k% since it requires parameters. If we don't have getownpropdesc, there will not be issues (unless this is a primitive value with a property that requires params ?)
 				else if (k == "Prototype" && (obj.Prototype.__Class == "Class" || obj.Prototype.__Class == "Object" || obj.Prototype.__Class == "Any"))
 					strFromCurrentEnums(k, obj.Prototype.__Class ".Prototype")
 				else
@@ -479,15 +485,15 @@ objToString(obj, compact := false, compress := true, strEscape?, anyAsObj := fal
 		}
 		return ( (flagIsObj || anyAsObj) ? "{" : (flagIsArr ? "[" : "Map(") ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( (flagIsObj || anyAsObj) ? "}" : (flagIsArr ? "]" : ")") )
 
-		strFromCurrentEnums(k, v) {
+		strFromCurrentEnums(k, v, overrStrEscape?, isOwnPropDescObject?) {
 			if (!compact && compress)
 				separator := isSimple(v) ? trspace : '`n'
 			if !(IsSet(v))
 				str .= RTrim(str, separator) "," separator
 			else if (flagIsObj || anyAsObj )
-				str .= _objToString(k ?? "", indentLevel + 1, true) (flagIsMap && !anyAsObj ? "," : ":") trspace _objToString(v ?? "", indentLevel + 1) "," separator
+				str .= _objToString(k ?? "", indentLevel + 1, true) (flagIsMap && !anyAsObj ? "," : ":") trspace _objToString(v ?? "", indentLevel + 1,, isOwnPropDescObject?) "," separator
 			else
-				str .= _objToString(v ?? "", indentLevel + 1) "," separator
+				str .= _objToString(v ?? "", indentLevel + 1, flagOverrideStrEscape?) "," separator
 		}
 
 		strFromAllProperties(maxDepth := -1) {
@@ -499,8 +505,8 @@ objToString(obj, compact := false, compress := true, strEscape?, anyAsObj := fal
 				for k in ObjOwnProps(base) {
 					if (k == "__Class" || k == "Prototype")
 						continue
-					d := base.GetOwnPropDesc(k)
-					flag := d.HasProp("Value") || (d.HasMethod("get") && d.get.MinParams < 2) ; 1 or 0 because class Methods have (this)
+					propdesc := base.GetOwnPropDesc(k)
+					flag := propdesc.HasProp("Value") || (propdesc.HasMethod("get") && propdesc.get.MinParams < 2) ; 1 or 0 because class Methods have (this)
 					if flag
 						strFromCurrentEnums(k, (!flagDetailedFunctions && Type(obj.%k%) == "Func") ? Type(obj.%k%) : obj.%k%)
 				}
