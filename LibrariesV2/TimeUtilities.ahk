@@ -12,6 +12,8 @@
  */
 DateAddW(dateTime, amount, timeUnit) {
 	timeUnit := validateTimeUnit(timeUnit)
+	if (amount == 0)
+		return dateTime
 	switch timeUnit {
 		case "Seconds", "Minutes", "Hours", "Days":
 			return DateAdd(dateTime, amount, timeUnit)
