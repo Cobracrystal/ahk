@@ -6,13 +6,14 @@
  * @param value value to check for
  * @returns {Integer} Count of how many instances of value were encountered
  */
-objCountValue(obj, value, comparator := (itKey,itVal,setVal) => (itVal = setVal)) {
+objCountValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = setVal)) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objCountValue does not handle type " . Type(obj)))
 	count := 0
+	condWithKey := conditional.MaxParams == 3 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (comparator(i, e, value))
+		if (condWithKey ? conditional(i, e, value) : conditional(e, value))
 			count++
 	return count
 }
@@ -24,12 +25,13 @@ objCountValue(obj, value, comparator := (itKey,itVal,setVal) => (itVal = setVal)
  * @param {Func} comparator 
  * @returns {Integer} 
  */
-objContainsValue(obj, value, comparator := (itKey,itVal,setVal) => (itVal = setVal)) {
+objContainsValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = setVal)) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
+	condWithKey := conditional.MaxParams == 3 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (comparator(i, e, value))
+		if (condWithKey ? conditional(i, e, value) : conditional(e, value))
 			return i
 	return 0
 }
@@ -78,14 +80,15 @@ objClone(obj) {
  * @param {Integer} limit if 0, removes all
  * @returns {Integer} count
  */
-objRemoveValue(obj, value := "", limit := 0, comparator := ((itKey, itVal, val) => (itVal = val)), emptyValue?) {
+objRemoveValue(obj, value := "", limit := 0, conditional := ((itKey, itVal, val) => (itVal = val)), emptyValue?) {
 	isArrLike := ((isArr := obj is Array) || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
 	count := 0
+	condWithKey := conditional.MaxParams == 3 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (comparator(i, e, value)) {
+		if (condWithKey ? conditional(i, e, value) : conditional(e, value)) {
 			if (!limit || count++ < limit)
 				queue.push(i)
 			else
@@ -111,15 +114,17 @@ objRemoveValue(obj, value := "", limit := 0, comparator := ((itKey, itVal, val) 
  * @param emptyValue If this is set, all encountered values are not removed, but instead replaced by this value.
  * @returns {Integer} 
  */
-objRemoveValues(obj, values, limit := 0, comparator := ((itKey,itVal,setVal) => (itVal = setVal)), emptyValue?) {
+objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) => (itVal = setVal)), emptyValue?) {
 	isArrLike := ((isArr := obj is Array) || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objRemoveValues does not handle type " . Type(obj)))
 	queue := []
 	count := 0
+	condWithKey := conditional.MaxParams == 3 ? 1 : 0
+	for i, e in (isArrLike ? obj : obj.OwnProps())
 	for i, e in (isArrLike ? obj : obj.OwnProps())
 		for f in values
-			if (comparator(i, e, f)) {
+			if (condWithKey ? conditional(i, e, f) : conditional(e, f)) {
 				if (!limit || count++ < limit)
 					queue.push(i)
 				else
@@ -142,15 +147,21 @@ objDoForEach(obj, fn := ((e) => (objToString(e))), value := 0, conditional := ((
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objDoForEach does not handle type " . Type(obj)))
 	clone := %Type(obj)%()
+	fnWithKey := fn.MaxParams == 2 ? 1 : 0
+	condWithKey := conditional.MaxParams == 3 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (conditional(i, e, value))
-			(isArrLike ? (isMap ? clone[i] := fn(e) : clone.push(fn(e))) : clone.%i% := fn(e))
+		if (condWithKey ? conditional(i, e, value) : conditional(e, value)) {
+			v := fnWithKey ? fn(i, e) : fn(e)
+			(isArrLike ? (isMap ? clone[i] := v : clone.push(v)) : clone.%i% := v)
+		}
 	return clone
 }
 
 objGetMinimum(obj) => objCollect(obj, (a,b) => Min(a,b))
 objGetMaximum(obj) => objCollect(obj, (a,b) => Max(a,b))
-objGetAverage(obj) => objCollect(obj, (a,b) => (a+b)) / (obj is Array ? obj.Length : obj is Map ? obj.Count : ObjOwnPropCount(obj))
+objGetSum(obj) => objCollect(obj, (a,b) => (a+b))
+objGetAverage(obj) => objGetSum(obj) / objGetValueCount(obj)
+objGetProd(obj) => objCollect(obj, (b,i) => b*i)
 
 /**
  * 
@@ -161,15 +172,17 @@ objGetAverage(obj) => objCollect(obj, (a,b) => (a+b)) / (obj is Array ? obj.Leng
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
  * @returns {Any} Collected Value
  */
-objCollect(obj, fn := ((base, iterator) => (base . objToString(iterator))), initialBase?, value := 0, conditional := ((itKey, itVal, setVal) => (true))) {
+objCollect(obj, fn := ((base, itKey, itVal) => (base . objToString(itVal))), initialBase?, value := 0, conditional := ((itKey, itVal, setVal) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || obj is Object)
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	if (IsSet(initialBase))
 		base := initialBase
+	fnWithKey := fn.MaxParams == 3 ? 1 : 0
+	condWithKey := conditional.MaxParams == 3 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (conditional(i, e, value))
-			base := IsSet(base) ? fn(base, e) : e
+		if (condWithKey ? conditional(i, e, value) : conditional(e, value))
+			base := IsSet(base) ? (fnWithKey ? fn(base, i, e) : fn(base, e)) : e
 	return base ?? ""
 }
 
@@ -189,8 +202,9 @@ objGetDuplicates(obj, fn := (a => a), caseSense := true, grouped := false) {
 	counterMap := Map()
 	duplicateIndices := []
 	duplicateMap.CaseSense := caseSense
+	fnWithKey := fn.MaxParams == 2 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps()) {
-		v := fn(e)
+		v := fnWithKey ? fn(i,e) : fn(e)
 		if (duplicateMap.Has(v)) {
 			duplicateMap[v].push(i)
 			counterMap[v] := 1
@@ -205,7 +219,7 @@ objGetDuplicates(obj, fn := (a => a), caseSense := true, grouped := false) {
 	}
 	else
 		for i, e in (isArrLike ? obj : obj.OwnProps()) {
-			v := fn(e)
+			v := fnWithKey ? fn(i,e) : fn(e)
 			if (duplicateMap[v].Length > 1)
 				duplicateIndices.push(duplicateMap[v][counterMap[v]++])
 		}
@@ -225,8 +239,9 @@ objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	duplicateMap := Map()
 	duplicateMap.CaseSense := caseSense
+	fnWithKey := fn.MaxParams == 2 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps()) {
-		v := fn(e)
+		v := fnWithKey ? fn(i,e) : fn(e)
 		if (duplicateMap.Has(v))
 			duplicateMap[v]++
 		else
@@ -248,9 +263,10 @@ objGetUniques(obj, fn := (a => a), caseSense := true) {
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	uniques := Map()
 	uniques.CaseSense := caseSense
-	clone := %Type(obj)%
+	fnWithKey := fn.MaxParams == 2 ? 1 : 0
+	clone := %Type(obj)%()
 	for i, e in (isArrLike ? obj : obj.OwnProps()) {
-		v := fn(e)
+		v := fnWithKey ? fn(i,e) : fn(e)
 		if !(uniques.Has(v)) {
 			uniques[v] := true
 			isArrLike ? (isMap ? clone[i] := e : clone.push(e)) : clone.%i% := e
@@ -540,7 +556,7 @@ range(startEnd, end?, step?, inclusive := true) {
 	)
 }
 
-rangeA(startEnd, end?, step?, inclusive := true) {
+rangeAsArr(startEnd, end?, step?, inclusive := true) {
 	a := []
 	for e in range(startEnd, end?, step?, inclusive)
 		a.push(e)
@@ -630,6 +646,26 @@ arraySort(arr, mode := "") {
 }
 
 
+/**
+ * Sorts an object directly. Note that this converts everything to strings.
+ * @param obj Given object
+ * @param {String} sortMode
+ * @returns {Array} 
+ */
+objSort(obj, sortMode := "") {
+	isArrLike := (obj is Map || obj is Array)
+	indexMap := Map()
+	retArr := []
+	l := objGetValueCount(obj)
+	if !l
+		return []
+	for e in (isArrLike ? obj : obj.OwnProps())
+		str .= e . "©"
+	sortMode := RegExReplace(sortMode, "D.")
+	newStr := Sort(SubStr(str, 1, -1), sortMode . " D©")
+	return StrSplitUTF8(newStr, "©")
+}
+objSortNumerically(obj, sortMode := "N") => objDoForEach(objSort(obj, sortMode), (e => Number(e)))
 
 /**
  * Given an enumerable object whos values itself are objects, sorts it by value of the inner objects key.
@@ -638,35 +674,35 @@ arraySort(arr, mode := "") {
  * @param {String} mode Sorting mode. equivalent to sorting options in Sort [String]
  * @returns {Array} The sorted array, where each entry in the array is an object with the original index as property .index and value as .value
  */
-objSortByKey(tObj, key, mode := "") {
-	isArr := tObj is Array
-	isMap := tObj is Map
-	if !(tObj is Object)
-		throw(TypeError("Expected Object, but got " tObj.Prototype.Name))
+objSortByKey(obj, key, mode := "") {
+	isArr := obj is Array
+	isMap := obj is Map
+	if !(obj is Object)
+		throw(TypeError("Expected Object, but got " obj.Prototype.Name))
 	isObj := !(isArr || isMap)
 	indexMap := Map()
 	retArr := []
-	l := isArr ? tObj.Length : isMap ? tObj.Count : ObjOwnPropCount(tObj)
+	l := objGetValueCount(obj)
 	removeDuplicates := InStr(mode, "U")
 	if !l
 		return []
-	for i, sortKey in (isObj ? tObj.OwnProps() : tObj) {
+	for i, sortKey in (isObj ? obj.OwnProps() : obj) {
 		if (!IsSet(innerIsObj))
 			innerIsObj := !(sortKey is Map || sortKey is Array)
-		tv := innerIsObj ? sortKey.%key% : sortKey[key]
+		v := innerIsObj ? sortKey.%key% : sortKey[key]
 		if (!IsSet(isString))
-			isString := (tv is String)
-		if (indexMap.Has(tv) && !removeDuplicates)
-			indexMap[tv].push(i)
+			isString := (v is String)
+		if (indexMap.Has(v) && !removeDuplicates)
+			indexMap[v].push(i)
 		else
-			indexMap[tv] := [i]
-		str .= tv . "`n"
+			indexMap[v] := [i]
+		str .= v . "©"
 	}
-	newStr := Sort(IsSet(str) ? SubStr(str, 1, -1) : "", removeDuplicates ? mode : mode . ' U')
-	strArr := StrSplit(newStr, "`n")
+	newStr := Sort(SubStr(str, 1, -1), removeDuplicates ? mode : mode . ' U')
+	strArr := StrSplit(newStr, "©")
 	for sortKey in strArr
 		for index in indexMap[isString ? String(sortKey) : Number(sortKey)]
-			retArr.push({ index: index, value: isObj ? tObj.%index% : tObj[index] })
+			retArr.push({ index: index, value: isObj ? obj.%index% : obj[index] })
 	return retArr
 }
 
