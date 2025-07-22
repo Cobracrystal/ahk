@@ -206,3 +206,5 @@ numRoundProper(num, precision := 12) {
 		return Number(RTrim(Round(num, precision), "0."))
 }
 
+clamp(n, minimum, maximum) => Max(min, Min(n, max))
+isClamped(n, minimum, maximum) => (n <= maximum && n >= minimum)
