@@ -147,7 +147,7 @@ class unicodeData {
 			this.verifyVersion()
 			if (whichUProperty is String)
 				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			return DllCall("icuuc\u_hasBinaryProperty", "uchar", Ord(char), "int", whichUProperty)
+			return DllCall("icuuc\u_hasBinaryProperty", "uchar", Ord(char), "int", whichUProperty, "char")
 		}
 		
 		;  	Returns true if the property is true for the string. 
@@ -157,7 +157,7 @@ class unicodeData {
 			StrPut(str, strBuf, "UTF-8")
 			if (whichUProperty is String)
 				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			return DllCall("icuuc\u_stringHasBinaryProperty", "Ptr", strBuf, "int", length, "int", whichUProperty)
+			return DllCall("icuuc\u_stringHasBinaryProperty", "Ptr", strBuf, "int", length, "int", whichUProperty, "char")
 		}
 		
 		;  	Returns a frozen USet for a binary property. 
@@ -178,25 +178,25 @@ class unicodeData {
 		;  	Check if a code point has the Alphabetic Unicode property. 
 		static isUAlphabetic(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isUAlphabetic", "uchar", Ord(char))
+			return DllCall("icuuc\u_isUAlphabetic", "uchar", Ord(char), "char")
 		}
 		
 		;  	Check if a code point has the Lowercase Unicode property. 
 		static isULowercase(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isULowercase", "uchar", Ord(char))
+			return DllCall("icuuc\u_isULowercase", "uchar", Ord(char), "char")
 		}
 		
 		;  	Check if a code point has the Uppercase Unicode property. 
 		static isUUppercase(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isUUppercase", "uchar", Ord(char))
+			return DllCall("icuuc\u_isUUppercase", "uchar", Ord(char), "char")
 		}
 		
 		;  	Check if a code point has the White_Space Unicode property. 
 		static isUWhiteSpace(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isUWhiteSpace", "uchar", Ord(char))
+			return DllCall("icuuc\u_isUWhiteSpace", "uchar", Ord(char), "char")
 		}
 		
 		;  	Get the property value for an enumerated or integer Unicode property for a code point. 
@@ -241,115 +241,115 @@ class unicodeData {
 		;  	Get the numeric value for a Unicode code point as defined in the Unicode Character Database. 
 		static getNumericValue(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_getNumericValue", "uchar", Ord(char))
+			return DllCall("icuuc\u_getNumericValue", "uchar", Ord(char), "double")
 		}
 		
 		;  	Determines whether the specified code point has the general category "Ll" (lowercase letter) => 0. 
 		static islower(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_islower", "uchar", Ord(char))
+			return DllCall("icuuc\u_islower", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point has the general category "Lu" (uppercase letter) => 0. 
 		static isupper(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isupper", "uchar", Ord(char))
+			return DllCall("icuuc\u_isupper", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is a titlecase letter. 
 		static istitle(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_istitle", "uchar", Ord(char))
+			return DllCall("icuuc\u_istitle", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is a digit character according to Java. 
 		static isdigit(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isdigit", "uchar", Ord(char))
+			return DllCall("icuuc\u_isdigit", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is a letter character. 
 		static isalpha(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isalpha", "uchar", Ord(char))
+			return DllCall("icuuc\u_isalpha", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is an alphanumeric character (letter or digit) => 0 according to Java. 
 		static isalnum(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isalnum", "uchar", Ord(char))
+			return DllCall("icuuc\u_isalnum", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is a hexadecimal digit. 
 		static isxdigit(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isxdigit", "uchar", Ord(char))
+			return DllCall("icuuc\u_isxdigit", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is a punctuation character. 
 		static ispunct(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_ispunct", "uchar", Ord(char))
+			return DllCall("icuuc\u_ispunct", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is a "graphic" character (printable, excluding spaces) => 0. 
 		static isgraph(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isgraph", "uchar", Ord(char))
+			return DllCall("icuuc\u_isgraph", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is a "blank" or "horizontal space", a character that visibly separates words on a line. 
 		static isblank(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isblank", "uchar", Ord(char))
+			return DllCall("icuuc\u_isblank", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is "defined", which usually means that it is assigned a character. 
 		static isdefined(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isdefined", "uchar", Ord(char))
+			return DllCall("icuuc\u_isdefined", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines if the specified character is a space character or not. 
 		static isspace(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isspace", "uchar", Ord(char))
+			return DllCall("icuuc\u_isspace", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determine if the specified code point is a space character according to Java. 
 		static isJavaSpaceChar(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isJavaSpaceChar", "uchar", Ord(char))
+			return DllCall("icuuc\u_isJavaSpaceChar", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines if the specified code point is a whitespace character according to Java/ICU. 
 		static isWhitespace(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isWhitespace", "uchar", Ord(char))
+			return DllCall("icuuc\u_isWhitespace", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is a control character (as defined by this function) => 0. 
 		static iscntrl(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_iscntrl", "uchar", Ord(char))
+			return DllCall("icuuc\u_iscntrl", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is an ISO control code. 
 		static isISOControl(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isISOControl", "uchar", Ord(char))
+			return DllCall("icuuc\u_isISOControl", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines whether the specified code point is a printable character. 
 		static isprint(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isprint", "uchar", Ord(char))
+			return DllCall("icuuc\u_isprint", "uchar", Ord(char), "char")
 		}
 		
 		;  	Non-standard: Determines whether the specified code point is a base character. 
 		static isbase(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isbase", "uchar", Ord(char))
+			return DllCall("icuuc\u_isbase", "uchar", Ord(char), "char")
 		}
 		
 		;  	Returns the bidirectional category value for the code point, which is used in the Unicode bidirectional algorithm (UAX #9 http://www.unicode.org/reports/tr9/). 
@@ -362,7 +362,7 @@ class unicodeData {
 		;  	Determines whether the code point has the Bidi_Mirrored property. 
 		static isMirrored(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isMirrored", "uchar", Ord(char))
+			return DllCall("icuuc\u_isMirrored", "uchar", Ord(char), "char")
 		}
 		
 		;  	Maps the specified character to a "mirror-image" character. 
@@ -382,7 +382,7 @@ class unicodeData {
 		;  	Returns the general category value for the code point. 
 		static charType(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_charType", "uchar", Ord(char))
+			return DllCall("icuuc\u_charType", "uchar", Ord(char), "char")
 		}
 		
 		;  	Enumerate efficiently all code points with their Unicode general categories. 
@@ -394,7 +394,7 @@ class unicodeData {
 		;  	Returns the combining class of the code point as specified in UnicodeData.txt. 
 		static getCombiningClass(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_getCombiningClass", "uchar", Ord(char))
+			return DllCall("icuuc\u_getCombiningClass", "uchar", Ord(char), "uchar")
 		}
 		
 		;  	Returns the decimal digit value of a decimal digit character. 
@@ -501,13 +501,13 @@ class unicodeData {
 		;  	Determines if the specified character is permissible as the first character in an identifier according to UAX #31 Unicode Identifier and Pattern Syntax. 
 		static isIDStart(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isIDStart", "uchar", Ord(char))
+			return DllCall("icuuc\u_isIDStart", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines if the specified character is permissible as a non-initial character of an identifier according to UAX #31 Unicode Identifier and Pattern Syntax. 
 		static isIDPart(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isIDPart", "uchar", Ord(char))
+			return DllCall("icuuc\u_isIDPart", "uchar", Ord(char), "char")
 		}
 		
 		;  	Does the set of Identifier_Type values code point c contain the given type? 
@@ -531,19 +531,19 @@ class unicodeData {
 		;  	Determines if the specified character should be regarded as an ignorable character in an identifier, according to Java. 
 		static isIDIgnorable(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isIDIgnorable", "uchar", Ord(char))
+			return DllCall("icuuc\u_isIDIgnorable", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines if the specified character is permissible as the first character in a Java identifier. 
 		static isJavaIDStart(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isJavaIDStart", "uchar", Ord(char))
+			return DllCall("icuuc\u_isJavaIDStart", "uchar", Ord(char), "char")
 		}
 		
 		;  	Determines if the specified character is permissible in a Java identifier. 
 		static isJavaIDPart(char) {
 			this.verifyVersion()
-			return DllCall("icuuc\u_isJavaIDPart", "uchar", Ord(char))
+			return DllCall("icuuc\u_isJavaIDPart", "uchar", Ord(char), "char")
 		}
 		
 		;  	The given character is mapped to its lowercase equivalent according to UnicodeData.txt; if the character has no lowercase equivalent, the character itself is returned. 
@@ -584,6 +584,8 @@ class unicodeData {
 		;  	Determines the character representation for a specific digit in the specified radix. 
 		static forDigit(digit, radix) {
 			this.verifyVersion()
+			if !(isClamped(radix, 2, 36) && isClamped(digit, 0, radix-1))
+				throw(ValueError("Radix must be between 2 and 36 and digit between 0 and radix, given " radix ", " digit))
 			codePoint := DllCall("icuuc\u_forDigit", "int", digit, "char", radix)
 			return Chr(codePoint)
 		}
@@ -635,6 +637,8 @@ class unicodeData {
 		U_FOLD_CASE_DEFAULT: 0,
 		U_FOLD_CASE_EXCLUDE_SPECIAL_I: 1
 	}
+
+	static U_NO_NUMERIC_VALUE => -123456789.0
 	
 	static UIdentifierStatus => {}
 
