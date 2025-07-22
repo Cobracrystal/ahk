@@ -23,10 +23,10 @@ solveCores(str, beStupid := true) {
 	solutions := []
 	arr2 := objClone(arr)
 	arr2 := objDoForEach(arr2, objCollect)
-	arr2 := objDoForEach(arr2, Number)
+	arr2 := objDoForEach(arr2, (a) => Number(a))
 	for i, e, f in objZip(arr, arr2) {
 		core := numericCore(e*)
-		; core2 := bestNumericCorePermutative(e*)
+		core2 := bestNumericCorePermutative(e*)
 		; core3 := bestNumericCore(f)
 		; core.push(core2*)
 		; core.push(core3*)
@@ -36,7 +36,7 @@ solveCores(str, beStupid := true) {
 }
 
 bestNumericCorePermutative(n,m,o,p) {
-	values := permutations([n,m,o,p])
+	values := permutations(n,m,o,p)
 	solutions := []
 	for i, e in values {
 		f := numericCore(e*)
@@ -56,7 +56,7 @@ bestNumericCorePermutative(n,m,o,p) {
 }
 
 bestNumericCore(n) {
-	values := splitRecursive(n, 4)
+	values := strSplitRecursive(n, 4)
 	solutions := []
 	for i, e in values {
 		for j, f in e
