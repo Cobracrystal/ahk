@@ -153,16 +153,42 @@ primefactor(n) {
  */
 factors(n) {
 	local pfactors := primefactor(n)
-	factorSets := powerset(pfactors)
 	local factors := []
-	for i, e in factorSets {
-		f := 1
-		for j, k in e
-			f *= k
-		factors.push(f)
+	pfactorExpos := []
+	prev := 0
+	for i, e in pfactors {
+		if (prev == e) {
+			factExpos.push(e**factExpos.Length)
+		} else {
+			if (i != 1)
+				pfactorExpos.push(factExpos)
+			factExpos := [1, e]
+		}
+		prev := e
 	}
-	factors := arraySort(objGetUniques(factors), "N")
-	return factors
+	pfactorExpos.push(factExpos)
+	for factArr in combinations(pfactorExpos)
+		factors.push(prod(factArr*))
+	return objSortNumerically(factors)
+}
+
+/**
+ * Given an array (or Map) containing arrays, returns all possible combinations of values from the subarrays.
+ * Eg, [[1,2], [3,4]] returns [[1,3],[1,4],[2,3],[2,4]]
+ * @param arrOfArrs 
+ */
+combinations(arr) {
+	collection := []
+	if objGetValueCount(arr) == 1 {
+		for sel in arr[1]
+			collection.push([sel])
+		return collection
+	}
+	t := combinations(arrayIgnoreIndex(arr, 1))
+	for sel in arr[1]
+		for combs in t
+			collection.push([sel, combs*])
+	return collection
 }
 
 /**
@@ -445,3 +471,5 @@ kgv(n) => lcm(n)
 kgt(n) => lcd(n)
 ggv(n) => gcm(n)
 choose(n,m) => binomialCoefficient(n,m)
+Sum(vals*) => objgetsum(vals)
+Prod(vals*) => objGetProd(vals)
