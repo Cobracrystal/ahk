@@ -137,7 +137,7 @@ betterFileNames(linkArray) {
 		linkArray[i].fileName := newFileName
 	}
 	newLinkArray := []
-	dupeURLs := objGetDuplicates(linkArray, "url", false)
+	dupeURLs := objGetDuplicates(linkArray, e => e.url, false)
 	for e in dupeURLs
 		Loop(e.Length - 1)
 			linkArray[e[A_Index + 1]].status := "Duplicate URL (URL " e[1] ")"
