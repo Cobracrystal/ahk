@@ -118,7 +118,7 @@ handleWebfiles(ByRef req, ByRef res, ByRef server) {
 
 handleMusicfiles(ByRef req, ByRef res, ByRef server) {
 	logger(req)
-	static origin := RegexReplace(A_MyDocuments, "\\[^\\]*$", "") . "\Music\Collections\NoMetadata"
+	static origin := RegexReplace(A_MyDocuments, "\\[^\\]*$", "") . "\Music\Collections"
 	static URLorigin := "/music/"
 	vpath := StrReplace(SubStr(req.path, StrLen(URLorigin)), "/", "\")
 	if (req.headers["CF-Connecting-IP"] == CURRENT_PUBLIC_IP)
