@@ -330,16 +330,16 @@ toggleNumpadMouseMove() {
 	}
 	if !(init) {
 		for i, e in keyMap.moveKeys
-			Hotkey(i, moveMousePixel.bind(e*))
+			Hotkey("*" i, moveMousePixel.bind(e*))
 		for i, e in keyMap.clickKeys
-			Hotkey(i, clickMouse.bind(e*))
+			Hotkey("*" i, clickMouse.bind(e*))
 		init := 1
 		return
 	}
 	for i, e in keyMap.moveKeys
-		Hotkey(i, "Toggle")
+		Hotkey("*" i, "Toggle")
 	for i, e in keyMap.clickKeys
-		Hotkey(i, "Toggle")
+		Hotkey("*" i, "Toggle")
 }
 
 moveMousePixel(x, y, *) {
@@ -1022,7 +1022,20 @@ loadTableAsHotstrings(filePath) {
 }
 
 ^+!d::{	; Run download script for list of links to image/video sites
-	Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")
+	static turnSelfOff := toggleDLKeys.bind(0)
+	try {
+		toggleDLKeys()
+		SetTimer(turnSelfOff, -300000)
+	} catch {
+		Hotkey("XButton1", (*) => (SetTimer(turnSelfOff, -300000), Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")))
+		Hotkey("XButton2", (*) => Run('"' A_WorkingDir '\..\Demo_Scripts\download.ahk" --open-folder'))
+	}
+
+	toggleDLKeys(mode := -1) {
+		mode := (mode == -1 ? "Toggle" : (mode == 0 ? "Off" : "On"))
+		Hotkey("XButton1", mode)
+		Hotkey("XButton2", mode)
+	}
 }
 
 #HotIf WinActive("Revolution Idle")
@@ -1074,7 +1087,7 @@ b::{	; Revo Idle: Buy
 		}
 	}
 	if !IsSet(conIndex)
-		throw Error()
+		throw Error("No Controller Found")
 	g := Gui()
 	ed := g.AddEdit("w300 R20 ReadOnly")
 	g.show()
