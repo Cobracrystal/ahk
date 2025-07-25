@@ -1,4 +1,5 @@
 ﻿#Requires AutoHotkey v2.0
+#SingleInstance Off
 #Include "%A_MyDocuments%\..\Desktop\programs\programming\ahk\LibrariesV2\BasicUtilities.ahk"
 CoordMode("ToolTip", "Screen")
 mainFunc()
@@ -16,6 +17,13 @@ mainFunc() {
 		folderPath .= "\tN" SubStr(A_YYYY, 3,2) . A_MM . A_DD
 	if !(InStr(FileExist(folderPath), "D"))
 		DirCreate(folderPath)
+	if (objContainsValue(A_Args, "--open-folder", (e,v) => InStr(e,v))) {
+		if (WinExist(SubStr(folderPath, InStr(folderPath, "\",,,-1)+1) . " ahk_exe explorer.exe"))
+			WinActivate()
+		else
+			Run('explorer.exe "' folderPath '"')
+		ExitApp()
+	}
 	linkArray := parseInput(text)
 	extractLinksFromLandingPages(linkArray)
 	fixLinks(linkArray)
@@ -23,6 +31,8 @@ mainFunc() {
 	downloadLog := downloadLinks(folderPath, linkArray)
 	verifyLog := verifyFiles(folderPath, downloadLog)
 	writeLog(folderPath, downloadLog, verifyLog)
+	info := verifyLog.Pop()
+	timedTooltip((info.message), 700)
 }
 
 writeLog(folder, fileLog, verifyLog, verbose := false) {

@@ -8,12 +8,11 @@
  */
 objCountValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = setVal)) {
 	isArrLike := (obj is Array || obj is Map)
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objCountValue does not handle type " . Type(obj)))
 	count := 0
-	condWithKey := conditional.MaxParams == 3 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (condWithKey ? conditional(i, e, value) : conditional(e, value))
+		if conditional(i, e, value)
 			count++
 	return count
 }
@@ -25,13 +24,13 @@ objCountValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = setVal
  * @param {Func} comparator 
  * @returns {Integer} 
  */
-objContainsValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = setVal)) {
+objContainsValue(obj, value, comparator := (itKey,itVal,setVal) => (itVal = setVal)) {
 	isArrLike := (obj is Array || obj is Map)
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
-	condWithKey := conditional.MaxParams == 3 ? 1 : 0
+	condWithKey := comparator.MaxParams == 3 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (condWithKey ? conditional(i, e, value) : conditional(e, value))
+		if (condWithKey ? comparator(i, e, value) : comparator(e, value))
 			return i
 	return 0
 }
@@ -41,14 +40,16 @@ objContainsValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = set
  * @param obj 
  * @returns {Integer} 
  */
-objGetValueCount(obj) {
-	return obj is Map ? obj.Count : (obj is Array ? obj.Length : ObjOwnPropCount(obj))
+objGetValueCount(obj, recursive := false) {
+	if !recursive
+		return obj is Map ? obj.Count : (obj is Array ? obj.Length : ObjOwnPropCount(obj))
+	return objCollect(obj, (b, e?) => b + (IsSet(e) && IsObject(e) ? objGetValueCount(e, true) : 1), 0)
 }
 
 objGetRandomValue(obj) {
 	isArrLike := (obj is Array || obj is Map)
 	isArr := obj is Array
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
 	r := Random(1, objGetValueCount(obj))
 	if isArr
@@ -65,7 +66,7 @@ objGetRandomValue(obj) {
  */
 objClone(obj) {
 	isArrLike := (obj is Array || obj is Map)
-	if !(obj is Object)
+	if !(IsObject(obj))
 		return obj
 	copy := obj.Clone()
 	for i, e in (isArrLike ? obj : obj.OwnProps())
@@ -82,13 +83,12 @@ objClone(obj) {
  */
 objRemoveValue(obj, value := "", limit := 0, conditional := ((itKey, itVal, val) => (itVal = val)), emptyValue?) {
 	isArrLike := ((isArr := obj is Array) || obj is Map)
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
 	count := 0
-	condWithKey := conditional.MaxParams == 3 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (condWithKey ? conditional(i, e, value) : conditional(e, value)) {
+		if conditional(i, e, value) {
 			if (!limit || count++ < limit)
 				queue.push(i)
 			else
@@ -116,15 +116,14 @@ objRemoveValue(obj, value := "", limit := 0, conditional := ((itKey, itVal, val)
  */
 objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) => (itVal = setVal)), emptyValue?) {
 	isArrLike := ((isArr := obj is Array) || obj is Map)
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objRemoveValues does not handle type " . Type(obj)))
 	queue := []
 	count := 0
-	condWithKey := conditional.MaxParams == 3 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps())
 	for i, e in (isArrLike ? obj : obj.OwnProps())
 		for f in values
-			if (condWithKey ? conditional(i, e, f) : conditional(e, f)) {
+			if conditional(i, e, f) {
 				if (!limit || count++ < limit)
 					queue.push(i)
 				else
@@ -141,19 +140,18 @@ objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) =>
 	return n
 }
 
-objDoForEach(obj, fn := ((e) => (objToString(e))), value := 0, conditional := ((itKey, itVal, setVal) => (true))) {
+objDoForEach(obj, fn := (val => objToString(val)), value := 0, conditional := ((itKey?, itVal?, setVal?) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objDoForEach does not handle type " . Type(obj)))
 	clone := %Type(obj)%()
-	fnWithKey := fn.MaxParams == 2 ? 1 : 0
-	condWithKey := conditional.MaxParams == 3 ? 1 : 0
-	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (condWithKey ? conditional(i, e, value) : conditional(e, value)) {
-			v := fnWithKey ? fn(i, e) : fn(e)
-			(isArrLike ? (isMap ? clone[i] := v : clone.push(v)) : clone.%i% := v)
-		}
+	if (isArrLike && !isMap)
+		clone.Capacity := obj.Length, clone.Length := obj.Length
+	for i, e in objGetEnumerable(obj) {
+		v := conditional(i, e?, value) ? fn(e?) : e
+		isArrLike ? clone[i] := v : clone.%i% := v
+	}
 	return clone
 }
 
@@ -172,17 +170,15 @@ objGetProd(obj) => objCollect(obj, (b,i) => b*i)
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
  * @returns {Any} Collected Value
  */
-objCollect(obj, fn := ((base, itKey, itVal) => (base . objToString(itVal))), initialBase?, value := 0, conditional := ((itKey, itVal, setVal) => (true))) {
+objCollect(obj, fn := ((base, e) => (base . objToString(e))), initialBase?, value := 0, conditional := ((itKey?, itVal?, setVal?) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	if (IsSet(initialBase))
 		base := initialBase
-	fnWithKey := fn.MaxParams == 3 ? 1 : 0
-	condWithKey := conditional.MaxParams == 3 ? 1 : 0
-	for i, e in (isArrLike ? obj : obj.OwnProps())
-		if (condWithKey ? conditional(i, e, value) : conditional(e, value))
-			base := IsSet(base) ? (fnWithKey ? fn(base, i, e) : fn(base, e)) : e
+	for i, e in objGetEnumerable(obj)
+		if (conditional(i, e?, value))
+			base := IsSet(base) ? fn(base, e?) : e
 	return base ?? ""
 }
 
@@ -196,15 +192,14 @@ objCollect(obj, fn := ((base, itKey, itVal) => (base . objToString(itVal))), ini
  */
 objGetDuplicates(obj, fn := (a => a), caseSense := true, grouped := false) {
 	isArrLike := (obj is Array || obj is Map)
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	duplicateMap := Map()
 	counterMap := Map()
 	duplicateIndices := []
 	duplicateMap.CaseSense := caseSense
-	fnWithKey := fn.MaxParams == 2 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps()) {
-		v := fnWithKey ? fn(i,e) : fn(e)
+		v := fn(e)
 		if (duplicateMap.Has(v)) {
 			duplicateMap[v].push(i)
 			counterMap[v] := 1
@@ -219,7 +214,7 @@ objGetDuplicates(obj, fn := (a => a), caseSense := true, grouped := false) {
 	}
 	else
 		for i, e in (isArrLike ? obj : obj.OwnProps()) {
-			v := fnWithKey ? fn(i,e) : fn(e)
+			v := fn(e)
 			if (duplicateMap[v].Length > 1)
 				duplicateIndices.push(duplicateMap[v][counterMap[v]++])
 		}
@@ -235,13 +230,12 @@ objGetDuplicates(obj, fn := (a => a), caseSense := true, grouped := false) {
 objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	duplicateMap := Map()
 	duplicateMap.CaseSense := caseSense
-	fnWithKey := fn.MaxParams == 2 ? 1 : 0
 	for i, e in (isArrLike ? obj : obj.OwnProps()) {
-		v := fnWithKey ? fn(i,e) : fn(e)
+		v := fn(e)
 		if (duplicateMap.Has(v))
 			duplicateMap[v]++
 		else
@@ -259,14 +253,13 @@ objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 objGetUniques(obj, fn := (a => a), caseSense := true) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
-	if !(isArrLike || obj is Object)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	uniques := Map()
 	uniques.CaseSense := caseSense
-	fnWithKey := fn.MaxParams == 2 ? 1 : 0
 	clone := %Type(obj)%()
 	for i, e in (isArrLike ? obj : obj.OwnProps()) {
-		v := fnWithKey ? fn(i,e) : fn(e)
+		v := fn(e)
 		if !(uniques.Has(v)) {
 			uniques[v] := true
 			isArrLike ? (isMap ? clone[i] := e : clone.push(e)) : clone.%i% := e
@@ -308,24 +301,92 @@ objCompare(obj1, obj2) {
 	return 1
 }
 
+/**
+ * Zips two objects as a combined enumerator. Can accept 2-4 parameters. 
+ * @param obj1 Object 1
+ * @param obj2 Object 2 (Must be of same Type as Object 1)
+ * @param {Integer} stopAtAnyEnd Whether to stop enumerating on encountering ANY end in the objects or whether to stop after ALL ends have been reached (will return unset for ended objects)
+ * @returns {Enumerator} Func(&i, &j, &n := -1, &m := -1) Accepts up to 4 parameters. 
+ * If two params are given, enumerates both objects values.
+ * If three params are given, enumerates the total index and both objects values.
+ * If four params are given, enumerates respective key and value of both objects 
+ */
 objZip(obj1, obj2, stopAtAnyEnd := true) {
 	if (Type(obj1) != Type(obj2))
 		throw(TypeError("obj1 and obj2 are not of equal type, instead " Type(obj1) ", " Type(obj2)))
-	if (obj1 is Array || obj1 is Map)
-		obj1Enum := obj1, obj2Enum := obj2
-	else
-		obj1Enum := obj1.OwnProps(), obj2Enum := obj2.OwnProps()
+	obj1Enum := objGetEnumerable(obj1, true)
+	obj2Enum := objGetEnumerable(obj2, true)
 	index := 1
-	try obj1Enum := obj1Enum.__Enum(2)
-	try obj2Enum := obj2Enum.__Enum(2)
 	return (&i, &j, &n := -1, &m := -1) => (
-		flagN := !IsSet(n), ; if for-loop passes n to this function, then it is unset. otherwise it is set.
-		flagM := !IsSet(m),
-		flagN ? (flagM ? flag1 := obj1Enum(&i, &n)	: i := index++ )			 : flag1 := obj1Enum(&_, &i),
-		flagN ? (flagM ? flag2 := obj2Enum(&j, &m)	: flag1 := obj1Enum(&_, &j)) : flag2 := obj2Enum(&_, &j),
-		flagN ? (flagM ? 0 							: flag2 := obj2Enum(&_, &n)) : 0,
-		stopAtAnyEnd ? flag1 && flag2 : flag1 || flag2
+		flag3Var := !IsSet(n), ; if for-loop passes n to this function, then it is unset. otherwise it is set.
+		flag4Var := !IsSet(m),
+		flagObj1End := flag3Var ? (flag4Var ? obj1Enum(&i, &n) : (i := index++, obj1Enum(&j)))	: obj1Enum(&i),
+		flagObj2End := flag3Var ? (flag4Var ? obj2Enum(&j, &m) : obj2Enum(&n)) 					: obj2Enum(&j),
+		stopAtAnyEnd ? flagObj1End && flagObj2End : flagObj1End || flagObj2End
 	)
+}
+
+/**
+ * Zips any amount of objects into a combined enumerator, where each enumerated value is an array containing the currently enumerated value for each object..
+ * @param objects Variadic amount of objects. Need not be of the same type.
+ * @returns {Enumerator} Func(&i, &e := -1, &f := -1) Accepts up to 3 Parameters.
+ * If only 1 Parameter is given, enumerates values in all objects simultaneously and gives an array of these values.
+ * If two are given, enumerates index and all values.
+ * If three are given, enumerates index, an array of the current keys for all objects and an array of corresponding values. 
+ */
+objZipAsArray(objects*) {
+	len := objects.Length
+	index := 1
+	enums := []
+	for o in objects
+		enums.push(objGetEnumerable(o, true))
+	return (&i, &e := -1, &v := -1) => (
+		flag2Var := !IsSet(e), ; if for-loop passes n to this function, then it is unset. otherwise it is set.
+		flag3Var := !IsSet(v),
+		arrVals := [], arrVals.Capacity := len,
+		flag3Var ? (arrKeys := [], arrKeys.Capacity := len) : 0,
+		arrResult := flag3Var ? objDoForEach(enums, (en) => (flag := en(&l, &r), arrKeys.push(l?), arrVals.push(r?), flag)) : objDoForEach(enums, (en) => (flag := en(&r), arrVals.push(r?), flag)),
+		flagIsAtEnd := objCollect(arrResult, (a, b) => a || b),
+		flag2Var ? (i := index++, flag3Var ? (e := arrKeys, v := arrVals) : e := arrVals) : i := arrVals,
+		flagIsAtEnd
+	)
+}
+
+/**
+ * Enumerates given objects one after another. 
+ * @param objects Variadic chain of objects, can be mixed between obj/arr/map etc.
+ * @returns {Enumerator} Func(&i, &j := -1, &e := -1). Accepts up to 3 parameters. 
+ * If only 1 parameter is given, enumerates values. 
+ * If two are given, enumerates total index and values. 
+ * If three are given, enumerates total index, the current objects' index/key and values.
+ */
+objChain(objects*) {
+	enums := []
+	for o in objects
+		enums.push(objGetEnumerable(o, true))
+	len := enums.Length
+	index := 1
+	objIndex := 1
+	return (&i, &j := -1, &e := -1) => (
+		flag2Var := !IsSet(j),
+		flag3Var := !IsSet(e),
+		enum := enums[objIndex],
+		flagReachedObjEnd := !(flag2Var ? (i := index++, flag3Var ? enum(&j,&e) : enum(&j)) : enum(&i)),
+		flagReachedObjEnd ? objIndex++ : 0,
+		flagLastObjEnd := objIndex > len,
+		flagReachedObjEnd && !flagLastObjEnd ? enum := enums[objIndex] : 0,
+		flagReachedObjEnd && !flagLastObjEnd ? (flag2Var ? (flag3Var ? enum(&j,&e) : enum(&j)) : enum(&i)) : 0,
+		!flagLastObjEnd
+	)
+}
+
+objGetEnumerable(obj, getEnumFunction := false, numberParams?) {
+	enum := (obj is Array || obj is Map) ? obj : ObjOwnProps(obj)
+	if !getEnumFunction
+		return enum
+	try
+		enum := enum.__Enum(numberParams?)
+	return enum
 }
 
 objGetBaseChain(obj) {
@@ -456,17 +517,17 @@ objToString(obj, compact := false, compress := true, strEscape := false, anyAsOb
 		flagIsArr := obj is Array
 		flagIsObj := ((!flagIsArr && !flagIsMap) || objType == "Prototype" ? 1 : 0)
 		flagIsInstance := (objType != "Prototype" && objType != "Class" && Type(ObjGetBase(obj)) == "Prototype") ; we could also check whether obj doesn't have the proprety Prototype, but that relies on the object not being Primitive/Any
-		indent := (compress || compact)  ? '' : strMultiply(spacer, indentLevel + 1)
+		indent := (compress || compact)  ? '' : strMultiply(spacer, indentLevel)
 		trspace := compress ? "" : A_Space
-		separator := (!compact && !compress ? '`n' indent : trspace)
-		sep2 := (compact || compress) ? separator : '`n' SubStr(indent, 1, -1 * StrLen(spacer))
-		count := objGetValueCount(obj)
+		separator := (compact || compress) ? trspace : '`n' indent . spacer
+		sep2 := (compact || compress) ? trspace : '`n' indent
+		count := objGetValueCount(obj, false)
 		className := obj.__Class
 		str := ""
 		if (flagIsInstance) {
 			if (obj.HasMethod("__Enum")) ; enumerate own properties
 				for k, v in obj
-					strFromCurrentEnums(k, v, true)
+					strFromCurrentEnums(k, v?, true)
 			; get OwnProps and inherited Properties (depending on the flag)
 			; Ignores .Prototype and .__Class (Prototype later and .__Class is present multiple times)
 			strFromAllProperties(flagIncludeInheritedProps ? -1 : 0)
@@ -501,12 +562,12 @@ objToString(obj, compact := false, compress := true, strEscape := false, anyAsOb
 		}
 		return ( (flagIsObj || anyAsObj) ? "{" : (flagIsArr ? "[" : "Map(") ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( (flagIsObj || anyAsObj) ? "}" : (flagIsArr ? "]" : ")") )
 
-		strFromCurrentEnums(k, v, overrStrEscape?, isOwnPropDescObject?) {
+		strFromCurrentEnums(k, v?, overrStrEscape?, isOwnPropDescObject?) {
 			if (!compact && compress)
-				separator := isSimple(v) ? trspace : '`n'
-			if !(IsSet(v))
-				str .= RTrim(str, separator) "," separator
-			else if (flagIsObj || anyAsObj )
+				separator := sep2 := isSimple(v?) ? trspace : '`n'
+			if !(IsSet(v)) ; must be array, obj/map keys cannot be unset
+				str := RTrim(str, separator) "," separator
+			else if (flagIsObj || anyAsObj || flagIsMap)
 				str .= _objToString(k ?? "", indentLevel + 1, true) (flagIsMap && !anyAsObj ? "," : ":") trspace _objToString(v ?? "", indentLevel + 1,, isOwnPropDescObject?) "," separator
 			else
 				str .= _objToString(v ?? "", indentLevel + 1, flagOverrideStrEscape?) "," separator
@@ -558,6 +619,7 @@ range(startEnd, end?, step?, inclusive := true) {
 
 rangeAsArr(startEnd, end?, step?, inclusive := true) {
 	a := []
+	a.Capacity := Floor(Abs((end ?? 0) - startEnd) * 1/step) + inclusive
 	for e in range(startEnd, end?, step?, inclusive)
 		a.push(e)
 	return a
@@ -565,6 +627,7 @@ rangeAsArr(startEnd, end?, step?, inclusive := true) {
 
 arrayMerge(array1, array2) {
 	arr2 := []
+	arr2.Capacity := array1.Length + array2.Length
 	arr2.push(array1*)
 	arr2.push(array2*)
 	return arr2
@@ -573,17 +636,16 @@ arrayMerge(array1, array2) {
 arraySlice(arr, from := 1, to := arr.Length) {
 	arr2 := []
 	to := to > arr.Length ? arr.Length : to
-	Loop(to) {
-		i := from + A_Index - 1
-		arr2.push(arr[i])
-	}
+	arr2.Capacity := to - from + 1
+	Loop(to - from + 1)
+		arr2.push(arr[from + A_Index - 1])
 	return arr2
 }
 
 arrayFunctionMask(arr, maskFunc := (a) => (IsSet(a)), keepEmpty := true) {
 	arr2 := []
 	if keepEmpty
-		arr2.Length := arr.Lenght
+		arr2.Length := arr.Length
 	for i, e in arr {
 		if (maskFunc(e)) {
 			if keepEmpty 
@@ -677,7 +739,7 @@ objSortNumerically(obj, sortMode := "N") => objDoForEach(objSort(obj, sortMode),
 objSortByKey(obj, key, mode := "") {
 	isArr := obj is Array
 	isMap := obj is Map
-	if !(obj is Object)
+	if !(IsObject(obj))
 		throw(TypeError("Expected Object, but got " obj.Prototype.Name))
 	isObj := !(isArr || isMap)
 	indexMap := Map()
@@ -719,8 +781,8 @@ mapFromArrays(keyArray, valueArray) {
 	else if (keyArray.Length != valueArray.Length)
 		throw(ValueError("mapFromArrays expected Arrays of equal Length, got Lengths " keyArray.Length ", " valueArray.Length))
 	newMap := Map()
-	for i, e in keyArray
-		newMap[e] := valueArray[i]
+	for k, v in objZip(keyArray, valueArray)
+		newMap[k] := v
 	return newMap
 }
 
@@ -758,15 +820,15 @@ mapFlip(mapObject) {
  * @param {Integer} recursive 
  * @returns {Object | Map | Array} 
  */
-MapToObj(objInput, recursive := true) {
-	flagIsArray := objInput is Array
-	flagIsMapArray := flagIsArray || objInput is Map
-	if (!(objInput is Object))
-		return objInput
+MapToObj(obj, recursive := true) {
+	flagIsArray := obj is Array
+	flagIsMapArray := flagIsArray || obj is Map
+	if (!(obj is Object))
+		return obj
 	objOutput := flagIsArray ? Array() : {}
 	if (flagIsArray)
-		objOutput.Length := objInput.Length
-	for i, e in (flagIsMapArray ? objInput : objInput.OwnProps()) {
+		objOutput.Length := obj.Length
+	for i, e in objGetEnumerable(obj) {
 		if (flagIsArray)
 			objOutput[i] := (recursive ? MapToObj(e, true) : e)
 		else
@@ -781,16 +843,14 @@ MapToObj(objInput, recursive := true) {
  * @param {Integer} recursive 
  * @returns {Object | Map | Array} 
  */
-ObjToMap(objInput, recursive := true) {
-	flagIsArray := objInput is Array
-	flagIsMapArray := flagIsArray || objInput is Map
-	flagIsObject := objInput is Object
-	if (!flagIsObject)
-		return objInput
-	objOutput := flagIsArray ? Array() : Map()
-	if (flagIsArray)
-		objOutput.Length := objInput.Length
-	for i, e in (flagIsMapArray ? objInput : objInput.OwnProps())
-		objOutput[i] := (recursive ? ObjToMap(e, true) : e)
-	return (objOutput)
+objToMap(obj, recursive := true) {
+	if (!IsObject(obj))
+		return obj
+	flagisArr := obj is Array
+	clone := flagisArr ? [] : Map()
+	if (flagisArr)
+		clone.Capacity := obj.Length, clone.Length := obj.Length
+	for i, e in objGetEnumerable(obj)
+		clone[i] := (recursive ? objToMap(e, true) : e)
+	return clone
 }

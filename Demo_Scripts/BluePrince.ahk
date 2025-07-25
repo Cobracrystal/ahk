@@ -19,11 +19,11 @@ solveCores(str, beStupid := true) {
 	arr := []
 	str := StrReplace(str, "`n", " ")
 	for i, e in StrSplitUTF8(str, " ")
-		arr.push(objDoForEach(StrSplitUTF8(e), (char) => (ord(char) - ord("A") + 1)))
+		arr.push(objDoForEach(StrSplitUTF8(e), char => (ord(char) - ord("A") + 1)))
 	solutions := []
 	arr2 := objClone(arr)
-	arr2 := objDoForEach(arr2, objCollect)
-	arr2 := objDoForEach(arr2, (a) => Number(a))
+	arr2 := objDoForEach(arr2, o => objCollect(o))
+	arr2 := objDoForEach(arr2, n => Number(n))
 	for i, e, f in objZip(arr, arr2) {
 		core := numericCore(e*)
 		core2 := bestNumericCorePermutative(e*)
@@ -32,7 +32,7 @@ solveCores(str, beStupid := true) {
 		; core.push(core3*)
 		solutions.push(core)
 	}
-	return objDoForEach(solutions, (a) => (a.insertAt(1, Chr(a[1] + Ord("A") - 1)), a))
+	return objDoForEach(solutions, a => (a.insertAt(1, Chr(a[1] + Ord("A") - 1)), a))
 }
 
 bestNumericCorePermutative(n,m,o,p) {
