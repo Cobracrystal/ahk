@@ -106,6 +106,79 @@ strRecursiveReplace(text, from, to) {
 	}
 }
 
+strSimilarity(s1, s2) => 1 - strDistanceNormalizedLevenshtein(s1, s2)
+
+strDistanceNormalizedLevenshtein(s1, s2) {
+	len := Max(StrLen(s1), StrLen(s2))
+	if !len
+		return 0
+	return strDistanceLevenshtein(s1, s2) / len
+}
+
+strDistanceLevenshtein(s1, s2, limit := 2**31-1) {
+	if (s1 == s2)
+		return 0
+	len1 := StrLen(s1)
+	len2 := StrLen(s2)
+	if !(len1)
+		return len2
+	if !len2
+		return len1
+	v0 := [], v1 := []
+	v0.Capacity := v0.Length := v1.Capacity := v1.Length := len2+1
+	Loop(len2+1)
+		v0[A_Index] := A_Index-1
+	Loop(len1) {
+		v1[1] := minv1 := i := A_Index
+		Loop(len2) {
+			cost := SubStr(s1, i, 1) != SubStr(s2, A_Index, 1)
+			v1[A_Index + 1] := Min(v1[A_Index] + 1, v0[A_Index+1] + 1, v0[A_Index] + cost) ; min of ins, del, sub
+			minv1 := Min(minv1, v1[A_Index+1])
+		}
+		if (minv1 >= limit)
+			return limit
+		temp := v0
+		v0 := v1
+		v1 := temp
+	}
+	return v0.Pop()
+}
+
+strDistanceWeightedLevenshtein(s1, s2, limit := 1e+307, insertionCost := (char) => 1.0, deletionCost := (char) => 1.0, substitutionCost := (char1, char2) => 1.0) {
+	if (s1 == s2)
+		return 0
+	len1 := StrLen(s1)
+	len2 := StrLen(s2)
+	if !(len1)
+		return len2
+	if !len2
+		return len1
+	v0 := [], v1 := []
+	v0.Capacity := v0.Length := v1.Capacity := v1.Length := len2+1
+	v0[1] := 0
+	Loop(len2)
+		v0[A_Index + 1] := v0[A_Index] + insertionCost(SubStr(s2, A_Index, 1))
+	Loop(len1) {
+		i := A_Index
+		char1 := SubStr(s1, i, 1)
+		costDel := deletionCost(char1)
+		v1[1] := minv1 := v0[1] + costDel
+		Loop(len2) {
+			char2 := SubStr(s2, A_Index, 1)
+			costSub := char1 != char2 ? substitutionCost(char1, char2) : 0
+			costIns := insertionCost(char2)
+			v1[A_Index+1] := Min(v1[A_Index] + costIns, v0[A_Index+1] + costDel, v0[A_Index] + costSub)
+			minv1 := Min(minv1, v1[A_Index+1])
+		}
+		if (minv1 >= limit)
+			return limit
+		temp := v0
+		v0 := v1
+		v1 := temp
+	}
+	return v0.Pop()
+}
+
 /**
  * Behaves exactly as strsplit except that if it is called without a delim and thus parses char by char, doesn't split unicode characters in two.
  * @param str 
@@ -204,6 +277,10 @@ numRoundProper(num, precision := 12) {
 		return Integer(num)
 	else
 		return Number(RTrim(Round(num, precision), "0."))
+}
+
+intMax() {
+	return 2**63-1
 }
 
 clamp(n, minimum, maximum) => Max(min, Min(n, max))
