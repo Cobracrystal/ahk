@@ -1,6 +1,5 @@
 ﻿; https://github.com/cobracrystal/ahk
 ; TODO 3: Add Settings for excluded windows (with editable list, like in PATH native settings)
-; add option to resize and position windows, including multiple windows. make inputbox gui for xywh for that.
 ; fix spread windows
 ; add "show system info" somewhere in settings to show monitor sizes etc
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
@@ -50,6 +49,7 @@ class WindowManager {
 		this.data := {
 			coords: {x: 300, y: 200, cw: 1018, ch: 410, mmx: 0},
 			currentWinInfo: [],
+			cacheMap: Map()
 		}
 		; window menu
 		HotIfWinactive("Window Manager ahk_class AutoHotkeyGUI")
@@ -74,6 +74,8 @@ class WindowManager {
 	static guiCreate() {
 		static LVS_EX_DOUBLEBUFFER := 0x10000
 		static LVWidth := 1000
+		static LVN_KEYDOWN := -155
+		static NM_RCLICK := -5
 		this.gui := Gui("+OwnDialogs +Resize", "Window Manager")
 		this.gui.OnEvent("Close", (*) => this.windowManager("Close"))
 		this.gui.OnEvent("Escape", (*) => this.windowManager("Close"))
@@ -81,15 +83,18 @@ class WindowManager {
 		this.gui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
 		this.gui.AddCheckbox("Section R1.45 vCBHiddenWindows Checked" . this.config.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.configGuiHandler.bind(this))
 		this.gui.AddCheckbox("ys R1.45 vCBExcludedWindows Checked" . !this.config.useBlacklist, "Show Excluded Windows?").OnEvent("Click", this.configGuiHandler.bind(this))
-		this.gui.AddCheckbox("ys R1.45 vCBGetCommandLine Checked" . this.config.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.configGuiHandler.bind(this))
+		; this.gui.AddCheckbox("ys R1.45 vCBGetCommandLine Checked" . this.config.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.configGuiHandler.bind(this))
 		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false, false))
 		this.gui.AddText("ys+2 0x200 R1.45 xs+" LVWidth-160 " w100 vWindowCount", "Window Count: 0")
 		this.gui.AddButton("xs+" LVWidth-50 " ys w50 vBTNSettings", "Settings").OnEvent("Click", this.createSettingsGui.bind(this))
-		this.LV := this.gui.AddListView("xs R20 w1000 +Multi", ["#z", "handle", "ahk_title", "Process", "mmx", "xpos", "ypos", "width", "height", "ahk_class", "PID", "Process Path", "Command Line"])
+		this.LV := this.gui.AddListView("xs R20 w1000 +Multi", objCollect(this.config.columnsProfile, (b, e) => (b.push(e.name), b), []))
 		this.LV.Opt("+LV" LVS_EX_DOUBLEBUFFER)
-		this.LV.OnNotify(-155, this.LV_Event.bind(this, "Key"))
-		this.LV.OnEvent("ContextMenu", this.LV_Event.bind(this, "ContextMenu"))
+		this.LV.OnNotify(LVN_KEYDOWN, this.LV_Event.bind(this, "Key"))
+		this.LV.OnNotify(NM_RCLICK, this.LV_Event.bind(this, "ContextMenu"))
+		; this.LV.OnEvent("ContextMenu", this.LV_Event.bind(this, "ContextMenu")) ambiguous for headers, as the lParam is not correct.
 		this.LV.OnEvent("DoubleClick", this.LV_Event.bind(this, "DoubleClick"))
+		for i, col in objEnumIf(this.config.columnsProfile, (e => e.isInteger))
+			this.LV.ModifyCol(i, "+Integer")
 		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", this.activateButton.bind(this))
 		this.guiListviewCreate(true, true)
 		this.applyColorScheme(this.gui)
@@ -158,7 +163,7 @@ class WindowManager {
 		this.LV.Delete()
 		if (update) {
 			this.data.currentWinInfo := this.getAllWindowInfo(this.config.detectHiddenWindows, this.config.useBlacklist)
-			if (firstCall)
+			if !this.data.cacheMap.Has(this.gui.hwnd)
 				this.data.currentWinInfo.InsertAt(1, this.getWindowInfo(this.gui.Hwnd))
 		}
 		for i, win in this.data.currentWinInfo
@@ -168,19 +173,28 @@ class WindowManager {
 					options .= "Select"
 				if (win.hwnd == focusedHandle)
 					options .= " Focus"
-				this.LV.Add(options, i, this.config.formatWindowHandles ? Format("0x{:06X}", win.hwnd) : win.hwnd, 
-					win.title, win.process, win.state, win.xpos, win.ypos, win.width, win.height, win.class, win.pid, win.processPath, win.commandLine)
+				this.LV.Add(options, i, flattenWindowInfo(win)*)
 			}
 		this.gui["WindowCount"].Value := Format("Window Count: {:4}", this.LV.GetCount())
-		if (firstCall)
-			for i in [1, 2, 5, 6, 7, 8, 9, 11]
-				this.LV.ModifyCol(i, "+Integer")
 		if (resize) {
 			Loop (this.LV.GetCount("Col"))
 				this.LV.ModifyCol(A_Index, "+AutoHdr")
 		}
 		this.LV.Opt("+Redraw")
 		this.gui.Opt("-Disabled")
+
+		flattenWindowInfo(win) {
+			arr := []
+			for i, e in this.config.columnsProfile {
+				if i == 1
+					continue
+				v := win.%e.key%
+				if (e.key == "hwnd" && this.config.formatWindowHandles)
+					v := Format("0x{:06X}", win.hwnd)
+				arr.push(v)
+			}
+			return arr
+		}
 	}
 
 	static isIncludedInSearch(win) {
@@ -193,6 +207,10 @@ class WindowManager {
 			"ypos",			["y", "ypos", "ahk_y"],
 			"width",		["w", "width", "ahk_w"],
 			"height",		["h", "height", "ahk_h"],
+			"xpos",			["cx", "client_x", "ahk_cx"],
+			"ypos",			["cy", "client_y", "ahk_cy"],
+			"width",		["cw", "client_width", "ahk_cw"],
+			"height",		["ch", "client_height", "ahk_ch"],
 			"class",		["class", "ahk_class"],
 			"pid",			["pid", "processID", "ahk_pid"],
 			"processPath",	["processPath", "path", "ahk_exe"],
@@ -233,7 +251,7 @@ class WindowManager {
 		tMM := A_TitleMatchMode
 		dHW := A_DetectHiddenWindows
 		DetectHiddenWindows(getHidden)
-			wHandles := WinGetList()
+		wHandles := WinGetList()
 		for i, wHandle in wHandles {
 			if useBlacklist
 				for e in this.config.blacklist
@@ -247,33 +265,39 @@ class WindowManager {
 	}
 
 	static getWindowInfo(wHandle) {
-		x := "", y := "", w := "", h := "", winTItle := "", winClass := "", mmx := "", processName := "", processPath := "", pid := "", cmdLine := ""
-		if !WinExist(wHandle)
+		x := y := w := h := winTitle := winClass := mmx := processName := processPath := pid := cmdLine := ""
+		if !WinExist(wHandle) {
 			return {}
-		try	WinGetPos(&x, &y, &w, &h, wHandle)
+		}
 		try	winTitle := WinGetTitle(wHandle)
-		try	winClass := WinGetClass(wHandle)
+		try	WinGetPos(&x, &y, &w, &h, wHandle)
+		try WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
 		try	mmx := WinGetMinMax(wHandle)
-		try	processName := WinGetProcessName(wHandle)
-		try	processPath := WinGetProcessPath(wHandle)
-		try	pid := WinGetPID(wHandle)
+		if (this.data.cacheMap.Has(wHandle)) {
+			if !(this.data.cacheMap[wHandle].commandLine) && this.config.getCommandLine
+				try this.data.cacheMap[wHandle].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
+		} else {
+			try	winClass := WinGetClass(wHandle)
+			try	processName := WinGetProcessName(wHandle)
+			try	processPath := WinGetProcessPath(wHandle)
+			try	pid := WinGetPID(wHandle)
 			if (this.config.getCommandLine)
 				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
-			; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
-		return {
-			hwnd: wHandle,
-			title: winTitle,
-			process: processName,
-			class: winClass,
-			processPath: processPath,
-			state: mmx,
-			xpos: x,
-			ypos: y,
-			width: w,
-			height: h,
-			pid: pid,
-			commandLine: cmdLine
+					; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
+			this.data.cacheMap[wHandle] := {
+				hwnd: wHandle, class: winClass, process: processName, processPath: processPath, pid: pid, commandLine: cmdLine 
+			}
 		}
+		cacheObj := this.data.cacheMap[wHandle]
+		objMerge(cacheObj, {
+			title: winTitle,
+			state: mmx,
+			xpos: x, ypos: y,
+			width: w, height: h,
+			clientxpos: cx, clientypos: cy,
+			clientwidth: cw, clientheight: ch
+		},,true)
+		return cacheObj
 	}
 
 	static borderlessFullscreenWindow(wHandle) {
@@ -380,38 +404,34 @@ class WindowManager {
 							if (A_Index != guiRowIndex)
 								this.LV.Modify(A_Index, "+Select")
 					case "67": ; ctrl C
-						if (GetKeyState("Ctrl") && GetKeyState("Alt") && GetKeyState("Shift")) {
-							for rowN in rowNums
-								str .= this.LV.GetText(rowN, 2) "`n"
-							A_Clipboard := RTrim(str, "`n")
-						}
-						else if (GetKeyState("Ctrl") && GetKeyState("Shift")) { ; ctrl shift C to get all info
-							wInfoArray := []
-							for rowN in rowNums {
-								wInfoArray.Push({
-									hwnd: 	 this.LV.GetText(rowN, 2),
-									title: 	 this.LV.GetText(rowN, 3),
-									process: this.LV.GetText(rowN, 4),
-									state: 	 this.LV.GetText(rowN, 5),
-									xpos: 	 this.LV.GetText(rowN, 6),
-									ypos: 	 this.LV.GetText(rowN, 7),
-									width: 	 this.LV.GetText(rowN, 8),
-									height:  this.LV.GetText(rowN, 9),
-									class: 	 this.LV.GetText(rowN, 10),
-									pid: 	 this.LV.GetText(rowN, 11),
-									processPath: this.LV.GetText(rowN, 12),
-									commandLine: this.config.getCommandLine ? this.LV.GetText(rowN, 13) : unset
-								})
-							}
-							A_Clipboard := objToString(wInfoArray, false, false)
-						} else if (GetKeyState("Ctrl") && GetKeyState("Alt")) { ; ctrl + alt C to get title only
-							for rowN in rowNums
-								str .= this.LV.GetText(rowN, 3) "`n"
-							A_Clipboard := Trim(str, "`n")
-						} else if (GetKeyState("Ctrl")) { ; ctrl C to get identifier
-							for rowN in rowNums
-								str .= this.LV.GetText(rowN, 3) " ahk_exe " this.LV.GetText(rowN, 4) " ahk_class " this.LV.GetText(rowN, 10) . "`n"
-							A_Clipboard := Trim(str, "`n")
+						switch {
+							case GetKeyState("Ctrl") && GetKeyState("Alt") && GetKeyState("Shift"):
+								for rowN in rowNums
+									str .= this.LV.GetText(rowN, 2) "`n"
+								A_Clipboard := RTrim(str, "`n")
+							case GetKeyState("Ctrl") && GetKeyState("Shift"):
+								wInfoArray := []
+								for rowN in rowNums {
+									wInfo := {}
+									for i, e in this.config.columnsProfile {
+										if (i == 1)
+											continue
+										v := this.LV.GetText(rowN, i)
+										if (e.isInteger && (e.key != "hwnd" || !this.config.formatWindowHandles))
+											v := Integer(v)
+										wInfo.%e.key% := v
+									}
+									wInfoArray.push(wInfo)
+								}
+								A_Clipboard := objToString(wInfoArray, false, false, true)
+							case GetKeyState("Ctrl") && GetKeyState("Alt"): ; ctrl + alt C to get title only
+								for rowN in rowNums
+									str .= this.LV.GetText(rowN, 3) "`n"
+								A_Clipboard := Trim(str, "`n")
+							case GetKeyState("Ctrl"): ; ctrl C to get identifier
+								for rowN in rowNums
+									str .= this.LV.GetText(rowN, 3) " ahk_exe " this.LV.GetText(rowN, 4) " ahk_class " this.LV.GetText(rowN, 10) . "`n"
+								A_Clipboard := Trim(str, "`n")
 						}
 					case "77":
 						for rowN in rowNums
@@ -420,8 +440,12 @@ class WindowManager {
 						this.guiListviewCreate()
 				}
 			case "ContextMenu":
-				rowN := param
-				if (rowN == 0 || rowN > this.LV.GetCount())
+				rowN := NumGet(param, 24, "int")
+				if (rowN == 0) { ; clicked header
+					this.menus.columnsMenu.show()
+					return
+				}
+				if (rowN == -1)
 					return
 				wHandle := Integer(this.LV.GetText(rowN, 2))
 				if (!WinExist(wHandle)) {
@@ -430,23 +454,17 @@ class WindowManager {
 				}
 				style := WinGetStyle(wHandle)
 				exStyle := WinGetExStyle(wHandle)
-				if (exStyle & this.windowExStyles.WS_EX_TOPMOST)
-					this.menus.submenu.Check("Toggle Window Lock")
-				else
-					this.menus.submenu.Uncheck("Toggle Window Lock")
-				if (style & this.windowStyles.WS_CAPTION)
-					this.menus.submenu.Check("Toggle Title Bar")
-				else
-					this.menus.submenu.Uncheck("Toggle Title Bar")
-				if (style & this.windowStyles.WS_VISIBLE)
-					this.menus.submenu.Check("Toggle Visibility")
-				else
-					this.menus.submenu.Uncheck("Toggle Visibility")
+				checkState := style & this.windowExStyles.WS_EX_TOPMOST ? "Check" : "Uncheck"
+				this.menus.subMenu.%checkState%("Toggle Window Lock")
+				checkState := style & this.windowStyles.WS_CAPTION ? "Check" : "Uncheck"
+				this.menus.subMenu.%checkState%("Toggle Title Bar")
+				checkState := style & this.windowStyles.WS_VISIBLE ? "Check" : "Uncheck"
+				this.menus.subMenu.%checkState%("Toggle Visibility")
 				this.menus.menu.show()
 			case "DoubleClick":
 				rowN := param
 				if (rowN != 0)
-					WinActivate(Integer(LVObj.GetText(rowN, 2)))
+					WinActivate(Integer(this.LV.GetText(rowN, 2)))
 			default:
 				return
 		}
@@ -541,6 +559,28 @@ class WindowManager {
 				this.transparencyGUI(wHandles)
 			; this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
 			; this.winSubMenu.Add("Spread Windows per Screen", this.menuHandler.Bind(this))
+			case "Move Windows to Position":
+				pg := Gui('AlwaysOnTop +ToolWindow +Owner' this.gui.hwnd, "Choose Position")
+				pg.OnEvent("Close", (*) => pg.Destroy())
+				pg.OnEvent("Escape", (*) => pg.Destroy())
+				pg.AddText("Section 0x200 R1.45", "x")
+				pg.AddEdit("vX yp r1 w25 -Multi")
+				pg.AddText("yp 0x200 R1.45", "y")
+				pg.AddEdit("vY yp r1 w25 -Multi")
+				pg.AddText("yp 0x200 R1.45", "w")
+				pg.AddEdit("vW yp r1 w25 -Multi")
+				pg.AddText("yp 0x200 R1.45", "h")
+				pg.AddEdit("vH yp r1 w25 -Multi")
+				pg.AddButton("xs w150", "Move Windows").OnEvent("Click", guiMoveWinToPos)
+				pg.show()
+				guiMoveWinToPos(*) {
+					data := pg.Submit(false)
+					x := data.X == "" ? unset : data.X, y := data.Y == "" ? unset : data.Y
+					w := data.W == "" ? unset : data.W, h := data.H == "" ? unset : data.H
+					for wHandle in wHandles
+						WinMove(x?, y?, w?, h?, wHandle)
+					pg.Destroy()
+				}
 			case "Spread Windows":
 				tileWindows(wHandles)
 			default: ; custom functions
@@ -549,6 +589,26 @@ class WindowManager {
 						try this.menus.customFunctions[itemName](wHandle)
 		}
 		; this.guiListviewCreate()
+	}
+
+	static columnMenuHandler(itemName, itemPos?, menuObj?) {
+		index := objContainsValue(this.config.columnsProfile, itemName, (i,v,iname) => (v.name == iname))
+		if (index) {
+			this.config.columnsProfile.RemoveAt(index)
+			this.LV.DeleteCol(index)
+			menuObj.Uncheck(itemName)
+		}
+		else {
+			colObj := this.columnsHeaderMap[itemName]
+			index := arrayInsertSorted(this.columnsOrder, this.config.columnsProfile, itemName, colObj, a => a.name)
+			this.LV.InsertCol(index, colObj.isInteger ? "+Integer" : "", colObj.name)
+			menuObj.Check(itemName)
+		}
+		if (itemName == this.columns.commandLine.name) {
+			this.config.getCommandLine := !this.config.getCommandLine
+			this.getAllWindowInfo(this.config.detectHiddenWindows, this.config.useBlacklist)
+		}
+		this.guiListviewCreate(true,true,false)
 	}
 
 	static transparencyGUI(wHandles) {
@@ -683,11 +743,11 @@ class WindowManager {
 			case "CBExcludedWindows":
 				this.config.useBlacklist := !this.config.useBlacklist
 				this.guiListviewCreate(true)
-			case "CBGetCommandLine":
-				this.config.getCommandLine := !this.config.getCommandLine
-				if (this.config.getCommandLine)
-					this.LV.ModifyCol(13, "0")
-				this.guiListviewCreate(true)
+			; case "CBGetCommandLine":
+			; 	this.config.getCommandLine := !this.config.getCommandLine
+			; 	if (this.config.getCommandLine)
+			; 		this.LV.ModifyCol(13, "0")
+			; 	this.guiListviewCreate(true)
 			case "EditCustomThemeColor", "EditCustomThemeFontColor":
 				property := SubStr(ctrl.Name, 5)
 				color := ctrl.Value
@@ -771,6 +831,7 @@ class WindowManager {
 		menus := {}
 		menus.menu := Menu()
 		menus.subMenu := Menu()
+		menus.columnsMenu := Menu()
 		menus.customFunctions := Map()
 		for cFunc in this.customFunctions ; define custom function map
 			menus.customFunctions[cFunc] := %cFunc%
@@ -808,6 +869,13 @@ class WindowManager {
 			menus.menu.add()
 			; add debug options here
 		}
+		colHandler := this.columnMenuHandler.bind(this)
+		for e in this.columnsOrder
+			menus.columnsMenu.Add(e.name, colHandler)
+		for e in this.config.columnsProfile
+			menus.columnsMenu.check(e.name)
+		menus.columnsMenu.Disable(this.columns.zOrder.name)
+		menus.columnsMenu.Disable(this.columns.hwnd.name)
 		return menus
 	}
 
@@ -825,6 +893,20 @@ class WindowManager {
 		getCommandLine: 0,
 		detectHiddenWindows: 0,
 		useBlacklist: 1,
+		columnsProfile: [
+			this.columns.zOrder,
+			this.columns.hwnd,
+			this.columns.title,
+			this.columns.process,
+			this.columns.state,
+			this.columns.xpos,
+			this.columns.ypos,
+			this.columns.width,
+			this.columns.height,
+			this.columns.clientwidth,
+			this.columns.clientheight,
+			this.columns.class
+		],
 		blacklist: [
 			"",
 			"NVIDIA GeForce Overlay",
@@ -839,6 +921,66 @@ class WindowManager {
 			; "MSCTFIME UI"
 		]
 	}
+
+	static columns => {
+		zOrder: 		{isInteger: 1, key: "zOrder", 		name: "#z"},
+		hwnd: 			{isInteger: 1, key: "hwnd", 		name: "Handle"},
+		title: 			{isInteger: 0, key: "title", 		name: "Title"},
+		process: 		{isInteger: 0, key: "process", 		name: "Process"},
+		state: 			{isInteger: 1, key: "state", 		name: "mmx"},
+		xpos: 			{isInteger: 1, key: "xpos", 		name: "xpos"},
+		ypos: 			{isInteger: 1, key: "ypos", 		name: "ypos"},
+		width: 			{isInteger: 1, key: "width", 		name: "width"},
+		height: 		{isInteger: 1, key: "height", 		name: "height"},
+		clientxpos: 	{isInteger: 1, key: "clientxpos", 	name: "client_x"},
+		clientypos: 	{isInteger: 1, key: "clientypos", 	name: "client_y"},
+		clientwidth:	{isInteger: 1, key: "clientwidth", 	name: "client_width"},
+		clientheight:	{isInteger: 1, key: "clientheight", name: "client_height"},
+		class: 			{isInteger: 0, key: "class", 		name: "ahk_class"},
+		pid: 			{isInteger: 1, key: "pid", 			name: "PID"},
+		processPath:	{isInteger: 0, key: "processPath", 	name: "Process Path"},
+		commandLine:	{isInteger: 0, key: "commandLine", 	name: "Command Line"}
+	}
+
+	static columnsOrder => [
+		this.columns.zOrder,
+		this.columns.hwnd,
+		this.columns.title,
+		this.columns.process,
+		this.columns.state,
+		this.columns.xpos,
+		this.columns.ypos,
+		this.columns.width,
+		this.columns.height,
+		this.columns.clientxpos,
+		this.columns.clientypos,
+		this.columns.clientwidth,
+		this.columns.clientheight,
+		this.columns.class,
+		this.columns.pid,
+		this.columns.processPath,
+		this.columns.commandLine
+	]
+
+	static columnsHeaderMap => Map(
+		this.columns.zOrder.name, this.columns.zOrder,
+		this.columns.hwnd.name, this.columns.hwnd,
+		this.columns.title.name, this.columns.title,
+		this.columns.process.name, this.columns.process,
+		this.columns.state.name, this.columns.state,
+		this.columns.xpos.name, this.columns.xpos,
+		this.columns.ypos.name, this.columns.ypos,
+		this.columns.width.name, this.columns.width,
+		this.columns.height.name, this.columns.height,
+		this.columns.clientxpos.name, this.columns.clientxpos,
+		this.columns.clientypos.name, this.columns.clientypos,
+		this.columns.clientwidth.name, this.columns.clientwidth,
+		this.columns.clientheight.name, this.columns.clientheight,
+		this.columns.class.name, this.columns.class,
+		this.columns.pid.name, this.columns.pid,
+		this.columns.processPath.name, this.columns.processPath,
+		this.columns.commandLine.name, this.columns.commandLine
+	)
 
 	static windowStyles => {
 		WS_BORDER: 0x800000,
