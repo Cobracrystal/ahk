@@ -63,6 +63,7 @@ class TableFilter {
 	}
 
 	guiCreate(*) {
+		static LVN_KEYDOWN := -155
 		if (!this.data.openFile && this.guis.Length == 1) {
 			WinActivate(this.guis[1].hwnd)
 			return 0
@@ -91,7 +92,7 @@ class TableFilter {
 			rowKeys := this.data.keys.Clone()
 			rowKeys.push("DataIndex")
 			guiObj.LV := guiObj.AddListView("xs R35 w950 +Multi", rowKeys) ; LVEvent, Altsubmit
-			guiObj.LV.OnNotify(-155, this.LV_Event.bind(this, "Key"))
+			guiObj.LV.OnNotify(LVN_KEYDOWN, this.LV_Event.bind(this, "Key"))
 			guiObj.LV.OnEvent("ContextMenu", this.LV_Event.bind(this, "ContextMenu"))
 			guiObj.LV.OnEvent("DoubleClick", this.LV_Event.bind(this, "DoubleClick"))
 			this.createFilteredList(guiObj)

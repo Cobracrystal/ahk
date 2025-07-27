@@ -160,6 +160,7 @@ class ReminderManager {
 	}
 
 	guiCreate() {
+		static LVN_KEYDOWN := -155
 		this.gui := Gui("+Border", "Reminder Manager")
 		this.gui.OnEvent("Escape", (*) => this.reminderManagerGUI("Close"))
 		this.gui.OnEvent("Close", (*) => this.reminderManagerGUI("Close"))
@@ -194,7 +195,7 @@ class ReminderManager {
 		this.gui.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", this.reminderOnFromGUI.bind(this))
 		this.LV := this.gui.AddListView("xs R10 w500 -Multi Sort", ["Next Occurence", "Period", "Message", "Function", "Index"])
 		this.LV.OnEvent("ContextMenu", this.onContextMenu.bind(this))
-		this.LV.OnNotify(-155, this.onKeyPress.bind(this))
+		this.LV.OnNotify(LVN_KEYDOWN, this.onKeyPress.bind(this))
 		this.createListView()
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 	}
