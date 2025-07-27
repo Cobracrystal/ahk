@@ -357,10 +357,9 @@ class WindowManager {
 						cFunction := GetKeyState("Shift") ? WinKill : WinClose
 						if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
 							return
-						rWH := arrayReverse(wHandles)
-						for i, wHandle in rWH
+						for i, wHandle in arrayInReverse(wHandles)
 							try cFunction(wHandle)
-						for i, wHandle in rWH
+						for i, wHandle in arrayInReverse(wHandles)
 							if WinWaitClose(wHandle, , 0.5) {
 								try this.LV.Delete(rowNums[rowNums.Length - i + 1])
 								try objRemoveValue(this.data.currentWinInfo, wHandle,, (it, itV, wHandle) => (itV.hwnd == wHandle))
@@ -465,7 +464,7 @@ class WindowManager {
 		}
 		if (wHandles.Length == 0)
 			return
-		for i, wHandle in arrayReverse(wHandles)
+		for wHandle in arrayInReverse(wHandles)
 			try WinActivate(wHandle)
 	}
 
@@ -504,20 +503,20 @@ class WindowManager {
 			"View Program Folder", 	(wHandle) => (Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"'))
 		)
 		if (basicTasks.Has(itemName)) {
-			for i, wHandle in wHandles
+			for wHandle in wHandles
 				try basicTasks[itemName](wHandle)
 		} else switch itemName {
 			case "Activate Window":
-				for i, wHandle in arrayReverse(wHandles)
+				for wHandle in arrayInReverse(wHandles)
 					try WinActivate(wHandle)
 			case "Borderless Fullscreen":
-				for i, wHandle in wHandles
+				for wHandle in wHandles
 					this.borderlessFullscreenWindow(wHandle)
 			case "Close Window":
 				if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
 					return
-				rWH := arrayReverse(wHandles)
-				for i, wHandle in rWH
+				rWH := arrayInReverse(wHandles)
+				for wHandle in rWH
 					try WinClose(wHandle)
 				for i, wHandle in rWH
 					if WinWaitClose(wHandle, , 0.5) {
@@ -782,7 +781,7 @@ class WindowManager {
 			"Copy Window Title", "View Command Line", "View Window Text", "View Properties", "View Program Folder"
 		]
 		menus.subMenuFunctionNames := [
-			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Spread Windows", "Spread Windows on all Screens", "Spread Windows per Screen"]
+			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Move Windows to Position", "Spread Windows", "Spread Windows on all Screens", "Spread Windows per Screen"]
 		menus.subMenuToggles := [
 			["Toggle Window Lock", "Set Window Lock", "Remove Window Lock"],
 			["Toggle Title Bar", "Add Title Bar", "Remove Title Bar"],

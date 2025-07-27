@@ -694,6 +694,19 @@ arrayReverse(arr) {
 	return arr2
 }
 
+/**
+ * Enumerates an array backwards
+ * @param arr 
+ */
+arrayInReverse(arr) {
+	index := arr.Length
+	flagEnd := false
+	return (&i, &e := -1) => (
+		IsSet(e) ? i := arr[index] : (i := index, e := arr[index]),
+		index > 1 ? (index--, 1) : (flagEnd ? 0 : flagEnd := 1)
+	)
+}
+
 arraySort(arr, mode := "") {
 	arr2 := []
 	for i, e in arr
