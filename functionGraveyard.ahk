@@ -96,3 +96,46 @@ objIterate(o,f) { ; this could be a oneliner
 		)
 	)
 }
+
+
+ao3Functions() {
+	bigArr := []
+	arr := ao3DLBookMarks(28)
+	for i, e in arr
+		bigArr.push(ao3GetStories(e)*)
+	print("")
+	sArr := objSortByKey(bigArr, "wordcount", "N")
+	print(sArr)
+	print(bigArr.Length)
+	print(objCollect(bigArr, (a, b) => a + b.wordcount, 0))
+
+	ao3GetStories(str) {
+		pos := 1
+		arr := []
+		len := strlen(str)
+		while (pos <= len) {
+			ob := {}
+			pos := RegexMatch(str, '<!--title, author, fandom-->\s*<div class="header module">\s*<h4 class="heading">\s*<a href="\/works\/(\d+)">(.*)<\/a>', &o, pos)
+			if (pos == 0)
+				break
+			ob.link := o[1]
+			ob.name := o[2]
+			pos += StrLen(o[0])
+			pos := RegExMatch(str, '<dt class="words">Words:<\/dt>\s*<dd class="words">((?:\d|,|\.)*)<\/dd>', &o, pos)
+			pos += StrLen(o[0])
+			ob.wordcount := StrReplace(o[1], ",")
+			arr.push(ob)
+		}
+		return arr
+	}
+
+	ao3DLBookMarks(pages) {
+		static baseURL := "https://archiveofourown.org/users/Cobracrystal/bookmarks"
+		htmlArr := []
+		Loop (pages) {
+			htmlArr.push(sendRequest(baseURL . (A_Index > 1 ? "?page=" A_Index : "")))
+			print(Round(A_Index / pages * 100, 1) "%", , false)
+		}
+		return htmlArr
+	}
+}
