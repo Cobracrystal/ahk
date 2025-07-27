@@ -75,6 +75,31 @@ objClone(obj) {
 }
 
 /**
+ * Merges obj2 into obj1 or creates a new object if desired. Prefers obj1 keys over obj2 unless specified.
+ * This only works for Maps and Objects. For merging arrays, use arrayMerge instead.
+ * @param obj1 
+ * @param obj2 
+ * @param {Integer} createNew 
+ * @param {Integer} overwriteIdenticalKeys 
+ * @returns {Any} 
+ */
+objMerge(obj1, obj2, createNew := false, overwriteIdenticalKeys := false) {
+	if (Type(obj1) != Type(obj2))
+		throw(TypeError("obj1 and obj2 are not of equal type, instead " Type(obj1) ", " Type(obj2)))
+	isMap := obj1 is Map
+	obj := createNew ? objClone(obj1) : obj1
+	for key, val in objGetEnumerable(obj2) {
+		if (isMap) {
+			if !obj.Has(key) || overwriteIdenticalKeys
+				obj[key] := val
+		}
+		else if (!obj.HasOwnProp(key) || overwriteIdenticalKeys)
+			obj.%key% := val
+	}
+	return obj
+}
+
+/**
  * Deletes given Value from Object {limit} times. Returns count of removed values
  * @param {Array | Map} obj
  * @param value the value to remove
@@ -301,6 +326,24 @@ objCompare(obj1, obj2) {
 	return 1
 }
 
+objEnumIf(obj, conditional := (e?) => IsSet(e?)) {
+	objEnum := objGetEnumerable(obj, true)
+	index := 1
+	return _enumerate
+
+	_enumerate(&i, &j:= -1, &e := -1) {
+		flag2Var := !IsSet(j)
+		flag3Var := !IsSet(e)
+		flagNotAtEnd := flag2Var ? objEnum(&k, &f) : objEnum(&_, &f)
+		if flagNotAtEnd {
+			while(!conditional(f) && flagNotAtEnd)
+				flagNotAtEnd := flag2Var ? objEnum(&k, &f) : objEnum(&_, &f)
+			flag3Var ? (i := index++, j := k, e := f) : flag2Var ? (i := k, j := f) : i := f
+		}
+		return flagNotAtEnd
+	}
+}
+
 /**
  * Zips two objects as a combined enumerator. Can accept 2-4 parameters. 
  * @param obj1 Object 1
@@ -309,7 +352,7 @@ objCompare(obj1, obj2) {
  * @returns {Enumerator} Func(&i, &j, &n := -1, &m := -1) Accepts up to 4 parameters. 
  * If two params are given, enumerates both objects values.
  * If three params are given, enumerates the total index and both objects values.
- * If four params are given, enumerates respective key and value of both objects 
+ * If four params are given, enumerates respective key and value of both objects: i = obj1Index, j = obj2Index, n = obj1Value, m = obj2Value
  */
 objZip(obj1, obj2, stopAtAnyEnd := true) {
 	if (Type(obj1) != Type(obj2))
@@ -320,8 +363,8 @@ objZip(obj1, obj2, stopAtAnyEnd := true) {
 	return (&i, &j, &n := -1, &m := -1) => (
 		flag3Var := !IsSet(n), ; if for-loop passes n to this function, then it is unset. otherwise it is set.
 		flag4Var := !IsSet(m),
-		flagObj1End := flag3Var ? (flag4Var ? obj1Enum(&i, &n) : (i := index++, obj1Enum(&j)))	: obj1Enum(&i),
-		flagObj2End := flag3Var ? (flag4Var ? obj2Enum(&j, &m) : obj2Enum(&n)) 					: obj2Enum(&j),
+		flagObj1End := flag4Var ? obj1Enum(&i, &n) : (flag3Var ? (i := index++, obj1Enum(&_, &j)) : obj1Enum(&_, &i)),
+		flagObj2End := flag4Var ? obj2Enum(&j, &m) : (flag3Var ? obj2Enum(&_, &n) 				  : obj2Enum(&_, &j)),
 		stopAtAnyEnd ? flagObj1End && flagObj2End : flagObj1End || flagObj2End
 	)
 }
@@ -345,7 +388,7 @@ objZipAsArray(objects*) {
 		flag3Var := !IsSet(v),
 		arrVals := [], arrVals.Capacity := len,
 		flag3Var ? (arrKeys := [], arrKeys.Capacity := len) : 0,
-		arrResult := flag3Var ? objDoForEach(enums, (en) => (flag := en(&l, &r), arrKeys.push(l?), arrVals.push(r?), flag)) : objDoForEach(enums, (en) => (flag := en(&r), arrVals.push(r?), flag)),
+		arrResult := flag3Var ? objDoForEach(enums, (en) => (flag := en(&l, &r), arrKeys.push(l?), arrVals.push(r?), flag)) : objDoForEach(enums, (en) => (flag := en(&_, &r), arrVals.push(r?), flag)),
 		flagIsAtEnd := objCollect(arrResult, (a, b) => a || b),
 		flag2Var ? (i := index++, flag3Var ? (e := arrKeys, v := arrVals) : e := arrVals) : i := arrVals,
 		flagIsAtEnd
@@ -371,11 +414,11 @@ objChain(objects*) {
 		flag2Var := !IsSet(j),
 		flag3Var := !IsSet(e),
 		enum := enums[objIndex],
-		flagReachedObjEnd := !(flag2Var ? (i := index++, flag3Var ? enum(&j,&e) : enum(&j)) : enum(&i)),
+		flagReachedObjEnd := !(flag2Var ? (i := index++, flag3Var ? enum(&j,&e) : enum(&_, &j)) : enum(&_, &i)),
 		flagReachedObjEnd ? objIndex++ : 0,
 		flagLastObjEnd := objIndex > len,
 		flagReachedObjEnd && !flagLastObjEnd ? enum := enums[objIndex] : 0,
-		flagReachedObjEnd && !flagLastObjEnd ? (flag2Var ? (flag3Var ? enum(&j,&e) : enum(&j)) : enum(&i)) : 0,
+		flagReachedObjEnd && !flagLastObjEnd ? (flag2Var ? (flag3Var ? enum(&j,&e) : enum(&_, &j)) : enum(&_, &i)) : 0,
 		!flagLastObjEnd
 	)
 }
@@ -625,12 +668,64 @@ rangeAsArr(startEnd, end?, step?, inclusive := true) {
 	return a
 }
 
-arrayMerge(array1, array2) {
+arrayMerge(arr1, arr2) {
 	arr2 := []
-	arr2.Capacity := array1.Length + array2.Length
-	arr2.push(array1*)
-	arr2.push(array2*)
+	arr2.Capacity := arr1.Length + arr2.Length
+	arr2.push(arr1*)
+	arr2.push(arr2*)
 	return arr2
+}
+
+arrayMergeSorted(arr1, arr2) {
+	ret := []
+	p1 := 1, p2 := 1
+	l1 := arr1.Length, l2 := arr2.Length
+	while(p1 <= l1 && p2 <= l2) {
+		if (arr1[p1] < arr2[p2])
+			ret.push(arr1[p1++])
+		else
+			ret.push(arr2[p2++])
+	}
+	while(p1 <= l1)
+		ret.push(arr1[p1++])
+	while(p2 <= l2)
+		ret.push(arr2[p2++])
+	return ret
+}
+
+arrayIsSorted(arr, downwards := false) {
+	if downwards {
+		Loop(arr.Length - 1)
+			if arr[A_Index] < arr[A_Index + 1]
+				return false
+		return true
+	}
+	Loop(arr.Length - 1)
+		if arr[A_Index] > arr[A_Index + 1]
+			return false
+	return true
+}
+
+/**
+ * For an array subset whose values are all contained in arr, and a value contained in arr, inserts the value in the position defined through the ordering in set.
+ * @param arr 
+ * @param subarr 
+ * @param compareValue 
+ * @param insertValue 
+ * @param {(itVal, compVal) => Number} comparator 
+ * @returns {Integer} Index of the inserted element
+ */
+arrayInsertSorted(arr, subarr, compareValue, insertValue := compareValue, transformer := (itVal => itVal)) {
+	next := 1
+	for i, e in arr {
+		if (transformer(e) == compareValue || next > subarr.Length) {
+			subarr.InsertAt(next, insertValue)
+			break
+		}
+		if transformer(e) == transformer(subarr[next])
+			next++
+	}
+	return next
 }
 
 arraySlice(arr, from := 1, to := arr.Length) {
@@ -707,17 +802,14 @@ arrayInReverse(arr) {
 	)
 }
 
-arraySort(arr, mode := "") {
+arraySort(arr, sortMode := "") {
 	arr2 := []
 	for i, e in arr
-		str .= e . "`n"
-	sortedStr := Sort(str, mode)
-	Loop Parse, sortedStr, "`n" {
-		if (A_LoopField == "")
-			continue
-		arr2.push(A_LoopField)
-	}
-	return arr2
+		str .= e .  "©"
+	sortMode := RegExReplace(sortMode, "D.")
+	newStr := Sort(SubStr(str, 1, -1), sortMode . " D©")
+	sortedStr := Sort(str, sortMode)
+	return StrSplit(sortedStr, "©")
 }
 
 
@@ -729,16 +821,13 @@ arraySort(arr, mode := "") {
  */
 objSort(obj, sortMode := "") {
 	isArrLike := (obj is Map || obj is Array)
-	indexMap := Map()
-	retArr := []
-	l := objGetValueCount(obj)
-	if !l
+	if !objGetValueCount(obj)
 		return []
-	for e in (isArrLike ? obj : obj.OwnProps())
+	for e in objGetEnumerable(obj)
 		str .= e . "©"
 	sortMode := RegExReplace(sortMode, "D.")
 	newStr := Sort(SubStr(str, 1, -1), sortMode . " D©")
-	return StrSplitUTF8(newStr, "©")
+	return StrSplit(newStr, "©")
 }
 objSortNumerically(obj, sortMode := "N") => objDoForEach(objSort(obj, sortMode), (e => Number(e)))
 
