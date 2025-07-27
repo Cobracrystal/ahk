@@ -1030,6 +1030,8 @@ loadTableAsHotstrings(filePath) {
 		Hotkey("XButton1", (*) => (SetTimer(turnSelfOff, -300000), Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")))
 		Hotkey("XButton2", (*) => Run('"' A_WorkingDir '\..\Demo_Scripts\download.ahk" --open-folder'))
 	}
+	if (RegExMatch(A_Clipboard, "\.(?:png|jpeg|jpg|webp|mp4|gif)"))
+		Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")
 
 	toggleDLKeys(mode := -1) {
 		mode := (mode == -1 ? "Toggle" : (mode == 0 ? "Off" : "On"))
@@ -1107,6 +1109,58 @@ b::{	; Revo Idle: Buy
 		ed.Value := Format("Controller Name: {} (#{})`nCon Info: {}`nAxis: {}`nButtons Down: {}", conName, conIndex, conInfo, conSticks, btnsActive)
 		Sleep(100)
 	}
+}
+
+^+WheelUp::{
+	MouseGetPos(,,&hwnd)
+	WinSetVolume("+5", hwnd)
+}
+
+^+WheelDown::{
+	MouseGetPos(,,&hwnd)
+	WinSetVolume("-5", hwnd)
+}
+
+WinSetVolume(level, target?) {
+    appName := WinGetProcessName(target ?? WinExist() || "A")
+    GUID := Buffer(16)
+    DllCall("ole32\CLSIDFromString", "Str", "{77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F}", "Ptr", GUID)
+    IMMDeviceEnumerator := ComObject("{BCDE0395-E52F-467C-8E3D-C4579291692E}", "{A95664D2-9614-4F35-A746-DE8DB63617E6}")
+    ComCall(4, IMMDeviceEnumerator, "UInt", 0, "UInt", 1, "Ptr*", &IMMDevice := 0)
+    ComCall(3, IMMDevice, "Ptr", GUID, "UInt", 23, "Ptr", 0, "Ptr*", &IAudioSessionManager2 := 0)
+    ObjRelease(IMMDevice)
+    ComCall(5, IAudioSessionManager2, "Ptr*", &IAudioSessionEnumerator := 0)
+    ObjRelease(IAudioSessionManager2)
+    ComCall(3, IAudioSessionEnumerator, "UInt*", &sessionCount := 0)
+    loop sessionCount {
+        ComCall(4, IAudioSessionEnumerator, "Int", A_Index - 1, "Ptr*", &IAudioSessionControl := 0)
+        IAudioSessionControl2 := ComObjQuery(IAudioSessionControl, "{BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D}")
+        ObjRelease(IAudioSessionControl)
+        ComCall(14, IAudioSessionControl2, "UInt*", &pid := 0)
+
+        if (!pid || ProcessGetName(pid) != appName)
+            continue
+
+        ISimpleAudioVolume := ComObjQuery(IAudioSessionControl2, "{87CE5498-68D6-44E5-9215-6DA47EF883D8}")
+        ComCall(6, ISimpleAudioVolume, "Int*", &muted := 0)
+        if muted || level = 0
+            ComCall(5, ISimpleAudioVolume, "Int", !muted, "Ptr", 0)
+
+        if level {
+            ComCall(4, ISimpleAudioVolume, "Float*", &levelOld := 0)
+
+            if (level ~= "^[-+]")
+                levelNew := clamp(levelOld + (level / 100), 0, 1)
+            else
+                levelNew := clamp(level / 100, 0, 1)
+
+            if (levelNew != levelOld)
+                ComCall(3, ISimpleAudioVolume, "Float", levelNew, "Ptr", 0)
+        }
+        break
+    }
+    ObjRelease IAudioSessionEnumerator
+    return (IsSet(levelNew) ? Round(levelNew * 100) : -1)
 }
 
 #HotIf WinActive("GT: New Horizons")
