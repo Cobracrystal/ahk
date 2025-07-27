@@ -283,5 +283,5 @@ intMax() {
 	return 2**63-1
 }
 
-clamp(n, minimum, maximum) => Max(min, Min(n, max))
+clamp(n, minimum, maximum) => Max(minimum, Min(n, maximum))
 isClamped(n, minimum, maximum) => (n <= maximum && n >= minimum)
