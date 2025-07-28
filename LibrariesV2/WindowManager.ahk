@@ -3,8 +3,6 @@
 ; fix spread windows
 ; add "show system info" somewhere in settings to show monitor sizes etc
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
-; cache command lines to reuse
-; add general updates
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "*i %A_LineFile%\..\..\LibrariesV2\CustomWindowFunctions.ahk"
 ; Usage (if including this file as a library):

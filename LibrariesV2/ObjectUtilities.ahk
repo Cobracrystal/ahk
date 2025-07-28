@@ -447,6 +447,7 @@ objGetClassObject(obj) {
 }
 
 
+
 /*
 we have an object.
 if it is a class instance object, we wish to get the properties that it got from the class
