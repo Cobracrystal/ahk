@@ -46,8 +46,7 @@ class WindowManager {
 		this.settingsGui := 0
 		this.data := {
 			coords: {x: 300, y: 200, cw: 1018, ch: 410, mmx: 0},
-			currentWinInfo: [],
-			cacheMap: Map()
+			currentWinInfo: []
 		}
 		; window menu
 		HotIfWinactive("Window Manager ahk_class AutoHotkeyGUI")
@@ -82,7 +81,7 @@ class WindowManager {
 		this.gui.AddCheckbox("Section R1.45 vCBHiddenWindows Checked" . this.config.detectHiddenWindows, "Show Hidden Windows?").OnEvent("Click", this.configGuiHandler.bind(this))
 		this.gui.AddCheckbox("ys R1.45 vCBExcludedWindows Checked" . !this.config.useBlacklist, "Show Excluded Windows?").OnEvent("Click", this.configGuiHandler.bind(this))
 		; this.gui.AddCheckbox("ys R1.45 vCBGetCommandLine Checked" . this.config.getCommandLine, "Show Command Lines? (Slow)").OnEvent("Click", this.configGuiHandler.bind(this))
-		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false, false))
+		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false))
 		this.gui.AddText("ys+2 0x200 R1.45 xs+" LVWidth-160 " w100 vWindowCount", "Window Count: 0")
 		this.gui.AddButton("xs+" LVWidth-50 " ys w50 vBTNSettings", "Settings").OnEvent("Click", this.createSettingsGui.bind(this))
 		this.LV := this.gui.AddListView("xs R20 w1000 +Multi", objCollect(this.config.columnsProfile, (b, e) => (b.push(e.name), b), []))
@@ -146,7 +145,7 @@ class WindowManager {
 		return
 	}
 
-	static guiListviewCreate(resize := false, firstCall := false, update := true, *) {
+	static guiListviewCreate(resize, update, *) {
 		this.gui.Opt("+Disabled")
 		this.LV.Opt("-Redraw")
 		wHandles := [], lastRow := 0
@@ -160,9 +159,9 @@ class WindowManager {
 		}
 		this.LV.Delete()
 		if (update) {
-			this.data.currentWinInfo := this.getAllWindowInfo(this.config.detectHiddenWindows, this.config.useBlacklist)
-			if !this.data.cacheMap.Has(this.gui.hwnd)
-				this.data.currentWinInfo.InsertAt(1, this.getWindowInfo(this.gui.Hwnd))
+			this.data.currentWinInfo := DesktopState.getAllWindowInfo(this.config.detectHiddenWindows, this.config.useBlacklist ? this.config.blacklist : [], this.config.getCommandLine)
+			if !DesktopState.isVisible(this.gui.hwnd)
+				this.data.currentWinInfo.InsertAt(1, DesktopState.getWindowInfo(this.gui.Hwnd, this.config.getCommandLine))
 		}
 		for i, win in this.data.currentWinInfo
 			if (this.isIncludedInSearch(win)) {
@@ -242,104 +241,6 @@ class WindowManager {
 			if (InStr(e, freeSearch, this.config.filterCaseSense))
 				return true
 		return false
-	}
-
-	static getAllWindowInfo(getHidden := false, useBlacklist := true) {
-		windows := []
-		tMM := A_TitleMatchMode
-		dHW := A_DetectHiddenWindows
-		DetectHiddenWindows(getHidden)
-		wHandles := WinGetList()
-		for i, wHandle in wHandles {
-			if useBlacklist
-				for e in this.config.blacklist
-					if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == ""))
-						continue 2
-			windows.push(this.getWindowInfo(wHandle))
-		}
-		SetTitleMatchMode(tMM)
-		DetectHiddenWindows(dHW)
-		return windows
-	}
-
-	static getWindowInfo(wHandle) {
-		x := y := w := h := winTitle := winClass := mmx := processName := processPath := pid := cmdLine := ""
-		if !WinExist(wHandle) {
-			return {}
-		}
-		try	winTitle := WinGetTitle(wHandle)
-		try	WinGetPos(&x, &y, &w, &h, wHandle)
-		try WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
-		try	mmx := WinGetMinMax(wHandle)
-		if (this.data.cacheMap.Has(wHandle)) {
-			if !(this.data.cacheMap[wHandle].commandLine) && this.config.getCommandLine
-				try this.data.cacheMap[wHandle].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
-		} else {
-			try	winClass := WinGetClass(wHandle)
-			try	processName := WinGetProcessName(wHandle)
-			try	processPath := WinGetProcessPath(wHandle)
-			try	pid := WinGetPID(wHandle)
-			if (this.config.getCommandLine)
-				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
-					; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
-			this.data.cacheMap[wHandle] := {
-				hwnd: wHandle, class: winClass, process: processName, processPath: processPath, pid: pid, commandLine: cmdLine 
-			}
-		}
-		cacheObj := this.data.cacheMap[wHandle]
-		objMerge(cacheObj, {
-			title: winTitle,
-			state: mmx,
-			xpos: x, ypos: y,
-			width: w, height: h,
-			clientxpos: cx, clientypos: cy,
-			clientwidth: cw, clientheight: ch
-		},,true)
-		return cacheObj
-	}
-
-	static borderlessFullscreenWindow(wHandle) {
-		WinGetPos(&x, &y, &w, &h, wHandle)
-		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
-		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		NumPut("Uint", 40, monitorInfo := Buffer(40))
-		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-		monitor := {
-			left: NumGet(monitorInfo, 4, "Int"),
-			top: NumGet(monitorInfo, 8, "Int"),
-			right: NumGet(monitorInfo, 12, "Int"),
-			bottom: NumGet(monitorInfo, 16, "Int")
-		}
-		WinMove(
-			monitor.left + (x - cx),
-			monitor.top + (y - cy),
-			monitor.right - monitor.left + (w - cw),
-			monitor.bottom - monitor.top + (h - ch),
-			wHandle
-		)
-	}
-
-	static isBorderlessFullscreen(wHandle) {
-		WinGetPos(&x, &y, &w, &h, wHandle)
-		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
-		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		NumPut("Uint", 40, monitorInfo := Buffer(40))
-		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-			monLeft := NumGet(monitorInfo, 4, "Int"),
-			monTop := NumGet(monitorInfo, 8, "Int"),
-			monRight := NumGet(monitorInfo, 12, "Int"),
-			monBottom := NumGet(monitorInfo, 16, "Int")
-		if (monLeft == cx && monTop == cy && monRight == monLeft + cw && monBottom == monTop + ch)
-			return true
-		else 
-			return false
-	}
-
-	static winmgmt(v, w, d := "Win32_Process", m := "winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2") {
-		local i, s := []
-		for i in ComObjGet(m).ExecQuery("Select " . (IsSet(v) ? v : "*") . " from " . d . (IsSet(w) ? " " . w : ""))
-			s.push(i.%v%)
-		return (s.length > 0 ? s : [""])
 	}
 
 	static onResize(g, mmx, w, h) {
@@ -435,7 +336,7 @@ class WindowManager {
 						for rowN in rowNums
 							WinMaximize(Integer(this.LV.GetText(rowN, 2)))
 					case "116":	; F5 Key -> Refresh LV
-						this.guiListviewCreate()
+						this.guiListviewCreate(false, true)
 				}
 			case "ContextMenu":
 				rowN := NumGet(param, 24, "int")
@@ -502,7 +403,7 @@ class WindowManager {
 			"Reset Window Position", resetWindowPosition,
 			"Minimize Window", 		WinMinimize,
 			"Maximize Window", 		WinMaximize,
-			"Restore Window", 		(wHandle) => this.isBorderlessFullscreen(wHandle) ? resetWindowPosition(wHandle, 5/7) : WinRestore(wHandle),
+			"Restore Window", 		(wHandle) => DesktopState.isBorderlessFullscreen(wHandle) ? resetWindowPosition(wHandle, 5/7) : WinRestore(wHandle),
 			"Move Windows to Monitor 1", resetWindowPosition.bind(,,1),
 			"Move Windows to Monitor 2", resetWindowPosition.bind(,,2),
 			"Toggle Window Lock", 	(wHandle) => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & 0x8 ? 0 : 1, wHandle)),
@@ -514,7 +415,7 @@ class WindowManager {
 			"Toggle Visibility", 	(wHandle) => (WinGetStyle(wHandle) & this.windowStyles.WS_VISIBLE ? WinHide(wHandle) : WinShow(wHandle)),
 			"Show Window", 			WinShow,
 			"Hide Window", 			WinHide,
-			"View Command Line", 	(wHandle) => (MsgBoxAsGui(this.winmgmt("CommandLine", "Where ProcessId = " . WinGetPID(wHandle))[1],,,,,,this.gui.hwnd,1)),
+			"View Command Line", 	(wHandle) => (MsgBoxAsGui(DesktopState.winmgmt("CommandLine", "Where ProcessId = " . WinGetPID(wHandle))[1],,,,,,this.gui.hwnd,1)),
 			"View Properties", 		(wHandle) => (Run('properties "' WinGetProcessPath(wHandle) '"')),
 			"View Program Folder", 	(wHandle) => (Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"'))
 		)
@@ -527,7 +428,7 @@ class WindowManager {
 					try WinActivate(wHandle)
 			case "Borderless Fullscreen":
 				for wHandle in wHandles
-					this.borderlessFullscreenWindow(wHandle)
+					DesktopState.borderlessFullscreenWindow(wHandle)
 			case "Close Window":
 				if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
 					return
@@ -586,7 +487,6 @@ class WindowManager {
 					for i, wHandle in wHandles
 						try this.menus.customFunctions[itemName](wHandle)
 		}
-		; this.guiListviewCreate()
 	}
 
 	static columnMenuHandler(itemName, itemPos?, menuObj?) {
@@ -603,10 +503,10 @@ class WindowManager {
 			menuObj.Check(itemName)
 		}
 		if (itemName == this.columns.commandLine.name) {
-			this.config.getCommandLine := !this.config.getCommandLine
-			this.getAllWindowInfo(this.config.detectHiddenWindows, this.config.useBlacklist)
+			if (this.config.getCommandLine := !this.config.getCommandLine)
+				DesktopState.getAllWindowInfo(this.config.detectHiddenWindows, this.config.useBlacklist ? this.config.blacklist : [], true)
 		}
-		this.guiListviewCreate(true,true,false)
+		this.guiListviewCreate(true,false)
 	}
 
 	static transparencyGUI(wHandles) {
@@ -731,21 +631,21 @@ class WindowManager {
 			case "CBFilterCaseSense":
 				this.config.filterCaseSense := ctrl.Value
 				if (this.gui["EditFilterWindows"].Value != "")
-					this.guiListviewCreate(false, false, false)
+					this.guiListviewCreate(false, false)
 			case "CBFormatWindowHandles":
 				this.config.formatWindowHandles := !this.config.formatWindowHandles
-				this.guiListviewCreate(true)
+				this.guiListviewCreate(true, true)
 			case "CBHiddenWindows":
 				this.config.detectHiddenWindows := !this.config.detectHiddenWindows
-				this.guiListviewCreate(true)
+				this.guiListviewCreate(true, true)
 			case "CBExcludedWindows":
 				this.config.useBlacklist := !this.config.useBlacklist
-				this.guiListviewCreate(true)
+				this.guiListviewCreate(true, true)
 			; case "CBGetCommandLine":
 			; 	this.config.getCommandLine := !this.config.getCommandLine
 			; 	if (this.config.getCommandLine)
 			; 		this.LV.ModifyCol(13, "0")
-			; 	this.guiListviewCreate(true)
+			; 	this.guiListviewCreate(true, true)
 			case "EditCustomThemeColor", "EditCustomThemeFontColor":
 				property := SubStr(ctrl.Name, 5)
 				color := ctrl.Value
@@ -905,19 +805,7 @@ class WindowManager {
 			this.columns.clientheight,
 			this.columns.class
 		],
-		blacklist: [
-			"",
-			"NVIDIA GeForce Overlay",
-			"ahk_class MultitaskingViewFrame ahk_exe explorer.exe",
-			"ahk_class Windows.UI.Core.CoreWindow",
-			"ahk_class WorkerW ahk_exe explorer.exe",
-			"ahk_class Progman ahk_exe explorer.exe",
-			"ahk_class Shell_TrayWnd ahk_exe explorer.exe",
-			"ahk_class Shell_SecondaryTrayWnd ahk_exe explorer.exe",
-			; "Microsoft Text Input Application",
-			; "Default IME",
-			; "MSCTFIME UI"
-		]
+		blacklist: DesktopState.defaultBlacklist
 	}
 
 	static columns => {
@@ -996,7 +884,7 @@ class WindowManager {
 		WS_OVERLAPPED: 0x0,
 		WS_OVERLAPPEDWINDOW: 0xCF0000,
 		WS_POPUPWINDOW: 0x80880000,
-		WS_SIZEBOX: 0x40000,
+		WS_SIZEBOX: 0x40000, ; thin title bar
 		WS_SYSMENU: 0x80000,
 		WS_TABSTOP: 0x10000,
 		WS_THICKFRAME: 0x40000,
@@ -1022,6 +910,7 @@ class DesktopState {
 		this.timer := this.save.bind(this)
 		this.prevState := []
 		this.customStates := Map()
+		this.windowCache := Map()
 	}
 
 	static enable(period := 20000) {
@@ -1035,9 +924,9 @@ class DesktopState {
 
 	static save(custom?) {
 		if (IsSet(custom))
-			this.customStates[custom] := WindowManager.getAllWindowInfo(0, 1)
+			this.customStates[custom] := this.getAllWindowInfo()
 		else
-			this.prevState := WindowManager.getAllWindowInfo(0, 1)
+			this.prevState := this.getAllWindowInfo()
 	}
 
 	static restore(custom?) {
@@ -1059,4 +948,119 @@ class DesktopState {
 		if (IsSet(logString))
 			MsgBoxAsGui(logString)
 	}
+	
+	static getAllWindowInfo(getHidden := false, blacklist := this.defaultBlacklist, getCommandLine := false) {
+		windows := []
+		tMM := A_TitleMatchMode
+		dHW := A_DetectHiddenWindows
+		DetectHiddenWindows(getHidden)
+		wHandles := WinGetList()
+		for i, wHandle in wHandles {
+			for e in blacklist
+				if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == ""))
+					continue 2
+			windows.push(this.getWindowInfo(wHandle, getCommandLine))
+		}
+		SetTitleMatchMode(tMM)
+		DetectHiddenWindows(dHW)
+		return windows
+	}
+
+	static getWindowInfo(wHandle, getCommandline := false) {
+		x := y := w := h := winTitle := winClass := mmx := processName := processPath := pid := cmdLine := ""
+		if !WinExist(wHandle) {
+			return {}
+		}
+		try	winTitle := WinGetTitle(wHandle)
+		try	WinGetPos(&x, &y, &w, &h, wHandle)
+		try WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+		try	mmx := WinGetMinMax(wHandle)
+		if (this.windowCache.Has(wHandle)) {
+			if !(this.windowCache[wHandle].commandLine) && getCommandLine
+				try this.windowCache[wHandle].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[wHandle].pid)[1]
+		} else {
+			try	winClass := WinGetClass(wHandle)
+			try	processName := WinGetProcessName(wHandle)
+			try	processPath := WinGetProcessPath(wHandle)
+			try	pid := WinGetPID(wHandle)
+			if (getCommandLine)
+				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
+					; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
+			this.windowCache[wHandle] := {
+				hwnd: wHandle, class: winClass, process: processName, processPath: processPath, pid: pid, commandLine: cmdLine 
+			}
+		}
+		cacheObj := this.windowCache[wHandle]
+		objMerge(cacheObj, {
+			title: winTitle,
+			state: mmx,
+			xpos: x, ypos: y,
+			width: w, height: h,
+			clientxpos: cx, clientypos: cy,
+			clientwidth: cw, clientheight: ch
+		},,true)
+		return cacheObj
+	}
+
+	static winmgmt(v, w, d := "Win32_Process", m := "winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2") {
+		local i, s := []
+		for i in ComObjGet(m).ExecQuery("Select " . (IsSet(v) ? v : "*") . " from " . d . (IsSet(w) ? " " . w : ""))
+			s.push(i.%v%)
+		return (s.length > 0 ? s : [""])
+	}
+
+	static isVisible(wHandle) {
+		return WinGetStyle(wHandle) & WindowManager.windowStyles.WS_VISIBLE
+	}
+
+	static isBorderlessFullscreen(wHandle) {
+		WinGetPos(&x, &y, &w, &h, wHandle)
+		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+		NumPut("Uint", 40, monitorInfo := Buffer(40))
+		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
+			monLeft := NumGet(monitorInfo, 4, "Int"),
+			monTop := NumGet(monitorInfo, 8, "Int"),
+			monRight := NumGet(monitorInfo, 12, "Int"),
+			monBottom := NumGet(monitorInfo, 16, "Int")
+		if (monLeft == cx && monTop == cy && monRight == monLeft + cw && monBottom == monTop + ch)
+			return true
+		else 
+			return false
+	}
+
+	static borderlessFullscreenWindow(wHandle) {
+		WinGetPos(&x, &y, &w, &h, wHandle)
+		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+		NumPut("Uint", 40, monitorInfo := Buffer(40))
+		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
+		monitor := {
+			left: NumGet(monitorInfo, 4, "Int"),
+			top: NumGet(monitorInfo, 8, "Int"),
+			right: NumGet(monitorInfo, 12, "Int"),
+			bottom: NumGet(monitorInfo, 16, "Int")
+		}
+		WinMove(
+			monitor.left + (x - cx),
+			monitor.top + (y - cy),
+			monitor.right - monitor.left + (w - cw),
+			monitor.bottom - monitor.top + (h - ch),
+			wHandle
+		)
+	}
+
+	static defaultBlacklist => [
+		"",
+		"NVIDIA GeForce Overlay",
+		"ahk_class MultitaskingViewFrame ahk_exe explorer.exe",
+		"ahk_class Windows.UI.Core.CoreWindow",
+		"ahk_class WorkerW ahk_exe explorer.exe",
+		"ahk_class Progman ahk_exe explorer.exe",
+		"ahk_class Shell_TrayWnd ahk_exe explorer.exe",
+		"ahk_class Shell_SecondaryTrayWnd ahk_exe explorer.exe",
+		; "Microsoft Text Input Application",
+		; "Default IME",
+		; "MSCTFIME UI"
+	]
 }

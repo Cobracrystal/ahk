@@ -17,7 +17,7 @@ class HotstringLoader {
 		this.hotstrings[index] := {obj: hotstringObj, status: -1, hasMenu: addMenu, file:fileName} ; -1 = unregistered, 0 = off, 1 = on
 		if (register) {
 			this.registerHotstrings(index, startOff, skipError)
-			this.hotstrings[index].status := startOff ? 0 : 1
+			this.hotstrings[index].status := !startOff
 		}
 		if (addMenu && IsSet(name)) {
 			A_TrayMenu.Add(Format(this.defaultMenutext, index), this.switchFromMenu.bind(this, index))
@@ -57,7 +57,7 @@ class HotstringLoader {
 			tObj := Map()
 			if (e.Has("string") && e.Has("replacement")) {
 				try {
-					HotString(":" (e.Has("options") ? e["options"] : "") ":" e["string"], e["replacement"], startOff ? 0 : 1)
+					HotString(":" (e.Has("options") ? e["options"] : "") ":" e["string"], e["replacement"], !startOff)
 				}
 				catch {
 					if (!skipError)

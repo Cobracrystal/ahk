@@ -51,6 +51,10 @@ class SongDownloader {
 		}
 		return str
 	}
+	
+	static getMetadataJson(songLinks) {
+		return objToString(SongDownloader.getMetaData(songLinks, false),false,false,true,true)
+	}
 
 	static getMetaData(songLink, keepJsonData := true, printIntermediateSteps := false) {
 		if !(songLink is Array)

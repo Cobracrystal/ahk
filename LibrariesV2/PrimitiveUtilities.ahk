@@ -19,9 +19,7 @@ strCountStr(HayStack, SearchText, CaseSense := false) {
  * @param {Integer} Occurence 
  */
 stringssInStr(HayStack, SearchTexts, CaseSense, StartPos := 1, Occurence := 1) {
-	loop parse HayStack {
-
-	}
+	throw Error("Not implemented")
 }
 
 strReverse(str) {
@@ -285,3 +283,5 @@ intMax() {
 
 clamp(n, minimum, maximum) => Max(minimum, Min(n, maximum))
 isClamped(n, minimum, maximum) => (n <= maximum && n >= minimum)
+hex(n) => Format("0x{:X}", n)
+oct(n) => Format("{:o}", n)

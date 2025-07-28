@@ -140,14 +140,6 @@ parseHeaders(str) {
 	return headers
 }
 
-; only works in 2.0.9
-BoundFnName(Obj) {
-	Address := ObjPtr(Obj)
-	n := NumGet(Address, 5 * A_PtrSize + 16, "Ptr")
-	Obj := ObjFromPtrAddRef(n)
-	return Obj.Name
-}
-
 /**
  * Given a function fn, returns the largest possible value in given range where fn does not throw an error.
  * @param fn 

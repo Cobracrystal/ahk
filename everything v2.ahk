@@ -267,7 +267,7 @@ if (!GLOBALVAR_WASRELOADED)
 		shell := ComObject("Shell.Application")
 		switch MsgBoxAsGui("Tile Windows?", "Confirm Dialog", 0x7, 4, true,,,, ["Vertically", "Horizontally", "Cascade", "No"]) {
 			case "Vertically":
-				list := WindowManager.getAllWindowInfo()
+				list := DesktopState.getAllWindowInfo()
 				objRemoveValue(list,,,(key,a,b) => (WinGetMinMax(a) == -1))
 				; msgbox(objToString(list, false))
 				Loop(list.Length) {

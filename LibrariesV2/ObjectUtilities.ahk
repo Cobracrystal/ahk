@@ -11,7 +11,7 @@ objCountValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = setVal
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objCountValue does not handle type " . Type(obj)))
 	count := 0
-	for i, e in (isArrLike ? obj : obj.OwnProps())
+	for i, e in objGetEnumerator(obj)
 		if conditional(i, e, value)
 			count++
 	return count
@@ -29,7 +29,7 @@ objContainsValue(obj, value, comparator := (itKey,itVal,setVal) => (itVal = setV
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
 	condWithKey := comparator.MaxParams == 3 ? 1 : 0
-	for i, e in (isArrLike ? obj : obj.OwnProps())
+	for i, e in objGetEnumerator(obj)
 		if (condWithKey ? comparator(i, e, value) : comparator(e, value))
 			return i
 	return 0
@@ -69,7 +69,7 @@ objClone(obj) {
 	if !(IsObject(obj))
 		return obj
 	copy := obj.Clone()
-	for i, e in (isArrLike ? obj : obj.OwnProps())
+	for i, e in objGetEnumerator(obj)
 		isArrLike ? copy[i] := objClone(e) : copy.%i% := objClone(e)
 	return copy
 }
@@ -88,7 +88,7 @@ objMerge(obj1, obj2, createNew := false, overwriteIdenticalKeys := false) {
 		throw(TypeError("obj1 and obj2 are not of equal type, instead " Type(obj1) ", " Type(obj2)))
 	isMap := obj1 is Map
 	obj := createNew ? objClone(obj1) : obj1
-	for key, val in objGetEnumerable(obj2) {
+	for key, val in objGetEnumerator(obj2) {
 		if (isMap) {
 			if !obj.Has(key) || overwriteIdenticalKeys
 				obj[key] := val
@@ -112,7 +112,7 @@ objRemoveValue(obj, value := "", limit := 0, conditional := ((itKey, itVal, val)
 		throw(TypeError("objRemoveValue does not handle type " . Type(obj)))
 	queue := []
 	count := 0
-	for i, e in (isArrLike ? obj : obj.OwnProps())
+	for i, e in objGetEnumerator(obj)
 		if conditional(i, e, value) {
 			if (!limit || count++ < limit)
 				queue.push(i)
@@ -145,8 +145,7 @@ objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) =>
 		throw(TypeError("objRemoveValues does not handle type " . Type(obj)))
 	queue := []
 	count := 0
-	for i, e in (isArrLike ? obj : obj.OwnProps())
-	for i, e in (isArrLike ? obj : obj.OwnProps())
+	for i, e in objGetEnumerator(obj)
 		for f in values
 			if conditional(i, e, f) {
 				if (!limit || count++ < limit)
@@ -173,7 +172,7 @@ objDoForEach(obj, fn := (val => objToString(val)), value := 0, conditional := ((
 	clone := %Type(obj)%()
 	if (isArrLike && !isMap)
 		clone.Capacity := obj.Length, clone.Length := obj.Length
-	for i, e in objGetEnumerable(obj) {
+	for i, e in objGetEnumerator(obj) {
 		v := conditional(i, e?, value) ? fn(e?) : e
 		isArrLike ? clone[i] := v : clone.%i% := v
 	}
@@ -201,7 +200,7 @@ objCollect(obj, fn := ((base, e) => (base . objToString(e))), initialBase?, valu
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	if (IsSet(initialBase))
 		base := initialBase
-	for i, e in objGetEnumerable(obj)
+	for i, e in objGetEnumerator(obj)
 		if (conditional(i, e?, value))
 			base := IsSet(base) ? fn(base, e?) : e
 	return base ?? ""
@@ -223,7 +222,7 @@ objGetDuplicates(obj, fn := (a => a), caseSense := true, grouped := false) {
 	counterMap := Map()
 	duplicateIndices := []
 	duplicateMap.CaseSense := caseSense
-	for i, e in (isArrLike ? obj : obj.OwnProps()) {
+	for i, e in objGetEnumerator(obj) {
 		v := fn(e)
 		if (duplicateMap.Has(v)) {
 			duplicateMap[v].push(i)
@@ -238,7 +237,7 @@ objGetDuplicates(obj, fn := (a => a), caseSense := true, grouped := false) {
 				duplicateIndices.push(e)
 	}
 	else
-		for i, e in (isArrLike ? obj : obj.OwnProps()) {
+		for i, e in objGetEnumerator(obj) {
 			v := fn(e)
 			if (duplicateMap[v].Length > 1)
 				duplicateIndices.push(duplicateMap[v][counterMap[v]++])
@@ -259,7 +258,7 @@ objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	duplicateMap := Map()
 	duplicateMap.CaseSense := caseSense
-	for i, e in (isArrLike ? obj : obj.OwnProps()) {
+	for i, e in objGetEnumerator(obj) {
 		v := fn(e)
 		if (duplicateMap.Has(v))
 			duplicateMap[v]++
@@ -267,7 +266,7 @@ objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 			duplicateMap[v] := 1
 	}
 	clone := %Type(obj)%()
-	for i, e in (isArrLike ? obj : obj.OwnProps()) {
+	for i, e in objGetEnumerator(obj) {
 		v := fn(e)
 		if (duplicateMap[v] == 1)
 			isArrLike ? (isMap ? clone[i] := e : clone.push(e)) : clone.%i% := e
@@ -283,7 +282,7 @@ objGetUniques(obj, fn := (a => a), caseSense := true) {
 	uniques := Map()
 	uniques.CaseSense := caseSense
 	clone := %Type(obj)%()
-	for i, e in (isArrLike ? obj : obj.OwnProps()) {
+	for i, e in objGetEnumerator(obj) {
 		v := fn(e)
 		if !(uniques.Has(v)) {
 			uniques[v] := true
@@ -327,7 +326,7 @@ objCompare(obj1, obj2) {
 }
 
 objEnumIf(obj, conditional := (e?) => IsSet(e?)) {
-	objEnum := objGetEnumerable(obj, true)
+	objEnum := objGetEnumerator(obj, true)
 	index := 1
 	return _enumerate
 
@@ -357,8 +356,8 @@ objEnumIf(obj, conditional := (e?) => IsSet(e?)) {
 objZip(obj1, obj2, stopAtAnyEnd := true) {
 	if (Type(obj1) != Type(obj2))
 		throw(TypeError("obj1 and obj2 are not of equal type, instead " Type(obj1) ", " Type(obj2)))
-	obj1Enum := objGetEnumerable(obj1, true)
-	obj2Enum := objGetEnumerable(obj2, true)
+	obj1Enum := objGetEnumerator(obj1, true)
+	obj2Enum := objGetEnumerator(obj2, true)
 	index := 1
 	return (&i, &j, &n := -1, &m := -1) => (
 		flag3Var := !IsSet(n), ; if for-loop passes n to this function, then it is unset. otherwise it is set.
@@ -382,7 +381,7 @@ objZipAsArray(objects*) {
 	index := 1
 	enums := []
 	for o in objects
-		enums.push(objGetEnumerable(o, true))
+		enums.push(objGetEnumerator(o, true))
 	return (&i, &e := -1, &v := -1) => (
 		flag2Var := !IsSet(e), ; if for-loop passes n to this function, then it is unset. otherwise it is set.
 		flag3Var := !IsSet(v),
@@ -406,7 +405,7 @@ objZipAsArray(objects*) {
 objChain(objects*) {
 	enums := []
 	for o in objects
-		enums.push(objGetEnumerable(o, true))
+		enums.push(objGetEnumerator(o, true))
 	len := enums.Length
 	index := 1
 	objIndex := 1
@@ -423,7 +422,7 @@ objChain(objects*) {
 	)
 }
 
-objGetEnumerable(obj, getEnumFunction := false, numberParams?) {
+objGetEnumerator(obj, getEnumFunction := false, numberParams?) {
 	enum := (obj is Array || obj is Map) ? obj : ObjOwnProps(obj)
 	if !getEnumFunction
 		return enum
@@ -446,66 +445,6 @@ objGetClassObject(obj) {
 	return classObj
 }
 
-
-
-/*
-we have an object.
-if it is a class instance object, we wish to get the properties that it got from the class
-ie. msgbox is a func object and thus has the MinParams property, but this property does not appear in ObjOwnProps(Msgbox)
-
-if it is enumerable, we directly enumerate it.
-
-we enumerate ObjOwnProps() with one variable. This will get us ALL property names.
-If a property name has a getter, call it.
-Otherwise, print information about that property
-
-if the object has a Base object, enumerate that.
-
-Hierarchy:
-class Map [extends Object extends Any]
-base object chain then is: 
-	class Map
-		.__Class == "Class"
-		.Prototype == Map.Prototype
-			.__Class == "Map"
-			.base == Object.Prototype -> thus, Map.Prototype.base == Map.base.Prototype
-		.Base == class Object
-			.__Class == "Class"
-			.Prototype == Object.Prototype
-				.__Class == "Object"
-				.Base == Any.Prototype
-			.Base == class Any
-				.__Class == "Class"
-				.Prototype == Any.Prototype
-					.__Class == "Any"
-					.Base == "" (literal empty string)
-				.Base == Class.Prototype (The Prototype of class Class)
-					.__Class == "Class"
-					.Base == Object.Prototype
-						.__Class == "Object"
-						.Base == Any.Prototype
-							.__Class == "Any"
-							.Base == "" (literal empty string)
-TLDR: 
-the base of a class is the class object that it is extended from.
-the base of class Any is class.Prototype and then we chain
-The base of a class instance is class.Prototype
-Now:
-class Thing {
-	property := 1
-	static staticproperty := 2
-	method() => 1
-	static staticmethod => 2
-}
-
-The Instance contains only instance properties. Instance methods are inherited from Prototype. __Class is inherited from Prototype and contains the class name 
-Method counts as Prop, not an OwnProp
-The Prototype contains only instance methods and Properties (that exist in the class. Properties assigned via New/Init/Assignments in class Body are not included) 
-. __Class is defined here and is the class name
-Method counts as OwnProp
-The class Object contains only static properties and static methods. __Class is inherited from class class and thus contains "Class"
-static methods count as OwnProps
-*/
 
 ; Aliases for shorthand options
 objToStringNoBases(obj, detailedFunctions := false)	=>	objToString(obj, , false, , , , true, detailedFunctions, true, false)
@@ -546,7 +485,7 @@ objToString(obj, compact := false, compress := true, strEscape := false, anyAsOb
 		if !(IsObject(obj)) { ; if obj is Primitive, no need for the entire rest.
 			if (obj is Number)
 				return String(obj)
-			if (IsNumber(obj) || obj is String)
+			if (IsNumber(obj))
 				return qt obj qt
 			if (strEscape || flagOverrideStrEscape) {
 				for e in escapes
@@ -649,6 +588,14 @@ objToString(obj, compact := false, compress := true, strEscape := false, anyAsOb
 	}
 }
 
+; Unreliable, may only work in ahk versions around ~2.0.9
+BoundFnName(Obj) {
+	Address := ObjPtr(Obj)
+	n := NumGet(Address, 5 * A_PtrSize + 16, "Ptr")
+	Obj := ObjFromPtrAddRef(n)
+	return Obj.Name
+}
+
 range(startEnd, end?, step?, inclusive := true) {
 	start := IsSet(end) ? startEnd : 1
 	end := end ?? startEnd
@@ -662,11 +609,11 @@ range(startEnd, end?, step?, inclusive := true) {
 }
 
 rangeAsArr(startEnd, end?, step?, inclusive := true) {
-	a := []
-	a.Capacity := Floor(Abs((end ?? 0) - startEnd) * 1/step) + inclusive
+	local arr := []
+	arr.Capacity := Floor(Abs((end ?? 0) - startEnd) * 1/step) + inclusive
 	for e in range(startEnd, end?, step?, inclusive)
-		a.push(e)
-	return a
+		arr.push(e)
+	return arr
 }
 
 arrayMerge(arr1, arr2) {
@@ -796,6 +743,8 @@ arrayReverse(arr) {
  */
 arrayInReverse(arr) {
 	index := arr.Length
+	if !index
+		return (*) => false
 	flagEnd := false
 	return (&i, &e := -1) => (
 		IsSet(e) ? i := arr[index] : (i := index, e := arr[index]),
@@ -824,7 +773,7 @@ objSort(obj, sortMode := "") {
 	isArrLike := (obj is Map || obj is Array)
 	if !objGetValueCount(obj)
 		return []
-	for e in objGetEnumerable(obj)
+	for e in objGetEnumerator(obj)
 		str .= e . "©"
 	sortMode := RegExReplace(sortMode, "D.")
 	newStr := Sort(SubStr(str, 1, -1), sortMode . " D©")
@@ -931,7 +880,7 @@ MapToObj(obj, recursive := true) {
 	objOutput := flagIsArray ? Array() : {}
 	if (flagIsArray)
 		objOutput.Length := obj.Length
-	for i, e in objGetEnumerable(obj) {
+	for i, e in objGetEnumerator(obj) {
 		if (flagIsArray)
 			objOutput[i] := (recursive ? MapToObj(e, true) : e)
 		else
@@ -953,7 +902,7 @@ objToMap(obj, recursive := true) {
 	clone := flagisArr ? [] : Map()
 	if (flagisArr)
 		clone.Capacity := obj.Length, clone.Length := obj.Length
-	for i, e in objGetEnumerable(obj)
+	for i, e in objGetEnumerator(obj)
 		clone[i] := (recursive ? objToMap(e, true) : e)
 	return clone
 }
