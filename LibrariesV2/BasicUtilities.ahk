@@ -538,108 +538,118 @@ timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 	}
 }
 
-MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj := 0, owner := 0, addCopyButton := 0, buttonNames := [], icon := 0, timeout := 0, maxCharsVisible?, maxTextWidth := 400) {
-	static MB_OK 						:= 0
-	static MB_OKCANCEL 					:= 1
-	static MB_ABORTRETRYIGNORE 			:= 2
-	static MB_YESNOCANCEL 				:= 3
-	static MB_YESNO 					:= 4
-	static MB_RETRYCANCEL 				:= 5
-	static MB_CANCELRETRYCONTINUE 		:= 6
-	static MB_CUSTOM4BTNS				:= 7
-	static MB_CUSTOM5BTNS				:= 8
-	static MB_CUSTOM6BTNS				:= 9
-	static MB_TEXT_MAP := Map(
-		MB_OK,					["OK"],
-		MB_OKCANCEL,			["OK", "Cancel"],
-		MB_ABORTRETRYIGNORE,	["Abort", "Retry", "Ignore"],
-		MB_YESNOCANCEL,			["Yes", "No", "Cancel"],
-		MB_YESNO,				["Yes", "No"],
-		MB_RETRYCANCEL,			["Retry", "Cancel"],
-		MB_CANCELRETRYCONTINUE,	["Cancel", "Retry", "Continue"],
-		MB_CUSTOM4BTNS,	[1,2,3,4],
-		MB_CUSTOM5BTNS,	[1,2,3,4,5],
-		MB_CUSTOM6BTNS,	[1,2,3,4,5,6]
+
+; parse options string into the msgboxasgui options
+; MsgBoxAsGuiO(text := "Press OK to continue", title := A_ScriptName, options := "0", funcObj?) {
+
+; 	MsgBoxAsGui(text, title, buttonStyle, defaultButton, wait, funcObj?, owner?, addCopyButton, buttonNames, icon?, timeout?, maxCharsVisible?, maxTextWidth)
+; 	/*
+;     Icon
+; 	static Error      => 0x10
+; 	static Question   => 0x20
+; 	static Warning    => 0x30
+; 	static Info       => 0x40
+
+;     static Default2       => 0x100
+;     static Default3       => 0x200
+;     static Default4       => 0x300
+
+;     static SystemModal    => 0x1000
+;     static TaskModal      => 0x2000
+;     static AlwaysOnTop    => 0x40000
+
+;     static HelpButton     => 0x4000
+;     static RightJustified => 0x80000
+;     static RightToLeft    => 0x100000
+; 	*/
+; }
+
+MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := 0, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {
+	; button choices
+	static MB_BUTTON_TEXT := [
+		["OK"],
+		["OK", "Cancel"],
+		["Abort", "Retry", "Ignore"],
+		["Yes", "No", "Cancel"],
+		["Yes", "No"],
+		["Retry", "Cancel"],
+		["Cancel", "Retry", "Continue"]
+	]
+	; icons
+	static DEFAULT_ICONS := Map(
+		"x", 0x5E, "MB_ICONHANDERROR", 0x5E,
+		"?", 0x5F, "MB_ICONQUESTION", 0x5F,
+		"!", 0x50, "MB_ICONEXCLAMATION", 0x50,
+		"i", 0x4D, "MB_ICONASTERISKINFO", 0x4D
 	)
-
-	/*
-    Icon
-	static Error      => 0x10
-	static Question   => 0x20
-	static Warning    => 0x30
-	static Info       => 0x40
-
-    static Default2       => 0x100
-    static Default3       => 0x200
-    static Default4       => 0x300
-
-    static SystemModal    => 0x1000
-    static TaskModal      => 0x2000
-    static AlwaysOnTop    => 0x40000
-
-    static HelpButton     => 0x4000
-    static RightJustified => 0x80000
-    static RightToLeft    => 0x100000
-	*/
-
-	static MB_ICONHANDERROR				:= 16
-	static MB_ICONQUESTION 				:= 32
-	static MB_ICONEXCLAMATION 			:= 48
-	static MB_ICONASTERISKINFO 			:= 64
-
-	static MB_FONTNAME
-	static MB_FONTSIZE
-	static MB_FONTWEIGHT
-	static MB_FONTISITALIC
+	static ICON_SOUNDS := Map(
+		DEFAULT_ICONS["MB_ICONHANDERROR"], "*16",
+		DEFAULT_ICONS["MB_ICONQUESTION"], "*32",
+		DEFAULT_ICONS["MB_ICONEXCLAMATION"], "*48",
+		DEFAULT_ICONS["MB_ICONASTERISKINFO"], "*64"
+	)
+	static MB_FONTNAME, MB_FONTSIZE, MB_FONTWEIGHT, MB_FONTISITALIC
 	static MB_HASFONTINFORMATION := getMsgBoxFontInfo(&MB_FONTNAME, &MB_FONTSIZE, &MB_FONTWEIGHT, &MB_FONTISITALIC)
 
 	static gap := 26			; Spacing above and below text in top area of the Gui
-	static leftMargin := 12		; Left Gui margin
-	static rightMargin := 8		; Space between right side of button and right Gui edge
+	static buttonMargin := 12	; Left Gui margin
+	static rightMargin := 8		; Space between right side of button and next button / gui edge
 	static buttonWidth := 88	; Width of OK button
 	static buttonHeight := 26	; Height of OK button
 	static buttonOffset := 30	; Offset between the right side of text and right edge of button
+	static buttonSpace := buttonWidth + rightMargin
+	static leftMargin := 20
 	static minGuiWidth := 138	; Minimum width of Gui
+	static minTextWidth := 400
 	static SS_WHITERECT := 0x0006	; Gui option for white rectangle (http://ahkscript.org/boards/viewtopic.php?p=20053#p20053)
-	static retValue := ""
+	static NecessaryStyle := 0x94C80000
 
-	bottomGap := leftMargin
-	BottomHeight := buttonHeight + 2 * bottomGap
-	if !(MB_TEXT_MAP.Has(buttonStyle))
-		throw Error("Invalid button Style")
-	if (buttonNames.Length == 0)
-		buttonNames := MB_TEXT_MAP[buttonStyle]
-	else if (MB_TEXT_MAP[buttonStyle].Length != buttonNames.Length)
-		throw Error("Invalid Button Names for given Button Style")
-	gStr := owner ? "+Owner" owner : ''
+	if (buttonNames.Length == 0) {
+		if !(MB_BUTTON_TEXT.Has(buttonStyle))
+			throw Error("Invalid button Style")
+		buttonNames := MB_BUTTON_TEXT[buttonStyle]
+	}
+	retValue := ""
+	totalButtonWidth := buttonSpace * (buttonNames.Length + (addCopyButton ? 1 : 0))
+	ownerStr := IsSet(owner) ? "+Owner" owner : ''
 	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT (MB_FONTISITALIC ? " italic" : "") : ""
-	mbgui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " gStr, title)
-	mbgui.Opt("+0x94C80000")
+	mbgui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " ownerStr, title)
+	mbgui.Opt("+" hex(NecessaryStyle))
 	mbgui.Opt("-ToolWindow")
-	if (buttonStyle == 2 || buttonStyle == 4)
+	if (buttonStyle == 2 || buttonStyle == 4) ; if cancel is not present in option, close and escape have no effect. user must select an option.
 		mbgui.Opt("-SysMenu")
 	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
-	maxTextWidth := (StrLen(text) > 10000 && !IsSet(maxCharsVisible) && maxTextWidth < 1500) ? 1500 : maxTextWidth
-	nText := textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text,, guiFontOptions, MB_FONTNAME)
-	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, nText)
-	mbgui.AddText("x" leftMargin " y" gap " BackgroundTrans vTextBox", nText)
+	if !IsSet(maxTextWidth)
+		maxTextWidth := (StrLen(text) > 10000 && !IsSet(maxCharsVisible)) ? 1500 : Max(minTextWidth, totalButtonWidth)
+	ctrlText := textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text,, guiFontOptions, MB_FONTNAME)
+	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, ctrlText)
+	if (IsSet(icon)) {
+		iconPath := icon is Array ? icon[2] : "imageres.dll"
+		icon := (icon is Array ? icon[1] : icon)
+		icon := DEFAULT_ICONS.Has(icon) ? DEFAULT_ICONS[icon] : icon
+		mbgui.AddPicture(Format("x{} y{} w{} h{} Icon{} BackgroundTrans", leftMargin, gap-9, 32, 32, icon), iconPath)
+		ICON_SOUNDS.Has(icon) ? SoundPlay(ICON_SOUNDS[icon], 0) : 0
+	}
+	mbgui.AddText("x" leftMargin + (IsSet(icon) ? 32 + buttonMargin : 0) " y" gap " BackgroundTrans vTextBox", ctrlText)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
-	guiWidth := leftMargin + buttonOffset + Max(TBw, (buttonWidth + rightMargin) * (buttonNames.Length + (addCopyButton ? 1 : 0))) + 1
-	guiWidth := (guiWidth < minGuiWidth ? minGuiWidth : guiWidth)
+	guiWidth := buttonMargin + buttonOffset + Max(TBw, totalButtonWidth) + 1
+	guiWidth := Max(guiWidth, minGuiWidth)
 	whiteBoxHeight := TBy + TBh + gap
 	mbGui["WhiteBoxTop"].Move(0, 0, guiWidth, whiteBoxHeight)
-	buttonX := guiWidth - (rightMargin + buttonWidth) * (buttonNames.Length + (addCopyButton ? 1 : 0))
-	buttonY := whiteBoxHeight + bottomGap
+	buttonX := guiWidth - totalButtonWidth ; the buttons are right-aligned
+	buttonY := whiteBoxHeight + buttonMargin
 	for i, e in buttonNames
-		mbgui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * (buttonWidth + rightMargin), buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(buttonStyle, i))
+		mbgui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * buttonSpace, buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(i))
 	if (addCopyButton)
-		mbgui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * (buttonWidth + rightMargin), buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := text))
+		mbgui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * buttonSpace, buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := text))
 	mbGui["Button" defaultButton].Focus()
-	guiHeight := whiteBoxHeight + BottomHeight
+	guiHeight := whiteBoxHeight + buttonHeight + 2 * buttonMargin
 	if (buttonStyle != 2 && buttonStyle != 4)
-		mbGui.OnEvent("Escape", (*) => finalEvent(buttonStyle, 0, 0, 0))
-	mbGui.OnEvent("Close", (*) => finalEvent(buttonStyle, 0, 0, 0))
+		mbGui.OnEvent("Escape", finalEvent.bind(0))
+	mbGui.OnEvent("Close", finalEvent.bind(0))
 	mbgui.Show("Center w" guiWidth " h" guiHeight)
+	if IsSet(timeout)
+		SetTimer(timeoutFObj := finalEvent.bind(-1), -1000 * timeout)
 	if (wait) {
 		WinWait(hwnd := mbgui.hwnd)
 		WinWaitClose(hwnd)
@@ -647,13 +657,17 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	}
 	return mbgui
 
-	finalEvent(buttonStyle, buttonNumber, buttonCtrl, info) {
+	finalEvent(buttonNumber, *) {
 		mbgui.Destroy()
-		retValue := buttonStyle == 0 ? "OK" : (buttonNumber == 0 ? "Cancel" : buttonNames[buttonNumber])
-		if (funcObj)
+		if (IsSet(timeout))
+			SetTimer(timeoutFObj, 0)
+		retValue := buttonNumber == -1 ? "Timeout" : buttonNumber == 0 ? "Cancel" : buttonNames[buttonNumber]
+		if (IsSet(funcObj))
 			funcObj(retValue)
 	}
 }
+
+
 
 getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
 	; SystemParametersInfo constant for retrieving the metrics associated with the nonclient area of nonminimized windows
@@ -712,7 +726,7 @@ textCtrlAdjustSize(width, textCtrl?, str?, onlyCalculate := false, fontOptions?,
 			fixedWidthLine := SubStr(fixedWidthLine, 1, -1)
 			if (guiGetTextSize(textCtrl, line)[1] <= width) {
 				fixedWidthStr .= (fixedWidthStr ? '`n' : '') fixedWidthLine . substr(str, pos, 1) 
-				fixedWidthLine := ""
+				fixedWidthLine := line
 			}
 			else { ; A_Loopfield is by itself wider than width
 				fixedWidthWord := ""
