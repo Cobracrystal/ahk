@@ -41,7 +41,7 @@ writeLog(folder, fileLog, verifyLog, verbose := false) {
 		return
 	for i, e in fileLog
 		if (verbose || e.result != "Success")
-			str .= e.result ": " e.message ". URL: " e.url " File: " e.fileName "." e.extension (e.origin ? " (Origin: " e.origin ")`n" : "`n")
+			str .= e.result ": " e.message ". URL:`n" e.url "`nFile: " e.fileName "." e.extension (e.origin ? " (Origin: " e.origin ")`n" : "`n")
 	str .= "=============`n"
 	for i, e in verifyLog {
 		if (e.result = "Info")
