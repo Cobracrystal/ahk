@@ -1,18 +1,4 @@
 ﻿; https://github.com/cobracrystal/ahk
-/*
-todo:
-clean links from stuff
-(resolution option?)
-format option (mp3, mp4, wav, etc)
-thumbnail download?
-
-FORMAT -f "bestvideo+bestaudio": twitter, instagram do not have an audio file so bestaudio causes failure.
-^ that is native ytdlp stuff, fix by just using better -f option
-
-only show finished + launch explorer if successful
-add option to clean part files
-add option to abort (modify cmdret potentially?)
-*/
 
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
