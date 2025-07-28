@@ -105,6 +105,133 @@ class Demonstrator {
 		}
 		g.show()
 	}
+
+	static showScrollbarPosition() {
+		static SIF_RANGE := 0x01
+		static SIF_PAGE := 0x02
+		static SIF_POS := 0x04
+		static SIF_TRACKPOS := 0x10
+		static SIF_ALL := (SIF_RANGE | SIF_PAGE | SIF_POS | SIF_TRACKPOS)
+		static SB_HORZ := 0
+		static SB_VERT := 1
+		static SB_CTL := 2
+		static SB_BOTH := 3
+		static SB_BOTTOM := 7
+		static WM_VSCROLL := 0x115
+		g := Gui()
+		g.OnEvent("Close", (*) => ExitApp())
+		g.OnEvent("Escape", (*) => ExitApp())
+		ed := g.addEdit("+ReadOnly R20 w200", "Start")
+		g.show()
+		Loop(51)
+			ed.Value .= Format("`nLine {}", A_Index)
+		Loop {
+			NumPut("UInt", 28, ScrollInfo := Buffer(28, 0))
+			NumPut("UInt", SIF_ALL, ScrollInfo, 4)
+			DllCall("GetScrollInfo", "uint", ed.hwnd, "int", SB_VERT, "Ptr", ScrollInfo)
+			nMin := NumGet(ScrollInfo, 8, "int")
+			nMax := NumGet(ScrollInfo, 12, "int")
+			nPage := NumGet(ScrollInfo, 16, "uint")
+			curPos := NumGet(ScrollInfo, 20, "uint")
+			; curPos := DllCall("user32\GetScrollPos", "Ptr", ed.hwnd, "int", SB_VERT)
+			ToolTip(nMin "-" nMax ": " curPos ". " nPage)
+			trueMax := nMax - nPage + 1
+			position := curPos / (trueMax - nMin)
+			ToolTip(nMin "-" nMax ": " curPos ". " nPage ": " position)
+			; PostMessage(WM_VSCROLL, SB_BOTTOM, 0, ed.hwnd)
+			; postmessage(0xB7,-1,-2, ed.hwnd)
+			Sleep(200)
+		}
+		; EM_SCROLLCARET
+	}
+
+	static coloredGUI() {
+		newGui := Gui("+Border", "a")
+		newGui.SetFont("c0x00FF00")
+		newGui.BackColor := "0x1e1e1e"
+		newGui.LV := newGui.AddListView("R5 w150", ["A", "B", "C"]) ; LVEvent, Altsubmit
+		newGui.AddGroupBox("w500 h50", "TEEEXT")
+		newGui.AddButton("Section r1 w100", "Add Row to List").OnEvent("Click", (*) => 0)
+		showString := "Center Autosize"
+		newGui.AddText("ys", "UHHH HELLO?????")
+		newGui.AddCheckbox("ys", "Hey there")
+		for i, ctrl in newGui {
+			ctrl.SetFont("c0xFF0000")
+			ctrl.Opt("+BackgroundYellow")
+		}
+		newGui.Show(showString)
+	}
+
+	; ORDER OF OPERATIONS
+	; static __Init() (aka static variables at the top) is called for the class Prototype
+	; static __New() then this prototype is created and thus this gets launched
+	; if we are calling the class (ie. instance := ClassName())
+	; static Call is called. This normally would call __Init and __New, but can be override. Then use super()
+	; Call must return the class instance.
+
+	class OperationOrder {
+		; static asd := msgbox(1) ; commented out since this would always pop up at start of script
+		; sdf := msgbox(4) ; since __Init is defined, this is illegal
+
+		__Init() {
+			msgbox(4)
+			this.asd := 5
+		}
+
+		static method1(a) {
+			return 5
+		}
+
+		static Call(asd) {
+			msgbox(3)
+			super("__NewParam") ; -> return class instance
+			return this ; -> return class object
+		}
+		static __New() {
+			; msgbox(2) ; commented out since this would always pop up at start of script
+		}
+
+		__New(*) {
+			msgbox(5)
+		}
+
+		method2(*) {
+			return 5
+		}
+	}
+	
+	/*
+	we have an object.
+	if it is a class instance object, we wish to get the properties that it got from the class
+	ie. msgbox is a func object and thus has the MinParams property, but this property does not appear in ObjOwnProps(Msgbox)
+
+	if it is enumerable, we directly enumerate it.
+
+	we enumerate ObjOwnProps() with one variable. This will get us ALL property names.
+	If a property name has a getter, call it.
+	Otherwise, print information about that property
+
+	if the object has a Base object, enumerate that.
+
+	the base of a class is the class object that it is extended from.
+	the base of class Any is class.Prototype and then we chain
+	The base of a class instance is class.Prototype
+	Now:
+	class Thing {
+		property := 1
+		static staticproperty := 2
+		method() => 1
+		static staticmethod => 2
+	}
+
+	The Instance contains only instance properties. Instance methods are inherited from Prototype. __Class is inherited from Prototype and contains the class name 
+	Method counts as Prop, not an OwnProp
+	The Prototype contains only instance methods and Properties (that exist in the class. Properties assigned via New/Init/Assignments in class Body are not included) 
+	. __Class is defined here and is the class name
+	Method counts as OwnProp
+	The class Object contains only static properties and static methods. __Class is inherited from class class and thus contains "Class"
+	static methods count as OwnProps
+	*/
 }
 
 objIterate(o,f) { ; this could be a oneliner
