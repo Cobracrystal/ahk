@@ -30,7 +30,7 @@ getFilesInFolder(path) {
 	A_Clipboard := objToString(arr,,,1,1)
 }
 
-class DemonstratePrototypes {
+class Demonstrator {
 
 	static demonstratePropertyDistribution() {
 		thing1 := this.Thing()
@@ -74,6 +74,36 @@ class DemonstratePrototypes {
 
 		static staticproperty := 2
 		static staticmethod() => 7
+	}
+
+	static showIcons(dll := 1) {
+		if (IsInteger(dll))
+			dll := dll ? "imageres.dll" : "shell32.dll"
+		g := Gui()
+		Loop(512) {
+			i := A_Index
+			try {
+				r := g.AddPicture((Mod(i, 32) ? "yp" : "x16") " w32 h32 Icon" i, dll)
+				r.iconid := i
+				r.OnEvent("Click", (o, *) => msgbox(o.iconid))
+			}
+		}
+		g.show()
+	}
+
+	static showBigIcons(dll := 1) {
+		if (IsInteger(dll))
+			dll := dll ? "imageres.dll" : "shell32.dll"
+		g := Gui()
+		Loop(512) {
+			i := A_Index
+			try {
+				r := g.addpicture((Mod(i, 32) ? "yp" : "x16") " w32 h32", "HICON:" LoadPicture("imageres.dll", "Icon" i, &it))
+				r.iconid := i
+				r.onevent("Click", (o,*) => msgbox(o.iconid))
+			}
+		}
+		g.show()
 	}
 }
 
@@ -138,4 +168,20 @@ ao3Functions() {
 		}
 		return htmlArr
 	}
+}
+
+sortYoutubePlaylistLinksByIndex() {
+	str := A_Clipboard
+	o := []
+	loop parse str, "`n" {
+		if RegExMatch(A_LoopField, "(.*)&list=WL&index=(\d+)", &m) {
+			o.push({link:m[1], index:m[2]})
+		}
+	}
+	s := ""
+	sorted := objSortByKey(o, "index", "N")
+	for i, e in sorted {
+		s .= e.value.link "`n"
+	}
+	A_Clipboard := s
 }
