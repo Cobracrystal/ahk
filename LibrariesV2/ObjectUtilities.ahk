@@ -464,7 +464,7 @@ objToStringClass(obj, detailedFunctions := false)	=>	objToString(obj, , false, ,
  * @param {Boolean} [withBases] Whether to print the .Base property. If true,any object will have its Base Chain printed up to Any.Prototype. Does NOT print class.Prototype.base, instead only class.base.Prototype (to avoid printing duplicate information), and furthermore does not print Class.Prototype, Object.Prototype, Any.Prototype at all (since they are included in the base chain anyway, since Any.Base == Class.Prototype)
  * @returns {String} The string representing the object
  */
-objToString(obj, compact := false, compress := true, strEscape := false, anyAsObj := false, spacer := "`t", withInheritedProps?, detailedFunctions?, withClassOrPrototype?, withBases?) {
+objToString(obj, compact := false, compress := true, strEscape := false, mapAsObj := true, spacer := "`t", withInheritedProps?, detailedFunctions?, withClassOrPrototype?, withBases?) {
 	if IsObject(obj) {
 		origin := obj
 		flagFirstIsInstance := (Type(obj) != "Prototype" && Type(obj) != "Class" && Type(objgetbase(obj)) == "Prototype") ; equivalent to line below
@@ -474,13 +474,12 @@ objToString(obj, compact := false, compress := true, strEscape := false, anyAsOb
 		flagIncludeClassOrPrototype := 	withClassOrPrototype	?? !flagFirstIsInstance
 		flagWithBases := 				withBases 				?? !flagFirstIsInstance
 		strEscape := 					strEscape				?? (!flagFirstIsInstance || flagIncludeClassOrPrototype || flagWithBases)
-		if (flagIncludeClassOrPrototype || flagIncludeInheritedProps)
-			anyAsObj := true
+		overrideAsObj := (flagIncludeClassOrPrototype || flagIncludeInheritedProps)
 	}
 	return _objToString(obj, 0)
 
 	_objToString(obj, indentLevel, flagOverrideStrEscape := false, flagIsOwnPropDescObject := false) {
-		static escapes := [["\", "\\"], ['"', '\"'], ["`n", "\n"], ["`t", "\t"]]
+		static escapes := [["\", "\\"], ['"', '\"'], ["`n", "\n"], ["`r", "\r"], ["`t", "\t"]]
 		qt := strEscape || flagOverrideStrEscape ? '"' : ''
 		if !(IsObject(obj)) { ; if obj is Primitive, no need for the entire rest.
 			if (obj is Number)
@@ -543,15 +542,16 @@ objToString(obj, compact := false, compress := true, strEscape := false, anyAsOb
 					strFromCurrentEnums("Base", obj.base.__Class ".Prototype")
 			}
 		}
-		return ( (flagIsObj || anyAsObj) ? "{" : (flagIsArr ? "[" : "Map(") ) (str == '' ? '' : separator) RegExReplace(str, "," separator "$") (str == '' ? '' : sep2) ( (flagIsObj || anyAsObj) ? "}" : (flagIsArr ? "]" : ")") )
+		wrapper := overrideAsObj ? ["{", "}"] : ( flagIsArr ? ["[", "]"] : ( mapAsObj ? ["{", "}"] : ["Map(", ")"]))
+		return (wrapper[1] . (str == '' ? '' : separator) . RegExReplace(str, "," separator "$") . (str == '' ? '' : sep2) . wrapper[2])
 
 		strFromCurrentEnums(k, v?, overrStrEscape?, isOwnPropDescObject?) {
 			if (!compact && compress)
 				separator := sep2 := isSimple(v?) ? trspace : '`n'
 			if !(IsSet(v)) ; must be array, obj/map keys cannot be unset
 				str := RTrim(str, separator) "," separator
-			else if (flagIsObj || anyAsObj || flagIsMap)
-				str .= _objToString(k ?? "", indentLevel + 1, true) (flagIsMap && !anyAsObj ? "," : ":") trspace _objToString(v ?? "", indentLevel + 1,, isOwnPropDescObject?) "," separator
+			else if (overrideAsObj || flagIsObj || (mapAsObj && flagIsMap))
+				str .= _objToString(k ?? "", indentLevel + 1, true) (flagIsMap && !mapAsObj ? "," : ":") trspace _objToString(v ?? "", indentLevel + 1,, isOwnPropDescObject?) "," separator
 			else
 				str .= _objToString(v ?? "", indentLevel + 1, flagOverrideStrEscape?) "," separator
 		}

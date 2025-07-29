@@ -596,6 +596,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	static SS_WHITERECT := 0x0006	; Gui option for white rectangle (http://ahkscript.org/boards/viewtopic.php?p=20053#p20053)
 	static NecessaryStyle := 0x94C80000
 
+	buttonStyle := buttonStyle + 1 ; offset since this is not 0-indexed
 	if (buttonNames.Length == 0) {
 		if !(MB_BUTTON_TEXT.Has(buttonStyle))
 			throw Error("Invalid button Style")
@@ -702,8 +703,7 @@ textCtrlAdjustSize(width, textCtrl?, str?, onlyCalculate := false, fontOptions?,
 		textCtrl := temp.AddText()
 		onlyCalculate := true
 	}
-	fixedWidthStr := ""
-	fixedWidthLine := ""
+	fixedWidthStr := fixedWidthLine := ""
 	pos := 0
 	loop parse str, " `t" {
 		line := A_LoopField
@@ -715,14 +715,11 @@ textCtrlAdjustSize(width, textCtrl?, str?, onlyCalculate := false, fontOptions?,
 		if (strWidth[1] <= width)
 			fixedWidthLine .= line . substr(str, pos, 1)
 		else { ; reached max width, begin new line
-			fixedWidthLine := SubStr(fixedWidthLine, 1, -1)
+			fixedWidthStr .= (fixedWidthStr ? '`n' : '') . fixedWidthLine
 			if (guiGetTextSize(textCtrl, line)[1] <= width) {
-				fixedWidthStr .= (fixedWidthStr ? '`n' : '') fixedWidthLine . substr(str, pos, 1) 
-				fixedWidthLine := line
-			}
-			else { ; A_Loopfield is by itself wider than width
-				fixedWidthWord := ""
-				linePart := ""
+				fixedWidthLine := line . substr(str, pos, 1)
+			} else { ; A_Loopfield is by itself wider than width
+				fixedWidthLine := fixedWidthWord := linePart := ""
 				loop parse line { ; thus iterate char by char
 					curWidth := guiGetTextSize(textCtrl, linePart . A_LoopField)
 					if (curWidth[1] <= width) ; reached max width, begin new line
