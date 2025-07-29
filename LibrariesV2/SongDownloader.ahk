@@ -24,6 +24,7 @@ class SongDownloader {
 			keepOpen: 1,
 			openExplorer: 1,
 			trySelectFile: 0,
+			tryCookies: 1,
 			currentTodo: 70,
 			outputBaseFolder: "C:\Users\Simon\Music\Collections",
 			outputSubFolder: "p001",
@@ -52,16 +53,19 @@ class SongDownloader {
 		return str
 	}
 	
-	static getMetadataJson(songLinks) {
-		return objToString(SongDownloader.getMetaData(songLinks, false),false,false,true,true)
+	static getMetadataJson(songLinks, allData := false) {
+		withPlaylist := false
+		if !(songLinks is Array) && InStr(songLinks, "playlist")
+			withPlaylist := true
+		return objToString(SongDownloader.getMetaData(songLinks, allData,,withPlaylist),false,false,true,true)
 	}
 
-	static getMetaData(songLink, keepJsonData := true, printIntermediateSteps := false) {
+	static getMetaData(songLink, keepJsonData := true, printIntermediateSteps := false, withPlaylist := false, withCookies := false) {
 		if !(songLink is Array)
 			songLink := StrSplitUTF8(Trim(songLink, "`n`r"), "`n", "`r")
 		songLink := objDoForEach(songLink, (e => this.constructLink(e)))
 		linkString := objCollect(songLink, (b, i) => (b . '"' i '" '), "")
-		command := this.cmdStringBuilder(this.PROFILE_GETMETADATA[printIntermediateSteps]) . linkString
+		command := this.cmdStringBuilder(this.PROFILE_GETMETADATA[printIntermediateSteps, withPlaylist, withCookies]) . linkString
 		fn := (sOutPut) => (RegExMatch(SubStr(sOutPut, 1, 20), "^\[[[:alnum:]]+\]") ? timedTooltip(SubStr(sOutPut, 1, 40)) : 0)
 		fullOutputStr := Trim(cmdRet(command, printIntermediateSteps ? fn : unset), " `t`r`n")
 		metaData := []
@@ -69,10 +73,23 @@ class SongDownloader {
 			if (printIntermediateSteps && RegExMatch(SubStr(A_LoopField, 1, 20), "^\[[[:alnum:]]+\]"))
 				continue
 			jsonStr := A_LoopField
-			try	
-				videoData := jsongo.parse(jsonStr)
-			catch 
-				return songLink.Length > 1 ? 0 : MsgBoxAsGui("Failed to get Metadata. Aborting. Copy Response?",,0x1,,, (response) => (response == "Copy" ? A_Clipboard := fullOutputStr : 0),A_ScriptHwnd,,["Copy", "Exit"])
+			try	videoData := jsongo.parse(jsonStr)
+			catch {
+				; !withCookies else we enter infinite loop
+				if (InStr(jsonStr, "Use --cookies-from-browser") && this.settings.tryCookies && !withCookies) {
+					RegExMatch(jsonStr, "ERROR:\s+\[youtube\]\s+(.*?):", &o)
+					if (o) {
+						curUrl := "https://youtube.com/watch?v=" o[1]
+						metaData.push(this.getMetaData(curUrl, keepJsonData, printIntermediateSteps, withPlaylist, true))
+						continue
+					}
+				}
+				MsgBoxAsGui("Failed to parse Metadata. Received`n" jsonStr,,,,,, A_ScriptHwnd,1,,,,2000)
+				if (songLink.Length > 1)
+					continue
+				else
+					return []
+			}
 			title := videoData.Has("track") ? videoData["track"] : videoData["title"]
 			artist := videoData.Has("artists") ? objCollect(videoData["artists"], (a,b) => a ", " b) : (videoData.Has("creator") ? videoData["creator"] : videoData["uploader"])
 			album := videoData.Has("album") ? videoData["album"] : ""
@@ -99,7 +116,7 @@ class SongDownloader {
 			}
 			objRemoveValues(videoData, ["automatic_captions", "formats", "heatmap", "requested_formats", "thumbnails", "subtitles"],,(i,e,v) => (i=v),"MANUALLY REMOVED")
 			metaData.push({
-				input: songLink[A_Index],
+				input: withPlaylist ? StrReplace(linkString, '"') : songLink[A_Index],
 				link: this.constructLink(videoData["id"]),
 				title: title,
 				artist: artist,
@@ -194,7 +211,7 @@ class SongDownloader {
 	}
 
 	static launchYTDL(profile, link, runHidden, runAsync := true, logFolder?) {
-		profile := this.toggleProfile(profile, this.PROFILE_SPLIT_CHAPTERS)
+		; profile := this.toggleProfile(profile, this.PROFILE_SPLIT_CHAPTERS)
 		fullCommand := this.cmdStringBuilder(profile) . '"' link '"'
 		if (runHidden) {
 			if (runAsync) {
@@ -232,7 +249,7 @@ class SongDownloader {
 			input := "https://youtube.com/watch?v=" . o[1]
 		if (RegExMatch(input, "^[A-Za-z0-9_-]{11}$"))
 			input := "https://youtube.com/watch?v=" . input
-		return input
+		return Trim(input)
 	}
 
 	static constructOutputPatternString(songData) {
@@ -324,18 +341,21 @@ class SongDownloader {
 		{ option: this.options.force_keyframes_at_cuts }
 	]
 
-	static PROFILE_GETMETADATA[with_intermediate_steps] {
+	static PROFILE_GETMETADATA[withIntermediateSteps, withPlaylist, withCookies] {
 		get {
 			a := [
 				{ option: this.options.ignore_config }, 
 				{ option: this.options.default_search, param: "ytsearch" }, 
-				{ option: this.options.no_playlist }, 
 				{ option: this.options.skip_download }, 
 				{ option: this.options.write_info_json }, 
 				{ option: this.options.dump_json }
 			]
-			if (with_intermediate_steps)
+			if (withIntermediateSteps)
 				a.push({ option: this.options.verbose })
+			if !(withPlaylist)
+				a.push({ option: this.options.no_playlist })
+			if withCookies
+				a.push({ option: this.options.cookies_from_browser, param: "firefox"})
 			return a
 		}
 	}
@@ -376,6 +396,8 @@ class SongDownloader {
 		username: { name: "--username",  alias: "-u", param: true },
 		password: { name: "--password",  alias: "-p", param: true },
 		twofactor: { name: "--twofactor",  alias: "-2", param: true },
+		cookies: { name: "--cookies",  param: true },
+		cookies_from_browser: { name: "--cookies-from-browser",  param: true },
 		; Post-Processing Options
 		ffmpeg_location: { name: "--ffmpeg-location",  param: true },
 		extract_audio: { name: "--extract-audio",  alias: "-x", param: false },
