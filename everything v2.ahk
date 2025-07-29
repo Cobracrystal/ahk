@@ -59,7 +59,7 @@ try reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBAL
 if (StrCompare(A_OSVersion, "10.0.22000") < 0)
 	TransparentTaskbar.TransparentTaskbar(1, 50, 0)
 ; Start keeping track of desktop window changes
-DesktopState.enable(60000)
+WindowManager.DesktopState.enable(60000)
 ; import custom blacklist into AltDrag
 AltDrag.addBlacklist([
 	"Satisfactory ahk_class UnrealWindow",
@@ -241,7 +241,7 @@ if (!GLOBALVAR_WASRELOADED)
 
 Alt & Capslock::{
 	m := Menu()
-	windows := DesktopState.getAllWindowInfo()
+	windows := WinUtilities.getAllWindowInfo()
 	for e in windows
 		m.Add("&" e.title, (i,p,m) => WinActivate(windows[p]))
 	m.show()
@@ -271,11 +271,11 @@ Alt & Capslock::{
 ^!+J:: { ; Tiles Windows Vertically
 	static windowInfo, tileState := false
 	if (tileState := !tileState) {
-		DesktopState.save("TilingState")
+		WindowManager.DesktopState.save("TilingState")
 		shell := ComObject("Shell.Application")
 		switch MsgBoxAsGui("Tile Windows?", "Confirm Dialog", 0x7, 4, true,,,, ["Vertically", "Horizontally", "Cascade", "No"]) {
 			case "Vertically":
-				list := DesktopState.getAllWindowInfo()
+				list := WinUtilities.getAllWindowInfo()
 				objRemoveValue(list,,,(key,a,b) => (WinGetMinMax(a) == -1))
 				; msgbox(objToString(list, false))
 				Loop(list.Length) {
@@ -295,11 +295,11 @@ Alt & Capslock::{
 		}
 	}
 	else
-		DesktopState.restore("TilingState")
+		WindowManager.DesktopState.restore("TilingState")
 }
 
 ^!+L:: { ; save / restore desktop state
-	DesktopState.restore()
+	WindowManager.DesktopState.restore()
 }
 
 

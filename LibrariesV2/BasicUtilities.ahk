@@ -4,6 +4,7 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\TimeUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\unicodeData.ahk"
 
 class TrayMenu {
