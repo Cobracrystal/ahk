@@ -239,6 +239,14 @@ if (!GLOBALVAR_WASRELOADED)
 	}
 }
 
+Alt & Capslock::{
+	m := Menu()
+	windows := DesktopState.getAllWindowInfo()
+	for e in windows
+		m.Add("&" e.title, (i,p,m) => WinActivate(windows[p]))
+	m.show()
+}
+
 ^!H:: {	; Change Window Shape
 	static toggle := false, shapedWindow, depth := 5
 	if (toggle := !toggle) {
