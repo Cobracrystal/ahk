@@ -1,6 +1,7 @@
 ﻿; https://github.com/cobracrystal/ahk
 #Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\unicodeData.ahk"
 
 class TextEditMenu {
 
@@ -63,6 +64,7 @@ class TextEditMenu {
 		textModifyMenu.Add("Flip", (*) => modifySelectedText(this.flip.bind(this)))
 		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(strDoPerChar, " "))
 		textModifyMenu.Add("Add Zalgo", (*) => modifySelectedText(this.zalgo.bind(this), 5))
+		textModifyMenu.Add("Get Char Names", (*) => MsgBoxAsGui(objCollect(objDoForEach(StrSplitUTF8(fastCopy()), e => e " | " unicodeData.charName(e)), (b,e) => (b . "`n" . e)), "Character Names",,,,,,1))
 		;	menu_RemoveSpace(textModifyMenu.Handle) ; this also decreases vertical spacing.
 		this.menu := textModifyMenu
 	}
