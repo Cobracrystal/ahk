@@ -951,7 +951,6 @@ class DesktopState {
 	
 	static getAllWindowInfo(getHidden := false, blacklist := this.defaultBlacklist, getCommandLine := false) {
 		windows := []
-		tMM := A_TitleMatchMode
 		dHW := A_DetectHiddenWindows
 		DetectHiddenWindows(getHidden)
 		wHandles := WinGetList()
@@ -961,13 +960,12 @@ class DesktopState {
 					continue 2
 			windows.push(this.getWindowInfo(wHandle, getCommandLine))
 		}
-		SetTitleMatchMode(tMM)
 		DetectHiddenWindows(dHW)
 		return windows
 	}
 
-	static getWindowInfo(wHandle, getCommandline := false) {
-		x := y := w := h := winTitle := winClass := mmx := processName := processPath := pid := cmdLine := ""
+	static getWindowInfo(wHandle, getCommandline := false, updateCache := true) {
+		x := y := w := h := winTitle := mmx := ""
 		if !WinExist(wHandle) {
 			return {}
 		}
@@ -975,31 +973,60 @@ class DesktopState {
 		try	WinGetPos(&x, &y, &w, &h, wHandle)
 		try WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
 		try	mmx := WinGetMinMax(wHandle)
-		if (this.windowCache.Has(wHandle)) {
-			if !(this.windowCache[wHandle].commandLine) && getCommandLine
-				try this.windowCache[wHandle].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[wHandle].pid)[1]
-		} else {
-			try	winClass := WinGetClass(wHandle)
-			try	processName := WinGetProcessName(wHandle)
-			try	processPath := WinGetProcessPath(wHandle)
-			try	pid := WinGetPID(wHandle)
-			if (getCommandLine)
-				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
-					; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
-			this.windowCache[wHandle] := {
-				hwnd: wHandle, class: winClass, process: processName, processPath: processPath, pid: pid, commandLine: cmdLine 
-			}
-		}
-		cacheObj := this.windowCache[wHandle]
-		objMerge(cacheObj, {
+		info := {
 			title: winTitle,
 			state: mmx,
 			xpos: x, ypos: y,
 			width: w, height: h,
 			clientxpos: cx, clientypos: cy,
 			clientwidth: cw, clientheight: ch
-		},,true)
+		}
+		if !updateCache
+			cacheObj := info
+		else {
+			cacheObj := this.updateSingleCache(wHandle, getCommandline)
+			objMerge(cacheObj, info, false, true)
+		}
 		return cacheObj
+	}
+
+	static updateCache(getHidden := false, blacklist := this.defaultBlacklist, getCommandLine := false) {
+		dHW := A_DetectHiddenWindows
+		DetectHiddenWindows(getHidden)
+		wHandles := WinGetList()
+		for i, wHandle in wHandles {
+			for e in blacklist
+				if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == ""))
+					continue 2
+			this.updateSingleCache(wHandle, getCommandLine)
+		}
+		DetectHiddenWindows(dHW)
+	}
+
+	static updateSingleCache(wHandle, getCommandLine) {
+		winClass := processName := processPath := pid := cmdLine := ""
+		triedCommandline := false
+		if (this.windowCache.Has(wHandle)) {
+			if getCommandLine && !this.windowCache[wHandle].triedCommandline {
+				try this.windowCache[wHandle].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[wHandle].pid)[1]
+				this.windowCache[wHandle].triedCommandline := true
+			}
+		} 
+		else {
+			try	winClass := WinGetClass(wHandle)
+			try	processName := WinGetProcessName(wHandle)
+			try	processPath := WinGetProcessPath(wHandle)
+			try	pid := WinGetPID(wHandle)
+			if (getCommandLine) {
+				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
+				triedCommandline := true
+			}
+					; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
+			this.windowCache[wHandle] := {
+				hwnd: wHandle, class: winClass, process: processName, processPath: processPath, pid: pid, commandLine: cmdLine, triedCommandline: triedCommandline
+			}
+		}
+		return this.windowCache[wHandle]
 	}
 
 	static winmgmt(v, w, d := "Win32_Process", m := "winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2") {
