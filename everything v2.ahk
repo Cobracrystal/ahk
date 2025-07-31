@@ -1026,7 +1026,7 @@ loadTableAsHotstrings(filePath) {
 }
 
 ^+d::{ ; Download currently copied link through yt-dlp as a song
-	SongDownloader.downloadSong(A_Clipboard)
+	SongDownloader.download(A_Clipboard)
 }
 
 ^+!d::{	; Run download script for list of links to image/video sites
@@ -1038,7 +1038,7 @@ loadTableAsHotstrings(filePath) {
 		Hotkey("XButton1", (*) => (SetTimer(turnSelfOff, -300000), Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")))
 		Hotkey("XButton2", (*) => Run('"' A_WorkingDir '\..\Demo_Scripts\download.ahk" --open-folder'))
 	}
-	if (RegExMatch(A_Clipboard, "\.(?:png|jpeg|jpg|webp|mp4|gif)"))
+	if (RegExMatch(A_Clipboard, "\.(?:png|jpeg|jpg|webp|mp4|gif|mov)"))
 		Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")
 
 	toggleDLKeys(mode := -1) {
