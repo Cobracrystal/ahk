@@ -1,11 +1,15 @@
+#Requires AutoHotkey v2
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 
 ; todo: for nightcore, match original song from description (we have title and know its nightcore - title, so search in description for artist etc)
 ; todo: split videos via chapters
-; todo for profile adjusting: function that compares objects deeply, then remove the ones that match
+; todo: in metadata object, have optional thumbnail property that can specify a path to a different thumbnail image
+; todo: log metadata object in corresponding folder too
+; todo: when downloading from metadata string, limit to 10 instances maybe? use finalize to check how many are active and launch with a queue
 ; a much simpler class than youtubeDL to instantly download music
 if (A_LineFile == A_ScriptFullPath) {
-	SongDownloader.downloadSong("https://www.youtube.com/watch?v=KH89fk-0qks")
+	SetWorkingDir(A_ScriptDir "\..\script_files\SongDownloader")
+	SongDownloader.download(A_Clipboard)
 	; SongDownloader.downloadSong("https://www.youtube.com/watch?v=MzsBwcXkghQ")
 	; SongDownloader.downloadSong("Never Gonna Give You Up")
 	; SongDownloader.downloadSong("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=WL&index=3&pp=gAQBiAQB")
@@ -13,115 +17,162 @@ if (A_LineFile == A_ScriptFullPath) {
 class SongDownloader {
 
 	static __New() {
-		this.data := {
-			coords: {x: 750, y: 425},
-			commandLineString: ""
-		}
 		this.settings := {
-			useInlineConsole: 1,
-			useAliases: 1,
-			launchHidden: 1,
-			keepOpen: 1,
-			openExplorer: 1,
-			trySelectFile: 0,
-			tryCookies: 1,
+			debug: true,
+			simulate: false,
+			useAliases: true,
+			useVisibleCMD: false,
+			useCookies: true,
+			browserCookies: "firefox",
 			currentTodo: 70,
 			outputBaseFolder: "C:\Users\Simon\Music\Collections",
-			outputSubFolder: "p001",
+			outputSubFolder: "",
+			logMetadata: true,
+			logFolder: "C:\Users\Simon\Music\ConvertMusic\ytdl\Logs",
 			ffmpegPath: "C:\Users\Simon\Music\ConvertMusic\ytdl\ffmpeg.exe",
+			ffprobePath: "C:\Users\Simon\Music\ConvertMusic\ytdl\ffprobe.exe",
 			ytdlPath: "C:\Users\Simon\Music\ConvertMusic\ytdl\yt-dlp.exe",
+			metadataFields: ["title", "artist", "album", "genre"]
 		}
 		this.settings.outputSubFolder := Format("p{:03}", this.settings.currentTodo)
+		this.data := {
+			coords: {x: 750, y: 425},
+			currentOutputSubFolder: this.settings.outputSubFolder
+		}
+	}
+
+	static download(str) {
+		str := Trim(str, " `t`r`n")
+		if SubStr(str,1,1) == "{" || SubStr(str,1,1) == "[" {
+			try {
+				jsongo.parse(str) ; we assume its metadata, so run that
+				if (A_LineFile == A_ScriptFullPath)
+					this.downloadFromJson(str)
+				else
+					Run(A_LineFile)
+			} catch { ; something wack is happening
+				MsgBoxAsGui("Invalid JSON/Download: " str,,,,,,,,,,,1000)
+			}
+		} else if (strCountStr(str, "https") > 1) { ; assume its multiple songs, so retrive metadata
+			if (A_LineFile == A_ScriptFullPath) {
+				r := this.getMetadataJson(str)
+				MsgBoxAsGui(r, "Metadata",,0,,,,1,,"i",,1000)
+			} else
+				Run(A_LineFile)
+		} else {
+			return this.downloadSong(str)
+		}
 	}
 
 	static downloadSong(songLink) {
-		songLink := this.constructLink(songLink)
 		ToolTip("Loading Metadata...")
-		metaData := this.getMetaData(songLink,, false)
+		rawData := this.getMetaDataStr(songLink, false, false)
+		metaData := this.parseMetadata(rawData, true)
 		ToolTip()
-		if !metaData
+		if !metaData || !objGetValueCount(metadata)
 			return 0
 		this.songDLGui(metaData)
+		return 1
 	}
 
 	static downloadFromJson(jsonAsStr, outputSubFolder := this.settings.outputSubFolder, embedThumbnail := true) {
 		data := MapToObj(jsongo.Parse(jsonAsStr))
+		if !(data is Array)
+			data := [data]
+		finisher := this.onFinish.bind(this, data.length, this.settings.outputSubFolder, 1, 0)
 		for i, dataPoint in data {
-			profile := this.PROFILE_MUSIC[this.constructParseMetadataString(dataPoint), this.constructOutputPatternString(dataPoint), outputSubFolder]
-			str .= this.launchYTDL(profile, dataPoint.link, this.settings.launchHidden, true) "`n==============================`n"
+			profile := this.PROFILE_MUSIC[this.PROFILE_PARSE_METADATA[dataPoint], this.constructOutputPatternString(dataPoint), outputSubFolder, this.settings.useCookies, true]
+			this.launchYTDL(profile, dataPoint.link, this.settings.useVisibleCMD, finisher)
 		}
-		return str
 	}
 	
-	static getMetadataJson(songLinks, allData := false) {
-		withPlaylist := false
-		if !(songLinks is Array) && InStr(songLinks, "playlist")
-			withPlaylist := true
-		return objToString(SongDownloader.getMetaData(songLinks, allData,,withPlaylist),false,false,true,true)
+	static getMetadataJson(songLinks, allData := false, withPlaylist := false, printIntermediateSteps := false) {
+		rawDataString := this.getMetaDataStr(songLinks, printIntermediateSteps, withPlaylist)
+		metadata := this.parseMetadata(rawDataString, allData)
+		return objToString(metadata,false,false,true,true)
 	}
 
-	static getMetaData(songLink, keepJsonData := true, printIntermediateSteps := false, withPlaylist := false, withCookies := false) {
-		if !(songLink is Array)
-			songLink := StrSplitUTF8(Trim(songLink, "`n`r"), "`n", "`r")
-		songLink := objDoForEach(songLink, (e => this.constructLink(e)))
-		linkString := objCollect(songLink, (b, i) => (b . '"' i '" '), "")
-		command := this.cmdStringBuilder(this.PROFILE_GETMETADATA[printIntermediateSteps, withPlaylist, withCookies]) . linkString
+	static getMetaDataStr(songLinks, printIntermediateSteps := false, withPlaylist := false) {
+		if !(songLinks is Array)
+			songLinks := StrSplitUTF8(Trim(songLinks, "`n`r"), "`n", "`r")
+		songLinks := objDoForEach(songLinks, (e => this.constructLink(e)))
+		linkString := objCollect(songLinks, (b, i) => (b . '"' i '" '), "")
+		command := this.cmdStringBuilder(this.PROFILE_GETMETADATA[printIntermediateSteps, withPlaylist, true]) . linkString
 		fn := (sOutPut) => (RegExMatch(SubStr(sOutPut, 1, 20), "^\[[[:alnum:]]+\]") ? timedTooltip(SubStr(sOutPut, 1, 40)) : 0)
 		fullOutputStr := Trim(cmdRet(command, printIntermediateSteps ? fn : unset), " `t`r`n")
+		if (this.settings.debug) {
+			if (!InStr(FileExist(A_WorkingDir "\SongDownloader"), "D"))
+				DirCreate(A_WorkingDir "\SongDownloader")
+			FileAppend(fullOutputStr, A_WorkingDir "\SongDownloader\retLog_" FormatTime(A_Now, "yyyy-MM-dd_HH.mm.ss") ".txt", "UTF-8")
+		}
+		return fullOutputStr
+	}
+
+	static parseMetadata(rawData, keepJsonData := false) {
+		rawData := RTrim(rawData, " `t`n`r")
+		lines := strCountStr(rawData, "`n")
 		metaData := []
-		Loop Parse fullOutputStr, "`n", "`r" {
-			if (printIntermediateSteps && RegExMatch(SubStr(A_LoopField, 1, 20), "^\[[[:alnum:]]+\]"))
-				continue
+		Loop Parse rawData, "`n", "`r" {
 			jsonStr := A_LoopField
 			try	videoData := jsongo.parse(jsonStr)
 			catch {
-				; !withCookies else we enter infinite loop
-				if (InStr(jsonStr, "Use --cookies-from-browser") && this.settings.tryCookies && !withCookies) {
-					RegExMatch(jsonStr, "ERROR:\s+\[youtube\]\s+(.*?):", &o)
-					if (o) {
-						curUrl := "https://youtube.com/watch?v=" o[1]
-						metaData.push(this.getMetaData(curUrl, keepJsonData, printIntermediateSteps, withPlaylist, true))
-						continue
-					}
-				}
-				MsgBoxAsGui("Failed to parse Metadata. Received`n" jsonStr,,,,,, A_ScriptHwnd,1,,,,2000)
-				if (songLink.Length > 1)
-					continue
-				else
-					return []
+				lnk := RegExMatch(jsonStr, "\[youtube\]\s+([A-Za-z0-9_-]{11}):", &o) ? o[1] : ""
+				metaData.push({ link: this.constructLink(lnk), title: "", artist: "", album:"", genre:"",description:"",error:1, shortJson: jsonStr})
+				if lines == 1
+					MsgBoxAsGui("Failed to parse Metadata. Received`n" jsonStr,,,,,, A_ScriptHwnd,1,,,,2000)
+				continue
 			}
 			title := videoData.Has("track") ? videoData["track"] : videoData["title"]
-			artist := videoData.Has("artists") ? objCollect(videoData["artists"], (a,b) => a ", " b) : (videoData.Has("creator") ? videoData["creator"] : videoData["uploader"])
 			album := videoData.Has("album") ? videoData["album"] : ""
 			genre := ""
-			; A_Clipboard := objToString(videoData, 0, 0, 1, 1)
 			if (InStr(title, "Nightcore")) {
-				if RegExMatch(title, "i)Nightcore\s*-\s*")
-					title := RegExReplace(title, "i)\s*Nightcore\s*-\s*")
+				if RegExMatch(title, "i)Nightcore\s*(?:-|–|—)\s*")
+					title := RegExReplace(title, "i)Nightcore\s*(?:-|–|—)")
 				else
 					title := RegExReplace(title, "\(\s*Nightcore\s*\)")
 				genre := "Nightcore"
 				album := "Nightcore"
 			}
-			if (pos := InStr(title, " - ")) {
-				artist := StrLen(artist) > 1 ? artist : Trim(SubStr(title, 1, pos))
-				title := SubStr(title, pos+3)
+			if RegExMatch(title, "i)(.)\s*\b(?:Official|Lyric)\s.*(?:Video|Audio)", &char) { ; clean (Official Lyric Video) and similar from title.
+				open := char[1]
+				closed := unicodeData.Wrapper.getBidiPairedBracket(open)
+				if open != closed
+					title := RegExReplace(title, Format("i){}\s*(?:Official|Lyric)\s+((Music|Lyric|HD)\s+)?(Video|Audio)\s*{}", '\' open, '\' closed))
 			}
-			if (RegExMatch(title, "\s*\(\s*(?:feat|ft)\.?\s*(.*?)\)", &o)) {
-				title := RegExReplace(title, "\s*\(\s*(?:feat|ft)\.?\s*.*?\)")
-				artist .= " ft " o[1]
-			} else if (RegExMatch(title, "(?:feat|ft)\.?\s+(.*)$", &o)) {
-				title := RegExReplace(title, "\s*(?:feat|ft)\.?\s+(.*)$")
-				artist .= " ft " o[1]
+			artist := videoData.Has("artists") ? Trim(objToString(videoData["artists"],1,0), " []") : videoData.Has("creator") ? artist := videoData["creator"] : ""
+			if RegexMatch(title, "^(.*)(?:-|–|—)\s+(.*)$", &m) {
+				if artist == ""
+					artist := m[1]
+				title := m[2]
 			}
-			objRemoveValues(videoData, ["automatic_captions", "formats", "heatmap", "requested_formats", "thumbnails", "subtitles"],,(i,e,v) => (i=v),"MANUALLY REMOVED")
+			if artist == ""
+				artist := videoData["uploader"]
+			if RegExMatch(title, "i)^(.*?)(\S)\s*\b(?:feat|ft)\b\.?(.*)", &match) {
+				open := match[2]
+				closed := unicodeData.Wrapper.getBidiPairedBracket(match[2])
+				if (open != closed && RegExMatch(title, Format("i){}\s*(?:feat|ft)\.?(.*?){}(.*)", '\' open, '\' closed), &match2)) { ; eg Artist - Title (feat. Thing) [some other stuff]
+					artist := Trim(artist) " ft " Trim(match2[1])
+					title := Trim(match[1]) . " " . Trim(match2[2])
+				} else { ; of the form Artist - Title feat. Singer (and thus there isn't a bracket) (or they forgot to close the bracket)
+					artist := Trim(artist) " ft " Trim(match[3])
+					title := match[1] . match[2]
+				} 
+			}
+			if RegExMatch(artist, "(.*)(\S)\s*\b(?:feat|ft)\b\.?(.*)", &match) {
+				open := match[2]
+				closed := unicodeData.Wrapper.getBidiPairedBracket(match[2])
+				if (open != closed && RegExMatch(title, Format("(.*){}\s*(?:feat|ft)\.?(.*?){}(.*)", open, closed), &match2)) ; eg Artist (feat. Thing) [some other stuff]
+					artist := Trim(match2[1]) " ft " Trim(match2[2]) . " " Trim(match2[3])
+				else ; of the form Artist - Title feat. Singer (and thus there isn't a bracket) (or they forgot to close the bracket)
+					artist := Trim(match[1] . match[2]) " ft " Trim(match[3])
+			}
+			objRemoveValues(videoData, ["formats", "requested_formats", "thumbnails", "subtitles"],,(i,e,v) => (i=v), "MANUALLY REMOVED")
 			metaData.push({
-				input: withPlaylist ? StrReplace(linkString, '"') : songLink[A_Index],
 				link: this.constructLink(videoData["id"]),
-				title: title,
-				artist: artist,
-				album: album,
-				genre: genre,
+				title: Trim(title),
+				artist: Trim(artist),
+				album: Trim(album),
+				genre: Trim(genre),
 				description: videoData["description"],
 				shortJson: keepJsonData ? videoData : unset
 			})
@@ -133,46 +184,53 @@ class SongDownloader {
 
 	static songDLGui(data) {
 		g := Gui("+Border +OwnDialogs", "Download Song")
-		g.OnEvent("Escape", this.finishGui.bind(this))
 		g.OnEvent("Close", (*) => g.Destroy())
+		if data.HasOwnProp("error") {
+			errEdit := g.AddEdit("w250 R10 ReadOnly", data.shortJson)
+			errEdit.SetFont("cRed Bold")
+		}
 		g.AddText("Section 0x200 R1.45", "Links | Current Folder: " )
-		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", (subOutputFolder := this.settings.outputSubFolder)).OnEvent("Change", adjustCMDField)
-		if data.description
-			g.AddButton("xs+151 vButtonDescription ys-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
+		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", (subOutputFolder := this.settings.outputSubFolder)).OnEvent("Change", guiHandler)
+		g.AddButton("xs+151 vButtonDescription ys-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
 		g.AddEdit("xs w250 R1 ReadOnly vLink", data.link)
-		g["Link"].Focus()
 		g.AddText("0x200 R1.45", "Title")
-		g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
-		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", adjustCMDField)
+		if data.HasOwnProp("shortJson")
+			g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
+		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", guiHandler)
 		g.AddText("", "Artist")
-		g.AddEdit("w250 vArtist", data.artist).OnEvent("Change", adjustCMDField)
+		g.AddEdit("w250 vArtist", data.artist).OnEvent("Change", guiHandler)
+		g["Artist"].Focus()
 		g.AddText("", "Album")
-		g.AddEdit("w250 vAlbum", data.album).OnEvent("Change", adjustCMDField)
+		g.AddEdit("w250 vAlbum", data.album).OnEvent("Change", guiHandler)
 		g.AddText("", "Genre")
-		g.AddEdit("w250 vGenre", data.genre).OnEvent("Change", adjustCMDField)
-		g.AddCheckbox("vEmbedThumbnail Checked1", "Embed Thumbnail").OnEvent("Click", adjustCMDField)
-		g.AddCheckbox("yp vLaunchHidden Checked" this.settings.launchHidden, "Launch Hidden")
+		g.AddEdit("w250 vGenre", data.genre).OnEvent("Change", guiHandler)
+		g.AddCheckbox("xs vEmbedThumbnail Checked1", "Embed Thumbnail").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs+125 yp vUseVisibleCMD Checked" this.settings.useVisibleCMD, "Visble CMD")
+		g.AddCheckbox("xs vUseCookies Checked" this.settings.useCookies, "Use Cookies (" this.settings.browserCookies ")").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs+125 yp vSkipNonMusic Checked" true, "Skip Non-Music Parts").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs yp vLogMetadata Checked" this.settings.logMetadata, "Log Metadata")
 		g.AddText("xs", "Current Command Line")
 		profile := this.PROFILE_MUSIC[
-			this.constructParseMetadataString(data),
+			this.PROFILE_PARSE_METADATA[data],
 			this.constructOutputPatternString(data),
-			subOutputFolder
+			subOutputFolder,
+			this.settings.useCookies,
+			true
 		]
 		g.AddEdit("vCMD w250 R1 Readonly", this.cmdStringBuilder(profile) '"' data.link '"')
-		g.AddButton("xs-1 h30 w251 Default", "Launch yt-dlp").OnEvent("Click", this.finishGui.bind(this))
+		g.AddButton("xs-1 h30 w251 Default", "Launch yt-dlp").OnEvent("Click", this.finishGui.bind(this, data))
 		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 
-		; this is entirely for copying purposes
-		adjustCMDField(guiCtrlObj, info?) {
+		; USE SETTINGS GUI FOR AFFECTING SETTINGS.
+		; THIS FUNCTION ONLY CREATES THE STRING FOR COPYING AND NOTHING ELSE AT ALL.
+		guiHandler(guiCtrlObj, info?) {
 			name := guiCtrlObj.Name
 			val := guiCtrlObj.Value
 			switch name {
 				case "Title", "Artist", "Album", "Genre":
-					rem := [{ option: this.options.output, param: this.constructOutputPatternString(data)},
-							{ option: this.options.output, param: this.constructOutputPatternString(data)}]
-					data.%name% := val
-					add := [{ option: this.options.output, param: this.constructOutputPatternString(data)},
-							{ option: this.options.output, param: this.constructOutputPatternString(data)}]
+					rem := [{ option: this.options.output, param: this.constructOutputPatternString(data)}]
+					data.%name% := val ; THIS LINE BEING IN THIS ORDER IS RELEVANT
+					add := [{ option: this.options.output, param: this.constructOutputPatternString(data)}]
 					profile := this.addRemoveProfile(profile, rem, add, true, true)
 				case "OutputFolder":
 					rem := [{ option: this.options.paths, param: this.settings.outputBaseFolder "\" subOutputFolder }]
@@ -180,9 +238,13 @@ class SongDownloader {
 					subOutputFolder := val
 					profile := this.addRemoveProfile(profile, rem, add, true, true)
 				case "EmbedThumbnail":
-					toggleProfile := [	{ option: this.options.embed_thumbnail },
-										{ option: this.options.convert_thumbnail, param: "jpg" },
-										{ option: this.options.postprocessor_args, param: 'ThumbnailsConvertor+FFmpeg_o:-c:v mjpeg -qmin 1 -qscale:v 1 -vf crop=\"min(iw\,ih)\":\"min(iw\,ih)\"' }]
+					toggleProfile := this.PROFILE_EMBED_THUMBNAIL
+					profile := this.toggleProfile(profile, toggleProfile)
+				case "UseCookies": ; might cause issues if this setting changes while in GUI but ehhh
+					toggleProfile := [{option: this.options.cookies_from_browser, param: this.settings.browserCookies}]
+					profile := this.toggleProfile(profile, toggleProfile)
+				case "SkipNonMusic":
+					toggleProfile := [{option: this.options.sponsorblock_remove, param: "music_offtopic"}]
 					profile := this.toggleProfile(profile, toggleProfile)
 			}
 			g["CMD"].Value := this.cmdStringBuilder(profile) '"' data.link '"'
@@ -190,55 +252,127 @@ class SongDownloader {
 	}
 
 
-	static finishGui(g, info?) {
+	static finishGui(data, g, info?) {
 		if (g is Gui.Button)
 			g := g.gui
 		songData := {
 			title: g["Title"].Value, artist: g["Artist"].Value,
-			album: g["Album"].Value, genre: g["Genre"].Value
+			album: g["Album"].Value, genre: g["Genre"].Value,
+			link: g["Link"].Value, description: data.description
 		}
 		link := g["Link"].Value
-		launchHidden := g["LaunchHidden"].Value
+		UseVisibleCMD := g["UseVisibleCMD"].Value
 		outputSubFolder := g["OutputFolder"].Value
 		embedThumbnail := g["EmbedThumbnail"].Value
+		withCookies := g["UseCookies"].Value
+		skipNonMusic := g["SkipNonMusic"].Value
+		logMetadata := g["LogMetadata"].Value
 		g.destroy()
 		profile := this.PROFILE_MUSIC[
-			this.constructParseMetadataString(songData),
+			this.PROFILE_PARSE_METADATA[songData],
 			this.constructOutputPatternString(songData),
-			outputSubFolder
+			outputSubFolder,
+			withCookies,
+			skipNonMusic
 		]
-		this.launchYTDL(profile, link, launchHidden, false)
+		if logMetadata {
+			metadatapath := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILEPATH, outputSubFolder)
+			if FileExist(metadatapath) {
+				try {
+					curData := jsongo.parse(FileRead(metadatapath, "UTF-8"))
+					curData.push(songData)
+				}
+			}
+			f := FileOpen(metadatapath, "w", "UTF-8")
+			f.Write(objToString(curData ?? songData,false,false,true))
+			f.Close()
+		}
+		this.launchYTDL(profile, songData.link, UseVisibleCMD, this.onFinish.bind(this, 1, outputSubFolder, 0, 0))
 	}
 
-	static launchYTDL(profile, link, runHidden, runAsync := true, logFolder?) {
+	static launchYTDL(profile, link, useVisibleCMD, finisherFunc?) {
 		; profile := this.toggleProfile(profile, this.PROFILE_SPLIT_CHAPTERS)
 		fullCommand := this.cmdStringBuilder(profile) . '"' link '"'
-		if (runHidden) {
-			if (runAsync) {
-				Run(A_ComSpec " /c title SongDownloader && " fullCommand,,'Hide')
-				return
+		OutputDebug(fullCommand "`n")
+		if (useVisibleCMD) {
+			modifier := this.settings.debug ? "/k" : "/c"
+			Run("wt cmd " modifier " chcp 65001 && title SongDownloader && echo " fullCommand " && " fullCommand)
+		} else {
+			fn := finisherFunc ?? this.onFinish.bind(this, -1, this.settings.outputSubFolder, 0, 0)
+			fn := fn.bind(link)
+			success := cmdRetAsync(fullCommand, unset, "UTF-8", 500, fn)
+		}
+		return success ?? 1
+	}
+
+	static onFinish(amount, logID, withTooltips, finalCallback, link, output) {
+		static count := 0
+		count++
+		logger(output)
+		if (count == amount) {
+			ToolTip()
+			MsgBoxAsGui("Finished All Downloads", "Finished",,,,doneHandler,,,["OK", "Open Folder", "Open Log", "Open Both"])
+			if finalCallback
+				finalCallback(output)
+		} else if withTooltips
+			ToolTip(Format("[~{}/{}] {}", count, amount, Trim(SubStr(output, InStr(output, "|")+1))), -1920, 0)
+		return count == amount
+
+		doneHandler(ret) {
+			flagFolder := (ret == "Open Folder" || ret == "Open Both")
+			flagLog := (ret == "Open Log" || ret == "Open Both")
+			if flagFolder {
+				if (WinExist(logID " ahk_class CabinetWClass"))
+					WinActivate(logID " ahk_class CabinetWClass")
+				else
+					Run('explorer.exe "' this.settings.outputBaseFolder "\" logID '"')
+			}
+			if flagLog
+				tryEditTextFile("notepad", Format(this.settings.logFolder "\" this.TEMPLATES.LOGFILE, logID))
+		}
+
+		logger(output) {
+			path := Format(this.settings.logFolder "\" this.TEMPLATES.LOGFILE, logID)
+			fullStr := Format("[{}] {}`n{}`n", FormatTime(A_Now, "dd.MM.yyyy, ~HH:mm:ss"), Trim(output, " `t`r`n"), strMultiply("=", 22))
+			FileAppend(fullStr, path, "UTF-8")
+		}
+	}
+
+	static verifyDownloads(jsonAsStr, folderToCheck := this.settings.outputSubFolder) {
+		data := MapToObj(jsongo.Parse(jsonAsStr))
+		folder := InStr(folderToCheck, ":") ? folderToCheck : (this.settings.outputBaseFolder . "\" . folderToCheck)
+		ext := "mp3"
+		expectedFiles := Map()
+		local log := ""
+		for i, dataPoint in data {
+			fName := this.constructOutputPatternString(dataPoint)
+			fName := SubStr(fName, 1, -1 * (StrLen(this.TEMPLATES.EXT) + 1))
+			if (FileExist(folder "\" fName "." ext)) {
+				expectedFiles[fName] := 1
+				log .= "✅ File " fName "." ext " found.`n"
 			} else {
-				output := strMultiply("=", 20) . cmdRet(fullCommand) . '`n'
-				FileAppend(output, logFolder ?? this.settings.outputBaseFolder "\log.txt", "UTF-8")
-				return output
+				expectedFiles[fName] := 0
+				log .= "❌ File " fName "." ext " not found.`n"
 			}
 		}
-		conOptions := "title SongDownloader && mode con: cols=100 lines=30"
-		if (this.settings.keepOpen)
-			Run(A_ComSpec " /k " conOptions " && echo " fullCommand " && " fullCommand,,'Hide', &cmdPID)
-		else
-			Run(A_ComSpec " /c " conOptions " && " fullCommand,, 'Hide', &cmdPID)
-		ProcessWait(cmdPID)
-		Sleep(500)
-		WinShow("ahk_pid " cmdPID)
+		loop files folder "\*", '' {
+			SplitPath(A_LoopFileName,,, &ext, &name)
+			if expectedFiles.Has(name) {
+				if expectedFiles[name]
+					continue
+				else
+					log .= "❓ File " . name "." ext " found. (Not mp3?)`n"
+			} else {
+				log .= "❔ File " . name "." ext " found. (Unexpected)`n"
+			}
+		}
+		return log
 	}
 
 	static cmdStringBuilder(profile, useAliases := false) {
-		if !(profile is Array)
-			throw(TypeError("cmdStringBuilder given " Type(profile) " instead of Array.",,objToString(profile)))
 		str := '"' this.settings.ytdlPath '"' A_Space
 		for set in profile {
-			str .= (useAliases && set.option.has("alias") ? set.option.alias : set.option.name) . A_Space . (set.option.param ?  '"' set.param '"' A_Space : '')
+			str .= (useAliases && set.option.has("alias") ? set.option.alias : set.option.name) . A_Space . (set.option.param ?  '"' StrReplace(set.param, '"', '\"') '"' A_Space : '')
 		}
 		return str
 	}
@@ -247,28 +381,24 @@ class SongDownloader {
 		input := RegExReplace(input, "music\.youtube", "youtube")
 		if (RegExMatch(input, "youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})", &o))
 			input := "https://youtube.com/watch?v=" . o[1]
-		if (RegExMatch(input, "^[A-Za-z0-9_-]{11}$"))
+		else if (RegExMatch(input, "^[A-Za-z0-9_-]{11}$"))
 			input := "https://youtube.com/watch?v=" . input
 		return Trim(input)
 	}
 
 	static constructOutputPatternString(songData) {
-		title := songData.title ? songData.title : this.TEMPLATE.TITLE
-		artist := songData.artist ? songData.artist : this.TEMPLATE.ARTIST
-		return artist " - " title "." this.TEMPLATE.EXT
-	}
-
-	static constructParseMetadataString(songData) {
-		arr := []
-		str1 := "##"
-		str2 := "##"
-		for fieldName in ["title", "artist", "album", "genre"] {
-			if (songData.%fieldName%) {
-				str1 .= songData.%fieldName% '##'
-				str2 .= "%(meta_" fieldName ")s##"
-			}
+		static charMap := Map("\", "-", "/", "⧸", ":", "", "*", "＊", "?", ".", '"', "'", "<", "(", ">", ")", "|", "-")
+		if songData.HasOwnProp("filename")
+			filename := songData.filename "." this.TEMPLATES.EXT
+		else {
+			title := songData.title ? songData.title : this.TEMPLATES.TITLE
+			artist := songData.artist ? songData.artist : this.TEMPLATES.ARTIST
+			filename := artist " - " title "." this.TEMPLATES.EXT
 		}
-		return str1 ":" str2
+		for i, e in charMap
+			filename := StrReplace(filename, i, e)
+		filename := RegExReplace(filename, "\s+", " ") ; normalize spaces
+		return filename
 	}
 
 	static toggleProfile(profile, profileToToggle) {
@@ -295,55 +425,25 @@ class SongDownloader {
 
 	static addRemoveProfile(profile, profileToRemove := [], profileToAdd := [], paramCompare := true, inplace := false) {
 		nProfile := profile.clone()
-		lambda := (k, v, v2) => (objCompare(v.option, v2.option))
-		paramLambda := (k, v, v2) => (objCompare(v, v2))
+		optCompare := (k, v, v2) => (objCompare(v.option, v2.option))
+		allCompare := (k, v, v2) => (objCompare(v, v2))
+		lambda := paramCompare ? allCompare : optCompare
 		if (inplace) {
 			if (profileToRemove.Length != profileToAdd.Length)
 				throw(ValueError("Given Arrays have different Lengths"))
 			for e, f in objZip(profileToRemove, profileToAdd)
-				objRemoveValue(nProfile, e,, paramCompare ? paramLambda : lambda, f)
+				objRemoveValue(nProfile, e,, lambda, f)
 		} else {
-			objRemoveValues(nProfile, profileToRemove,, paramCompare ? paramLambda : lambda)
+			objRemoveValues(nProfile, profileToRemove,, lambda)
 			for i, e in (profileToAdd)
 				nProfile.push(e)
 		}
 		return nProfile
 	}
 
-	static PROFILE_MUSIC[metadata_parser, outputTemplate, outputSubFolder] => [
-		{ option: this.options.parse_metadata, param: metadata_parser },
-		{ option: this.options.embed_metadata },
-		{ option: this.options.embed_thumbnail },
-		{ option: this.options.convert_thumbnail, param: "jpg" },
-		{ option: this.options.postprocessor_args, param: 'ThumbnailsConvertor+FFmpeg_o:-c:v mjpeg -qmin 1 -qscale:v 1 -vf crop=\"min(iw\,ih)\":\"min(iw\,ih)\"' },
-		{ option: this.options.ignore_config },
-		{ option: this.options.output, param: outputTemplate},
-		{ option: this.options.paths, param: "temp:C:\Users\Simon\AppData\Roaming\yt-dlp\temp"},
-		{ option: this.options.paths, param: this.settings.outputBaseFolder "\" outputSubFolder},
-		{ option: this.options.no_overwrites },
-		{ option: this.options.no_playlist },
-		{ option: this.options.no_vid },
-		{ option: this.options.retries, param: 1 },
-		{ option: this.options.limit_rate, param: "5M" },
-		{ option: this.options.format, param: "bestaudio/best" },
-		{ option: this.options.ffmpeg_location, param: this.settings.ffmpegPath },
-		{ option: this.options.no_warning },
-		{ option: this.options.print, param: "after_move:filepath" },
-		{ option: this.options.extract_audio },
-		{ option: this.options.audio_quality, param: 0},
-		{ option: this.options.audio_format, param: "mp3"}
-	]
-
-	static PROFILE_SPLIT_CHAPTERS => [
-		{ option: this.options.split_chapters },
-		{ option: this.options.output, param: "chapter:%(meta_artist)s - " this.TEMPLATE.SECTION_TITLE "." this.TEMPLATE.EXT },
-		{ option: this.options.parse_metadata, param: "%(chapter_number)s:%(meta_disc)s" },
-		{ option: this.options.force_keyframes_at_cuts }
-	]
-
-	static PROFILE_GETMETADATA[withIntermediateSteps, withPlaylist, withCookies] {
+	static PROFILE_GETMETADATA[withIntermediateSteps, withPlaylist, skipJunk] {
 		get {
-			a := [
+			profile := [
 				{ option: this.options.ignore_config }, 
 				{ option: this.options.default_search, param: "ytsearch" }, 
 				{ option: this.options.skip_download }, 
@@ -351,12 +451,74 @@ class SongDownloader {
 				{ option: this.options.dump_json }
 			]
 			if (withIntermediateSteps)
-				a.push({ option: this.options.verbose })
+				profile.push({ option: this.options.verbose })
 			if !(withPlaylist)
-				a.push({ option: this.options.no_playlist })
+				profile.push({ option: this.options.no_playlist })
+			if this.settings.useCookies
+				profile.push({ option: this.options.cookies_from_browser, param: this.settings.browserCookies})
+			if skipJunk { ; don't remove "thumbnails", "subtitles", we might need those for parsing
+				for field in ["automatic_captions", "heatmap"]
+					profile.push({option: this.options.parse_metadata, param: Format(":(?P<{}>)", field)})
+			}
+			return profile
+		}
+	}
+
+	static PROFILE_MUSIC[PROFILE_PARSE_METADATA, outputTemplate, outputSubFolder, withCookies, skipNonMusic] {
+		get {
+			PROFILE := [
+				{ option: this.options.ignore_config },
+				{ option: this.options.retries, param: 1 },
+				{ option: this.options.limit_rate, param: "5M" },
+				{ option: this.options.no_overwrites },
+				{ option: this.options.no_playlist },
+				{ option: this.options.no_vid },
+				{ option: this.options.no_warning },
+				{ option: this.options.print, param: "after_move:%(filepath)s | %(original_url)s" },
+				{ option: this.options.output, param: outputTemplate},
+				{ option: this.options.paths, param: "temp:C:\Users\Simon\AppData\Roaming\yt-dlp\temp"},
+				{ option: this.options.paths, param: this.settings.outputBaseFolder "\" outputSubFolder},
+				{ option: this.options.format, param: "bestaudio/best" },
+				{ option: this.options.ffmpeg_location, param: this.settings.ffmpegPath },
+				{ option: this.options.ffmpeg_location, param: this.settings.ffProbePath }, ; technically unnecessary since it searches in the same folder but who cares
+				{ option: this.options.extract_audio },
+				{ option: this.options.audio_quality, param: 0},
+				{ option: this.options.audio_format, param: "mp3"},
+				{ option: this.options.embed_metadata }
+			]
+			PROFILE.Push(this.PROFILE_EMBED_THUMBNAIL*)
+			PROFILE.Push(PROFILE_PARSE_METADATA*)
 			if withCookies
-				a.push({ option: this.options.cookies_from_browser, param: "firefox"})
-			return a
+				PROFILE.push({ option: this.options.cookies_from_browser, param: this.settings.browserCookies})
+			if skipNonMusic
+				PROFILE.push({ option: this.options.sponsorblock_remove, param: "music_offtopic"})
+			return PROFILE
+		}
+	}
+
+	static PROFILE_SPLIT_CHAPTERS => [
+		{ option: this.options.split_chapters },
+		{ option: this.options.output, param: "chapter:%(meta_artist)s - " this.TEMPLATES.SECTION_TITLE "." this.TEMPLATES.EXT },
+		{ option: this.options.parse_metadata, param: "%(chapter_number)s:%(meta_disc)s" },
+		{ option: this.options.force_keyframes_at_cuts }
+	]
+
+	static PROFILE_EMBED_THUMBNAIL => [
+		{ option: this.options.embed_thumbnail },
+		{ option: this.options.convert_thumbnail, param: "jpg" },
+		{ option: this.options.postprocessor_args, param: 'ThumbnailsConvertor+FFmpeg_o:-c:v mjpeg -qmin 1 -qscale:v 1 -vf crop="min(iw\,ih)":"min(iw\,ih)"' }
+	]
+
+	static PROFILE_PARSE_METADATA[songData] {
+		get {
+			profile := []
+			for fieldName in this.settings.metadataFields {
+				if (songData.%fieldName%) {
+					parser_string := Format("#{}#:#%(meta_{})s#", StrReplace(songData.%fieldName%, ":", "\:"), fieldName)
+					profile.push({ option: this.options.parse_metadata, param: parser_string })
+				}
+			}
+			return profile
 		}
 	}
 
@@ -410,14 +572,17 @@ class SongDownloader {
 		parse_metadata: { name: "--parse-metadata",  param: true },
 		convert_thumbnail: { name: "--convert-thumbnail",  param: true },
 		postprocessor_args: { name: "--postprocessor-args",  alias:"--ppa", param: true },
+		sponsorblock_remove: { name: "--sponsorblock-remove",  alias:"--ppa", param: true },
 		no_warning: { name: "--no-warning", param: false },
 		print: { name: "--print",  param: true }
 	}
 
-	static TEMPLATE => {
+	static TEMPLATES => {
 		EXT: "%(ext)s",
 		ARTIST: "%(uploader)s",
 		TITLE: "%(title)s",
-		SECTION_TITLE: "%(section_title)s"
+		SECTION_TITLE: "%(section_title)s",
+		LOGFILE: "{}_log.txt",
+		METADATAFILEPATH: "{}_metadata.json"
 	}
 }
