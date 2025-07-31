@@ -173,7 +173,7 @@ extractLinksFromLandingPages(lnkAr) {
 	for i, e in lnkAr {
 		ext := ""
 		RegExMatch(e.url, "([^\/\?]+)(\?.*)?$", &o)
-		if (o && RegexMatch(o[1], "\.(png|jpg|jpeg|webp|gif|webm|mp4|m4v|mp3|wav|ogg|opus)$", &ext)) {
+		if (o && RegexMatch(o[1], "\.(png|jpg|jpeg|webp|gif|webm|mp4|mov|m4v|mp3|wav|ogg|opus)$", &ext)) {
 			if (!e.fileName || InStr(e.fileName, o[1]))
 				lnkAr[i].fileName := SubStr(o[1], 1, -4)
 			lnkAr[i].extension := ext[1]
@@ -194,7 +194,7 @@ extractLinksFromLandingPages(lnkAr) {
 				lnkAr[i].origin := e.url
 				lnkAr[i].url := link
 				if (RegexMatch(link, "([^\/\?]+)(\?.*)?$", &f))
-					RegexMatch(f[1], "\.(png|jpg|jpeg|webp|gif|webm|mp4|m4v)$", &ext)
+					RegexMatch(f[1], "\.(png|jpg|jpeg|webp|gif|webm|mp4|m4v|mov)$", &ext)
 				finfo := f ? f[1] : "unknown"
 				if (ext) {
 					lnkAr[i].extension := ext[1]
