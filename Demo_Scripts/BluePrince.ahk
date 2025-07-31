@@ -22,7 +22,7 @@ solveCores(str, beStupid := true) {
 		arr.push(objDoForEach(StrSplitUTF8(e), char => (ord(char) - ord("A") + 1)))
 	solutions := []
 	arr2 := objClone(arr)
-	arr2 := objDoForEach(arr2, o => objCollect(o))
+	arr2 := objDoForEach(arr2, o => objCollect(o, (b,e) => b . e))
 	arr2 := objDoForEach(arr2, n => Number(n))
 	for i, e, f in objZip(arr, arr2) {
 		core := numericCore(e*)

@@ -191,17 +191,22 @@ ExecScript(expression, Wait := true, void := false) {
 		input .= 'print(' expression ',,false)'
 	shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
-	exec.StdIn.Write(input)
+	strConvBuf := Buffer(StrPut(input, "UTF-8"))
+	StrPut(input, strConvBuf, "UTF-8")
+	exec.StdIn.Write(StrGet(strConvBuf, "CP0"))
 	exec.StdIn.Close()
-	if Wait
-		return RTrim(exec.StdOut.ReadAll(), " `t`n")
+	if !Wait
+		return
+	output := exec.StdOut.ReadAll()
+	buf := Buffer(StrPut(output, "CP0"))
+	StrPut(output, buf, "CP0")
+	return RTrim(StrGet(buf, "UTF-8"), " `t`n")
 }
 
-cmdRet(sCmd, callBackFuncObj := "", encoding := 'UTF-8') {
+cmdRet(sCmd, callBackFuncObj?, encoding := "CP" . DllCall("GetOEMCP", "UInt")) {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
 	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100, ptrsize := A_PtrSize
-	if (encoding == '')
-		encoding := "CP" . DllCall('GetOEMCP', 'UInt')
+
 	DllCall("CreatePipe", "PtrP", &hPipeRead := 0, "PtrP", &hPipeWrite := 0, "Ptr", 0, "UInt", 0)
 	DllCall("SetHandleInformation", "Ptr", hPipeWrite, "UInt", HANDLE_FLAG_INHERIT, "UInt", HANDLE_FLAG_INHERIT)
 
@@ -219,9 +224,10 @@ cmdRet(sCmd, callBackFuncObj := "", encoding := 'UTF-8') {
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
+	sOutput := ""
 	while DllCall("ReadFile", "Ptr", hPipeRead, "Ptr", sTemp, "UInt", 4096, "UIntP", &nSize := 0, "UInt", 0) {
 		sOutput .= stdOut := StrGet(sTemp, nSize, encoding)
-		if (callBackFuncObj)
+		if (IsSet(callBackFuncObj))
 			callBackFuncObj(stdOut)
 	}
 	DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, "Ptr"))
@@ -230,14 +236,25 @@ cmdRet(sCmd, callBackFuncObj := "", encoding := 'UTF-8') {
 	return sOutput
 }
 
-cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finishCallBackFuncObj := "", encoding := 'UTF-8') {
+
+cmdRetVoid(sCmd, finishCallBack?, encoding := "CP" . DllCall('GetOEMCP', 'UInt'), checkReturnInterval := 100) => cmdRetAsync(sCmd, unset, encoding, checkReturnInterval, finishCallBack?)
+
+/**
+ * Runs specified command in a command line interface without waiting for return value. optionally calls functions with return values
+ * @param sCmd Command to run. If the Run equivalent was Run(A_Comspec " /c ping 8.8.8.8"), use sCmd = "ping 8.8.8.8" here.
+ * @param callBackFuncObj Func Object accepting one parameter that will be called with the next line of console output every interval
+ * @param {String} encoding String encoding. Defaults to your local codepage (eg western CP850). Else specify UTF-8 etc
+ * @param {Integer} timePerCheck Time between each read of the console output
+ * @param finishCallBack Func object to be called with the full output when the console is done
+ * @returns {Integer} returns true if everything worked.
+ */
+cmdRetAsync(sCmd, callBackFuncObj?, encoding := "CP" . DllCall('GetOEMCP', 'UInt'), timePerCheck := 50, finishCallBack?) {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
 	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100, ptrsize := A_PtrSize
-	if (encoding == '')
-		encoding := "CP" . DllCall('GetOEMCP', 'UInt')
 	DllCall("CreatePipe", "PtrP", &hPipeRead := 0, "PtrP", &hPipeWrite := 0, "Ptr", 0, "UInt", 0)
 	DllCall("SetHandleInformation", "Ptr", hPipeWrite, "UInt", HANDLE_FLAG_INHERIT, "UInt", HANDLE_FLAG_INHERIT)
 
+	fullOutput := ""
 	STARTUPINFO := Buffer(size := ptrsize * 4 + 4 * 8 + ptrsize * 5, 0)
 	NumPut("UInt", size, STARTUPINFO)
 	NumPut("UInt", STARTF_USESTDHANDLES, STARTUPINFO, ptrsize * 4 + 4 * 7)
@@ -257,8 +274,8 @@ cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finis
 
 	readFileCheck() {
 		if (DllCall("ReadFile", "Ptr", hPipeRead, "Ptr", sTemp, "UInt", 4096, "UIntP", &nSize := 0, "UInt", 0)) {
-			returnValue .= stdOut := StrGet(sTemp, nSize, encoding)
-			if (callBackFuncObj)
+			fullOutput .= stdOut := StrGet(sTemp, nSize, encoding)
+			if (IsSet(callBackFuncObj))
 				callBackFuncObj(stdOut)
 		}
 		else {
@@ -271,8 +288,8 @@ cmdRetAsync(sCmd, &returnValue, callBackFuncObj := "", timePerCheck := 50, finis
 		DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, "Ptr"))
 		DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, ptrsize, "Ptr"))
 		DllCall("CloseHandle", "Ptr", hPipeRead)
-		if (finishCallBackFuncObj)
-			finishCallBackFuncObj()
+		if (IsSet(finishCallBack))
+			finishCallBack(fullOutput)
 	}
 }
 
@@ -596,6 +613,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	static minTextWidth := 400
 	static SS_WHITERECT := 0x0006	; Gui option for white rectangle (http://ahkscript.org/boards/viewtopic.php?p=20053#p20053)
 	static NecessaryStyle := 0x94C80000
+	static SS_NOPREFIX := 0x80 ; no ampersand nonsense
 
 	buttonStyle := buttonStyle + 1 ; offset since this is not 0-indexed
 	if (buttonNames.Length == 0) {
@@ -613,8 +631,15 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	if (buttonStyle == 2 || buttonStyle == 4) ; if cancel is not present in option, close and escape have no effect. user must select an option.
 		mbgui.Opt("-SysMenu")
 	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
-	if !IsSet(maxTextWidth)
-		maxTextWidth := (StrLen(text) > 10000 && !IsSet(maxCharsVisible)) ? 1500 : Max(minTextWidth, totalButtonWidth)
+	if !IsSet(maxTextWidth) {
+		maxTextWidth := Max(minTextWidth, totalButtonWidth)
+		lens := strGetSplitLen(IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text, "`n")
+		minim := min(lens*), maxim := max(lens*), avg := objGetSum(lens) / lens.Length
+		if (2 * avg > maxim && maxim < 1500)
+			maxTextWidth := Max(minTextWidth, maxim)
+		if StrLen(text) > 10000 && !IsSet(maxCharsVisible)
+			maxTextWidth := 1500
+	}
 	ctrlText := textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text,, guiFontOptions, MB_FONTNAME)
 	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, ctrlText)
 	if (IsSet(icon)) {
@@ -624,7 +649,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 		mbgui.AddPicture(Format("x{} y{} w{} h{} Icon{} BackgroundTrans", leftMargin, gap-9, 32, 32, icon), iconPath)
 		ICON_SOUNDS.Has(icon) ? SoundPlay(ICON_SOUNDS[icon], 0) : 0
 	}
-	mbgui.AddText("x" leftMargin + (IsSet(icon) ? 32 + buttonMargin : 0) " y" gap " BackgroundTrans vTextBox", ctrlText)
+	mbgui.AddText("x" leftMargin + (IsSet(icon) ? 32 + buttonMargin : 0) " y" gap " BackgroundTrans " SS_NOPREFIX " vTextBox", ctrlText)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
 	guiWidth := buttonMargin + buttonOffset + Max(TBw, totalButtonWidth) + 1
 	guiWidth := Max(guiWidth, minGuiWidth)
@@ -636,6 +661,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 		mbgui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * buttonSpace, buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(i))
 	if (addCopyButton)
 		mbgui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * buttonSpace, buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := text))
+	defaultButton := defaultButton == "Copy" ? 0 : defaultButton
 	mbGui["Button" defaultButton].Focus()
 	guiHeight := whiteBoxHeight + buttonHeight + 2 * buttonMargin
 	if (buttonStyle != 2 && buttonStyle != 4)

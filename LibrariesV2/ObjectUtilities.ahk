@@ -194,7 +194,7 @@ objGetProd(obj) => objCollect(obj, (b,i) => b*i)
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
  * @returns {Any} Collected Value
  */
-objCollect(obj, fn := ((base, e) => (base . objToString(e))), initialBase?, value := 0, conditional := ((itKey?, itVal?, setVal?) => (true))) {
+objCollect(obj, fn := ((base, e) => (base . ", " . objToString(e))), initialBase?, value := 0, conditional := ((itKey?, itVal?, setVal?) => (true))) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
@@ -516,8 +516,7 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 			; now, add .__Class for the current object
 			if (flagIncludeClassOrPrototype && !flagIsOwnPropDescObject)
 				strFromCurrentEnums("__Class", className)
-			flagIsBadFunction := (objType == "Func" && obj != origin) ; only do this if the original object was a function. otherwise we loop infinitely
-			if (flagWithBases && !flagIsOwnPropDescObject && !flagIsBadFunction)
+			if (flagWithBases && obj == origin)
 				strFromCurrentEnums("Base", obj.base)
 			; this would get the class object from an instance. why would we need this?
 			; if !(flagIsOwnPropDescObject || flagIsBadFunction || !flagIncludeClassOrPrototype)

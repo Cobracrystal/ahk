@@ -190,15 +190,14 @@ class YoutubeDLGui {
 		this.ytdlOptionHandler()
 		fullRuncmd := this.controls.editCmdConfig.value . "`"" StrReplace(Trim(links, " `t`n`r"), "`n", "`" `"") "`""
 		if (this.settings.useInlineConsole) {
-			cmdRetAsync(fullRuncmd, &output, this.updateGuiOutput.bind(this), 200, this.__done.bind(this, links), "UTF-8")
+			cmdRetAsync(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8", 200, this.__done.bind(this, links))
 		} else {
 			A_Clipboard := fullRuncmd
 ;			Run("cmd /k `"mode con: cols=100 lines=30 && " fullRuncmd "`"")
 		}
 	}
 
-	__done(links) {
-		fullOutput := this.controls.editOutput.value
+	__done(links, fullOutput) {
 		this.updateGuiOutput(YoutubeDLGui.UIComponents.separator)
 		if (!WinActive(this.gui))
 			this.YoutubeDLGui("Hide")

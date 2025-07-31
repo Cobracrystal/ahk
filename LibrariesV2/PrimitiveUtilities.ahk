@@ -76,6 +76,12 @@ replaceCharacters(text, replacer) {
 	return result
 }
 
+strChangeEncoding(str, encoding) {
+	buf := Buffer(StrPut(str, encoding))
+	StrPut(str, buf, encoding)
+	return StrGet(buf, "UTF-16")
+}
+
 /**
  * Makes a string literal for regex usage
  * @param str 
@@ -181,7 +187,7 @@ strDistanceWeightedLevenshtein(s1, s2, limit := 1e+307, insertionCost := (char) 
  * Behaves exactly as strsplit except that if it is called without a delim and thus parses char by char, doesn't split unicode characters in two.
  * @param str 
  * @param {String} delim 
- * @param {String} omit 
+ * @param {String} omit If omit and withDelim are both nonzero values, it will lead to unexpected behaviour.
  * @param {Integer} withDelim 
  * @returns {Array} 
  */
@@ -240,11 +246,19 @@ strMaxCharsPerLine(str, maxCharsPerLine) {
 	return nStr
 }
 
+strGetSplitLen(str, delim, omit := '') {
+	lens := []
+	Loop Parse, str, delim, omit
+		lens.push(StrLen(A_LoopField))
+	return lens
+}
+
 /**
  * Given a string str and a number of splits, returns an array containing all possible splits of str with [splits] partitions  
  * @param str the string to split
  * @param {Integer} splits amount of parts to split the string into
  * @returns {Array} 
+ * @example ?????
  */
 strSplitRecursive(str, splits := StrLen(str)) {
 	if (splits == 1)
