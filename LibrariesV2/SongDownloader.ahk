@@ -24,7 +24,7 @@ class SongDownloader {
 			useVisibleCMD: false,
 			useCookies: true,
 			browserCookies: "firefox",
-			currentTodo: 70,
+			currentTodo: 71,
 			outputBaseFolder: "C:\Users\Simon\Music\Collections",
 			outputSubFolder: "",
 			logMetadata: true,
@@ -98,7 +98,7 @@ class SongDownloader {
 		songLinks := objDoForEach(songLinks, (e => this.constructLink(e)))
 		linkString := objCollect(songLinks, (b, i) => (b . '"' i '" '), "")
 		command := this.cmdStringBuilder(this.PROFILE_GETMETADATA[printIntermediateSteps, withPlaylist, true]) . linkString
-		fn := (sOutPut) => (RegExMatch(SubStr(sOutPut, 1, 20), "^\[[[:alnum:]]+\]") ? timedTooltip(SubStr(sOutPut, 1, 40)) : 0)
+		fn := (sOutPut) => (RegExMatch(SubStr(sOutPut, 1, 20), "^\[[[:alnum:]]+\]") ? Tooltip(SubStr(sOutPut, 1, 40)) : 0)
 		fullOutputStr := Trim(cmdRet(command, printIntermediateSteps ? fn : unset), " `t`r`n")
 		if (this.settings.debug) {
 			if (!InStr(FileExist(A_WorkingDir "\SongDownloader"), "D"))
@@ -208,7 +208,7 @@ class SongDownloader {
 		g.AddCheckbox("xs+125 yp vUseVisibleCMD Checked" this.settings.useVisibleCMD, "Visble CMD")
 		g.AddCheckbox("xs vUseCookies Checked" this.settings.useCookies, "Use Cookies (" this.settings.browserCookies ")").OnEvent("Click", guiHandler)
 		g.AddCheckbox("xs+125 yp vSkipNonMusic Checked" true, "Skip Non-Music Parts").OnEvent("Click", guiHandler)
-		g.AddCheckbox("xs yp vLogMetadata Checked" this.settings.logMetadata, "Log Metadata")
+		g.AddCheckbox("xs vLogMetadata Checked" this.settings.logMetadata, "Log Metadata")
 		g.AddText("xs", "Current Command Line")
 		profile := this.PROFILE_MUSIC[
 			this.PROFILE_PARSE_METADATA[data],
@@ -314,9 +314,11 @@ class SongDownloader {
 			MsgBoxAsGui("Finished All Downloads", "Finished",,,,doneHandler,,,["OK", "Open Folder", "Open Log", "Open Both"])
 			if finalCallback
 				finalCallback(output)
+			count := 0
+			return amount
 		} else if withTooltips
 			ToolTip(Format("[~{}/{}] {}", count, amount, Trim(SubStr(output, InStr(output, "|")+1))), -1920, 0)
-		return count == amount
+		return count
 
 		doneHandler(ret) {
 			flagFolder := (ret == "Open Folder" || ret == "Open Both")
