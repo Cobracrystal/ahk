@@ -14,6 +14,7 @@ if (A_LineFile == A_ScriptFullPath) {
 	; SongDownloader.downloadSong("Never Gonna Give You Up")
 	; SongDownloader.downloadSong("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=WL&index=3&pp=gAQBiAQB")
 }
+
 class SongDownloader {
 
 	static __New() {
@@ -369,6 +370,25 @@ class SongDownloader {
 			}
 		}
 		return log
+	}
+
+	static findMetadataDupes() {
+		data := []
+		loop files this.settings.logFolder "\*", '' {
+			if (A_LoopFileExt == "json") && InStr(A_LoopFileName, "_metadata") {
+				try mdata := jsongo.Parse(FileRead(A_LoopFileFullPath, "UTF-8"))
+				mdata := mdata ?? []
+				mdata := objDoForEach(mdata, (val => (val.folder := A_LoopFileName, val)))
+				data.push((mdata ?? [])*)
+			}
+		}
+		indices := objGetDuplicates(data, (a => ((a.has("title") ? a["title"] : "") A_Space (a.has("artist") ? a["artist"] : ""))), false, true)
+		dupls := []
+		for e in indices {
+			for i in e
+				dupls.push(data[i])
+		}
+		return dupls
 	}
 
 	static cmdStringBuilder(profile, useAliases := false) {
