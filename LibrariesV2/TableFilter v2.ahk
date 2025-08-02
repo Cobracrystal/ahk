@@ -332,7 +332,7 @@ class TableFilter {
 		if (!rows.Length)
 			return
 		; reverse numerical sorting
-		sortedRows := arraySort(rows, "R N")
+		sortedRows := arrayBasicSort(rows, "R N")
 		for _, g in this.guis {
 			g.Opt("+Disabled")
 			rowsInLV := [], indexToRemove := []

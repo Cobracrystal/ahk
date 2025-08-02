@@ -152,11 +152,11 @@ primefactor(n) {
  * @returns {Array} Array of factors. 
  */
 factors(n) {
-	local pfactors := primefactor(n)
-	local factors := []
+	_pfactors := primefactor(n)
+	_factors := []
 	pfactorExpos := []
 	prev := 0
-	for i, e in pfactors {
+	for i, e in _pfactors {
 		if (prev == e) {
 			factExpos.push(e**factExpos.Length)
 		} else {
@@ -168,8 +168,8 @@ factors(n) {
 	}
 	pfactorExpos.push(factExpos)
 	for factArr in combinations(pfactorExpos)
-		factors.push(prod(factArr*))
-	return objSortNumerically(factors)
+		_factors.push(prod(factArr*))
+	return objSortNumerically(_factors)
 }
 
 /**
@@ -420,7 +420,7 @@ streetInDice(streetLen, diceAmount, filePath) {
 		strDice := "["
 		Loop(sequence.Length)
 			strDice .= sequence[A_Index] . ","
-		seq := arraySort(objGetUniques(sequence), "N")
+		seq := arrayBasicSort(objGetUniques(sequence), "N")
 		strDice .= "] sorted ["
 		Loop(seq.Length)
 			strDice .= seq[A_Index] . ","

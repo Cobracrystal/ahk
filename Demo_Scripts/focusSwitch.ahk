@@ -43,8 +43,8 @@ class focusSwitch {
 					monitor := mon.MonitorNumber
 		}
 		coordinates := this.getDesktopWindows(monitor) ; get all coordinates of visible windows on screen.
-		sortedByX := this.objSortByKey(coordinates, "x", "N")
-		sortedByY := this.objSortByKey(coordinates, "y", "N")
+		sortedByX := this.objSort(coordinates, a => a.x, "N")
+		sortedByY := this.objSort(coordinates, a => a.y, "N")
 		switch direction, 0 {
 			case "L", "R":
 				arr := sortedByX
@@ -112,50 +112,43 @@ class focusSwitch {
 
 	static objContainsValue(obj, value, comparator := ((iterator,value) => (iterator = value))) {
 		isArrLike := (obj is Array || obj is Map)
-		if !(isArrLike || obj is Object)
-			throw(TypeError("objContainsValue does not handle type " . Type(obj)))
 		for i, e in (isArrLike ? obj : obj.OwnProps())
 			if (comparator(e, value))
 				return i
 		return 0
 	}
 
-	static objSortByKey(tmap, key, mode := "") {
-		isArr := tMap is Array
-		isMap := tMap is Map
-		if !(tmap is Object)
-			throw(TypeError("Expected Object, but got " tmap.Prototype.Name))
-		isObj := !(isArr || isMap)
-		arr2 := Map()
-		arr3 := []
-		l := isArr ? tmap.Length : isMap ? tmap.Count : ObjOwnPropCount(tmap)
-		if !l
-			return []
-		for i, e in (isObj ? tmap.OwnProps() : tmap) {
-			if (!IsSet(innerIsObj))
-				innerIsObj := !(e is Map || e is Array)
-			tv := innerIsObj ? e.%key% : e[key]
-			if (!IsSet(isString))
-				isString := (tv is String)
-			if (arr2.Has(tv))
-				arr2[tv].push(i)
-			else
-				arr2[tv] := [i]
-			str .= tv . "`n"
-		}
-		newStr := Sort(IsSet(str) ? SubStr(str, 1, -1) : "", mode)
-		strArr := StrSplit(newStr, "`n")
-		counter := 1
-		Loop (strArr.Length) {
-			if (counter > strArr.Length)
-				break
-			el := isString ? String(strArr[counter]) : Number(strArr[counter])
-			for j, f in arr2[el] {
-				arr3.push({ index: f, value: isObj ? tmap.%f% : tmap[f] })
+	static objSort(obj, fn := (a => a), mode := "") {
+		isArrLike := obj is Array || obj is Map
+		sortedArr := []
+		indexMap := Map()
+		counterMap := Map()
+		if objGetValueCount(obj) == 0
+			return sortedArr
+		for i, e in objGetEnumerator(obj) {
+			v := String(fn(e))
+			if (indexMap.Has(v))
+				indexMap[v].push(i)
+			else {
+				indexMap[v] := [i]
+				counterMap[v] := 1
 			}
-			counter += arr2[el].Length
+			str .= v . "©"
 		}
-		return arr3
+		sortMode := RegExReplace(sortMode, "D.")
+		valArr := StrSplit(Sort(SubStr(str, 1, -1), sortMode . " D©"), "©")
+		if isArrLike {
+			for v in valArr {
+				key := indexMap[v][counterMap[v]++]
+				sortedArr.push({ key: key, value: obj[key]})
+			}
+		} else {
+			for v in valArr {
+				key := indexMap[v][counterMap[v]++]
+				sortedArr.push({ key: key, value: obj.%key% })
+			}
+		}
+		return sortedArr
 	}
 
 	static getMonitors() {

@@ -45,7 +45,7 @@ bestNumericCorePermutative(n,m,o,p) {
 	}
 	if solutions.Length == 0
 		return 0
-	sortedSolutions := objSortByKey(solutions, 1, "N")
+	sortedSolutions := objSort(solutions, a => a[1], "N")
 	s := sortedSolutions[1].value
 	if (s[1] >= 1000) {
 		ncr := bestNumericCorePermutative(s[1]*)
@@ -68,7 +68,7 @@ bestNumericCore(n) {
 	}
 	if solutions.Length == 0
 		return 0
-	sortedSolutions := objSortByKey(solutions, 1, "N")
+	sortedSolutions := objSort(solutions, a => a[1], "N")
 	s := sortedSolutions[1].value
 	if (s[1] >= 1000) {
 		ncr := bestNumericCore(s[1])

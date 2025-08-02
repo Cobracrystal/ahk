@@ -206,6 +206,13 @@ objCollect(obj, fn := ((base, e) => (base . ", " . objToString(e))), initialBase
 	return base ?? ""
 }
 
+objFlatten(obj, fn := (e => e), keys := false) {
+	arr := []
+	for key, e in objGetEnumerator(obj)
+		arr.push(keys ? key : fn(e))
+	return arr
+}
+
 /**
  * 
  * @param obj 
@@ -751,25 +758,39 @@ arrayInReverse(arr) {
 	)
 }
 
-arraySort(arr, sortMode := "") {
-	arr2 := []
-	for i, e in arr
-		str .= e .  "©"
+arraySort(arr, fn := (a => a), sortMode := "") {
+	sortedArr := []
+	indexMap := Map()
+	counterMap := Map()
+	if arr.Length == 0
+		return sortedArr
+	for i, e in arr {
+		v := String(fn(e))
+		if (indexMap.Has(v))
+			indexMap[v].push(i)
+		else {
+			indexMap[v] := [i]
+			counterMap[v] := 1
+		}
+		str .= v . "©"
+	}
 	sortMode := RegExReplace(sortMode, "D.")
-	newStr := Sort(SubStr(str, 1, -1), sortMode . " D©")
-	sortedStr := Sort(str, sortMode)
-	return StrSplit(sortedStr, "©")
+	valArr := StrSplit(Sort(SubStr(str, 1, -1), sortMode . " D©"), "©")
+	for v in valArr
+		sortedArr.push(arr[indexMap[v][counterMap[v]++]])
+	return sortedArr
 }
+
+arrayBasicSort(arr, sortMode := "") => objBasicSort(arr, sortMode)
 
 
 /**
- * Sorts an object directly. Note that this converts everything to strings.
+ * Sorts an object directly, returning the sorted Values Note that this converts everything to strings.
  * @param obj Given object
  * @param {String} sortMode
  * @returns {Array} 
  */
-objSort(obj, sortMode := "") {
-	isArrLike := (obj is Map || obj is Array)
+objBasicSort(obj, sortMode := "") {
 	if !objGetValueCount(obj)
 		return []
 	for e in objGetEnumerator(obj)
@@ -778,7 +799,7 @@ objSort(obj, sortMode := "") {
 	newStr := Sort(SubStr(str, 1, -1), sortMode . " D©")
 	return StrSplit(newStr, "©")
 }
-objSortNumerically(obj, sortMode := "N") => objDoForEach(objSort(obj, sortMode), (e => Number(e)))
+objSortNumerically(obj, sortMode := "N") => objDoForEach(objBasicSort(obj, sortMode), (e => Number(e)))
 
 /**
  * Given an enumerable object whos values itself are objects, sorts it by value of the inner objects key.
@@ -787,36 +808,37 @@ objSortNumerically(obj, sortMode := "N") => objDoForEach(objSort(obj, sortMode),
  * @param {String} mode Sorting mode. equivalent to sorting options in Sort [String]
  * @returns {Array} The sorted array, where each entry in the array is an object with the original index as property .index and value as .value
  */
-objSortByKey(obj, key, mode := "") {
-	isArr := obj is Array
-	isMap := obj is Map
-	if !(IsObject(obj))
-		throw(TypeError("Expected Object, but got " obj.Prototype.Name))
-	isObj := !(isArr || isMap)
+objSort(obj, fn := (a => a), mode := "") {
+	isArrLike := obj is Array || obj is Map
+	sortedArr := []
 	indexMap := Map()
-	retArr := []
-	l := objGetValueCount(obj)
-	removeDuplicates := InStr(mode, "U")
-	if !l
-		return []
-	for i, sortKey in (isObj ? obj.OwnProps() : obj) {
-		if (!IsSet(innerIsObj))
-			innerIsObj := !(sortKey is Map || sortKey is Array)
-		v := innerIsObj ? sortKey.%key% : sortKey[key]
-		if (!IsSet(isString))
-			isString := (v is String)
-		if (indexMap.Has(v) && !removeDuplicates)
+	counterMap := Map()
+	if objGetValueCount(obj) == 0
+		return sortedArr
+	for i, e in objGetEnumerator(obj) {
+		v := String(fn(e))
+		if (indexMap.Has(v))
 			indexMap[v].push(i)
-		else
+		else {
 			indexMap[v] := [i]
+			counterMap[v] := 1
+		}
 		str .= v . "©"
 	}
-	newStr := Sort(SubStr(str, 1, -1), removeDuplicates ? mode : mode . ' U')
-	strArr := StrSplit(newStr, "©")
-	for sortKey in strArr
-		for index in indexMap[isString ? String(sortKey) : Number(sortKey)]
-			retArr.push({ index: index, value: isObj ? obj.%index% : obj[index] })
-	return retArr
+	sortMode := RegExReplace(sortMode, "D.")
+	valArr := StrSplit(Sort(SubStr(str, 1, -1), sortMode . " D©"), "©")
+	if isArrLike {
+		for v in valArr {
+			key := indexMap[v][counterMap[v]++]
+			sortedArr.push({ key: key, value: obj[key]})
+		}
+	} else {
+		for v in valArr {
+			key := indexMap[v][counterMap[v]++]
+			sortedArr.push({ key: key, value: obj.%key% })
+		}
+	}
+	return sortedArr
 }
 
 

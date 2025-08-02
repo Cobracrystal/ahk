@@ -22,14 +22,6 @@ updateScript() {
 		Download(url, A_LineFile)
 }
 
-getFilesInFolder(path) {
-	arr := []
-	loop files path "\*", 'FDR'{
-		arr.push(A_LoopFileFullPath)
-	}
-	A_Clipboard := objToString(arr,,,1,1)
-}
-
 class Demonstrator {
 
 	static demonstratePropertyDistribution() {
@@ -261,7 +253,7 @@ ao3Functions() {
 	for i, e in arr
 		bigArr.push(ao3GetStories(e)*)
 	print("")
-	sArr := objSortByKey(bigArr, "wordcount", "N")
+	sArr := objSort(bigArr, a => a.wordcount, "N")
 	print(sArr)
 	print(bigArr.Length)
 	print(objCollect(bigArr, (a, b) => a + b.wordcount, 0))
@@ -306,7 +298,7 @@ sortYoutubePlaylistLinksByIndex() {
 		}
 	}
 	s := ""
-	sorted := objSortByKey(o, "index", "N")
+	sorted := objSort(o, r => r.index, "N")
 	for i, e in sorted {
 		s .= e.value.link "`n"
 	}
