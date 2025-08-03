@@ -13,7 +13,7 @@ class HotkeyManager {
 			if (mode == "O")
 				WinActivate(this.gui.hwnd)
 			else {
-				this.data.coords := windowGetCoordinates(this.gui.hwnd)
+				this.data.coords := WinUtilities.windowGetCoordinates(this.gui.hwnd)
 				this.gui.destroy()
 				this.gui := -1
 				this.LV := [-1,-1,-1]

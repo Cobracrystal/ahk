@@ -29,7 +29,7 @@ class WindowManager {
 			if (mode == "O")
 				WinActivate(this.gui.hwnd)
 			else {
-				this.data.coords := windowGetCoordinates(this.gui.hwnd)
+				this.data.coords := WinUtilities.windowGetCoordinates(this.gui.hwnd)
 				this.gui.destroy()
 				this.gui := 0
 			}
@@ -66,6 +66,9 @@ class WindowManager {
 			subMenu.Add(menuText, this.windowManager.Bind(this))
 			A_TrayMenu.Insert("1&", "GUIs", subMenu)
 		}
+		this.columnsHeaderMap := Map()
+		for key, col in this.columns.OwnProps()
+			this.columnsHeaderMap[col.name] := col
 	}
 
 	static guiCreate() {
@@ -204,10 +207,14 @@ class WindowManager {
 			"ypos",			["y", "ypos", "ahk_y"],
 			"width",		["w", "width", "ahk_w"],
 			"height",		["h", "height", "ahk_h"],
-			"xpos",			["cx", "client_x", "ahk_cx"],
-			"ypos",			["cy", "client_y", "ahk_cy"],
-			"width",		["cw", "client_width", "ahk_cw"],
-			"height",		["ch", "client_height", "ahk_ch"],
+			"clientxpos",	["cx", "client_x", "ahk_cx"],
+			"clientypos",	["cy", "client_y", "ahk_cy"],
+			"clientwidth",	["cw", "client_width", "ahk_cw"],
+			"clientheight",	["ch", "client_height", "ahk_ch"],
+			"res_xpos",		["rx", "res_x", "ahk_rx"],
+			"res_ypos",		["ry", "res_y", "ahk_ry"],
+			"res_width",	["rw", "res_width", "ahk_rw"],
+			"res_height",	["rh", "res_height", "ahk_rh"],
 			"class",		["class", "ahk_class"],
 			"pid",			["pid", "processID", "ahk_pid"],
 			"processPath",	["processPath", "path", "ahk_exe"],
@@ -340,7 +347,7 @@ class WindowManager {
 				}
 			case "ContextMenu":
 				rowN := NumGet(param, 24, "int")
-				if (rowN == 0) { ; clicked header
+				if (rowN == 0 || rowN > this.LV.getCount()) { ; clicked header
 					this.menus.columnsMenu.show()
 					return
 				}
@@ -400,12 +407,12 @@ class WindowManager {
 		for i, cFunc in rowNums
 			wHandles.push(Integer(this.LV.GetText(cFunc, 2)))
 		static basicTasks := Map(
-			"Reset Window Position", resetWindowPosition,
+			"Reset Window Position", WinUtilities.resetWindowPosition,
 			"Minimize Window", 		WinMinimize,
 			"Maximize Window", 		WinMaximize,
-			"Restore Window", 		(wHandle) => WinUtilities.isBorderlessFullscreen(wHandle) ? resetWindowPosition(wHandle, 5/7) : WinRestore(wHandle),
-			"Move Windows to Monitor 1", resetWindowPosition.bind(,,1),
-			"Move Windows to Monitor 2", resetWindowPosition.bind(,,2),
+			"Restore Window", 		(wHandle) => WinUtilities.isBorderlessFullscreen(wHandle) ? WinUtilities.resetWindowPosition(wHandle, 5/7) : WinRestore(wHandle),
+			"Move Windows to Monitor 1", WinUtilities.resetWindowPosition.bind(,,1),
+			"Move Windows to Monitor 2", WinUtilities.resetWindowPosition.bind(,,2),
 			"Toggle Window Lock", 	(wHandle) => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & WinUtilities.windowExStyles.WS_EX_TOPMOST ? 0 : 1, wHandle)),
 			"Set Window Lock", 		WinSetAlwaysOnTop.bind(true),
 			"Remove Window Lock", 	WinSetAlwaysOnTop.bind(false),
@@ -822,7 +829,12 @@ class WindowManager {
 		clientypos: 	{isInteger: 1, key: "clientypos", 	name: "client_y"},
 		clientwidth:	{isInteger: 1, key: "clientwidth", 	name: "client_width"},
 		clientheight:	{isInteger: 1, key: "clientheight", name: "client_height"},
+		res_xpos: 		{isInteger: 1, key: "res_xpos", 	name: "Restored xpos"},
+		res_ypos: 		{isInteger: 1, key: "res_ypos", 	name: "Restored ypos"},
+		res_width:		{isInteger: 1, key: "res_width", 	name: "Restored width"},
+		res_height:		{isInteger: 1, key: "res_height", 	name: "Restored height"},
 		class: 			{isInteger: 0, key: "class", 		name: "ahk_class"},
+		flags: 			{isInteger: 0, key: "flags", 		name: "flags"},
 		pid: 			{isInteger: 1, key: "pid", 			name: "PID"},
 		processPath:	{isInteger: 0, key: "processPath", 	name: "Process Path"},
 		commandLine:	{isInteger: 0, key: "commandLine", 	name: "Command Line"}
@@ -842,31 +854,16 @@ class WindowManager {
 		this.columns.clientypos,
 		this.columns.clientwidth,
 		this.columns.clientheight,
+		this.columns.res_xpos,
+		this.columns.res_ypos,
+		this.columns.res_width,
+		this.columns.res_height,
 		this.columns.class,
 		this.columns.pid,
+		this.columns.flags,
 		this.columns.processPath,
 		this.columns.commandLine
 	]
-
-	static columnsHeaderMap => Map(
-		this.columns.zOrder.name, this.columns.zOrder,
-		this.columns.hwnd.name, this.columns.hwnd,
-		this.columns.title.name, this.columns.title,
-		this.columns.process.name, this.columns.process,
-		this.columns.state.name, this.columns.state,
-		this.columns.xpos.name, this.columns.xpos,
-		this.columns.ypos.name, this.columns.ypos,
-		this.columns.width.name, this.columns.width,
-		this.columns.height.name, this.columns.height,
-		this.columns.clientxpos.name, this.columns.clientxpos,
-		this.columns.clientypos.name, this.columns.clientypos,
-		this.columns.clientwidth.name, this.columns.clientwidth,
-		this.columns.clientheight.name, this.columns.clientheight,
-		this.columns.class.name, this.columns.class,
-		this.columns.pid.name, this.columns.pid,
-		this.columns.processPath.name, this.columns.processPath,
-		this.columns.commandLine.name, this.columns.commandLine
-	)
 	
 	static appdataPath => A_AppData "\Autohotkey\WindowManager"
 	static colors => {

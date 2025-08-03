@@ -7,7 +7,7 @@
  * @param {String} mode F,D,R (Include Files, Include Directories, Recursive.) Defaults to Files no folders no recursive
  * @param {Integer} getMode 0 = all fileinfo, 1 = only name, 2 = only full path, 3 = name, ext, namenoext, size, dir
  */
-getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3) {
+getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name") {
 	files := []
 	loop files folder . "\" . filePattern, mode {
 		switch getMode {
@@ -44,7 +44,8 @@ getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3) {
 				})
 		}
 	}
-	return files
+	sorted := arraySort(files, a => a.%sortedBy%)
+	return sorted
 }
 
 removeDupes(folder1, folder2) {

@@ -808,7 +808,7 @@ objSortNumerically(obj, sortMode := "N") => objDoForEach(objBasicSort(obj, sortM
  * @param {String} mode Sorting mode. equivalent to sorting options in Sort [String]
  * @returns {Array} The sorted array, where each entry in the array is an object with the original index as property .index and value as .value
  */
-objSort(obj, fn := (a => a), mode := "") {
+objSort(obj, fn := (a => a), sortMode := "") {
 	isArrLike := obj is Array || obj is Map
 	sortedArr := []
 	indexMap := Map()

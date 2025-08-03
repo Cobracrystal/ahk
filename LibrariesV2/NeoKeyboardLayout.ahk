@@ -1,4 +1,5 @@
 ﻿; https://github.com/cobracrystal/ahk
+#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 
 class NeoKeyboardLayout {
 	
@@ -13,7 +14,7 @@ class NeoKeyboardLayout {
 				this.gui.hidden := false
 			}
 			else {
-				this.gui.coords := windowGetCoordinates(this.gui.obj.hwnd)
+				this.gui.coords := WinUtilities.windowGetCoordinates(this.gui.obj.hwnd)
 				this.gui.obj.Hide()
 				this.gui.hidden := true
 			}

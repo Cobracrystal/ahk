@@ -294,7 +294,7 @@ sortYoutubePlaylistLinksByIndex() {
 	o := []
 	loop parse str, "`n" {
 		if RegExMatch(A_LoopField, "(.*)&list=WL&index=(\d+)", &m) {
-			o.push({link:m[1], index:m[2]})
+			o.push({link:m[0], index:m[2]})
 		}
 	}
 	s := ""

@@ -10,7 +10,7 @@ class YoutubeDLGui {
 			mode := (this.data.guiVisibility ? "H" : "O")
 		if (this.gui) {
 			if (mode == "C") {
-				this.data.coords := windowGetCoordinates(this.gui.Hwnd)
+				this.data.coords := WinUtilities.windowGetCoordinates(this.gui.Hwnd)
 				this.gui.Destroy()
 				this.resetGUI()
 			}

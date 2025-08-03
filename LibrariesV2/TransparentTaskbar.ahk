@@ -59,7 +59,7 @@ class TransparentTaskbar {
 	static initialize() {
 		this.init := false
 		try {
-			this.monitors := getMonitors()
+			this.monitors := WinUtilities.getMonitors()
 			relevantMonitors := []
 			DetectHiddenWindows(1)
 			this.trayHandles[MonitorGetPrimary()] := WinGetID("ahk_class Shell_TrayWnd") 
