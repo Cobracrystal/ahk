@@ -78,6 +78,7 @@ class jsongo {
     
     /** @access private */
     static _Parse(jtxt, reviver:='') {
+        local hex
         this.error_log := '', if_rev := (reviver is Func && reviver.MaxParams > 2) ? 1 : 0, xval := 1, xobj := 2, xarr := 3, xkey := 4, xstr := 5, xend := 6, xcln := 7, xeof := 8, xerr := 9, null := '', str_flag := Chr(5), tmp_q := Chr(6), tmp_bs:= Chr(7), expect := xval, json := [], path := [json], key := '', is_key:= 0, remove := jsongo.JSON_Remove(), fn := A_ThisFunc
         loop 31
             (A_Index > 13 || A_Index < 9 || A_Index = 11 || A_Index = 12) && (i := InStr(jtxt, Chr(A_Index), 1)) ? err(21, i, 'Character number: 9, 10, 13 or anything higher than 31.', A_Index) : 0
