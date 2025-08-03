@@ -974,7 +974,7 @@ doNothing(*) {
 
 
 print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true) {
-	if !(value is String) {
+	if IsObject(value) {
 		value := objToString(value, compact, compress, strEscape)	
 	}
 	if (putNewline == true || (putNewline == -1 && InStr(value, '`n')))
