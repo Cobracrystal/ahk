@@ -29,13 +29,14 @@ A_TrayMenu.Delete()
 #Include "TextEditMenu.ahk"
 #Include "MacroRecorder.ahk"
 #Include "TimestampConverter.ahk"
-#Include "DiscordClient.ahk"
+#Include "FolderDialogSwitch.ahk"
 #Include "AltDrag.ahk"
 #Include "MathUtilities.ahk"
 #Include "BasicUtilities.ahk"
 #Include "HotstringLoader.ahk"
 #Include "TableFilter v2.ahk"
 #Include "openDTU.ahk"
+#Include "DiscordClient.ahk"
 ; #Include "%A_ScriptDir%\not_mine_or_examples\AquaHotkey\AquaHotkey.ahk"
 ; #Include "jsongo.ahk"
 ; for windows in which ctrl+ should replace scrolling
@@ -119,6 +120,11 @@ if (!GLOBALVAR_WASRELOADED)
 ^U:: {	; Time/Date Converter
 	TimestampConverter.textTimestampConverter()
 }
+
+^q:: {
+	FolderSwitch.showMenu()
+}
+
 
 ^!I:: {	; Show Hex code as Color
 	colorPreviewGUI(fastCopy())
