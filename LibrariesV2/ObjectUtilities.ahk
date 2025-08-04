@@ -194,7 +194,7 @@ objGetProd(obj) => objCollect(obj, (b,i) => b*i)
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
  * @returns {Any} Collected Value
  */
-objCollect(obj, fn := ((base, e) => (base . ", " . objToString(e))), initialBase?, value := 0, conditional := ((itKey?, itVal?, setVal?) => (true))) {
+objCollect(obj, fn := ((base, e) => (base . ", " . objToString(e))), initialBase?, value := 0, conditional := ((itKey?, itVal?, setVal?) => (true)), useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
@@ -202,14 +202,14 @@ objCollect(obj, fn := ((base, e) => (base . ", " . objToString(e))), initialBase
 		base := initialBase
 	for i, e in objGetEnumerator(obj)
 		if (conditional(i, e?, value))
-			base := IsSet(base) ? fn(base, e?) : e
+			base := IsSet(base) ? (useKeys ? fn(base, i?) : fn(base, e?)) : e
 	return base ?? ""
 }
 
 objFlatten(obj, fn := (e => e), keys := false) {
 	arr := []
 	for key, e in objGetEnumerator(obj)
-		arr.push(keys ? key : fn(e))
+		arr.push(keys ? fn(key) : fn(e))
 	return arr
 }
 
@@ -290,9 +290,37 @@ objGetUniques(obj, fn := (a => a), caseSense := true) {
 	uniques.CaseSense := caseSense
 	clone := %Type(obj)%()
 	for i, e in objGetEnumerator(obj) {
+		if !IsSet(e)
+			continue
 		v := fn(e)
 		if !(uniques.Has(v)) {
 			uniques[v] := true
+			isArrLike ? (isMap ? clone[i] := e : clone.push(e)) : clone.%i% := e
+		}
+	}
+	return clone
+}
+
+/**
+ * Given two objects, returns a clone of obj2 where all values that are also present in obj1 are deleted
+ * @param obj1 
+ * @param obj2 
+ * @param {(a) => void} fn 
+ * @param {Integer} caseSense 
+ */
+objGetComparedUniques(obj1, obj2, fn := (a => a), caseSense := true) {
+	isArrLike := (obj2 is Array || obj2 is Map)
+	isMap := (obj2 is Map)
+	if !(isArrLike || IsObject(obj2))
+		throw(TypeError("objForEach does not handle type " . Type(obj2)))
+	appeared := Map()
+	appeared.CaseSense := caseSense
+	clone := %Type(obj2)%()
+	for i, e in objGetEnumerator(obj1)
+		appeared[fn(e)] := true
+	for i, e in objGetEnumerator(obj2) {
+		v := fn(e)
+		if !(appeared.Has(v)) {
 			isArrLike ? (isMap ? clone[i] := e : clone.push(e)) : clone.%i% := e
 		}
 	}
@@ -430,7 +458,7 @@ objChain(objects*) {
 }
 
 objGetEnumerator(obj, getEnumFunction := false, numberParams?) {
-	enum := (obj is Array || obj is Map) ? obj : ObjOwnProps(obj)
+	enum := (obj is Array || obj is Map || obj is ComValue) ? obj : ObjOwnProps(obj)
 	if !getEnumFunction
 		return enum
 	try
@@ -472,11 +500,13 @@ objToStringClass(obj, detailedFunctions := false)	=>	objToString(obj, , false, ,
  * @returns {String} The string representing the object
  */
 objToString(obj, compact := false, compress := true, strEscape := false, mapAsObj := true, spacer := "`t", withInheritedProps?, detailedFunctions?, withClassOrPrototype?, withBases?) {
-	if IsObject(obj) {
+	if obj is VarRef || obj is ComValue {
+		return "{}"
+	} else if IsObject(obj) {
 		origin := obj
 		flagFirstIsInstance := (Type(obj) != "Prototype" && Type(obj) != "Class" && Type(objgetbase(obj)) == "Prototype") ; equivalent to line below
 		; if obj is an instance of a class, and it isnt enumerable, and it doesn't have any own props, then try getting inheritables
-		flagIncludeInheritedProps :=	withInheritedProps		?? (flagFirstIsInstance && !obj.HasMethod("__Enum") && ObjOwnPropCount(obj) == 0 ? 1 : 0)
+		flagIncludeInheritedProps :=	withInheritedProps		?? (flagFirstIsInstance && !obj.HasMethod("__Enum") && ObjOwnPropCount(obj) == 0)
 		flagDetailedFunctions := 		detailedFunctions		?? !flagFirstIsInstance ; (flagFirstIsInstance && Type(obj) != "Func" ? 0 : 1)
 		flagIncludeClassOrPrototype := 	withClassOrPrototype	?? !flagFirstIsInstance
 		flagWithBases := 				withBases 				?? !flagFirstIsInstance
@@ -594,6 +624,8 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 	}
 }
 
+varsToString(vars*) => objToString(vars,0,1,0)
+
 ; Unreliable, may only work in ahk versions around ~2.0.9
 BoundFnName(Obj) {
 	Address := ObjPtr(Obj)
@@ -622,12 +654,15 @@ rangeAsArr(startEnd, end?, step?, inclusive := true) {
 	return arr
 }
 
-arrayMerge(arr1, arr2) {
-	arr2 := []
-	arr2.Capacity := arr1.Length + arr2.Length
-	arr2.push(arr1*)
-	arr2.push(arr2*)
-	return arr2
+arrayMerge(arrs*) {
+	ret := []
+	len := 0
+	for arr in arrs
+		len += arr.length
+	ret.Capacity := len
+	for arr in arrs
+		ret.push(arr*)
+	return ret
 }
 
 arrayMergeSorted(arr1, arr2) {
