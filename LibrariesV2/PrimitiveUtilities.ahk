@@ -90,13 +90,15 @@ strChangeEncoding(str, encoding) {
 RegExEscape(str) => "\Q" StrReplace(str, "\E", "\E\\E\Q") "\E"
 
 /**
- * Replaces Strings in [string] from strings in [from] into strings in [to], in strict order of appearance in [from]
+ * StrReplace but from and to can be arrays containing multiple values which will be replaced in order, while guaranteeing that they will not replace themselves.
  * @param string String in which to replace the strings
  * @param from Array containing strings that are to be replaced in decreasing priority order
  * @param to Array containing strings that are the replacements for values in @from, in same order
  * @returns {string} 
+ * @example StrMultiReplace("abcd", ["a", "b"], ["b", "r"]) => "rrcd" ; since a->b->r 
+ * @example StrIndependentMultiReplace("abcd", ["a", "b"], ["b", "r"]) => "brcd" ; Replaced values independent of each other.
  */
-strRecursiveReplace(text, from, to) {
+StrIndependentMultiReplace(text, from, to) {
 	return __recursiveReplaceMap(text, from, to)
 
 	__recursiveReplaceMap(text, from, to, __index := 1) {
@@ -108,6 +110,15 @@ strRecursiveReplace(text, from, to) {
 			replacedString .= __recursiveReplaceMap(e, from, to, __index + 1) . (i == strArr.Length ? "" : to[__index])
 		return replacedString
 	}
+}
+
+StrMultiReplace(text, from, to, caseSense := true, &outputvarCount := 0, limit := -1) {
+	Loop(from.Length) {
+		text := StrReplace(text, from[A_Index], to[A_Index], caseSense, &repl, limit)
+		limit -= repl
+		outputvarCount += repl
+	}
+	return text
 }
 
 strSimilarity(s1, s2) => 1 - strDistanceNormalizedLevenshtein(s1, s2)
@@ -274,6 +285,39 @@ strSplitRecursive(str, splits := StrLen(str)) {
 		arr.push(a*)
 	}
 	return arr
+}
+
+class Uri {
+; stolen from https://github.com/ahkscript/libcrypt.ahk/blob/master/src/URI.ahk
+	static encode(str) { ; keep ":/;?@,&=+$#."
+		return this.LC_UriEncode(str)
+	}
+
+	static decode(str) {
+		return this.LC_UriDecode(str)
+	}
+
+	static LC_UriEncode(uri, RE := "[0-9A-Za-z]") {
+		var := Buffer(StrPut(uri, "UTF-8"), 0)
+		StrPut(uri, var, "UTF-8")
+		while(code := NumGet(Var, A_Index - 1, "UChar"))
+			res .= RegExMatch(char := Chr(Code), RE) ? char : Format("%{:02X}", Code)
+		return res
+	}
+
+	static LC_UriDecode(uri) {
+		pos := 1
+		while(pos := RegExMatch(uri, "i)(%[\da-f]{2})+", &code, pos)) {
+			var := Buffer(StrLen(code[1]) // 3, 0)
+			Code := SubStr(code[1], 2)
+			Loop Parse, code, "`%"
+				NumPut("UChar", "0x" A_LoopField, var, A_Index - 1)
+			decoded := StrGet(var, "UTF-8")
+			uri := SubStr(uri, 1, pos - 1) . decoded . SubStr(uri, pos+StrLen(Code)+1)
+			pos += StrLen(decoded)+1
+		}
+		return uri
+	}
 }
 
 /**

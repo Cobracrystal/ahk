@@ -88,39 +88,6 @@ modifySelectedText(method, params*) {
 	return 1
 }
 
-class Uri {
-; stolen from https://github.com/ahkscript/libcrypt.ahk/blob/master/src/URI.ahk
-	static encode(str) { ; keep ":/;?@,&=+$#."
-		return this.LC_UriEncode(str)
-	}
-
-	static decode(str) {
-		return this.LC_UriDecode(str)
-	}
-
-	static LC_UriEncode(uri, RE := "[0-9A-Za-z]") {
-		var := Buffer(StrPut(uri, "UTF-8"), 0)
-		StrPut(uri, var, "UTF-8")
-		while(code := NumGet(Var, A_Index - 1, "UChar"))
-			res .= RegExMatch(char := Chr(Code), RE) ? char : Format("%{:02X}", Code)
-		return res
-	}
-
-	static LC_UriDecode(uri) {
-		pos := 1
-		while(pos := RegExMatch(uri, "i)(%[\da-f]{2})+", &code, pos)) {
-			var := Buffer(StrLen(code[1]) // 3, 0)
-			Code := SubStr(code[1], 2)
-			Loop Parse, code, "`%"
-				NumPut("UChar", "0x" A_LoopField, var, A_Index - 1)
-			decoded := StrGet(var, "UTF-8")
-			uri := SubStr(uri, 1, pos - 1) . decoded . SubStr(uri, pos+StrLen(Code)+1)
-			pos += StrLen(decoded)+1
-		}
-		return uri
-	}
-}
-
 htmlDecode(str) {
 	static HTMLCodes := jsongo.Parse(FileRead(A_WorkingDir "\everything\HTML_Encodings.json", "UTF-8"))
 	if InStr(str, "&") {
@@ -847,8 +814,7 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
  * @returns {string} A normalized Path (if valid) or an empty string if the path could not be resolved.
  */
 normalizePath(path) {	; ONLY ABSOLUTE PATHS
-	path := StrReplace(path, "\\", "\")
-	path := StrReplace(path, "/", "\")
+	path := StrMultiReplace(path, ["\\", "/"], ["\", "\"])
 	if (!RegexMatch(path, "i)^[a-z]:\\") || RegexMatch(path, "i)^[a-z]:\\\.\.\\"))
 		return ""
 	path := StrReplace(path, "\.\", "\")
@@ -974,7 +940,7 @@ doNothing(*) {
 
 
 print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true) {
-	if IsObject(value) {
+	if IsObject(value) { 
 		value := objToString(value, compact, compress, strEscape)	
 	}
 	if (putNewline == true || (putNewline == -1 && InStr(value, '`n')))
