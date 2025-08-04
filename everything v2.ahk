@@ -29,7 +29,7 @@ A_TrayMenu.Delete()
 #Include "TextEditMenu.ahk"
 #Include "MacroRecorder.ahk"
 #Include "TimestampConverter.ahk"
-#Include "FolderDialogSwitch.ahk"
+#Include "FolderSwitch.ahk"
 #Include "AltDrag.ahk"
 #Include "MathUtilities.ahk"
 #Include "BasicUtilities.ahk"

@@ -1,4 +1,6 @@
-; this is to a certain extend based on https://github.com/JoyHak/QuickSwitch 
+#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
+
+; this is to a certain extend based on https://github.com/JoyHak/QuickSwitch
 class FolderSwitch {
 
 	static __New() {
@@ -8,50 +10,63 @@ class FolderSwitch {
 	static showMenu() {
 		hwnd := WinActive("A")
 		wClass := WinGetClass(hwnd)
-		if (wClass == "#32770" && fileDialogFunc := this.getFileDialog(hwnd, &editId)) {
-			fn := this.selector.bind(this, fileDialogFunc)
-			try {
-				ControlFocus("ToolbarWindow321", hwnd)
-				ControlSend("{end}{space}", editId)
-				Sleep 100
-			}
-		} else { ; check if we are in explorer
+		if (wClass == "#32770" && fileDialogFunc := this.getFileDialog(hwnd, &editId))
+			flagContext := 0
+		else { ; check if we are in explorer
 			if (wClass == "CabinetWClass" && WinGetProcessName(hwnd) == "explorer.exe")
-				fn := this.selector.bind(this, this.navigateExplorer.bind(this, hwnd))
+				flagContext := 1
 			else
-				fn := this.selector.bind(this, (path => Run('explorer.exe "' path '"')))
+				flagContext := 2
+		}
+		switch flagContext {
+			case 0:
+				fn := this.selector.bind(this, fileDialogFunc)
+				try {
+					ControlFocus("ToolbarWindow321", hwnd)
+					ControlSend("{end}{space}", editId)
+					Sleep 100
+				}
+			case 1:
+				curPath := ShellWrapper.getExplorerSelfPath(ShellWrapper.getExplorerIEObject(hwnd))
+				fn := this.selector.bind(this, ShellWrapper.navigateExplorer.bind(ShellWrapper, hwnd))
+			case 2:
+				fn := this.selector.bind(this, this.selectOrLaunch.bind(this))
 		}
 		m := Menu()
 		if (!FileExist(this.dataPath))
 			FileAppend("// Add Paths here, one per line`n" A_WorkingDir, this.dataPath, "UTF-8")
 		f := Trim(FileRead(this.dataPath, "UTF-8"), "`n`r`t ")
-		this.paths := []
+		this.savedpaths := []
 		loop parse f, "`n", "`r"
 			if (A_LoopField != "" && !RegExMatch(A_LoopField, "^\s*(;|\/\/)"))
-				this.paths.push(A_LoopField)
-		if !this.paths.Length
-			return
-		for i, e in this.paths
-			m.add("&" i " " e, fn)
+				this.savedpaths.push(Trim(A_LoopField))
+		objs := ShellWrapper.getExplorerIEObjects()
+		this.openedPaths := objDoForEach(objs, e => ShellWrapper.getExplorerSelfPath(e))
+		if this.savedpaths[this.savedpaths.Length] == this.dataPath
+			this.savedpaths.pop()
+		this.paths := objGetUniques(arrayMerge(this.savedpaths, [""], this.openedPaths), , false)
+		c := 1
+		for e in this.paths
+			m.add(e == "" ? unset : "&" c++ " " e, e == "" ? unset : fn)
+		m.add()
+		m.add("&s " this.dataPath, this.selector.bind(this, (path) => Run(path)))
 		m.show()
 	}
 
 	static selector(fn, menuItemName, menuItemPos, menuObj) {
-		path := this.paths[menuItemPos]
+		if menuItempos <= this.paths.length
+			path := this.paths[menuItemPos]
+		else
+			path := this.dataPath
 		fn(path)
 	}
 
-	static navigateExplorer(hwnd, path) {
-		if shell := this.getExplorerShell(hwnd)
-			shell.Navigate(path)
-	}
-
-	static getExplorerShell(hwnd) {
-		static objShell := ComObject("Shell.Application")
-		for e in objShell.Windows
-			if e.hwnd == hwnd
-				return e
-		return 0
+	static selectOrLaunch(path) {
+		arr := ShellWrapper.getExplorerIEObjects()
+		if index := objContainsValue(arr, path, (k, v, p) => (ShellWrapper.getExplorerSelfPath(v) == p))
+			WinActivate(arr[index].hwnd)
+		else
+			ShellWrapper.Explore(path)
 	}
 
 	static feedDialogSYSTREEVIEW(hwnd, editHwnd, path, attempts := 3) {
@@ -75,14 +90,16 @@ class FolderSwitch {
 			Sleep(15)
 			ControlFocus(this.sysListViewPrepCtrl, hwnd)
 			_focus := ControlGetFocus(hwnd)
-		} until (_focus == this.sysListViewPrepCtrl)
+		}
+		until (_focus == this.sysListViewPrepCtrl)
 
 		ControlSend("{Home}", this.sysListViewPrepCtrl, hwnd)
 		Loop (attempts) {
 			Sleep(15)
 			ControlSend("^{Space}", this.sysListViewPrepCtrl, hwnd)
 			_focus := ControlGetFocus(hwnd)
-		} until !_focus
+		}
+		until !_focus
 
 		return this.feedDialogSYSTREEVIEW(hwnd, editHwnd, path, attempts)
 	}
@@ -121,10 +138,10 @@ class FolderSwitch {
 	static sysListViewPrepCtrl => "SysListView321"
 
 	static classes => Map(
-		"SysListView321", 1, 
-		"SysTreeView321", 2, 
-		"SysHeader321", 4, 
-		"ToolbarWindow321", 8, 
+		"SysListView321", 1,
+		"SysTreeView321", 2,
+		"SysHeader321", 4,
+		"ToolbarWindow321", 8,
 		"DirectUIHWND1", 16
 	)
 }

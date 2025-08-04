@@ -280,3 +280,38 @@ class WinUtilities {
 		WS_EX_TOPMOST: 0x8
 	}
 }
+
+class ShellWrapper {
+	static shell := ComObject("Shell.Application")
+	
+	static IEObjectGetLocationURL(IEObject) {
+		; https://learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/platform-apis/aa752084(v=vs.85)
+		; formatted file:///c:/users....
+		return IEObject.LocationURL
+	}
+
+	static getExplorerSelfPath(IEObject) {
+		; https://learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/platform-apis/aa752084(v=vs.85)
+		return IEObject.document.folder.self.path
+	}
+
+	static getExplorerIEObject(hwnd) {
+		for e in this.shell.Windows()
+			if e.hwnd == hwnd
+				return e
+		return 0
+	}
+
+	static getExplorerIEObjects() {
+		return objFlatten(this.shell.windows(),, true)
+	}
+
+	static Explore(path) {
+		this.shell.Explore(path)
+	}
+
+	static navigateExplorer(hwnd, path) {
+		if shell := this.getExplorerIEObject(hwnd)
+			shell.Navigate(path)
+	}
+}
