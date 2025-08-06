@@ -6,13 +6,19 @@
 ; todo: in metadata object, have optional thumbnail property that can specify a path to a different thumbnail image
 ; todo: log metadata object in corresponding folder too
 ; todo: when downloading from metadata string, limit to 10 instances maybe? use finalize to check how many are active and launch with a queue
-; a much simpler class than youtubeDL to instantly download music
-if (A_LineFile == A_ScriptFullPath) {
+; description: a much simpler class than youtubeDL to instantly download music
+if (A_LineFile == A_ScriptFullPath) { ; NECESSARY TO WORK WHEN INCLUDING
 	SetWorkingDir(A_ScriptDir "\..\script_files\SongDownloader")
 	SongDownloader.download(A_Clipboard)
+	; usage options
 	; SongDownloader.downloadSong("https://www.youtube.com/watch?v=MzsBwcXkghQ")
 	; SongDownloader.downloadSong("Never Gonna Give You Up")
-	; SongDownloader.downloadSong("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=WL&index=3&pp=gAQBiAQB")
+	; playlistdata := SongDownloader.getMetadataJson("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=WL&index=3&pp=gAQBiAQB", false, true)
+	; usage 
+	; SongDownloader.settings.browserCookies := "firefox"
+	; SongDownloader.settings.useCookies := true
+	; jsonStr := SongDownloader.getMetadataJson("https://www.youtube.com/playlist?list=WL")
+	; SongDownloader.downloadFromJson(jsonStr)
 }
 
 class SongDownloader {
@@ -26,13 +32,13 @@ class SongDownloader {
 			useCookies: true,
 			browserCookies: "firefox",
 			currentTodo: 71,
-			outputBaseFolder: "C:\Users\Simon\Music\Collections",
+			outputBaseFolder: A_Desktop "\..\Music\Collections",
 			outputSubFolder: "",
 			logMetadata: true,
-			logFolder: "C:\Users\Simon\Music\ConvertMusic\ytdl\Logs",
-			ffmpegPath: "C:\Users\Simon\Music\ConvertMusic\ytdl\ffmpeg.exe",
-			ffprobePath: "C:\Users\Simon\Music\ConvertMusic\ytdl\ffprobe.exe",
-			ytdlPath: "C:\Users\Simon\Music\ConvertMusic\ytdl\yt-dlp.exe",
+			logFolder: A_Desktop "\..\Music\ConvertMusic\ytdl\Logs",
+			ffmpegPath: A_Desktop "\..\Music\ConvertMusic\ytdl\ffmpeg.exe",
+			ffprobePath: A_Desktop "\..\Music\ConvertMusic\ytdl\ffprobe.exe",
+			ytdlPath: A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe",
 			metadataFields: ["title", "artist", "album", "genre"]
 		}
 		this.settings.outputSubFolder := Format("p{:03}", this.settings.currentTodo)
@@ -277,7 +283,7 @@ class SongDownloader {
 			skipNonMusic
 		]
 		if logMetadata {
-			metadatapath := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILEPATH, outputSubFolder)
+			metadatapath := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILE, outputSubFolder)
 			if FileExist(metadatapath) {
 				try {
 					curData := jsongo.parse(FileRead(metadatapath, "UTF-8"))
@@ -446,7 +452,7 @@ class SongDownloader {
 	}
 
 	static addRemoveProfile(profile, profileToRemove := [], profileToAdd := [], paramCompare := true, inplace := false) {
-		nProfile := profile.clone()
+		nProfile := profile.clone() ; deepclone unnecessary.
 		optCompare := (k, v, v2) => (objCompare(v.option, v2.option))
 		allCompare := (k, v, v2) => (objCompare(v, v2))
 		lambda := paramCompare ? allCompare : optCompare
@@ -488,7 +494,7 @@ class SongDownloader {
 
 	static PROFILE_MUSIC[PROFILE_PARSE_METADATA, outputTemplate, outputSubFolder, withCookies, skipNonMusic] {
 		get {
-			PROFILE := [
+			profile := [
 				{ option: this.options.ignore_config },
 				{ option: this.options.retries, param: 1 },
 				{ option: this.options.limit_rate, param: "5M" },
@@ -498,7 +504,7 @@ class SongDownloader {
 				{ option: this.options.no_warning },
 				{ option: this.options.print, param: "after_move:%(filepath)s | %(original_url)s" },
 				{ option: this.options.output, param: outputTemplate},
-				{ option: this.options.paths, param: "temp:C:\Users\Simon\AppData\Roaming\yt-dlp\temp"},
+				{ option: this.options.paths, param: "temp:" A_AppData "\yt-dlp\temp"},
 				{ option: this.options.paths, param: this.settings.outputBaseFolder "\" outputSubFolder},
 				{ option: this.options.format, param: "bestaudio/best" },
 				{ option: this.options.ffmpeg_location, param: this.settings.ffmpegPath },
@@ -508,13 +514,13 @@ class SongDownloader {
 				{ option: this.options.audio_format, param: "mp3"},
 				{ option: this.options.embed_metadata }
 			]
-			PROFILE.Push(this.PROFILE_EMBED_THUMBNAIL*)
-			PROFILE.Push(PROFILE_PARSE_METADATA*)
+			profile.Push(this.PROFILE_EMBED_THUMBNAIL*)
+			profile.Push(PROFILE_PARSE_METADATA*)
 			if withCookies
-				PROFILE.push({ option: this.options.cookies_from_browser, param: this.settings.browserCookies})
+				profile.push({ option: this.options.cookies_from_browser, param: this.settings.browserCookies})
 			if skipNonMusic
-				PROFILE.push({ option: this.options.sponsorblock_remove, param: "music_offtopic"})
-			return PROFILE
+				profile.push({ option: this.options.sponsorblock_remove, param: "music_offtopic"})
+			return profile
 		}
 	}
 
@@ -544,7 +550,7 @@ class SongDownloader {
 		}
 	}
 
-	static options => {
+	static options => { ; this is not nearly all-encompassing.
 		; General and Meta Options
 		ignore_config: { name: "--ignore-config",  alias: "--no-config", param: false },
 		update: { name: "--update",  alias: "-U", param: false },
@@ -605,6 +611,6 @@ class SongDownloader {
 		TITLE: "%(title)s",
 		SECTION_TITLE: "%(section_title)s",
 		LOGFILE: "{}_log.txt",
-		METADATAFILEPATH: "{}_metadata.json"
+		METADATAFILE: "{}_metadata.json"
 	}
 }
