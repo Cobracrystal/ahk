@@ -32,19 +32,20 @@ class SongDownloader {
 			useCookies: true,
 			browserCookies: "firefox",
 			currentTodo: 71,
-			outputBaseFolder: A_Desktop "\..\Music\Collections",
+			outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
 			outputSubFolder: "",
 			logMetadata: true,
-			logFolder: A_Desktop "\..\Music\ConvertMusic\ytdl\Logs",
-			ffmpegPath: A_Desktop "\..\Music\ConvertMusic\ytdl\ffmpeg.exe",
-			ffprobePath: A_Desktop "\..\Music\ConvertMusic\ytdl\ffprobe.exe",
-			ytdlPath: A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe",
+			logFolder: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\Logs"),
+			ffmpegPath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\ffmpeg.exe"),
+			ffprobePath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\ffprobe.exe"),
+			ytdlPath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
 			metadataFields: ["title", "artist", "album", "genre"]
 		}
 		this.settings.outputSubFolder := Format("p{:03}", this.settings.currentTodo)
 		this.data := {
 			coords: {x: 750, y: 425},
-			currentOutputSubFolder: this.settings.outputSubFolder
+			currentOutputSubFolder: this.settings.outputSubFolder,
+			lastSongMetadata: {}
 		}
 	}
 
@@ -88,7 +89,7 @@ class SongDownloader {
 			data := [data]
 		finisher := this.onFinish.bind(this, data.length, this.settings.outputSubFolder, 1, 0)
 		for i, dataPoint in data {
-			profile := this.PROFILE_MUSIC[this.PROFILE_PARSE_METADATA[dataPoint], this.constructOutputPatternString(dataPoint), outputSubFolder, this.settings.useCookies, true]
+			profile := this.PROFILE_MUSIC[this.PROFILE_PARSE_METADATA[dataPoint], this.constructOutputPatternString(dataPoint), outputSubFolder, this.settings.useCookies, true, embedThumbnail]
 			this.launchYTDL(profile, dataPoint.link, this.settings.useVisibleCMD, finisher)
 		}
 	}
@@ -208,23 +209,26 @@ class SongDownloader {
 			g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
 		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", guiHandler)
 		g.AddText("", "Artist")
-		g.AddEdit("w250 vArtist", data.artist).OnEvent("Change", guiHandler)
-		g["Artist"].Focus()
+		metadataVar := ObjOwnPropCount(this.data.lastSongMetadata) > 0 ? this.data.lastSongMetadata : data
+		g.AddEdit("w250 vArtist", metadataVar.artist).OnEvent("Change", guiHandler)
+		g["Title"].Focus()
 		g.AddText("", "Album")
-		g.AddEdit("w250 vAlbum", data.album).OnEvent("Change", guiHandler)
+		g.AddEdit("w250 vAlbum", metadataVar.album).OnEvent("Change", guiHandler)
 		g.AddText("", "Genre")
-		g.AddEdit("w250 vGenre", data.genre).OnEvent("Change", guiHandler)
-		g.AddCheckbox("xs vEmbedThumbnail Checked1", "Embed Thumbnail").OnEvent("Click", guiHandler)
+		g.AddEdit("w250 vGenre", metadataVar.genre).OnEvent("Change", guiHandler)
+		g.AddCheckbox("xs vEmbedThumbnail Checked" true, "Embed Thumbnail").OnEvent("Click", guiHandler)
 		g.AddCheckbox("xs+125 yp vUseVisibleCMD Checked" this.settings.useVisibleCMD, "Visble CMD")
 		g.AddCheckbox("xs vUseCookies Checked" this.settings.useCookies, "Use Cookies (" this.settings.browserCookies ")").OnEvent("Click", guiHandler)
 		g.AddCheckbox("xs+125 yp vSkipNonMusic Checked" true, "Skip Non-Music Parts").OnEvent("Click", guiHandler)
 		g.AddCheckbox("xs vLogMetadata Checked" this.settings.logMetadata, "Log Metadata")
+		g.AddCheckbox("xs+125 yp vReuseData Checked" false, "Re-Use Data")
 		g.AddText("xs", "Current Command Line")
 		profile := this.PROFILE_MUSIC[
 			this.PROFILE_PARSE_METADATA[data],
 			this.constructOutputPatternString(data),
 			subOutputFolder,
 			this.settings.useCookies,
+			true,
 			true
 		]
 		g.AddEdit("vCMD w250 R1 Readonly", this.cmdStringBuilder(profile) '"' data.link '"')
@@ -265,28 +269,27 @@ class SongDownloader {
 	static finishGui(data, g, info?) {
 		if (g is Gui.Button)
 			g := g.gui
-		songData := { ; should just use gui.submit. but the data needs to be transcribed anyway so who cares.
-			title: g["Title"].Value, artist: g["Artist"].Value,
-			album: g["Album"].Value, genre: g["Genre"].Value,
-			link: g["Link"].Value, description: data.description
-		}
-		link := g["Link"].Value
-		UseVisibleCMD := g["UseVisibleCMD"].Value
-		outputSubFolder := g["OutputFolder"].Value
-		embedThumbnail := g["EmbedThumbnail"].Value
-		withCookies := g["UseCookies"].Value
-		skipNonMusic := g["SkipNonMusic"].Value
-		logMetadata := g["LogMetadata"].Value
+		gData := g.submit(true)
 		g.destroy()
+		songData := {
+			title: gData.Title, artist: gData.Artist,
+			album: gData.Album, genre: gData.Genre,
+			link: gData.Link, description: data.Description
+		}
 		profile := this.PROFILE_MUSIC[
 			this.PROFILE_PARSE_METADATA[songData],
 			this.constructOutputPatternString(songData),
-			outputSubFolder,
-			withCookies,
-			skipNonMusic
+			gData.OutputFolder,
+			gData.UseCookies,
+			gData.SkipNonMusic,
+			gData.EmbedThumbnail
 		]
-		if logMetadata {
-			metadatapath := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILE, outputSubFolder)
+		if (gData.ReuseData)
+			this.data.lastSongMetadata := songData
+		else
+			this.data.lastSongMetadata := {}
+		if gData.LogMetadata {
+			metadatapath := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILE, gData.OutputFolder)
 			if FileExist(metadatapath) {
 				try {
 					curData := jsongo.parse(FileRead(metadatapath, "UTF-8"))
@@ -297,7 +300,7 @@ class SongDownloader {
 			f.Write(objToString(curData ?? songData,false,false,true))
 			f.Close()
 		}
-		this.launchYTDL(profile, songData.link, UseVisibleCMD, this.onFinish.bind(this, 1, outputSubFolder, 0, 0))
+		this.launchYTDL(profile, songData.link, gData.UseVisibleCMD, this.onFinish.bind(this, 1, gData.OutputFolder, 0, 0))
 	}
 
 	static launchYTDL(profile, link, useVisibleCMD, finisherFunc?) {
@@ -495,7 +498,7 @@ class SongDownloader {
 		}
 	}
 
-	static PROFILE_MUSIC[PROFILE_PARSE_METADATA, outputTemplate, outputSubFolder, withCookies, skipNonMusic] {
+	static PROFILE_MUSIC[PROFILE_PARSE_METADATA, outputTemplate, outputSubFolder, withCookies, skipNonMusic, embedThumbnail] {
 		get {
 			profile := [
 				{ option: this.options.ignore_config },
@@ -517,7 +520,8 @@ class SongDownloader {
 				{ option: this.options.audio_format, param: "mp3"},
 				{ option: this.options.embed_metadata }
 			]
-			profile.Push(this.PROFILE_EMBED_THUMBNAIL*)
+			if embedThumbnail
+				profile.Push(this.PROFILE_EMBED_THUMBNAIL*)
 			profile.Push(PROFILE_PARSE_METADATA*)
 			if withCookies
 				profile.push({ option: this.options.cookies_from_browser, param: this.settings.browserCookies})
