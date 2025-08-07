@@ -52,7 +52,7 @@ class SongDownloader {
 		str := Trim(str, " `t`r`n")
 		if SubStr(str,1,1) == "{" || SubStr(str,1,1) == "[" {
 			try {
-				jsongo.parse(str) ; we assume its metadata, so run that
+				jsongo.parse(str) ; this is just a test to check if its valid json.
 				if (A_LineFile == A_ScriptFullPath)
 					this.downloadFromJson(str)
 				else
@@ -60,7 +60,7 @@ class SongDownloader {
 			} catch { ; something wack is happening
 				MsgBoxAsGui("Invalid JSON/Download: " str,,,,,,,,,,,1000)
 			}
-		} else if (strCountStr(str, "https") > 1) { ; assume its multiple songs, so retrive metadata
+		} else if (strCountStr(str, "https") > 1) { ; assume its multiple songs, so retrieve metadata
 			if (A_LineFile == A_ScriptFullPath) {
 				r := this.getMetadataJson(str)
 				MsgBoxAsGui(r, "Metadata",,0,,,,1,,"i",,1000)
@@ -115,6 +115,9 @@ class SongDownloader {
 		return fullOutputStr
 	}
 
+	; normalization should be in the following form: 
+	; Title is always of the form "Title (CoverArtist Cover|RemixArtist Remix|Full Album)"
+	; Artist is always of the form "Artist [x|&|,] Artist2 ft Feature"
 	static parseMetadata(rawData, keepJsonData := false) {
 		rawData := RTrim(rawData, " `t`n`r")
 		lines := strCountStr(rawData, "`n")
@@ -262,7 +265,7 @@ class SongDownloader {
 	static finishGui(data, g, info?) {
 		if (g is Gui.Button)
 			g := g.gui
-		songData := {
+		songData := { ; should just use gui.submit. but the data needs to be transcribed anyway so who cares.
 			title: g["Title"].Value, artist: g["Artist"].Value,
 			album: g["Album"].Value, genre: g["Genre"].Value,
 			link: g["Link"].Value, description: data.description
@@ -550,7 +553,7 @@ class SongDownloader {
 		}
 	}
 
-	static options => { ; this is not nearly all-encompassing.
+	static options := { ; this is not nearly all-encompassing.
 		; General and Meta Options
 		ignore_config: { name: "--ignore-config",  alias: "--no-config", param: false },
 		update: { name: "--update",  alias: "-U", param: false },
@@ -605,7 +608,7 @@ class SongDownloader {
 		print: { name: "--print",  param: true }
 	}
 
-	static TEMPLATES => {
+	static TEMPLATES := {
 		EXT: "%(ext)s",
 		ARTIST: "%(uploader)s",
 		TITLE: "%(title)s",

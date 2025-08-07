@@ -13,9 +13,9 @@ class expressionCalculator {
 		if (SubStr(expression, 1, 2) == "w:")
 			result := this.giveUpAndCallWolframalpha(SubStr(expression, 3))
 		else if (SubStr(expression, 1, 2) == "b:")
-			return ExecScript(this.clean_expression(SubStr(expression, 3)), false, true)
+			return ExecHelperScript(this.clean_expression(SubStr(expression, 3)), false, true)
 		else
-			result := this.readableFormat(ExecScript(this.clean_expression(expression)))
+			result := this.readableFormat(ExecHelperScript(this.clean_expression(expression)))
 		; READ THE ERROR STREAM. IF THERE'S SOME ERROR IN THERE, ALSO GIVE IT TO WOLFRAMALPHA
 		; ADD A CONTEXT MENU OPTION FOR THIS, EITHER WOLFRAM OR SOMETHING ELSE OR LOCAL
 	;	result := this.giveUpAndCallWolframalpha(expression)

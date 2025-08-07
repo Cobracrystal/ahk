@@ -148,8 +148,7 @@ binarySearch(fn, lower := 0, upper := 100000) {
 	return n
 }
 
-
-ExecScript(expression, Wait := true, void := false) {
+ExecHelperScript(expression, wait := true, void := false) {
 	input := '#Warn All, Off`n'
 	input .= '#Include "*i ' A_LineFile '"`n'
 	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\MathUtilities.ahk"`n'
@@ -157,7 +156,11 @@ ExecScript(expression, Wait := true, void := false) {
 		input .= expression
 	else
 		input .= 'print(' expression ',,false)'
-	shell := ComObject("WScript.Shell")
+	return ExecScript(input, wait)
+}
+
+ExecScript(input, Wait := true) {
+	static shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
 	strConvBuf := Buffer(StrPut(input, "UTF-8"))
 	StrPut(input, strConvBuf, "UTF-8")
