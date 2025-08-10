@@ -36,8 +36,8 @@ class SongDownloader {
 			outputSubFolder: "",
 			logMetadata: true,
 			logFolder: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\Logs"),
-			ffmpegPath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\ffmpeg.exe"),
-			ffprobePath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\ffprobe.exe"),
+			ffmpegPath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffmpeg.exe"),
+			ffprobePath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffprobe.exe"),
 			ytdlPath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
 			metadataFields: ["title", "artist", "album", "genre"]
 		}
@@ -50,7 +50,7 @@ class SongDownloader {
 	}
 
 	static download(str) {
-		str := Trim(str, " `t`r`n")
+		str := Trim(str, " `t`r`n`"`'")
 		if SubStr(str,1,1) == "{" || SubStr(str,1,1) == "[" {
 			try {
 				jsongo.parse(str) ; this is just a test to check if its valid json.
@@ -61,6 +61,8 @@ class SongDownloader {
 			} catch { ; something wack is happening
 				MsgBoxAsGui("Invalid JSON/Download: " str,,,,,,,,,,,1000)
 			}
+		} else if FileExist(str) {
+			this.editMetadata(str)
 		} else if (strCountStr(str, "https") > 1) { ; assume its multiple songs, so retrieve metadata
 			if (A_LineFile == A_ScriptFullPath) {
 				r := this.getMetadataJson(str)
@@ -193,7 +195,7 @@ class SongDownloader {
 		return metaData
 	}
 
-	static songDLGui(data) {
+	static songDLGui(data, destination?, editableLink := false) {
 		g := Gui("+Border +OwnDialogs", "Download Song")
 		g.OnEvent("Close", (*) => g.Destroy())
 		if data.HasOwnProp("error") {
@@ -201,21 +203,27 @@ class SongDownloader {
 			errEdit.SetFont("cRed Bold")
 		}
 		g.AddText("Section 0x200 R1.45", "Links | Current Folder: " )
-		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", (subOutputFolder := this.settings.outputSubFolder)).OnEvent("Change", guiHandler)
+		folder := this.settings.outputSubFolder
+		if IsSet(destination) {
+			SplitPath(destination,, &dir)
+			SplitPath(dir, &fl)
+			folder := fl
+		}
+		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", folder).OnEvent("Change", guiHandler)
 		g.AddButton("xs+151 vButtonDescription ys-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
-		g.AddEdit("xs w250 R1 ReadOnly vLink", data.link)
+		g.AddEdit("xs w250 R1 vLink " (editableLink ? "" : "ReadOnly"), data.link)
 		g.AddText("0x200 R1.45", "Title")
 		if data.HasOwnProp("shortJson")
 			g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
 		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", guiHandler)
 		g.AddText("", "Artist")
 		metadataVar := ObjOwnPropCount(this.data.lastSongMetadata) > 0 ? this.data.lastSongMetadata : data
-		g.AddEdit("w250 vArtist", metadataVar.artist).OnEvent("Change", guiHandler)
-		g["Title"].Focus()
+		g.AddEdit("xs w250 vArtist", metadataVar.artist).OnEvent("Change", guiHandler)
 		g.AddText("", "Album")
-		g.AddEdit("w250 vAlbum", metadataVar.album).OnEvent("Change", guiHandler)
+		g.AddEdit("xs w250 vAlbum", metadataVar.album).OnEvent("Change", guiHandler)
 		g.AddText("", "Genre")
-		g.AddEdit("w250 vGenre", metadataVar.genre).OnEvent("Change", guiHandler)
+		g.AddEdit("xs w250 vGenre", metadataVar.genre).OnEvent("Change", guiHandler)
+		g["Title"].Focus()
 		g.AddCheckbox("xs vEmbedThumbnail Checked" true, "Embed Thumbnail").OnEvent("Click", guiHandler)
 		g.AddCheckbox("xs+125 yp vUseVisibleCMD Checked" this.settings.useVisibleCMD, "Visble CMD")
 		g.AddCheckbox("xs vUseCookies Checked" this.settings.useCookies, "Use Cookies (" this.settings.browserCookies ")").OnEvent("Click", guiHandler)
@@ -226,7 +234,7 @@ class SongDownloader {
 		profile := this.PROFILE_MUSIC[
 			this.PROFILE_PARSE_METADATA[data],
 			this.constructOutputPatternString(data),
-			subOutputFolder,
+			folder,
 			this.settings.useCookies,
 			true,
 			true
@@ -265,6 +273,76 @@ class SongDownloader {
 		}
 	}
 
+	static editMetadataGui(data) {
+		g := Gui("+Border +OwnDialogs", "Edit Metadata")
+		g.OnEvent("Close", (*) => g.Destroy())
+		SplitPath(data.filePath, &name, &dir, &ext, &nameNoExt)
+		SplitPath(dir, &dirname)
+		g.AddText("Section 0x200 R1.45", "File | Current Folder: " )
+		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", dirname)
+		g.AddButton("xs+151 vButtonDescription ys-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
+		g.AddEdit("xs w250 R1 ReadOnly vFile", name)
+		g.AddText("0x200 R1.45", "Title")
+		if (data.HasOwnProp("purl"))
+			g.AddButton("xs+151 yp-1 w100", "Open Link").OnEvent("Click", (*) => Run(data.purl))
+		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", guiHandler)
+		g.AddText("0x200 R1.45", "Artist")
+		g.AddButton("xs+151 yp-1 w100 vSwapButton", "Swap Title - Artist").OnEvent("Click", guiHandler)
+		g.AddEdit("xs w250 vArtist", data.artist).OnEvent("Change", guiHandler)
+		g.AddText("", "Album")
+		g.AddEdit("xs w250 vAlbum", data.album).OnEvent("Change", guiHandler)
+		g.AddText("", "Genre")
+		g.AddEdit("xs w250 vGenre", data.genre).OnEvent("Change", guiHandler)
+		g.AddButton("xs-1 h30 w251 vReDownload", "Re-Download").OnEvent("Click", guiFinisher)
+		g.AddButton("xs1 h30 w251 vEditMetadata Default", "Edit Metadata").OnEvent("Click", guiFinisher)
+		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
+
+		guiHandler(guiCtrlObj, info?) {
+			switch guiCtrlObj.Name {
+				case "SwapButton":
+					temp := g["Artist"].Value
+					g["Artist"].Value := g["Title"].Value
+					g["Title"].Value := temp
+					SplitPath(g["File"].Value,,,&ext)
+					g["File"].Value := g["Artist"].Value " - " g["Title"].Value "." ext
+				case "Title", "Artist":
+					SplitPath(g["File"].Value,,,&ext)
+					g["File"].Value := g["Artist"].Value " - " g["Title"].Value "." ext
+			}
+		}
+
+		guiFinisher(ctrlObj, info?) {
+			gData := ctrlObj.gui.submit()
+			name := ctrlObj.Name
+			ctrlObj.gui.destroy()
+			switch name {
+				case "ReDownload":
+					songData := {
+						title: gData.Title, artist: gData.Artist,
+						album: gData.Album, genre: gData.Genre,
+						link: data.purl, description: data.Description
+					}
+					this.songDLGui(songData, data.filePath, true)
+				case "EditMetadata":
+					str := ""
+					fileName := gData.file
+					tempFile := dir "\" fileName
+					if (fileName == name) ; with ext, only name no folder
+						tempFile := dir "\" nameNoExt "_." ext
+					for e in this.settings.metadataFields
+						str .= "-metadata " e '="' gData.%e% '" '
+					cmd := Format('ffmpeg -i "{}" -codec copy {} "{}"', data.filePath, Trim(str), tempFile)
+					ret := cmdRet(cmd, , "UTF-8")
+					Sleep(200)
+					if (FileExist(tempFile)) {
+						FileDelete(data.filePath)
+						if (fileName == name)
+							FileMove(tempFile, data.filePath, 1)
+					}
+					MsgBoxAsGui("Done")
+			}
+		}
+	}
 
 	static finishGui(data, g, info?) {
 		if (g is Gui.Button)
@@ -293,11 +371,13 @@ class SongDownloader {
 			if FileExist(metadatapath) {
 				try {
 					curData := jsongo.parse(FileRead(metadatapath, "UTF-8"))
-					curData.push(songData)
+					try curData.push(songData)
+					catch
+						curData := [curData, songData]
 				}
 			}
 			f := FileOpen(metadatapath, "w", "UTF-8")
-			f.Write(objToString(curData ?? songData,false,false,true))
+			f.Write(objToString(curData ?? [songData],false,false,true))
 			f.Close()
 		}
 		this.launchYTDL(profile, songData.link, gData.UseVisibleCMD, this.onFinish.bind(this, 1, gData.OutputFolder, 0, 0))
@@ -351,6 +431,14 @@ class SongDownloader {
 			fullStr := Format("[{}] {}`n{}`n", FormatTime(A_Now, "dd.MM.yyyy, ~HH:mm:ss"), Trim(output, " `t`r`n"), strMultiply("=", 22))
 			FileAppend(fullStr, path, "UTF-8")
 		}
+	}
+
+	static editMetadata(filePath) {
+		jsonStr := cmdRet('ffprobe -v error -output_format json -show_entries format_tags "' filePath '"',, "UTF-8")
+		output := jsongo.parse(jsonStr)
+		metadata := MapToObj(output["format"]["tags"])
+		metadata.filePath := filePath
+		this.editMetadataGui(metadata)
 	}
 
 	static verifyDownloads(jsonAsStr, folderToCheck := this.settings.outputSubFolder) {
