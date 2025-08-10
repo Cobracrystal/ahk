@@ -284,9 +284,9 @@ Alt & Capslock::{
 				list := WinUtilities.getAllWindowInfo()
 				objRemoveValue(list,,,(key,a,b) => (WinGetMinMax(a) == -1))
 				; msgbox(objToString(list, false))
-				Loop(list.Length) {
-					a := 5
-				}
+				; Loop(list.Length) {
+				; 	a := 5
+				; }
 				; algorithm: for the number of windows we have, calculate the best integer multiplication (eg for 27: 7x4)
 				; then try both orientations (eg 7x4, 4x7), and choose the one where the calculated width/height ratio for the windows
 				; is smaller (as in, more quadratic).
@@ -300,7 +300,7 @@ Alt & Capslock::{
 				return
 		}
 	}
-	else
+	else if MsgBoxAsGui("Restore Previous State?", "Confirm Dialog", 0x1,,true) == "OK"
 		WindowManager.DesktopState.restore("TilingState")
 }
 
