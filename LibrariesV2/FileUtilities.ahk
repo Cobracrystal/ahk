@@ -63,8 +63,9 @@ removeDupes(folder1, folder2) {
 
 getFileDupes(recursive := true, caseSense := false, bySize := false, byName := true, byExt := true, grouped := true, folders*) {
 	fileList := []
+	mode := recursive ? 'FDR' : 'FD'
 	for folder in folders
-		fileList.push(getFolderAsArr(folder, , , 3))
+		fileList.push(getFolderAsArr(folder, , mode , 3)*)
 	switch {
 		case bySize && byName && byExt:
 			fn := (a => (a.size "|" a.name))
@@ -107,6 +108,22 @@ getMetadataFolder(folder, metadata := []) {
 		data.push(fObj)
 	}
 	return data
+}
+
+/**
+ * Compares items in folders. optionally recursive. returns items present in folder 1 that are not present in folder 2
+ * @param folder1 
+ * @param folder2 
+ * @returns {Map} 
+ */
+compareFolders(folder1, folder2, recursive := false) {
+	f1exists := Map()
+	changes := Map()
+	loop files folder1 "\*", recursive ? 'FDR' : 'FD' {
+		if !FileExist(folder2 "\" A_LoopFilename)
+			changes[A_LoopFileName] := true
+	}
+	return changes
 }
 
 class FGP {
