@@ -355,7 +355,7 @@ colorGradientArr(amount, colors*) {
 		gradient.Push(format("0x{1:02X}{2:02X}{3:02X}", r, g, b))
 	}
 	; last color given, same as first
-	gradient.Push(format("0x{:06X}", colors[colors.Length]))
+	gradient.Push(format("0x{:06X}", colors[-1]))
 	; return array of amount+2 colors
 	return gradient
 }
@@ -491,7 +491,10 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	static SS_WHITERECT := 0x0006	; Gui option for white rectangle (http://ahkscript.org/boards/viewtopic.php?p=20053#p20053)
 	static NecessaryStyle := 0x94C80000
 	static SS_NOPREFIX := 0x80 ; no ampersand nonsense
-
+	
+	static WM_KEYDOWN := 0x0100
+	static WM_RBUTTONDOWN := 0x0204
+	
 	buttonStyle := buttonStyle + 1 ; offset since this is not 0-indexed
 	if (buttonNames.Length == 0) {
 		if !(MB_BUTTON_TEXT.Has(buttonStyle))
@@ -535,32 +538,68 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	buttonX := guiWidth - totalButtonWidth ; the buttons are right-aligned
 	buttonY := whiteBoxHeight + buttonMargin
 	for i, e in buttonNames
-		mbgui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * buttonSpace, buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(i))
+		btn := mbgui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * buttonSpace, buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(i))
 	if (addCopyButton)
-		mbgui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * buttonSpace, buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := text))
+		btn := mbgui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * buttonSpace, buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := text))
 	defaultButton := defaultButton == "Copy" ? 0 : defaultButton
 	mbGui["Button" defaultButton].Focus()
 	guiHeight := whiteBoxHeight + buttonHeight + 2 * buttonMargin
 	if (buttonStyle != 2 && buttonStyle != 4)
 		mbGui.OnEvent("Escape", finalEvent.bind(0))
 	mbGui.OnEvent("Close", finalEvent.bind(0))
+	OnMessage(WM_KEYDOWN, guiNotify)
+	OnMessage(WM_RBUTTONDOWN, guiNotify)
 	mbgui.Show("Center w" guiWidth " h" guiHeight)
 	if IsSet(timeout)
 		SetTimer(timeoutFObj := finalEvent.bind(-1), -1000 * timeout)
 	if (wait) {
 		WinWait(hwnd := mbgui.hwnd)
 		WinWaitClose(hwnd)
+		mbgui := 0
+		OnMessage(WM_KEYDOWN, guiNotify, 0) ; unregister
+		OnMessage(WM_RBUTTONDOWN, guiNotify, 0)
 		return retValue
 	}
 	return mbgui
 
 	finalEvent(buttonNumber, *) {
 		mbgui.Destroy()
+		mbgui := 0
+		OnMessage(WM_KEYDOWN, guiNotify, 0) ; unregister
+		OnMessage(WM_RBUTTONDOWN, guiNotify, 0)
 		if (IsSet(timeout))
 			SetTimer(timeoutFObj, 0)
 		retValue := buttonNumber == -1 ? "Timeout" : buttonNumber == 0 ? "Cancel" : buttonNames[buttonNumber]
 		if (IsSet(funcObj))
 			funcObj(retValue)
+	}
+
+	guiNotify(wParam, lParam, msg, hwnd) {
+		if (!mbgui) {
+			OnMessage(WM_KEYDOWN, guiNotify, 0) ; unregister
+			OnMessage(WM_RBUTTONDOWN, guiNotify, 0)
+		} else if ((ctrl := GuiCtrlFromHwnd(hwnd)) && (ctrl.gui.hwnd == mbgui.hwnd)) || (hwnd == mbgui.hwnd) {
+			if (msg == WM_KEYDOWN) && (wParam == 67) && GetKeyState("Ctrl") {
+				A_Clipboard := text
+				return 0 ; prevents sound
+			} else if !ctrl {
+				m := Menu()
+				m.Add("Select Text", guiContextMenu)
+				m.show()
+			}
+		}
+	}
+
+	guiContextMenu(itemName, itemPos, menuObj) {
+		miniGui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox +Owner" mbgui.hwnd, "Select and Copy")
+		miniGui.Opt("+" hex(NecessaryStyle))
+		miniGui.Opt("-ToolWindow")
+		miniGui.OnEvent("Escape", (*) => miniGui.destroy())
+		miniGui.OnEvent("Close", (*) => miniGui.destroy())
+		miniGui.MarginX := miniGui.MarginY := 2
+		miniGui.SetFont(guiFontOptions, MB_FONTNAME)
+		miniGui.AddEdit("-E0x200 ReadOnly w" guiWidth " h" whiteBoxHeight, text)
+		miniGui.show()
 	}
 }
 
@@ -607,37 +646,41 @@ textCtrlAdjustSize(width, textCtrl?, str?, onlyCalculate := false, fontOptions?,
 		textCtrl := temp.AddText()
 		onlyCalculate := true
 	}
-	fixedWidthStr := fixedWidthLine := ""
-	pos := 0
-	loop parse str, " `t" {
-		line := A_LoopField
-		lLen := StrLen(A_LoopField)
-		pos += lLen + 1
-		strWidth := guiGetTextSize(textCtrl, fixedWidthLine . line)
-		if (pos > 65535)
-			break
-		if (strWidth[1] <= width)
-			fixedWidthLine .= line . substr(str, pos, 1)
-		else { ; reached max width, begin new line
-			fixedWidthStr .= (fixedWidthStr ? '`n' : '') . fixedWidthLine
-			if (guiGetTextSize(textCtrl, line)[1] <= width) {
-				fixedWidthLine := line . substr(str, pos, 1)
-			} else { ; A_Loopfield is by itself wider than width
-				fixedWidthLine := fixedWidthWord := linePart := ""
-				loop parse line { ; thus iterate char by char
-					curWidth := guiGetTextSize(textCtrl, linePart . A_LoopField)
-					if (curWidth[1] <= width) ; reached max width, begin new line
-						linePart .= A_LoopField
-					else {
-						fixedWidthWord .= '`n' linePart
-						linePart := A_LoopField
+	fixedWidthStr := ""
+	loop parse str, "`n", "`r" {
+		fixedWidthLine := ""
+		fullLine := A_LoopField
+		pos := 0
+		loop parse fullLine, " `t" {
+			line := A_LoopField
+			lLen := StrLen(A_LoopField)
+			pos += lLen + 1
+			strWidth := guiGetTextSize(textCtrl, fixedWidthLine . line)
+			if (pos > 65535)
+				break
+			if (strWidth[1] <= width)
+				fixedWidthLine .= line . substr(fullLine, pos, 1)
+			else { ; reached max width, begin new line
+				fixedWidthStr .= (fixedWidthStr ? '`n' : '') . fixedWidthLine
+				if (guiGetTextSize(textCtrl, line)[1] <= width) {
+					fixedWidthLine := line . substr(fullLine, pos, 1)
+				} else { ; A_Loopfield is by itself wider than width
+					fixedWidthLine := fixedWidthWord := linePart := ""
+					loop parse line { ; thus iterate char by char
+						curWidth := guiGetTextSize(textCtrl, linePart . A_LoopField)
+						if (curWidth[1] <= width) ; reached max width, begin new line
+							linePart .= A_LoopField
+						else {
+							fixedWidthWord .= '`n' linePart
+							linePart := A_LoopField
+						}
 					}
+					fixedWidthStr .= (fixedWidthStr == "" ? SubStr(fixedWidthWord, 2) : fixedWidthWord) . (linePart == "" ? '' : '`n' linePart)
 				}
-				fixedWidthStr .= (fixedWidthStr == "" ? SubStr(fixedWidthWord, 2) : fixedWidthWord) . (linePart == "" ? '' : '`n' linePart)
 			}
 		}
+		fixedWidthStr .= (fixedWidthStr ? '`n' : '') fixedWidthLine . substr(fullLine, pos, 1)
 	}
-	fixedWidthStr .= (fixedWidthStr ? '`n' : '') fixedWidthLine . substr(str, pos, 1)
 	if (!onlyCalculate) {
 		textCtrl.Move(,,guiGetTextSize(textCtrl, fixedWidthStr)*)
 		textCtrl.Value := fixedWidthStr
