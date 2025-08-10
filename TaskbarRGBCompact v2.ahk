@@ -69,7 +69,7 @@ colorGradientArr(amount, colors*) {
 		b := round((segProgress * (rgb[s+1].b-rgb[s].b))+rgb[s].b)
 		gradient.push(format("0x{1:02X}{2:02X}{3:02X}", r, g, b))
 	}
-	gradient.push(format("0x{:06X}", colors[colors.length]))
+	gradient.push(format("0x{:06X}", colors[-1]))
 	return gradient
 }
 

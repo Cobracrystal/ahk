@@ -78,7 +78,7 @@ class YoutubeDLGui {
 			StrReplace(newLine, "`r", "`r", , &carriageCount)
 			if (carriageCount) { ; if `r in string, only take the last string part.
 				tArr := StrSplit(newLine, "`r")
-				newLine := tArr[tArr.Length]
+				newLine := tArr[-1]
 			}
 			; if current line AND previous line have `r, then overwrite prev line, otherwise save the line.
 			if !(carriageCount && this.data.outputLastLineCFlag)
@@ -205,7 +205,7 @@ class YoutubeDLGui {
 			return
 		if (this.settings.trySelectFile) {
 			arrLong := StrSplit(fullOutput, YoutubeDLGui.UIComponents.separator)
-			responseArr := StrSplit(arrLong[arrLong.Length], YoutubeDLGui.UIComponents.separatorSmall)
+			responseArr := StrSplit(arrLong[-1], YoutubeDLGui.UIComponents.separatorSmall)
 			fileNames := []
 			for i, e in responseArr
 			{
@@ -227,7 +227,7 @@ class YoutubeDLGui {
 					WinActivate("ahk_id " . oWin.HWND)
 					PostMessage(0x111, 28931, , , "ahk_id " . oWin.HWND) ; forcibly refresh ?
 					oItems := oWin.Document.Folder.Items
-					oWin.Document.SelectItem(oItems.Item(fileNames[fileNames.Length]), 29)
+					oWin.Document.SelectItem(oItems.Item(fileNames[-1]), 29)
 					for i, e in fileNames
 						oWin.Document.SelectItem(oItems.Item(e), 1)
 					oWin := oItems := ""

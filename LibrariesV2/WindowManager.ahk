@@ -272,7 +272,7 @@ class WindowManager {
 				rowNums := []
 				wHandles := []
 				Loop {
-					nextRow := this.LV.GetNext(A_Index == 1 ? 0 : rowNums[rowNums.Length])
+					nextRow := this.LV.GetNext(A_Index == 1 ? 0 : rowNums[-1])
 					if (nextRow == 0)
 						break
 					rowNums.push(nextRow)
@@ -399,7 +399,7 @@ class WindowManager {
 		rowNums := []
 		wHandles := []
 		Loop {
-			nextRow := this.LV.GetNext(A_Index == 1 ? 0 : rowNums[rowNums.Length])
+			nextRow := this.LV.GetNext(A_Index == 1 ? 0 : rowNums[-1])
 			if (nextRow == 0)
 				break
 			rowNums.push(nextRow)

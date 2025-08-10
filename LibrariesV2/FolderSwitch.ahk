@@ -42,9 +42,11 @@ class FolderSwitch {
 				this.savedpaths.push(Trim(A_LoopField))
 		objs := ShellWrapper.getExplorerIEObjects()
 		this.openedPaths := objDoForEach(objs, e => ShellWrapper.getExplorerSelfPath(e))
-		if this.savedpaths[this.savedpaths.Length] == this.dataPath
+		if this.savedpaths[-1] == this.dataPath
 			this.savedpaths.pop()
 		this.paths := objGetUniques(arrayMerge(this.savedpaths, [""], this.openedPaths), , false)
+		if this.paths[-1] == ""
+			this.paths.pop()
 		c := 1
 		for e in this.paths
 			m.add(e == "" ? unset : "&" c++ " " e, e == "" ? unset : fn)
