@@ -513,6 +513,7 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 		strEscape := 					strEscape				?? (!flagFirstIsInstance || flagIncludeClassOrPrototype || flagWithBases)
 		overrideAsObj := (flagIncludeClassOrPrototype || flagIncludeInheritedProps)
 	}
+	encounteredObjs := Map() ; to avoid self-reference loops
 	return _objToString(obj, 0)
 
 	_objToString(obj, indentLevel, flagOverrideStrEscape := false, flagIsOwnPropDescObject := false) {
@@ -530,7 +531,10 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 			}
 			return obj
 		}
-		; for very small objects, this may be expensive to do, but it would be very messy otherwise
+		if (encounteredObjs.Has(ObjPtr(obj)))
+			return "{}"
+		encounteredObjs[ObjPtr(obj)] := true
+		; for very small objects, this may be excessive to do, but it would be very messy otherwise
 		objType := Type(obj)
 		flagIsMap := obj is Map
 		flagIsArr := obj is Array
@@ -807,10 +811,10 @@ arraySort(arr, fn := (a => a), sortMode := "") {
 			indexMap[v] := [i]
 			counterMap[v] := 1
 		}
-		str .= v . "©"
+		str .= v . "╦"
 	}
 	sortMode := RegExReplace(sortMode, "D.")
-	valArr := StrSplit(Sort(SubStr(str, 1, -1), sortMode . " D©"), "©")
+	valArr := StrSplit(Sort(SubStr(str, 1, -1), sortMode . " D╦"), "╦")
 	for v in valArr
 		sortedArr.push(arr[indexMap[v][counterMap[v]++]])
 	return sortedArr
@@ -829,10 +833,10 @@ objBasicSort(obj, sortMode := "") {
 	if !objGetValueCount(obj)
 		return []
 	for e in objGetEnumerator(obj)
-		str .= e . "©"
+		str .= e . "╦"
 	sortMode := RegExReplace(sortMode, "D.")
-	newStr := Sort(SubStr(str, 1, -1), sortMode . " D©")
-	return StrSplit(newStr, "©")
+	newStr := Sort(SubStr(str, 1, -1), sortMode . " D╦")
+	return StrSplit(newStr, "╦")
 }
 objSortNumerically(obj, sortMode := "N") => objDoForEach(objBasicSort(obj, sortMode), (e => Number(e)))
 
@@ -858,10 +862,10 @@ objSort(obj, fn := (a => a), sortMode := "") {
 			indexMap[v] := [i]
 			counterMap[v] := 1
 		}
-		str .= v . "©"
+		str .= v . "╦"
 	}
 	sortMode := RegExReplace(sortMode, "D.")
-	valArr := StrSplit(Sort(SubStr(str, 1, -1), sortMode . " D©"), "©")
+	valArr := StrSplit(Sort(SubStr(str, 1, -1), sortMode . " D╦"), "╦")
 	if isArrLike {
 		for v in valArr {
 			key := indexMap[v][counterMap[v]++]
