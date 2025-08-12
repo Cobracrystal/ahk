@@ -250,8 +250,7 @@ cmdRetAsync(sCmd, callBackFuncObj?, encoding := "CP" . DllCall('GetOEMCP', 'UInt
 			fullOutput .= stdOut := StrGet(sTemp, nSize, encoding)
 			if (IsSet(callBackFuncObj))
 				callBackFuncObj(stdOut)
-		}
-		else {
+		} else {
 			SetTimer(readFileCheck, 0)
 			closeHandle(1)
 		}
@@ -864,21 +863,25 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
  * @param path Path to normalize
  * @returns {string} A normalized Path (if valid) or an empty string if the path could not be resolved.
  */
-normalizePath(path) {	; ONLY ABSOLUTE PATHS
-	path := StrMultiReplace(path, ["\\", "/"], ["\", "\"])
-	if (!RegexMatch(path, "i)^[a-z]:\\") || RegexMatch(path, "i)^[a-z]:\\\.\.\\"))
-		return ""
-	path := StrReplace(path, "\.\", "\")
+normalizePath(path) {
+	path := StrMultiReplace(path, ["\\", "/"], ["\", "\"]) ; ignore \\, /->\
+	while InStr(path, "\.\") ; \.\ does nothing since . is current file
+		path := StrReplace(path, "\.\", "\")
 	if (SubStr(path, -2) == "\.")
 		path := SubStr(path, 1, -2)
-	Loop {
-		path := RegexReplace(path, "\\(?!\.\.\\)[^\\]+?\\\.\.(?:\\|$)", "\", &rCount)
-		if (rCount == 0)
-			break
+	path := Trim(path, " `t\")
+	pathArr := StrSplit(path, "\")
+	i := 1
+	while(i <= pathArr.Length) {
+		if (pathArr[i] != "..")
+			i++
+		else {
+			patharr.RemoveAt(i)
+			if i > 2 ; pathArr[1] is the drive. C:\..\Users\..\..\Users => C:\Users
+				pathArr.RemoveAt(--i)
+		}
 	}
-	if (InStr(path, "\..\") || SubStr(path, -3) == "\..")
-		return ""
-	return path
+	return objCollect(pathArr, (b, e) => b "\" e)
 }
 
 tryEditTextFile(editor := A_WinDir . "\system32\notepad.exe", params := "", *) {
