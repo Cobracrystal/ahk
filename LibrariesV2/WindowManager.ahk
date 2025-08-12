@@ -29,7 +29,7 @@ class WindowManager {
 			if (mode == "O")
 				WinActivate(this.gui.hwnd)
 			else {
-				this.data.coords := WinUtilities.windowGetCoordinates(this.gui.hwnd)
+				this.data.coords := WinUtilities.getWindowPlacement(this.gui.hwnd, true)
 				this.gui.destroy()
 				this.gui := 0
 			}
@@ -224,29 +224,35 @@ class WindowManager {
 		if (search == "")
 			return true
 		tagMap := Map()
-		for value, keys in aliases
-			for key in keys
-				tagMap[key] := value
-		
+		for normalizedTag, aliasTag in aliases
+			for tagAlias in aliasTag
+				tagMap[tagAlias] := normalizedTag
+		; tagMap: {handle => hwnd, id => hwnd, hwnd => hwnd, ahk_id => hwnd, title => title, ahk_title => title, ...}
 		searches := Map()
-		for tag, tagMapped in tagMap {
-			flagAHKSyntax := (SubStr(tag, 1, 4) == "ahk_")
-			RegexMatch(search, "(?:^|\s)" tag . (flagAHKSyntax ? "(?::|\s+)" : ":") . "([^\s]+)", &o)
+		for aliasTag, normalizedTag in tagMap {
+			flagAHKSyntax := (SubStr(aliasTag, 1, 4) == "ahk_")
+			RegexMatch(search, "(?:^|\s)" aliasTag . (flagAHKSyntax ? "(?::|\s+)" : ":") . "([^\s]+)", &o)
 			if (o) {
-				searches[tagMapped] := o[1]
-				search := RegExReplace(search, "\s*" tag . (flagAHKSyntax ? "(?::|\s+)" : ":") . "[^\s]+")
+				searches[normalizedTag] := o[1]
+				if normalizedTag == "hwnd"
+					try searches[normalizedTag] := Integer(o[1])
+				search := RegExReplace(search, "\s*" aliasTag . (flagAHKSyntax ? "(?::|\s+)" : ":") . "[^\s]+")
 			}
 		}
 		freeSearch := search
 		flagInclude := true
-		for tag, s in searches
-			if (!InStr(win.%tag%, s, this.config.filterCaseSense))
+		for normalizedTag, searchPhrase in searches
+			if (!InStr(win.%normalizedTag%, searchPhrase, this.config.filterCaseSense))
 				return false
 		if freeSearch == ""
 			return true
 		for i, e in win.OwnProps()
 			if (InStr(e, freeSearch, this.config.filterCaseSense))
 				return true
+		if IsInteger(freeSearch)
+			for i, e in win.OwnProps()
+				if (InStr(e, Integer(freeSearch), this.config.filterCaseSense))
+					return true
 		return false
 	}
 
@@ -360,11 +366,11 @@ class WindowManager {
 				}
 				style := WinGetStyle(wHandle)
 				exStyle := WinGetExStyle(wHandle)
-				checkState := style & WinUtilities.windowExStyles.WS_EX_TOPMOST ? "Check" : "Uncheck"
+				checkState := style & WinUtilities.EXSTYLES.WS_EX_TOPMOST ? "Check" : "Uncheck"
 				this.menus.subMenu.%checkState%("Toggle Window Lock")
-				checkState := style & WinUtilities.windowStyles.WS_CAPTION ? "Check" : "Uncheck"
+				checkState := style & WinUtilities.STYLES.WS_CAPTION ? "Check" : "Uncheck"
 				this.menus.subMenu.%checkState%("Toggle Title Bar")
-				checkState := style & WinUtilities.windowStyles.WS_VISIBLE ? "Check" : "Uncheck"
+				checkState := style & WinUtilities.STYLES.WS_VISIBLE ? "Check" : "Uncheck"
 				this.menus.subMenu.%checkState%("Toggle Visibility")
 				this.menus.menu.show()
 			case "DoubleClick":
@@ -413,13 +419,13 @@ class WindowManager {
 			"Restore Window", 		(wHandle) => WinUtilities.isBorderlessFullscreen(wHandle) ? WinUtilities.resetWindowPosition(wHandle, 5/7) : WinRestore(wHandle),
 			"Move Windows to Monitor 1", WinUtilities.resetWindowPosition.bind(,,1),
 			"Move Windows to Monitor 2", WinUtilities.resetWindowPosition.bind(,,2),
-			"Toggle Window Lock", 	(wHandle) => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & WinUtilities.windowExStyles.WS_EX_TOPMOST ? 0 : 1, wHandle)),
+			"Toggle Window Lock", 	(wHandle) => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & WinUtilities.EXSTYLES.WS_EX_TOPMOST ? 0 : 1, wHandle)),
 			"Set Window Lock", 		WinSetAlwaysOnTop.bind(true),
 			"Remove Window Lock", 	WinSetAlwaysOnTop.bind(false),
-			"Toggle Title Bar",		WinSetStyle.bind('^' WinUtilities.windowStyles.WS_CAPTION),
-			"Add Title Bar", 		WinSetStyle.bind("+" WinUtilities.windowStyles.WS_CAPTION),
-			"Remove Title Bar", 	WinSetStyle.bind("-" WinUtilities.windowStyles.WS_CAPTION),
-			"Toggle Visibility", 	(wHandle) => (WinGetStyle(wHandle) & WinUtilities.windowStyles.WS_VISIBLE ? WinHide(wHandle) : WinShow(wHandle)),
+			"Toggle Title Bar",		WinSetStyle.bind('^' WinUtilities.STYLES.WS_CAPTION),
+			"Add Title Bar", 		WinSetStyle.bind("+" WinUtilities.STYLES.WS_CAPTION),
+			"Remove Title Bar", 	WinSetStyle.bind("-" WinUtilities.STYLES.WS_CAPTION),
+			"Toggle Visibility", 	(wHandle) => (WinGetStyle(wHandle) & WinUtilities.STYLES.WS_VISIBLE ? WinHide(wHandle) : WinShow(wHandle)),
 			"Show Window", 			WinShow,
 			"Hide Window", 			WinHide,
 			"View Command Line", 	(wHandle) => (MsgBoxAsGui(WinUtilities.winmgmt("CommandLine", "Where ProcessId = " . WinGetPID(wHandle))[1],,,,,,this.gui.hwnd,1)),
@@ -821,18 +827,32 @@ class WindowManager {
 		title: 			{isInteger: 0, key: "title", 		name: "Title"},
 		process: 		{isInteger: 0, key: "process", 		name: "Process"},
 		state: 			{isInteger: 1, key: "state", 		name: "mmx"},
+
 		xpos: 			{isInteger: 1, key: "xpos", 		name: "xpos"},
 		ypos: 			{isInteger: 1, key: "ypos", 		name: "ypos"},
 		width: 			{isInteger: 1, key: "width", 		name: "width"},
 		height: 		{isInteger: 1, key: "height", 		name: "height"},
+
 		clientxpos: 	{isInteger: 1, key: "clientxpos", 	name: "client_x"},
 		clientypos: 	{isInteger: 1, key: "clientypos", 	name: "client_y"},
 		clientwidth:	{isInteger: 1, key: "clientwidth", 	name: "client_width"},
 		clientheight:	{isInteger: 1, key: "clientheight", name: "client_height"},
+
 		res_xpos: 		{isInteger: 1, key: "res_xpos", 	name: "Restored xpos"},
 		res_ypos: 		{isInteger: 1, key: "res_ypos", 	name: "Restored ypos"},
 		res_width:		{isInteger: 1, key: "res_width", 	name: "Restored width"},
 		res_height:		{isInteger: 1, key: "res_height", 	name: "Restored height"},
+
+		minX:			{isInteger: 1, key: "minX", 	name: "xpos while minimized"},
+		minY:			{isInteger: 1, key: "minY", 	name: "ypos while minimized"},
+		maxX:			{isInteger: 1, key: "maxX", 	name: "xpos while maximized"},
+		maxY:			{isInteger: 1, key: "maxY", 	name: "ypos while maximized"},
+
+		minW:			{isInteger: 1, key: "minW", 	name: "Min Width"},
+		minH:			{isInteger: 1, key: "minH", 	name: "Min Height"},
+		maxW:			{isInteger: 1, key: "maxW", 	name: "Max Width"},
+		maxH:			{isInteger: 1, key: "maxH", 	name: "Max Height"},
+
 		class: 			{isInteger: 0, key: "class", 		name: "ahk_class"},
 		flags: 			{isInteger: 0, key: "flags", 		name: "flags"},
 		pid: 			{isInteger: 1, key: "pid", 			name: "PID"},
@@ -858,6 +878,14 @@ class WindowManager {
 		this.columns.res_ypos,
 		this.columns.res_width,
 		this.columns.res_height,
+		this.columns.minX,
+		this.columns.minY,
+		this.columns.maxX,
+		this.columns.maxY,
+		this.columns.minW,
+		this.columns.minH,
+		this.columns.maxW,
+		this.columns.maxH,
 		this.columns.class,
 		this.columns.pid,
 		this.columns.flags,

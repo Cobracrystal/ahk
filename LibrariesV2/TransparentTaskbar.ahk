@@ -67,9 +67,9 @@ class TransparentTaskbar {
 			hSecondaryTray := WinGetList("ahk_class Shell_SecondaryTrayWnd")
 			for i, h in hSecondaryTray
 				this.trayHandles[this.get_window_monitor_number(h)] := h
-			for i, m in this.monitors { ; only include monitors that have a taskbar on them
-				if (this.trayHandles.Has(m.MonitorNumber))
-					relevantMonitors.push(m)
+			for i, mon in this.monitors { ; only include monitors that have a taskbar on them
+				if (this.trayHandles.Has(mon.number))
+					relevantMonitors.push(mon)
 			}
 			this.monitors := relevantMonitors
 		}
@@ -83,7 +83,7 @@ class TransparentTaskbar {
 		if (hard)
 			this.init := false
 		try for i, e in this.monitors
-			this.TaskBar_SetAttr(1, e.MonitorNumber, this.taskbar_accent_color, this.taskbar_accent_transparency)
+			this.TaskBar_SetAttr(1, e.number, this.taskbar_accent_color, this.taskbar_accent_transparency)
 		catch Error
 			return
 	}
@@ -127,26 +127,26 @@ class TransparentTaskbar {
 		static index := 0
 		maximizedMonitors := this.getMaximizedMonitors()
 		for i, el in this.monitors {
-			if (maximizedMonitors[el.MonitorNumber]) {
+			if (maximizedMonitors[el.number]) {
 				if (this.taskbar_RGB_mode) {
-					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.MonitorNumber, this.gradient[index+1], this.rgbTransparency)
-					this.taskbarTransparency[el.MonitorNumber] := 0
+					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.number, this.gradient[index+1], this.rgbTransparency)
+					this.taskbarTransparency[el.number] := 0
 					index := mod(index + 1, round(this.RGB_rotate_duration*63))
 				}
-				else if (this.taskbarTransparency[el.MonitorNumber]) {
-					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.MonitorNumber, this.taskbar_maximized_color, this.taskbar_maximized_transparency)
-					this.taskbarTransparency[el.MonitorNumber] := 0
+				else if (this.taskbarTransparency[el.number]) {
+					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.number, this.taskbar_maximized_color, this.taskbar_maximized_transparency)
+					this.taskbarTransparency[el.number] := 0
 				}
 				else if (override) {
-					this.TaskBar_SetAttr(1, el.MonitorNumber, 0x222222, 0x01) ; fix the accented color being wrong
-					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.MonitorNumber, this.taskbar_maximized_color)
+					this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix the accented color being wrong
+					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.number, this.taskbar_maximized_color)
 				}
 			}
 			else {
 				if (override)
-					this.TaskBar_SetAttr(1, el.MonitorNumber, 0x222222, 0x01) ; fix
-				this.TaskBar_SetAttr(2, el.MonitorNumber, 0x000000, 0x01)
-				this.taskbarTransparency[el.MonitorNumber] := 1
+					this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix
+				this.TaskBar_SetAttr(2, el.number, 0x000000, 0x01)
+				this.taskbarTransparency[el.number] := 1
 			}
 		}
 	}
@@ -169,8 +169,8 @@ class TransparentTaskbar {
 		winMiddleX := xpos + width/2
 		winMiddleY := ypos + height/2
 		for i, e in this.monitors
-			if (winMiddleX > e.Left && winMiddleX < e.Right && winMiddleY > e.Top && winMiddleY < e.Bottom)
-				return e.MonitorNumber
+			if (winMiddleX > e.left && winMiddleX < e.Right && winMiddleY > e.Top && winMiddleY < e.Bottom)
+				return e.number
 	}
 
 	static TaskBar_SetAttr(accent_state := 0, monitor := -1, gradient_RGB := 0xFF8000, gradient_alpha := 0x80) {

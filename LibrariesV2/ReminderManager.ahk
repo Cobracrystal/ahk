@@ -206,7 +206,7 @@ class ReminderManager {
 			if (mode == "O")
 				WinActivate(this.gui.hwnd)
 			else {
-				this.data.coords := WinUtilities.windowGetCoordinates(this.gui.hwnd)
+				this.data.coords := WinUtilities.getWindowPlacement(this.gui.hwnd)
 				this.gui.destroy()
 				this.gui := -1
 			}

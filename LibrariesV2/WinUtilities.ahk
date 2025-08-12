@@ -10,29 +10,37 @@ class WinUtilities {
 		dHW := A_DetectHiddenWindows
 		DetectHiddenWindows(getHidden)
 		wHandles := WinGetList()
-		for i, wHandle in wHandles {
-			for e in blacklist
-				if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == ""))
-					continue 2
-			windows.push(this.getWindowInfo(wHandle, getCommandLine))
+		for wHandle in wHandles {
+			if !this.winInBlacklist(wHandle, blacklist) {
+				windows.push(this.getWindowInfo(wHandle, getCommandLine))
+			}
 		}
 		DetectHiddenWindows(dHW)
 		return windows
 	}
 
-	static getWindowInfo(wHandle, getCommandline := false, updateCache := true) {
-		x := y := w := h := cx := cy := cw := ch := rx := ry := rw := rh := flags := mmx := winTitle := ""
-		if !WinExist(wHandle) {
+	static winInBlacklist(wHandle, blacklist := this.defaultBlacklist) {
+		for e in blacklist
+			if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == ""))
+				return 1
+		return 0
+	}
+
+	static getWindowInfo(hwnd, getCommandline := false, updateCache := true) {
+		x := y := w := h := cx := cy := cw := ch := rx := ry := rw := rh := minX := minY := maxX := maxY := ""
+		flags := mmx := winTitle := ""
+		if !WinExist(hwnd) {
 			return {}
 		}
-		try	winTitle := WinGetTitle(wHandle)
-		try	WinGetPos(&x, &y, &w, &h, wHandle)
+		try	winTitle := WinGetTitle(hwnd)
+		try	WinGetPos(&x, &y, &w, &h, hwnd)
 		try {
-			wInfo := this.getWindowPlacement(wHandle)
-			rx := wInfo.x, ry := wInfo.y, rw := wInfo.w, rh := wInfo.h, flags := wInfo.flags
+			wInfo := this.getWindowPlacement(hwnd)
+			rx := wInfo.x, ry := wInfo.y, rw := wInfo.w, rh := wInfo.h
+			mmx := wInfo.mmx, flags := wInfo.flags
+			minX := wInfo.minX, minY := wInfo.minY, maxX := wInfo.maxX, maxY := wInfo.maxY
 		}
-		try WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
-		try	mmx := WinGetMinMax(wHandle)
+		try WinGetClientPos(&cx, &cy, &cw, &ch, hwnd)
 		info := {
 			title: winTitle,
 			state: mmx,
@@ -42,12 +50,14 @@ class WinUtilities {
 			res_xpos: rx, res_ypos: ry,
 			res_width: rw, res_height: rh,
 			clientxpos: cx, clientypos: cy,
-			clientwidth: cw, clientheight: ch
+			clientwidth: cw, clientheight: ch,
+			minX: minX, minY: minY,
+			maxX: maxX, maxY: maxY
 		}
 		if !updateCache
 			cacheObj := info
 		else {
-			cacheObj := this.updateSingleCache(wHandle, getCommandline)
+			cacheObj := this.updateSingleCache(hwnd, getCommandline)
 			objMerge(cacheObj, info, false, true)
 		}
 		return cacheObj
@@ -66,30 +76,34 @@ class WinUtilities {
 		DetectHiddenWindows(dHW)
 	}
 
-	static updateSingleCache(wHandle, getCommandLine) {
+	static updateSingleCache(hwnd, getCommandLine) {
 		winClass := processName := processPath := pid := cmdLine := ""
+		minW := minH := maxW := maxH := ""
 		triedCommandline := false
-		if (this.windowCache.Has(wHandle)) {
-			if getCommandLine && !this.windowCache[wHandle].triedCommandline {
-				try this.windowCache[wHandle].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[wHandle].pid)[1]
-				this.windowCache[wHandle].triedCommandline := true
+		if (this.windowCache.Has(hwnd)) {
+			if getCommandLine && !this.windowCache[hwnd].triedCommandline {
+				try this.windowCache[hwnd].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[hwnd].pid)[1]
+				this.windowCache[hwnd].triedCommandline := true
 			}
 		} 
 		else {
-			try	winClass := WinGetClass(wHandle)
-			try	processName := WinGetProcessName(wHandle)
-			try	processPath := WinGetProcessPath(wHandle)
-			try	pid := WinGetPID(wHandle)
+			try	winClass := WinGetClass(hwnd)
+			try	processName := WinGetProcessName(hwnd)
+			try	processPath := WinGetProcessPath(hwnd)
+			try	pid := WinGetPID(hwnd)
+			try minMax := WinUtilities.getMinMaxResizeCoords(hwnd)
+			try minW := minMax.minW, minH := minMax.minH, maxW := minMax.maxW, maxH := minMax.maxH
 			if (getCommandLine) {
 				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
 				triedCommandline := true
 			}
-					; Get-WmiObject -Query "SELECT * FROM Win32_Process WHERE ProcessID = [PID]" in powershell btw
-			this.windowCache[wHandle] := {
-				hwnd: wHandle, class: winClass, process: processName, processPath: processPath, pid: pid, commandLine: cmdLine, triedCommandline: triedCommandline
+			this.windowCache[hwnd] := {
+				hwnd: hwnd, class: winClass, process: processName, processPath: processPath, 
+				pid: pid, minW: minW, minH: minH, maxW: maxW, maxH: MaxH,
+				commandLine: cmdLine, triedCommandline: triedCommandline
 			}
 		}
-		return this.windowCache[wHandle]
+		return this.windowCache[hwnd]
 	}
 
 	static winmgmt(selector?, selection?, d := "Win32_Process", m := "winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2") {
@@ -100,20 +114,15 @@ class WinUtilities {
 	}
 
 	static isVisible(wHandle) {
-		return WinGetStyle(wHandle) & this.windowStyles.WS_VISIBLE
+		return WinGetStyle(wHandle) & this.STYLES.WS_VISIBLE
 	}
 
 	static isBorderlessFullscreen(wHandle) {
 		WinGetPos(&x, &y, &w, &h, wHandle)
 		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
 		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		NumPut("Uint", 40, monitorInfo := Buffer(40))
-		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-			monLeft := NumGet(monitorInfo, 4, "Int"),
-			monTop := NumGet(monitorInfo, 8, "Int"),
-			monRight := NumGet(monitorInfo, 12, "Int"),
-			monBottom := NumGet(monitorInfo, 16, "Int")
-		if (monLeft == cx && monTop == cy && monRight == monLeft + cw && monBottom == monTop + ch)
+		mon := this.monitorGetWorkArea(mHandle)
+		if (mon.left == cx && mon.top == cy && mon.right == mon.left + cw && mon.bottom == mon.top + ch)
 			return true
 		else 
 			return false
@@ -123,14 +132,7 @@ class WinUtilities {
 		WinGetPos(&x, &y, &w, &h, wHandle)
 		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
 		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		NumPut("Uint", 40, monitorInfo := Buffer(40))
-		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-		monitor := {
-			left: NumGet(monitorInfo, 4, "Int"),
-			top: NumGet(monitorInfo, 8, "Int"),
-			right: NumGet(monitorInfo, 12, "Int"),
-			bottom: NumGet(monitorInfo, 16, "Int")
-		}
+		monitor := this.monitorGetWorkArea(mHandle)
 		WinMove(
 			monitor.left + (x - cx),
 			monitor.top + (y - cy),
@@ -139,102 +141,179 @@ class WinUtilities {
 			wHandle
 		)
 	}
-	
-	static getWindowPlacement(hwnd) {
-		DllCall("User32.dll\GetWindowPlacement", "Ptr", hwnd, "Ptr", WP := Buffer(44))
-		flags := NumGet(WP, 4, "Int")  ; flags
-		mmx := NumGet(WP, 8, "Int") ; ShowCMD
 
-		MinX := NumGet(WP, 12, "Int")
-		MinY := NumGet(WP, 16, "Int")
-		MaxX := NumGet(WP, 20, "Int")
-		MaxY := NumGet(WP, 24, "Int")
-		
-		x := NumGet(WP, 28, "Int")        ; X coordinate of the upper-left corner of the window in its original restored state
-		y := NumGet(WP, 32, "Int")        ; Y coordinate of the upper-left corner of the window in its original restored state
-		w := NumGet(WP, 36, "Int") - x   ; Width of the window in its original restored state
-		h := NumGet(WP, 40, "Int") - y   ; Height of the window in its original restored state
-		
-
-		return { x: x, y: y, w: w, h: h, mmx: mmx, flags: flags, minX: MinX, minY: MinY, maxX: MaxX, maxY: MaxY }
+	/**
+	 * Originally written by https://www.autohotkey.com/boards/viewtopic.php?f=6&t=3392
+	 */
+	static WinGetPosEx(hwnd) {
+		static S_OK := 0x0
+		static DWMWA_EXTENDED_FRAME_BOUNDS := 9
+		rect := Buffer(16, 0)
+		rectExt := Buffer(24, 0)
+		DllCall("GetWindowRect", "Ptr", hwnd, "Ptr", rect)
+		try 
+			DWMRC := DllCall("dwmapi\DwmGetWindowAttribute", "Ptr",  hwnd, "UInt", DWMWA_EXTENDED_FRAME_BOUNDS, "Ptr", rectExt, "UInt", 16, "UInt")
+		catch
+			return 0
+		L := NumGet(rectExt,  0, "Int")
+		T := NumGet(rectExt,  4, "Int")
+		R := NumGet(rectExt,  8, "Int")
+		B := NumGet(rectExt, 12, "Int")
+		leftBorder		:= L - NumGet(rect,  0, "Int")
+		topBorder		:= T - NumGet(rect,  4, "Int")
+		rightBorder		:= 	   NumGet(rect,  8, "Int") - R
+		bottomBorder	:= 	   NumGet(rect, 12, "Int") - B
+		return { x: L, y: T, w: R - L, h: B - T, LB: leftBorder, TB: topBorder, RB: rightBorder, BB: bottomBorder}
 	}
 
-	static setWindowPlacement(hwnd := "", X := "", Y := "", W := "", H := "", action := 9) {
-		DllCall("User32.dll\GetWindowPlacement", "Ptr", hwnd, "Ptr", WP := Buffer(44))
-		Lo := NumGet(WP, 28, "Int")        ; X coordinate of the upper-left corner of the window in its original restored state
-		To := NumGet(WP, 32, "Int")        ; Y coordinate of the upper-left corner of the window in its original restored state
-		Wo := NumGet(WP, 36, "Int") - Lo   ; Width of the window in its original restored state
-		Ho := NumGet(WP, 40, "Int") - To   ; Height of the window in its original restored state
-		L := X = "" ? Lo : X               ; X coordinate of the upper-left corner of the window in its new restored state
-		T := Y = "" ? To : Y               ; Y coordinate of the upper-left corner of the window in its new restored state
-		R := L + (W = "" ? Wo : W)         ; X coordinate of the bottom-right corner of the window in its new restored state
-		B := T + (H = "" ? Ho : H)         ; Y coordinate of the bottom-right corner of the window in its new restored state
-
-		NumPut("UInt", action, WP, 8)
-		NumPut("UInt", L, WP, 28)
-		NumPut("UInt", T, WP, 32)
-		NumPut("UInt", R, WP, 36)
-		NumPut("UInt", B, WP, 40)
-
-		Return DllCall("User32.dll\SetWindowPlacement", "Ptr", hwnd, "Ptr", WP)
-	}
-
-	static getMonitors() {
-		monitors := []
-		Loop(MonitorGetCount())
-		{
-			MonitorGet(A_Index, &mLeft, &mTop, &mRight, &mBottom)
-			monitors.push({MonitorNumber:A_Index, Left:mLeft, Right:mRight, Top:mTop, Bottom:mBottom})
+	static WinMoveEx(hwnd, x?, y?, width?, height?) {
+		if pos := this.WinGetPosEx(hwnd) {
+			if IsSet(x)
+				x -= pos.LB
+			if IsSet(y)
+				y -= pos.TB
+			if IsSet(width)
+				width += pos.LB + pos.RB
+			if IsSet(height)
+				height += pos.TB + pos.BB
 		}
-		return monitors
+		WinMove(x?, y?, Width?, Height?, hwnd)
 	}
 
-	static windowGetCoordinates(wHandle) {
-		dhw := A_DetectHiddenWindows
-		DetectHiddenWindows(1)
-		minimize_status := WinGetMinMax(wHandle)
+
+	/**
+	 * Retrieves coordinates of window of restored state even if it is maximized or minimized
+	 * @param hwnd 
+	 * @returns {Object} 
+	 */
+	static getWindowPlacement(hwnd, withClientPos := false) {
 		NumPut("Uint", 44, pos := Buffer(44, 0))
-		DllCall("GetWindowPlacement", "uint", wHandle, "uint", pos.ptr)
-		mmx := NumGet(pos, 8, "int")
-		x := NumGet(pos, 28, "int")
-		y := NumGet(pos, 32, "int")
-		w := NumGet(pos, 36, "int") - x
-		h := NumGet(pos, 40, "int") - y
-		pos := Buffer(16)
-		DllCall("GetClientRect", "uint", wHandle, "uint", pos.ptr)
-		cw := NumGet(pos, 8, "int")
-		ch := NumGet(pos, 12, "int")
-		DetectHiddenWindows(dhw)
-		return {x: x, y: y, w: w, h: h, cw: cw, ch: ch, mmx: (mmx == 3 ? 1 : (mmx == 2 ? -1 : 0))}
+		DllCall("User32.dll\GetWindowPlacement", "Ptr", hwnd, "Ptr", pos)
+		flags := NumGet(pos, 4, "Int")  ; flags
+		mmx   := NumGet(pos, 8, "Int") ; ShowCMD
+		; see https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
+		switch mmx {
+			case 0, 1, 4, 5, 7, 8, 9, 10:
+				mmx := 0
+			case 2, 6, 11:
+				mmx := -1
+			case 3:
+				mmx := 1
+		}
+		; coordinates of top left corner when window is in corresponding state
+		minimizedX := NumGet(pos, 12, "Int")
+		minimizedY := NumGet(pos, 16, "Int")
+		maximizedX := NumGet(pos, 20, "Int")
+		maximizedY := NumGet(pos, 24, "Int")
+		
+		x := NumGet(pos, 28, "Int")        ; X coordinate of the upper-left corner of the window in its original restored state
+		y := NumGet(pos, 32, "Int")        ; Y coordinate of the upper-left corner of the window in its original restored state
+		w := NumGet(pos, 36, "Int") - x   ; Width of the window in its original restored state
+		h := NumGet(pos, 40, "Int") - y   ; Height of the window in its original restored state
+		placementData := { x: x, y: y, w: w, h: h, mmx: mmx, flags: flags, minX: minimizedX, minY: minimizedY, maxX: maximizedX, maxY: maximizedY }
+		if withClientPos {
+			cpl := this.getWindowClientPlacement(hwnd)
+			placementData.cw := cpl.cw
+			placementData.ch := cpl.ch
+		}
+		return placementData
+	}
+
+	static getWindowClientPlacement(hwnd) {
+		clientRect := Buffer(16)
+		DllCall("GetClientRect", "uint", hwnd, "Ptr", clientRect)
+		; 0, 4 (top and left) are 0.
+		return { cw: NumGet(clientRect, 8, "int"), ch: NumGet(clientRect, 12, "int") }
+	}
+	
+	static setWindowPlacement(hwnd := "", x := "", y := "", w := "", h := "", action := 9) {
+		NumPut("Uint", 44, pos := Buffer(44, 0))
+		DllCall("User32.dll\GetWindowPlacement", "Ptr", hwnd, "Ptr", pos)
+		rx := NumGet(pos, 28, "Int")
+		rt := NumGet(pos, 32, "Int")
+		rw := NumGet(pos, 36, "Int") - rx
+		rh := NumGet(pos, 40, "Int") - rt
+		left := x = "" ? rx : x
+		top := y = "" ? rt : y
+		right := left + (w = "" ? rw : w)
+		bot := top + (h = "" ? rh : h)
+
+		NumPut("UInt", action, pos, 8)
+		NumPut("UInt", left, pos, 28)
+		NumPut("UInt", top, pos, 32)
+		NumPut("UInt", right, pos, 36)
+		NumPut("UInt", bot, pos, 40)
+
+		return DllCall("User32.dll\SetWindowPlacement", "Ptr", hwnd, "Ptr", pos)
+	}
+
+	static getMinMaxResizeCoords(hwnd) {
+		static WM_GETMINMAXINFO := 0x24
+		static SM_CXMINTRACK := 34, SM_CYMINTRACK := 35, SM_CXMAXTRACK := 59, SM_CYMAXTRACK := 60
+		static sysMinWidth := SysGet(SM_CXMINTRACK), sysMinHeight := SysGet(SM_CYMINTRACK)
+		static sysMaxWidth := SysGet(SM_CXMAXTRACK), sysMaxHeight := SysGet(SM_CYMAXTRACK)
+		MINMAXINFO := Buffer(40, 0)
+		SendMessage(WM_GETMINMAXINFO, , MINMAXINFO, , hwnd)
+		minWidth  := NumGet(MINMAXINFO, 24, "Int")
+		minHeight := NumGet(MINMAXINFO, 28, "Int")
+		maxWidth  := NumGet(MINMAXINFO, 32, "Int")
+		maxHeight := NumGet(MINMAXINFO, 36, "Int")
+		
+		minWidth  := Max(minWidth, sysMinWidth)
+		minHeight := Max(minHeight, sysMinHeight)
+		maxWidth  := Max(maxWidth, sysMaxWidth)
+		maxHeight := Max(maxHeight, sysMaxHeight)
+		return { minW: minWidth, minH: minHeight, maxW: maxWidth, maxH: maxHeight }
 	}
 
 	static resetWindowPosition(wHandle := Winexist("A"), sizePercentage?, monitorNum?) {
-		NumPut("Uint", 40, monitorInfo := Buffer(40))
 		if (IsSet(monitorNum)) {
-			MonitorGetWorkArea(monitorNum, &monLeft, &monTop, &monRight, &monBottom)
+			MonitorGetWorkArea(monitorNum, &left, &top, &right, &bot)
 		} else {
-			monitorHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-			DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
-				monLeft := NumGet(monitorInfo, 20, "Int") ; Left
-				monTop := NumGet(monitorInfo, 24, "Int") ; Top
-				monRight := NumGet(monitorInfo, 28, "Int") ; Right
-				monBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
+			mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+			mon := this.monitorGetWorkArea(mHandle)
+			left := mon.left, right := mon.right, top := mon.top, bot := mon.bottom
 		}
+		mWidth := right - left, mHeight := bot - top
 		WinRestore(wHandle)
 		WinGetPos(&x, &y, &w, &h, wHandle)
 		if (IsSet(sizePercentage))
 			WinMove(
-				monLeft + (monRight - monLeft) * (1 - sizePercentage) / 2, ; left edge of screen + half the width of it - half the width of the window, to center it.
-				monTop + (monBottom - monTop) * (1 - sizePercentage) / 2,  ; same as above but with top bottom
-				(monRight - monLeft) * sizePercentage,	; width
-				(monBottom - monTop) * sizePercentage,	; height
+				left + mWidth / 2 * (1 - sizePercentage), ; left edge of screen + half the width of it - half the width of the window, to center it.
+				top + mHeight / 2 * (1 - sizePercentage),  ; same as above but with top bottom
+				mWidth * sizePercentage,
+				mHeight * sizePercentage,
 				wHandle
 			)
 		else
 			WinMove(
-				monLeft + (monRight - monLeft) / 2 - w / 2, 
-				monTop + (monBottom - monTop) / 2 - h / 2, , , wHandle
+				left + mWidth / 2 - w / 2, 
+				top + mHeight / 2 - h / 2, , , wHandle
 			)
+	}
+
+	static getMonitors() {
+		monitors := []
+		Loop(MonitorGetCount()) {
+			MonitorGet(A_Index, &left, &top, &right, &bot)
+			MonitorGetWorkArea(A_Index, &wLeft, &wTop, &wRight, &wBot)
+			monitors.push({number: A_Index,
+				left: left, right: right, top: top, bottom: bot,
+				workLeft: wLeft, workRight: wRight, workTop: wTop, workBottom: wBot,
+			})
+		}
+		return monitors
+	}
+
+	static monitorGetWorkArea(monitorHandle) {
+		NumPut("Uint", 40, monitorInfo := Buffer(40))
+		DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
+		return {
+			left: NumGet(monitorInfo, 20, "Int"),
+			top: NumGet(monitorInfo, 24, "Int"),
+			right: NumGet(monitorInfo, 28, "Int"),
+			bottom: NumGet(monitorInfo, 32, "Int")
+		}
 	}
 
 	static defaultBlacklist => [
@@ -251,33 +330,65 @@ class WinUtilities {
 		; "MSCTFIME UI"
 	]
 
-	static windowStyles => {
-		WS_BORDER: 0x800000,
+	static STYLES := {
+		WS_OVERLAPPED: 0x00000000,
 		WS_POPUP: 0x80000000,
-		WS_CAPTION: 0xC00000,
-		WS_CLIPSIBLINGS: 0x4000000,
-		WS_DISABLED: 0x8000000,
-		WS_DLGFRAME: 0x400000,
-		WS_GROUP: 0x20000,
-		WS_HSCROLL: 0x100000,
-		WS_MAXIMIZE: 0x1000000,
-		WS_MAXIMIZEBOX: 0x10000,
+		WS_CHILD: 0x40000000,
 		WS_MINIMIZE: 0x20000000,
-		WS_MINIMIZEBOX: 0x20000,
-		WS_OVERLAPPED: 0x0,
-		WS_OVERLAPPEDWINDOW: 0xCF0000,
-		WS_POPUPWINDOW: 0x80880000,
-		WS_SIZEBOX: 0x40000, ; thin title bar
-		WS_SYSMENU: 0x80000,
-		WS_TABSTOP: 0x10000,
-		WS_THICKFRAME: 0x40000,
-		WS_VSCROLL: 0x200000,
 		WS_VISIBLE: 0x10000000,
-		WS_CHILD: 0x40000000
+		WS_DISABLED: 0x08000000,
+		WS_CLIPSIBLINGS: 0x04000000,
+		WS_CLIPCHILDREN: 0x02000000,
+		WS_MAXIMIZE: 0x01000000,
+		WS_CAPTION: 0x00C00000,
+		WS_BORDER: 0x00800000,
+		WS_DLGFRAME: 0x00400000,
+		WS_VSCROLL: 0x00200000,
+		WS_HSCROLL: 0x00100000,
+		WS_SYSMENU: 0x00080000,
+		WS_THICKFRAME: 0x00040000,
+		WS_GROUP: 0x00020000,
+		WS_TABSTOP: 0x00010000,
+		WS_MINIMIZEBOX: 0x00020000,
+		WS_MAXIMIZEBOX: 0x00010000,
+		WS_TILED: 0x00000000,
+		WS_ICONIC: 0x20000000,
+		WS_SIZEBOX: 0x00040000,
+		WS_OVERLAPPEDWINDOW: 0x00CF0000,
+		WS_POPUPWINDOW: 0x80880000,
+		WS_CHILDWINDOW: 0x40000000,
+		WS_TILEDWINDOW: 0x00CF0000,
+		WS_ACTIVECAPTION: 0x00000001,
+		WS_GT: 0x00030000 
 	}
 
-	static windowExStyles => {
-		WS_EX_TOPMOST: 0x8
+	static EXSTYLES := {
+		WS_EX_DLGMODALFRAME: 0x00000001,
+		WS_EX_NOPARENTNOTIFY: 0x00000004,
+		WS_EX_TOPMOST: 0x00000008,
+		WS_EX_ACCEPTFILES: 0x00000010,
+		WS_EX_TRANSPARENT: 0x00000020,
+		WS_EX_MDICHILD: 0x00000040,
+		WS_EX_TOOLWINDOW: 0x00000080,
+		WS_EX_WINDOWEDGE: 0x00000100,
+		WS_EX_CLIENTEDGE: 0x00000200,
+		WS_EX_CONTEXTHELP: 0x00000400,
+		WS_EX_RIGHT: 0x00001000,
+		WS_EX_LEFT: 0x00000000,
+		WS_EX_RTLREADING: 0x00002000,
+		WS_EX_LTRREADING: 0x00000000,
+		WS_EX_LEFTSCROLLBAR: 0x00004000,
+		WS_EX_CONTROLPARENT: 0x00010000,
+		WS_EX_STATICEDGE: 0x00020000,
+		WS_EX_APPWINDOW: 0x00040000,
+		WS_EX_OVERLAPPEDWINDOW: 0x00000300,
+		WS_EX_PALETTEWINDOW: 0x00000188,
+		WS_EX_LAYERED: 0x00080000,
+		WS_EX_NOINHERITLAYOUT: 0x00100000,
+		WS_EX_NOREDIRECTIONBITMAP: 0x00200000,
+		WS_EX_LAYOUTRTL: 0x00400000,
+		WS_EX_COMPOSITED: 0x02000000,
+		WS_EX_NOACTIVATE: 0x08000000 
 	}
 }
 
