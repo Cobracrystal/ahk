@@ -139,11 +139,11 @@ class AltDrag {
 			MouseGetPos(&mouseX2, &mouseY2)
 			diffX := mouseX2 - mouseX1
 			diffY := mouseY2 - mouseY1
-			if resizeLeft
-				winX += this.clamp(diffX, winW - limits.maxW, winW - limits.minW)
-			if resizeUp
-				winY += this.clamp(diffY, winH - limits.maxH, winH - limits.minH)
 			nx := winX, ny := winY
+			if resizeLeft
+				nx += this.clamp(diffX, winW - limits.maxW, winW - limits.minW)
+			if resizeUp
+				ny += this.clamp(diffY, winH - limits.maxH, winH - limits.minH)
 			nw := this.clamp(resizeLeft ? winW - diffX : winW + diffX, limits.minW, limits.maxW)
 			nh := this.clamp(resizeUp ? winH - diffY : winH + diffY, limits.minH, limits.maxH)
 			;	if (nw == wLimit.minX && nh == wLimit.minY)

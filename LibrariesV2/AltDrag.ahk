@@ -140,11 +140,11 @@ class AltDrag {
 			MouseGetPos(&mouseX2, &mouseY2)
 			diffX := mouseX2 - mouseX1
 			diffY := mouseY2 - mouseY1
-			if resizeLeft
-				winX += clamp(diffX, winW - limits.maxW, winW - limits.minW)
-			if resizeUp
-				winY += clamp(diffY, winH - limits.maxH, winH - limits.minH)
 			nx := winX, ny := winY
+			if resizeLeft
+				nx += clamp(diffX, winW - limits.maxW, winW - limits.minW)
+			if resizeUp
+				ny += clamp(diffY, winH - limits.maxH, winH - limits.minH)
 			nw := clamp(resizeLeft ? winW - diffX : winW + diffX, limits.minW, limits.maxW)
 			nh := clamp(resizeUp ? winH - diffY : winH + diffY, limits.minH, limits.maxH)
 			;	if (nw == wLimit.minW && nh == wLimit.minH)
