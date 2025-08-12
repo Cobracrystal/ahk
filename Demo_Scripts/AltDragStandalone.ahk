@@ -87,33 +87,37 @@ class AltDrag {
 		cleanHotkey := RegexReplace(A_ThisHotkey, "#|!|\^|\+|<|>|\$|~", "")
 		SetWinDelay(3)
 		CoordMode("Mouse", "Screen")
-		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
-		if ((this.winInBlacklist(wHandle) && !overrideBlacklist) || WinGetMinMax(wHandle) != 0) {
+		MouseGetPos(&mouseX1, &mouseY1, &hwnd)
+		if ((this.winInBlacklist(hwnd) && !overrideBlacklist) || WinGetMinMax(hwnd) != 0) {
 			this.sendKey(cleanHotkey)
 			return
 		}
-		WinGetPos(&winX1, &winY1, &winW, &winH, wHandle)
-		WinActivate(wHandle)
+		pos := this.WinGetPosEx(hwnd)
+		WinActivate(hwnd)
 		while (GetKeyState(cleanHotkey, "P")) {
 			MouseGetPos(&mouseX2, &mouseY2)
-			nx := winX1 + mouseX2 - mouseX1
-			ny := winY1 + mouseY2 - mouseY1
+			nx := pos.x + mouseX2 - mouseX1
+			ny := pos.y + mouseY2 - mouseY1
 			if (this.boolSnapping) {
-				mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-				if (!this.monitors.Has(mHandle)) { ; this should only call once
-					NumPut("Uint", 40, monitorInfo := Buffer(40))
-					DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-					this.monitors[mHandle] := {
-						left: NumGet(monitorInfo, 20, "Int"),
-						top: NumGet(monitorInfo, 24, "Int"),
-						right: NumGet(monitorInfo, 28, "Int"),
-						bottom: NumGet(monitorInfo, 32, "Int")
-					}
-				}
-				this.calculateSnapping(&nx, &ny, winW, winH, mHandle)
+				mHandle := DllCall("MonitorFromWindow", "Ptr", hwnd, "UInt", 0x2, "Ptr")
+				if (!this.monitors.Has(mHandle)) ; this should only call once
+					this.monitors[mHandle] := this.monitorGetWorkArea(mHandle)
+				calculateSnapping()
 			}
-			DllCall("SetWindowPos", "UInt", wHandle, "UInt", 0, "Int", nx, "Int", ny, "Int", 0, "Int", 0, "Uint", 0x0005)
+			; WinUtilities.WinMoveEx(hwnd, nx, ny)
+			DllCall("SetWindowPos", "UInt", hwnd, "UInt", 0, "Int", nx - pos.LB, "Int", ny - pos.TB, "Int", 0, "Int", 0, "Uint", 0x0005)
 			DllCall("Sleep", "UInt", 5)
+		}
+
+		calculateSnapping() {
+			if (abs(nx - this.monitors[mHandle].left) < this.snappingRadius)
+				nx := this.monitors[mHandle].left			; left edge
+			else if (abs(nx + pos.w - this.monitors[mHandle].right) < this.snappingRadius)
+				nx := this.monitors[mHandle].right - pos.w 	; right edge
+			if (abs(ny - this.monitors[mHandle].top) < this.snappingRadius)
+				ny := this.monitors[mHandle].top				; top edge
+			else if (abs(ny + pos.h - this.monitors[mHandle].bottom) < this.snappingRadius)
+				ny := this.monitors[mHandle].bottom - pos.h	; bottom edge
 		}
 	}
 
@@ -130,15 +134,18 @@ class AltDrag {
 		; corner from which direction to resize
 		resizeLeft := (mouseX1 < winX + winW / 2)
 		resizeUp := (mouseY1 < winY + winH / 2)
-		wLimit := this.winMinMaxSize(wHandle)
+		limits := this.getMinMaxResizeCoords(wHandle)
 		while GetKeyState(cleanHotkey, "P") {
 			MouseGetPos(&mouseX2, &mouseY2)
 			diffX := mouseX2 - mouseX1
 			diffY := mouseY2 - mouseY1
-			nx := (resizeLeft ? winX + Max(Min(diffX, winW - wLimit.minX), winW - wLimit.maxX) : winX)
-			ny := (resizeUp ? winY + Max(Min(diffY, winH - wLimit.minY), winH - wLimit.maxY) : winY)
-			nw := Min(Max((resizeLeft ? winW - diffX : winW + diffX), wLimit.minX), wLimit.MaxX)
-			nh := Min(Max((resizeUp ? winH - diffY : winH + diffY), wLimit.minY), wLimit.MaxY)
+			if resizeLeft
+				winX += this.clamp(diffX, winW - limits.maxW, winW - limits.minW)
+			if resizeUp
+				winY += this.clamp(diffY, winH - limits.maxH, winH - limits.minH)
+			nx := winX, ny := winY
+			nw := this.clamp(resizeLeft ? winW - diffX : winW + diffX, limits.minW, limits.maxW)
+			nh := this.clamp(resizeUp ? winH - diffY : winH + diffY, limits.minH, limits.maxH)
 			;	if (nw == wLimit.minX && nh == wLimit.minY)
 			;		continue ; THIS CAUSES JUMPS (or stucks) BECAUSE IT DOESN'T UPDATE THE VERY LAST RESIZE IT NEEDS TO. CHECK PREVIOUS SIZE?
 			;	tooltip % "x: " nx "`ny: " ny "`nw: " nw "`nh: " nh "`nlimX " wLimit.minX "`nlimY " wLimit.minY
@@ -166,22 +173,19 @@ class AltDrag {
 		}
 		WinGetPos(&winX, &winY, &winW, &winH, wHandle)
 		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		if (!this.monitors.Has(mHandle)) {
-			NumPut("Uint", 40, mI := Buffer(40))
-			DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", mI)
-			this.monitors[mHandle] := { left: NumGet(mI, 20, "Int"), top: NumGet(mI, 24, "Int"), right: NumGet(mI, 28, "Int"), bottom: NumGet(mI, 32, "Int") }
-		}
+		if (!this.monitors.Has(mHandle))
+			this.monitors[mHandle] := this.monitorGetWorkArea(mHandle)
 		xChange := floor((this.monitors[mHandle].right - this.monitors[mHandle].left) * (scale_factor - 1))
 		yChange := floor(winH * xChange / winW)
-		wLimit := this.winMinMaxSize(wHandle)
+		wLimit := this.getMinMaxResizeCoords(wHandle)
 		if (direction == 1) {
 			nx := winX - xChange, ny := winY - yChange
-			if ((nw := winW + 2 * xChange) >= wLimit.maxX || (nh := winH + 2 * yChange) >= wLimit.maxY)
+			if ((nw := winW + 2 * xChange) >= wLimit.maxH || (nh := winH + 2 * yChange) >= wLimit.maxH)
 				return
 		}
 		else {
 			nx := winX + xChange, ny := winY + yChange
-			if ((nw := winW - 2 * xChange) <= wLimit.minX || (nh := winH - 2 * yChange) <= wLimit.minY)
+			if ((nw := winW - 2 * xChange) <= wLimit.minW || (nh := winH - 2 * yChange) <= wLimit.minH)
 				return
 		}
 		;	tooltip % "x: " nx "`ny: " ny "`nw: " nw "`nh: " nh "`nxCh: " xChange "`nyCh: " yChange "`nminX: " wLimit.minX "`nminY: " wLimit.minY "`nmaxX: " wLimit.maxX "`nmaxY: " wLimit.maxY
@@ -221,14 +225,7 @@ class AltDrag {
 		WinGetPos(&x, &y, &w, &h, wHandle)
 		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
 		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		NumPut("Uint", 40, monitorInfo := Buffer(40))
-		DllCall("GetMonitorInfo", "Ptr", mHandle, "Ptr", monitorInfo)
-		monitor := {
-			left: NumGet(monitorInfo, 4, "Int"),
-			top: NumGet(monitorInfo, 8, "Int"),
-			right: NumGet(monitorInfo, 12, "Int"),
-			bottom: NumGet(monitorInfo, 16, "Int")
-		}
+		monitor := this.monitorGetWorkArea(mHandle)
 		WinMove(
 			monitor.left + (x - cx),
 			monitor.top + (y - cy),
@@ -244,32 +241,17 @@ class AltDrag {
 	 * @param sizePercentage The percentage of the total monitor size that the window will occupy
 	 */
 	static resetWindowPosition(wHandle := Winexist("A"), sizePercentage := 5/7) {
-		NumPut("Uint", 40, monitorInfo := Buffer(40))
 		monitorHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
-			workLeft := NumGet(monitorInfo, 20, "Int") ; Left
-			workTop := NumGet(monitorInfo, 24, "Int") ; Top
-			workRight := NumGet(monitorInfo, 28, "Int") ; Right
-			workBottom := NumGet(monitorInfo, 32, "Int") ; Bottom
+		mon := this.monitorGetWorkArea(monitorHandle)
 		WinRestore(wHandle)
+		mWidth := mon.right - mon.left, mHeight := mon.bot - mon.top
 		WinMove(
-			workLeft + (workRight - workLeft) * (1 - sizePercentage) / 2, ; left edge of screen + half the width of it - half the width of the window, to center it.
-			workTop + (workBottom - workTop) * (1 - sizePercentage) / 2,  ; same as above but with top bottom
-			(workRight - workLeft) * sizePercentage,	; width
-			(workBottom - workTop) * sizePercentage,	; height
+			mon.left + mWidth / 2 * (1 - sizePercentage), ; left edge of screen + half the width of it - half the width of the window, to center it.
+			mon.top + mHeight / 2 * (1 - sizePercentage),  ; same as above but with top bottom
+			mWidth * sizePercentage,
+			mHeight * sizePercentage,
 			wHandle
 		)
-	}
-
-	static calculateSnapping(&x, &y, w, h, mHandle) {
-		if (abs(x - this.monitors[mHandle].left) < this.snappingRadius)
-			x := this.monitors[mHandle].left - this.pixelCorrectionAmountLeft			; snap to left edge of screen
-		else if (abs(x + w - this.monitors[mHandle].right) < this.snappingRadius)
-			x := this.monitors[mHandle].right - w + this.pixelCorrectionAmountRight 	; snap to right edge of screen
-		if (abs(y - this.monitors[mHandle].top) < this.snappingRadius)
-			y := this.monitors[mHandle].top	- this.pixelCorrectionAmountTop				; snap to top edge of screen
-		else if (abs(y + h - this.monitors[mHandle].bottom) < this.snappingRadius)
-			y := this.monitors[mHandle].bottom - h + this.pixelCorrectionAmountBottom	; snap to bottom edge of screen
 	}
 
 	static winInBlacklist(wHandle) {
@@ -279,20 +261,63 @@ class AltDrag {
 		return 0
 	}
 
-	static winMinMaxSize(wHandle) {
+	static monitorGetWorkArea(monitorHandle) {
+		NumPut("Uint", 40, monitorInfo := Buffer(40))
+		DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
+		return {
+			left: NumGet(monitorInfo, 20, "Int"),
+			top: NumGet(monitorInfo, 24, "Int"),
+			right: NumGet(monitorInfo, 28, "Int"),
+			bottom: NumGet(monitorInfo, 32, "Int")
+		}
+	}
+
+	static WinGetPosEx(hwnd) {
+		static S_OK := 0x0
+		static DWMWA_EXTENDED_FRAME_BOUNDS := 9
+		rect := Buffer(16, 0)
+		rectExt := Buffer(24, 0)
+		DllCall("GetWindowRect", "Ptr", hwnd, "Ptr", rect)
+		try 
+			DWMRC := DllCall("dwmapi\DwmGetWindowAttribute", "Ptr",  hwnd, "UInt", DWMWA_EXTENDED_FRAME_BOUNDS, "Ptr", rectExt, "UInt", 16, "UInt")
+		catch
+			return 0
+		L := NumGet(rectExt,  0, "Int")
+		T := NumGet(rectExt,  4, "Int")
+		R := NumGet(rectExt,  8, "Int")
+		B := NumGet(rectExt, 12, "Int")
+		leftBorder		:= L - NumGet(rect,  0, "Int")
+		topBorder		:= T - NumGet(rect,  4, "Int")
+		rightBorder		:= 	   NumGet(rect,  8, "Int") - R
+		bottomBorder	:= 	   NumGet(rect, 12, "Int") - B
+		return { x: L, y: T, w: R - L, h: B - T, LB: leftBorder, TB: topBorder, RB: rightBorder, BB: bottomBorder}
+	}
+
+	static getMinMaxResizeCoords(hwnd) {
+		static WM_GETMINMAXINFO := 0x24
+		static SM_CXMINTRACK := 34, SM_CYMINTRACK := 35, SM_CXMAXTRACK := 59, SM_CYMAXTRACK := 60
+		static sysMinWidth := SysGet(SM_CXMINTRACK), sysMinHeight := SysGet(SM_CYMINTRACK)
+		static sysMaxWidth := SysGet(SM_CXMAXTRACK), sysMaxHeight := SysGet(SM_CYMAXTRACK)
 		MINMAXINFO := Buffer(40, 0)
-		SendMessage(0x24, , MINMAXINFO, , wHandle) ;WM_GETMINMAXINFO := 0x24
-		vMinX := Max(NumGet(MINMAXINFO, 24, "Int"), this.minMaxSystem.minX)
-		vMinY := Max(NumGet(MINMAXINFO, 28, "Int"), this.minMaxSystem.minY)
-		vMaxX := (NumGet(MINMAXINFO, 32, "Int") == 0 ? this.minMaxSystem.MaxX : NumGet(MINMAXINFO, 32, "Int"))
-		vMaxY := (NumGet(MINMAXINFO, 36, "Int") == 0 ? this.minMaxSystem.MaxY : NumGet(MINMAXINFO, 36, "Int"))
-		return { minX: vMinX, minY: vMinY, maxX: vMaxX, maxY: vMaxY }
+		SendMessage(WM_GETMINMAXINFO, , MINMAXINFO, , hwnd)
+		minWidth  := NumGet(MINMAXINFO, 24, "Int")
+		minHeight := NumGet(MINMAXINFO, 28, "Int")
+		maxWidth  := NumGet(MINMAXINFO, 32, "Int")
+		maxHeight := NumGet(MINMAXINFO, 36, "Int")
+		
+		minWidth  := Max(minWidth, sysMinWidth)
+		minHeight := Max(minHeight, sysMinHeight)
+		maxWidth  := maxWidth == 0 ? sysMaxWidth : maxWidth
+		maxHeight := maxHeight == 0 ? sysMaxHeight : maxHeight
+		return { minW: minWidth, minH: minHeight, maxW: maxWidth, maxH: maxHeight }
 	}
 
 	static snappingToggle(*) {
 		AltDrag.boolSnapping := !AltDrag.boolSnapping
 		A_TrayMenu.ToggleCheck("Enable Snapping")
 	}
+
+	static clamp(n, minimum, maximum) => Max(minimum, Min(n, maximum))
 
 	static sendKey(hkey) {
 		if (!hkey)

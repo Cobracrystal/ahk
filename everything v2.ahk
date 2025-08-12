@@ -315,7 +315,7 @@ Alt & Capslock::{
 	else if WinActive("Discord ahk_exe Discord.exe")
 		WinMove(-1497, 129, 1292, 769)
 	else
-		AltDrag.resetWindowPosition()
+		WinUtilities.resetWindowPosition(,5/7)
 }
 
 ^!+H:: { ; Make Active Window Transparent
@@ -639,7 +639,7 @@ trayMenuHandler(itemName, *) {
 			SetTitleMatchMode("RegEx")
 			hwnd := WinWait("AutoHotkey (?:v2)? Help ahk_exe hh\.exe")
 			SetTitleMatchMode(tMM)
-			AltDrag.resetWindowPosition(hwnd, 0.8)
+			WinUtilities.resetWindowPosition(hwnd, 0.8)
 		case "Window Spy":
 			PostMessage(0x111, 65402, , , A_ScriptHwnd)
 		case "Reload this Script":

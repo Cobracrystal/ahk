@@ -40,7 +40,7 @@ class focusSwitch {
 			WinGetPos(&x, &y, &w, &h, activeHwnd)
 			for mon in this.monitors
 				if (this.windowOnMonitor(x, y, w, h, mon))
-					monitor := mon.MonitorNumber
+					monitor := mon.number
 		}
 		coordinates := this.getDesktopWindows(monitor) ; get all coordinates of visible windows on screen.
 		sortedByX := this.objSort(coordinates, a => a.x, "N")
@@ -156,7 +156,7 @@ class focusSwitch {
 		Loop(MonitorGetCount())
 		{
 			MonitorGet(A_Index, &mLeft, &mTop, &mRight, &mBottom)
-			monitors.push({MonitorNumber:A_Index, Left:mLeft, Right:mRight, Top:mTop, Bottom:mBottom})
+			monitors.push({number:A_Index, Left:mLeft, Right:mRight, Top:mTop, Bottom:mBottom})
 		}
 		return monitors
 	}
