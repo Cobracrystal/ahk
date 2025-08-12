@@ -25,7 +25,7 @@ class SongDownloader {
 
 	static __New() {
 		this.settings := {
-			debug: true,
+			debug: false,
 			simulate: false,
 			useAliases: true,
 			useVisibleCMD: false,
@@ -61,8 +61,8 @@ class SongDownloader {
 			} catch { ; something wack is happening
 				MsgBoxAsGui("Invalid JSON/Download: " str,,,,,,,,,,,1000)
 			}
-		} else if FileExist(str) {
-			this.editMetadata(str)
+		} else if FileExist(str) || (RegExMatch(str, '^(?:filelist:)?(")?(\w:\\.*?)\1?$', &o) && FileExist(o[2])) {
+			this.editMetadata(IsSet(o) ? o[2] : str)
 		} else if (strCountStr(str, "https") > 1) { ; assume its multiple songs, so retrieve metadata
 			if (A_LineFile == A_ScriptFullPath) {
 				r := this.getMetadataJson(str)
@@ -153,7 +153,7 @@ class SongDownloader {
 					title := RegExReplace(title, Format("i){}\s*(?:Official|Lyric)\s+((Music|Lyric|HD)\s+)?(Video|Audio)\s*{}", '\' open, '\' closed))
 			}
 			artist := videoData.Has("artists") ? Trim(objToString(videoData["artists"],1,0), " []") : videoData.Has("creator") ? artist := videoData["creator"] : ""
-			if RegexMatch(title, "^(.*)(?:-|–|—)\s+(.*)$", &m) {
+			if RegexMatch(title, "^(.*?)(?:-|–|—)\s+(.*)$", &m) {
 				if artist == ""
 					artist := m[1]
 				title := m[2]
@@ -179,6 +179,7 @@ class SongDownloader {
 				else ; of the form Artist - Title feat. Singer (and thus there isn't a bracket) (or they forgot to close the bracket)
 					artist := Trim(match[1] . match[2]) " ft " Trim(match[3])
 			}
+			thumbnails := videoData["thumbnails"]
 			objRemoveValues(videoData, ["formats", "requested_formats", "thumbnails", "subtitles"],,(i,e,v) => (i=v), "MANUALLY REMOVED")
 			metaData.push({
 				link: this.constructLink(videoData["id"]),
@@ -187,7 +188,8 @@ class SongDownloader {
 				album: Trim(album),
 				genre: Trim(genre),
 				description: videoData["description"],
-				shortJson: keepJsonData ? videoData : unset
+				shortJson: keepJsonData ? videoData : unset,
+				thumbnails: MapToObj(thumbnails)
 			})
 		}
 		if (metaData.Length == 1)
@@ -210,18 +212,20 @@ class SongDownloader {
 			folder := fl
 		}
 		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", folder).OnEvent("Change", guiHandler)
-		g.AddButton("xs+151 vButtonDescription ys-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
+		g.AddButton("xs+151 ys-1 w100", "Open Link").OnEvent("Click", (*) => Run(data.link))
 		g.AddEdit("xs w250 R1 vLink " (editableLink ? "" : "ReadOnly"), data.link)
 		g.AddText("0x200 R1.45", "Title")
-		if data.HasOwnProp("shortJson")
-			g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
+		g.AddButton("xs+151 yp-1 w100", "Show Thumbnail").OnEvent("Click", (*) => this.thumbnailPreviewer(data))
 		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", guiHandler)
 		g.AddText("", "Artist")
 		metadataVar := ObjOwnPropCount(this.data.lastSongMetadata) > 0 ? this.data.lastSongMetadata : data
 		g.AddEdit("xs w250 vArtist", metadataVar.artist).OnEvent("Change", guiHandler)
-		g.AddText("", "Album")
+		g.AddText("0x200 R1.45", "Album")
+		g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
 		g.AddEdit("xs w250 vAlbum", metadataVar.album).OnEvent("Change", guiHandler)
-		g.AddText("", "Genre")
+		g.AddText("0x200 R1.45", "Genre")
+		if data.HasOwnProp("shortJson")
+			g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
 		g.AddEdit("xs w250 vGenre", metadataVar.genre).OnEvent("Change", guiHandler)
 		g["Title"].Focus()
 		g.AddCheckbox("xs vEmbedThumbnail Checked" true, "Embed Thumbnail").OnEvent("Click", guiHandler)
@@ -280,16 +284,16 @@ class SongDownloader {
 		SplitPath(dir, &dirname)
 		g.AddText("Section 0x200 R1.45", "File | Current Folder: " )
 		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", dirname)
-		g.AddButton("xs+151 vButtonDescription ys-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
+		if (data.HasOwnProp("purl"))
+			g.AddButton("xs+151 ys-1 w100", "Open Link").OnEvent("Click", (*) => Run(data.purl))
 		g.AddEdit("xs w250 R1 ReadOnly vFile", name)
 		g.AddText("0x200 R1.45", "Title")
-		if (data.HasOwnProp("purl"))
-			g.AddButton("xs+151 yp-1 w100", "Open Link").OnEvent("Click", (*) => Run(data.purl))
 		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Artist")
 		g.AddButton("xs+151 yp-1 w100 vSwapButton", "Swap Title - Artist").OnEvent("Click", guiHandler)
 		g.AddEdit("xs w250 vArtist", data.artist).OnEvent("Change", guiHandler)
-		g.AddText("", "Album")
+		g.AddText("0x200 R1.45", "Album")
+		g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
 		g.AddEdit("xs w250 vAlbum", data.album).OnEvent("Change", guiHandler)
 		g.AddText("", "Genre")
 		g.AddEdit("xs w250 vGenre", data.genre).OnEvent("Change", guiHandler)
@@ -313,9 +317,9 @@ class SongDownloader {
 
 		guiFinisher(ctrlObj, info?) {
 			gData := ctrlObj.gui.submit()
-			name := ctrlObj.Name
+			ctrlName := ctrlObj.Name
 			ctrlObj.gui.destroy()
-			switch name {
+			switch ctrlName {
 				case "ReDownload":
 					songData := {
 						title: gData.Title, artist: gData.Artist,
@@ -327,21 +331,54 @@ class SongDownloader {
 					str := ""
 					fileName := gData.file
 					tempFile := dir "\" fileName
-					if (fileName == name) ; with ext, only name no folder
+					if (fileName = name) ; with ext, only name no folder. Ignore capital letters since windows does so too.
 						tempFile := dir "\" nameNoExt "_." ext
 					for e in this.settings.metadataFields
 						str .= "-metadata " e '="' gData.%e% '" '
-					cmd := Format('ffmpeg -i "{}" -codec copy {} "{}"', data.filePath, Trim(str), tempFile)
-					ret := cmdRet(cmd, , "UTF-8")
-					Sleep(200)
-					if (FileExist(tempFile)) {
-						FileDelete(data.filePath)
-						if (fileName == name)
-							FileMove(tempFile, data.filePath, 1)
-					}
-					MsgBoxAsGui("Done")
+					cmd := Format('"{}" -i "{}" -codec copy {} "{}"', this.settings.ffmpegPath, data.filePath, Trim(str), tempFile)
+					if this.settings.debug
+						print(cmd)
+					cmdRetAsync(cmd, , "UTF-8",,postEdit,200)
+				return 0
+			}
+
+			postEdit(output, success) {
+				Sleep(200)
+				if success == -1
+					MsgBoxAsGui(output,,,,,,,1)
+				else if (FileExist(tempFile)) {
+					FileDelete(data.filePath)
+					if (fileName = name)
+						FileMove(tempFile, data.filePath, 1)
+				}
+				MsgBoxAsGui("Done")
 			}
 		}
+	}
+
+	static thumbnailPreviewer(metadata) {
+		static HTML_STYLE := '<style>html, body {margin: 0;padding: 0;background: #222;overflow: hidden;-ms-overflow-style: none;}.wrapper {position: relative;display: inline-block;}.wrapper img {display: block;position: relative;}.overlay {position: absolute;top: 0;bottom: 0;background-color: #000;filter: alpha(opacity=50);zoom: 1;}</style>'
+		static HTML_TEMPLATE := '<!DOCTYPE html><html><head>{6}</head><body><div class="wrapper" style="width:{2}px;height:{3}px;"><img src="{1}" alt="Picture" style="width:{2}px;height:{3}px;"><div class="overlay" style="left:0;width:{4}px;"></div><div class="overlay" style="right:0;width:{5}px;"></div></div></body></html>'
+		
+		for th in arrayInReverse(metadata.thumbnails) {
+			if RegExMatch(th.url, "webp$") ; activex doesn't support webps
+				continue
+			thumb := th
+			break
+		}
+		height := clamp(thumb.height, 1, 500)
+		width := Round(height/thumb.height * thumb.width)
+		squareOffset := (width - height) // 2
+		g := Gui("+Border +OwnDialogs", "Thumbnail Preview")
+		g.OnEvent("Close", (*) => g.Destroy())
+		g.AddText("Section 0x200 R1.45", "Link | Thumbnail ID: " )
+		g.AddEdit("xs+110 ys R1 w30 vThumbID", thumb.id)
+		g.AddButton(Format("xs+{} ys-1 w150", width-149), "View Thumbnails Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(metadata.thumbnails,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
+		g.AddEdit(Format("xs w{} R1 vFile", width), thumb.url)
+		WBObj := g.AddActiveX(Format("xs w{} h{}", width, height), "Shell.Explorer2").Value ; Explorer2 because persistently vanishing scrollbars.
+		WBObj.Silent := true
+		WBObj.Navigate("about:" Format(HTML_TEMPLATE, thumb.url, width, height, squareOffset, squareOffset, HTML_STYLE))
+		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x + 125 - width//2, this.data.coords.y + 200 - 100 - height//2))
 	}
 
 	static finishGui(data, g, info?) {
@@ -398,7 +435,7 @@ class SongDownloader {
 		return success ?? 1
 	}
 
-	static onFinish(amount, logID, withTooltips, finalCallback, link, output) {
+	static onFinish(amount, logID, withTooltips, finalCallback, link, output, status) {
 		static count := 0
 		count++
 		logger(output)
@@ -434,7 +471,10 @@ class SongDownloader {
 	}
 
 	static editMetadata(filePath) {
-		jsonStr := cmdRet('ffprobe -v error -output_format json -show_entries format_tags "' filePath '"',, "UTF-8")
+		cmd := Format('"{}" -v error -output_format json -show_entries format_tags "{}"', this.settings.ffprobePath, filePath)
+		if this.settings.debug
+			print(cmd)
+		jsonStr := cmdRet(cmd,, "UTF-8")
 		output := jsongo.parse(jsonStr)
 		metadata := MapToObj(output["format"]["tags"])
 		metadata.filePath := filePath
