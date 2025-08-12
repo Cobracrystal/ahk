@@ -219,7 +219,7 @@ cmdRetVoid(sCmd, finishCallBack?, encoding := "CP" . DllCall('GetOEMCP', 'UInt')
  * @param finishCallBack Func object to be called with the full output when the console is done
  * @returns {Integer} returns true if everything worked.
  */
-cmdRetAsync(sCmd, callBackFuncObj?, encoding := "CP" . DllCall('GetOEMCP', 'UInt'), timePerCheck := 50, finishCallBack?) {
+cmdRetAsync(sCmd, callBackFuncObj?, encoding := "CP" . DllCall('GetOEMCP', 'UInt'), timePerCheck := 50, finishCallBack?, timeout?) {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi, CP850 Western European Ansi.
 	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100, ptrsize := A_PtrSize
 	DllCall("CreatePipe", "PtrP", &hPipeRead := 0, "PtrP", &hPipeWrite := 0, "Ptr", 0, "UInt", 0)
@@ -241,6 +241,8 @@ cmdRetAsync(sCmd, callBackFuncObj?, encoding := "CP" . DllCall('GetOEMCP', 'UInt
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
 	SetTimer(readFileCheck, timePerCheck)
+	if IsSet(timeout)
+		SetTimer(closeHandle, -1 * timeout)
 	return 1
 
 	readFileCheck() {
@@ -251,16 +253,18 @@ cmdRetAsync(sCmd, callBackFuncObj?, encoding := "CP" . DllCall('GetOEMCP', 'UInt
 		}
 		else {
 			SetTimer(readFileCheck, 0)
-			closeHandle()
+			closeHandle(1)
 		}
 	}
 
-	closeHandle() {
+	closeHandle(success := -1) {
+		SetTimer(closeHandle, 0)
+		SetTimer(readFileCheck, 0)
 		DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, "Ptr"))
 		DllCall("CloseHandle", "Ptr", NumGet(PROCESS_INFORMATION, ptrsize, "Ptr"))
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		if (IsSet(finishCallBack))
-			finishCallBack(fullOutput)
+			finishCallBack(fullOutput, success)
 	}
 }
 
@@ -506,6 +510,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	ownerStr := IsSet(owner) ? "+Owner" owner : ''
 	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT (MB_FONTISITALIC ? " italic" : "") : ""
 	mbgui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " ownerStr, title)
+	mbgui.OnEvent("Close", finalEvent.bind(0))
 	mbgui.Opt("+" hex(NecessaryStyle))
 	mbgui.Opt("-ToolWindow")
 	if (buttonStyle == 2 || buttonStyle == 4) ; if cancel is not present in option, close and escape have no effect. user must select an option.
