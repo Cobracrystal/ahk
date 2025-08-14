@@ -139,14 +139,17 @@ class SongDownloader {
 		rawData := RTrim(rawData, " `t`n`r")
 		lines := strCountStr(rawData, "`n")
 		metaData := []
+		receivedBadInfo := []
 		Loop Parse rawData, "`n", "`r" {
 			jsonStr := A_LoopField
 			try	videoData := jsongo.parse(jsonStr)
 			catch {
-				lnk := RegExMatch(jsonStr, "\[youtube\]\s+([A-Za-z0-9_-]{11}):", &o) ? o[1] : ""
-				metaData.push({ link: this.constructLink(lnk), title: "", artist: "", album:"", genre:"",description:"",error:1, shortJson: jsonStr})
-				if lines == 1
-					MsgBoxAsGui("Failed to parse Metadata. Received`n" jsonStr,,,,,, A_ScriptHwnd,1,,,,2000)
+				isError := InStr(jsonStr, "ERROR:") ? true : false
+				if isError { ; if its a warning, metadata should still be parsed next iteration
+					lnk := RegExMatch(jsonStr, "\[youtube\]\s+([A-Za-z0-9_-]{11}):", &o) ? o[1] : ""
+					metaData.push({ link: this.constructLink(lnk), title: "", artist: "", album:"", genre:"",description:"",error:1, shortJson: jsonStr})
+				}
+				receivedBadInfo.push(jsonStr)
 				continue
 			}
 			title := videoData.Has("track") ? videoData["track"] : videoData["title"]
@@ -205,6 +208,10 @@ class SongDownloader {
 				shortJson: keepJsonData ? videoData : unset,
 				thumbnails: MapToObj(thumbnails)
 			})
+		}
+		if receivedBadInfo.Length > 0 {
+			str := objCollect(receivedBadInfo, (b, v) => b . "`n" v)
+			MsgBoxAsGui("Received issues while parsing Metadata. Received`n`n" str,,,,,,,1,,,,2000)
 		}
 		if (metaData.Length == 1)
 			metaData := metaData[1]
@@ -440,6 +447,7 @@ class SongDownloader {
 		sect := g.AddText("Section 0x200 R1.45", "Link | Thumbnail ID: " )
 		sect.GetPos(&sectX)
 		g.AddEdit("xs+110 ys R1 w30 vThumbID", thumb.id)
+		g.AddText("xs+150 0x200 R1.45 ys vThumbInfo", "Dimensions: " thumb.width " x " thumb.height)
 		g.AddButton(Format("xs+{} ys-1 w130", width-129), "View Thumbnails Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(metadata.thumbnails,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
 		g.AddEdit(Format("xs w{} R1 vFile", width), thumb.url)
 		g.AddText("vCoverLeft Hidden Section xs w" squareOffset " h" height)
