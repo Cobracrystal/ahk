@@ -164,16 +164,46 @@ objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) =>
 	return n
 }
 
-objDoForEach(obj, fn := (val => objToString(val)), value := 0, conditional := ((itKey?, itVal?, setVal?) => (true))) {
+/**
+ * Creates a new object with filtered values removed.
+ * @param obj 
+ * @param {(k, v) => Boolean} filter 
+ * @returns {Integer} 
+ */
+objFilter(obj, filter := (k, v) => (true)) {
+	isArrLike := ((isArr := obj is Array) || obj is Map)
+	if !(isArrLike || IsObject(obj))
+		throw(TypeError("objRemoveValue does not handle type " . Type(obj)))
+	clone := %Type(obj)%()
+	if isArr
+		clone.Capacity := obj.Length
+	if isArr {
+		for i, e in obj
+			if filter(i, e)
+				clone.push(e)
+	} else if isArrLike {
+		for i, e in obj
+			if filter(i, e)
+				clone[i] := e
+	} else {
+		for i, e in ObjOwnProps(obj)
+			if filter(i, e)
+				clone.%i% := e
+	}
+	return clone
+}
+
+objDoForEach(obj, fn := (v) => objToString(v), conditional := (itKey?, itVal?) => true, useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objDoForEach does not handle type " . Type(obj)))
 	clone := %Type(obj)%()
 	if (isArrLike && !isMap)
-		clone.Capacity := obj.Length, clone.Length := obj.Length
+		clone.Length := clone.Capacity := obj.Length
 	for i, e in objGetEnumerator(obj) {
-		v := conditional(i, e?, value) ? fn(e?) : e
+		t := useKeys ? i : e
+		v := conditional(i, e?) ? fn(t?) : t
 		isArrLike ? clone[i] := v : clone.%i% := v
 	}
 	return clone
@@ -194,14 +224,14 @@ objGetProd(obj) => objCollect(obj, (b,i) => b*i)
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
  * @returns {Any} Collected Value
  */
-objCollect(obj, fn := ((base, e) => (base . ", " . objToString(e))), initialBase?, value := 0, conditional := ((itKey?, itVal?, setVal?) => (true)), useKeys := false) {
+objCollect(obj, fn := ((base, e) => (base . ", " . objToString(e))), initialBase?, conditional := (itKey?, itVal?) => true, useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	if (IsSet(initialBase))
 		base := initialBase
 	for i, e in objGetEnumerator(obj)
-		if (conditional(i, e?, value))
+		if (conditional(i, e?))
 			base := IsSet(base) ? (useKeys ? fn(base, i?) : fn(base, e?)) : e
 	return base ?? ""
 }
