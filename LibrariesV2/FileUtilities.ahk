@@ -44,7 +44,7 @@ getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3, sortedBy
 				})
 		}
 	}
-	sorted := arraySort(files, a => a.%sortedBy%)
+	sorted := arraySort(files, getMode == 1 || getMode == 2 ? unset : a => a.%sortedBy%)
 	return sorted
 }
 
