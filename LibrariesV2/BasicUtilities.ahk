@@ -155,7 +155,7 @@ ExecHelperScript(expression, wait := true, void := false) {
 	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print\(.*\)') || RegexMatch(expression, 'i)\.Show\(.*\)'))
 		input .= expression
 	else
-		input .= 'print(' expression ',,false)'
+		input .= 'print(' expression ',,false,true)'
 	return ExecScript(input, wait)
 }
 
@@ -498,23 +498,24 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	static WM_KEYDOWN := 0x0100
 	static WM_RBUTTONDOWN := 0x0204
 	
-	buttonStyle := buttonStyle + 1 ; offset since this is not 0-indexed
 	if (buttonNames.Length == 0) {
-		if !(MB_BUTTON_TEXT.Has(buttonStyle))
+		if !(MB_BUTTON_TEXT.Has(buttonStyle + 1)) ; offset since this is not 0-indexed
 			throw Error("Invalid button Style")
-		buttonNames := MB_BUTTON_TEXT[buttonStyle]
+		buttonNames := MB_BUTTON_TEXT[buttonStyle + 1]
 	}
 	retValue := ""
 	totalButtonWidth := buttonSpace * (buttonNames.Length + (addCopyButton ? 1 : 0))
 	ownerStr := IsSet(owner) ? "+Owner" owner : ''
 	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT (MB_FONTISITALIC ? " italic" : "") : ""
-	mbgui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " ownerStr, title)
-	mbgui.OnEvent("Close", finalEvent.bind(0))
-	mbgui.Opt("+" hex(NecessaryStyle))
-	mbgui.Opt("-ToolWindow")
+	mbGui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " ownerStr, title)
+	mbGui.OnEvent("Close", finalEvent.bind(0))
+	mbGui.Opt("+" hex(NecessaryStyle))
+	mbGui.Opt("-ToolWindow")
 	if (buttonStyle == 2 || buttonStyle == 4) ; if cancel is not present in option, close and escape have no effect. user must select an option.
-		mbgui.Opt("-SysMenu")
-	mbgui.SetFont(guiFontOptions, MB_FONTNAME)
+		mbGui.Opt("-SysMenu")
+	mbGui.SetFont(guiFontOptions, MB_FONTNAME)
+	if IsObject(text)
+		text := objToString(text, 0, 0, true)
 	if !IsSet(maxTextWidth) {
 		maxTextWidth := Max(minTextWidth, totalButtonWidth)
 		lens := strGetSplitLen(IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text, "`n")
@@ -525,15 +526,15 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 			maxTextWidth := 1500
 	}
 	ctrlText := textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text,, guiFontOptions, MB_FONTNAME)
-	mbgui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, ctrlText)
+	mbGui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, ctrlText)
 	if (IsSet(icon)) {
 		iconPath := icon is Array ? icon[2] : "imageres.dll"
 		icon := (icon is Array ? icon[1] : icon)
 		icon := DEFAULT_ICONS.Has(icon) ? DEFAULT_ICONS[icon] : icon
-		mbgui.AddPicture(Format("x{} y{} w{} h{} Icon{} BackgroundTrans", leftMargin, gap-9, 32, 32, icon), iconPath)
+		mbGui.AddPicture(Format("x{} y{} w{} h{} Icon{} BackgroundTrans", leftMargin, gap-9, 32, 32, icon), iconPath)
 		ICON_SOUNDS.Has(icon) ? SoundPlay(ICON_SOUNDS[icon], 0) : 0
 	}
-	mbgui.AddText("x" leftMargin + (IsSet(icon) ? 32 + buttonMargin : 0) " y" gap " BackgroundTrans " SS_NOPREFIX " vTextBox", ctrlText)
+	mbGui.AddText("x" leftMargin + (IsSet(icon) ? 32 + buttonMargin : 0) " y" gap " BackgroundTrans " SS_NOPREFIX " vTextBox", ctrlText)
 	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
 	guiWidth := buttonMargin + buttonOffset + Max(TBw, totalButtonWidth) + 1
 	guiWidth := Max(guiWidth, minGuiWidth)
@@ -542,9 +543,9 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	buttonX := guiWidth - totalButtonWidth ; the buttons are right-aligned
 	buttonY := whiteBoxHeight + buttonMargin
 	for i, e in buttonNames
-		btn := mbgui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * buttonSpace, buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(i))
+		btn := mbGui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * buttonSpace, buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(i))
 	if (addCopyButton)
-		btn := mbgui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * buttonSpace, buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := text))
+		btn := mbGui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * buttonSpace, buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := text))
 	defaultButton := defaultButton == "Copy" ? 0 : defaultButton
 	mbGui["Button" defaultButton].Focus()
 	guiHeight := whiteBoxHeight + buttonHeight + 2 * buttonMargin
@@ -553,22 +554,22 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	mbGui.OnEvent("Close", finalEvent.bind(0))
 	OnMessage(WM_KEYDOWN, guiNotify)
 	OnMessage(WM_RBUTTONDOWN, guiNotify)
-	mbgui.Show("Center w" guiWidth " h" guiHeight)
+	mbGui.Show("Center w" guiWidth " h" guiHeight)
 	if IsSet(timeout)
 		SetTimer(timeoutFObj := finalEvent.bind(-1), -1000 * timeout)
 	if (wait) {
-		WinWait(hwnd := mbgui.hwnd)
+		WinWait(hwnd := mbGui.hwnd)
 		WinWaitClose(hwnd)
-		mbgui := 0
+		mbGui := 0
 		OnMessage(WM_KEYDOWN, guiNotify, 0) ; unregister
 		OnMessage(WM_RBUTTONDOWN, guiNotify, 0)
 		return retValue
 	}
-	return mbgui
+	return mbGui
 
 	finalEvent(buttonNumber, *) {
-		mbgui.Destroy()
-		mbgui := 0
+		mbGui.Destroy()
+		mbGui := 0
 		OnMessage(WM_KEYDOWN, guiNotify, 0) ; unregister
 		OnMessage(WM_RBUTTONDOWN, guiNotify, 0)
 		if (IsSet(timeout))
@@ -579,10 +580,10 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	}
 
 	guiNotify(wParam, lParam, msg, hwnd) {
-		if (!mbgui) {
+		if (!mbGui) {
 			OnMessage(WM_KEYDOWN, guiNotify, 0) ; unregister
 			OnMessage(WM_RBUTTONDOWN, guiNotify, 0)
-		} else if ((ctrl := GuiCtrlFromHwnd(hwnd)) && (ctrl.gui.hwnd == mbgui.hwnd)) || (hwnd == mbgui.hwnd) {
+		} else if ((ctrl := GuiCtrlFromHwnd(hwnd)) && (ctrl.gui.hwnd == mbGui.hwnd)) || (hwnd == mbGui.hwnd) {
 			if (msg == WM_KEYDOWN) && (wParam == 67) && GetKeyState("Ctrl") {
 				A_Clipboard := text
 				return 0 ; prevents sound
@@ -595,7 +596,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	}
 
 	guiContextMenu(itemName, itemPos, menuObj) {
-		miniGui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox +Owner" mbgui.hwnd, "Select and Copy")
+		miniGui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox +Owner" mbGui.hwnd, "Select and Copy")
 		miniGui.Opt("+" hex(NecessaryStyle))
 		miniGui.Opt("-ToolWindow")
 		miniGui.OnEvent("Escape", (*) => miniGui.destroy())
@@ -993,7 +994,7 @@ doNothing(*) {
 ; }
 
 
-print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true) {
+print(value, options?, putNewline := true, compress := false, compact := false, strEscape := true) {
 	if IsObject(value) { 
 		value := objToString(value, compact, compress, strEscape)	
 	}
