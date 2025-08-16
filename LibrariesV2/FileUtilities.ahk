@@ -6,6 +6,9 @@
  * @param {String} filePattern Filepattern to filter for. By default all files are included
  * @param {String} mode F,D,R (Include Files, Include Directories, Recursive.) Defaults to Files no folders no recursive
  * @param {Integer} getMode 0 = all fileinfo, 1 = only name, 2 = only full path, 3 = name, ext, namenoext, size, dir
+ * @returns {Array} Array containing objects of the following type:
+ * 
+ * obj := { name, nameNoExt, ext, path, shortPath shortName dir, attrib, size, sizeKB, sizeMB, timeModified, timeCreated, timeAccessed }
  */
 getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name") {
 	files := []
@@ -14,20 +17,20 @@ getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3, sortedBy
 			case 0:
 				SplitPath(A_LoopFileFullPath,,,, &nameNoExt)
 				files.push({
-					name: A_LoopFileName,
-					nameNoExt: nameNoExt,
-					ext: A_LoopFileExt,
-					path: A_LoopFileFullPath,
-					shortPath: A_LoopFileShortPath,
-					shortName: A_LoopFileShortName,
-					dir: A_LoopFileDir,
-					attrib: A_LoopFileAttrib,
-					size: A_LoopFileSize,
-					sizeKB: A_LoopFileSizeKB,
-					sizeMB: A_LoopFileSizeMB,
-					timeModified: A_LoopFileTimeModified,
-					timeCreated: A_LoopFileTimeCreated,
-					timeAccessed: A_LoopFileTimeAccessed
+					name:			A_LoopFileName,
+					nameNoExt:		nameNoExt,
+					ext:			A_LoopFileExt,
+					path:			A_LoopFileFullPath,
+					shortPath:		A_LoopFileShortPath,
+					shortName:		A_LoopFileShortName,
+					dir:			A_LoopFileDir,
+					attrib:			A_LoopFileAttrib,
+					size:			A_LoopFileSize,
+					sizeKB:			A_LoopFileSizeKB,
+					sizeMB:			A_LoopFileSizeMB,
+					timeModified:	A_LoopFileTimeModified,
+					timeCreated:	A_LoopFileTimeCreated,
+					timeAccessed:	A_LoopFileTimeAccessed
 				})
 			case 1:
 				files.push(A_LoopFileName)
@@ -46,6 +49,41 @@ getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3, sortedBy
 	}
 	sorted := arraySort(files, getMode == 1 || getMode == 2 ? unset : a => a.%sortedBy%)
 	return sorted
+}
+
+getFileInfo(filePath, getMode := 0) {
+	path := filePath,
+	size := FileGetSize(filePath)
+	sizeKB := FileGetSize(filePath, "K")
+	sizeMB := FileGetSize(filePath, "M")
+	timeCreated := FileGetTime(filePath, 'C')
+	timeModified := FileGetTime(filePath, 'M')
+	timeAccessed := FileGetTime(filePath, 'A')
+	attrib := FileGetAttrib(filePath)
+	SplitPath(filePath, &name, &dir, &ext, &nameNoExt)
+	if getMode == 0
+		return {
+			name:			name,
+			nameNoExt:		nameNoExt,
+			ext:			ext,
+			path:			path,
+			dir:			dir,
+			attrib:			attrib,
+			size:			size,
+			sizeKB:			sizeKB,
+			sizeMB:			sizeMB,
+			timeModified:	timeModified,
+			timeCreated:	timeCreated,
+			timeAccessed:	timeAccessed
+		}
+	else
+		return {
+			name: A_LoopFileName,
+			dir: A_LoopFileDir,
+			ext: A_LoopFileExt,
+			nameNoExt: nameNoExt,
+			size: A_LoopFileSize,
+		}
 }
 
 removeDupes(folder1, folder2) {
@@ -108,6 +146,25 @@ getMetadataFolder(folder, metadata := []) {
 		data.push(fObj)
 	}
 	return data
+}
+
+strContainsIllegalChar(str) {
+	static charMap := Map("\", "-", "/", "⧸", ":", "", "*", "＊", "?", ".", '"', "'", "<", "(", ">", ")", "|", "-")
+	for i, e in charMap
+		if InStr(str, i)
+			return 1
+	return 0
+}
+
+strReplaceIllegalChars(str, &replaceCount) {
+	static charMap := Map("\", "-", "/", "⧸", ":", "", "*", "＊", "?", ".", '"', "'", "<", "(", ">", ")", "|", "-")
+	total := 0
+	for i, e in charMap {
+		str := StrReplace(str, i, e,, &count)
+		total += count
+	}
+	replaceCount := total
+	return str
 }
 
 /**
