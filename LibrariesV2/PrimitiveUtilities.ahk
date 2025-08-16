@@ -36,10 +36,19 @@ strRotate(str, offset := 0) {
 
 strMultiply(str, count) {
 	s := ""
+	if count <= 0
+		return ""
 	VarSetStrCapacity(&s, count * StrLen(str))
 	Loop(count)
 		s .= str
 	return s
+}
+
+strFill(str, width, alignRight := true, char := A_Space) {
+	s := strMultiply(char, width - StrLen(str))
+	if alignRight
+		return s . str
+	return str . s
 }
 
 strDoPerChar(text, fn := (e => e . " ")) {
@@ -137,7 +146,7 @@ strDistanceLevenshtein(s1, s2, limit := 2**31-1) {
 	len2 := StrLen(s2)
 	if !(len1)
 		return len2
-	if !len2
+	if !(len2)
 		return len1
 	v0 := [], v1 := []
 	v0.Capacity := v0.Length := v1.Capacity := v1.Length := len2+1
@@ -166,7 +175,7 @@ strDistanceWeightedLevenshtein(s1, s2, limit := 1e+307, insertionCost := (char) 
 	len2 := StrLen(s2)
 	if !(len1)
 		return len2
-	if !len2
+	if !(len2)
 		return len1
 	v0 := [], v1 := []
 	v0.Capacity := v0.Length := v1.Capacity := v1.Length := len2+1
@@ -192,6 +201,202 @@ strDistanceWeightedLevenshtein(s1, s2, limit := 1e+307, insertionCost := (char) 
 		v1 := temp
 	}
 	return v0.Pop()
+}
+
+strDistanceSIFT(s1, s2, maxOffset := 5, maxDistance?) {
+	if (s1 == s2)
+		return 0
+	tl1 := StrLen(s1)
+	tl2 := StrLen(s2)
+	if !(tl1)
+		return tl2
+	if !(tl2)
+		return tl1
+	t1 := StrSplit(s1)
+	t2 := StrSplit(s2)
+	c1 := c2 := 1 ; Cursors
+	lcss := 0 ; Largest common subsequence
+	lcs := 0 ; Largest common substring
+	trans := 0 ; Number of transpositions
+	offsets := [] ; Offset pair array
+
+	while (c1 <= tl1 && c2 <= tl2) {
+		if t1[c1] == t2[c2] {
+			lcs += 1
+			while(offsets.Length) {
+				if (c1 <= offsets[1][1] || c2 <= offsets[1][2]) {
+					trans++
+					break
+				} else {
+					offsets.RemoveAt(1)
+				}
+			}
+			offsets.push([c1, c2])
+		} else {
+			lcss += lcs
+			lcs := 0
+			if(c1 !== c2) {
+				c1 := c2 := Min(c1, c2)
+			}
+			Loop(maxOffset) {
+				i := A_Index - 1
+				if(c1 + i <= tl1 && t1[c1+i] == t2[c2]) {
+					c1 += i - 1
+					c2 -= 1
+					break
+				}
+				if(c2 + i <= tl2 && t1[c1] == t2[c2+i]) {
+					c1 -= 1
+					c2 += i - 1
+					break
+				}
+			}
+		}
+		c1++
+		c2++
+
+		if(IsSet(maxDistance)) {
+			distance := Max(c1, c2) - 1 - (lcss - trans / 2)
+			if(distance >= maxDistance)
+				return Round(distance)
+		}
+	}
+	lcss += lcs
+	return Round(Max(tl1, tl2) - (lcss - trans/2))
+}
+
+/**
+ * This is ONLY appropriate where the difference in strings is one mismatched run of addition (and even then pretty bad)
+ * @param s1 
+ * @param s2 
+ * @param {Integer} maxOffset 
+ * @returns {Array | Primitive} 
+ */
+strDifferenceSIFT(s1, s2, maxOffset := 5) {
+	if (s1 == s2)
+		return []
+	tl1 := StrLen(s1)
+	tl2 := StrLen(s2)
+	t1 := StrSplit(s1)
+	t2 := StrSplit(s2)
+	c1 := c2 := 1 ; Cursors
+	lcs := 0 ; Largest common substring
+	lcss := 0 ; Largest common subsequence
+	trans := 0 ; Number of transpositions
+	offsets := [] ; Offset pair array
+
+	mismatches := []
+	mismatchStart := mismatchStart1 := mismatchStart2 := -1
+	while (c1 <= tl1 && c2 <= tl2) {
+		if t1[c1] == t2[c2] {
+			lcs += 1
+			if (mismatchStart != -1) {
+				m1len := c1 - mismatchStart1
+				m2len := c2 - mismatchStart2
+				if (m1len >= 0 && m2len >= 0)
+					mismatches.push({
+						index1: mismatchStart1,
+						length1: m1len,
+						str1: SubStr(s1, mismatchStart1, m1len),
+						index2: mismatchStart2,
+						length2: m2len,
+						str2: SubStr(s2, mismatchStart2, m2len),
+					})
+				mismatchStart := mismatchStart1 := mismatchStart2 := -1
+			}
+			while(offsets.Length) {
+				if (c1 <= offsets[1][1] || c2 <= offsets[1][2]) {
+					trans++
+					break
+				} else {
+					offsets.RemoveAt(1)
+				}
+			}
+			offsets.push([c1, c2])
+		} else {
+			if (mismatchStart == -1) {
+				mismatchStart := Max(c1, c2)
+				mismatchStart1 := c1
+				mismatchStart2 := c2
+			}
+			lcss += lcs
+			lcs := 0
+			if(c1 !== c2) {
+				c1 := c2 := Min(c1, c2)
+			}
+			Loop(maxOffset) {
+				i := A_Index - 1
+				if(c1 + i <= tl1 && t1[c1+i] == t2[c2]) {
+					c1 += i - 1
+					c2 -= 1
+					break
+				}
+				if(c2 + i <= tl2 && t1[c1] == t2[c2+i]) {
+					c1 -= 1
+					c2 += i - 1
+					break
+				}
+			}
+		}
+		c1++
+		c2++
+
+		if(IsSet(maxDistance)) {
+			distance := Max(c1, c2) - 1 - (lcss - trans /2)
+			if(distance >= maxDistance) 
+				return Round(distance)
+		}
+	}
+	if (mismatchStart >= 0) {
+		m1len := c1 - mismatchStart1
+		m2len := c2 - mismatchStart2
+		mismatches.push({
+			index1: mismatchStart1,
+			length1: m1len,
+			str1: SubStr(s1, mismatchStart1, m1len),
+			index2: mismatchStart2,
+			length2: m2len,
+			str2: SubStr(s2, mismatchStart2, m2len),
+		})
+	}
+	if (c1 < tl1 || c2 < tl2) {
+		mismatches.push({
+			index1: c1,
+			length1: Max(tl1 - c1 + 1),
+			str1: SubStr(s1, c1),
+			index2: c2,
+			length2: Max(0, tl2 - c2 + 1),
+			str2: SubStr(s2, c2),
+		})
+	}
+	return mismatches
+}
+
+strLimitToDiffs(str1, str2, maxOffset := 5, radius := 10, fillChar := "#", separator := " ... ") {
+	s1 := s2 := ""
+	diffs := strDifferenceSIFT(str1, str2, maxOffset)
+	for diff in diffs {
+		c1 := strGetContext(str1, diff.index1, diff.index1 + diff.length1, radius)
+		c2 := strGetContext(str2, diff.index2, diff.index2 + diff.length2, radius)
+		if (diff.length1 > diff.length2) {
+			s1 .= c1[1] strfill(diff.str1, diff.length1,, fillChar) c1[2] separator
+			s2 .= c2[1] strfill(diff.str2, diff.length1,, fillChar) c2[2] separator
+		} else {
+			s1 .= c1[1] strfill(diff.str1, diff.length2,, fillChar) c1[2] separator
+			s2 .= c2[1] strfill(diff.str2, diff.length2,, fillChar) c2[2] separator
+		}
+	}
+	s1 := SubStr(s1, 1, -1 * StrLen(separator))
+	s2 := SubStr(s2, 1, -1 * StrLen(separator))
+	return [s1, s2]
+}
+
+strGetContext(str, startIndex, endIndex := startIndex, radius := 15) {
+	befLen := Min(radius, startIndex - 1)
+	befStart := Max(1, startIndex - radius)
+	afterLen := Min(radius, StrLen(str) - endIndex + 1)
+	afterStart := endIndex
+	return [SubStr(str, befStart, befLen), SubStr(str, afterStart, afterLen)]
 }
 
 /**
@@ -222,6 +427,11 @@ StrSplitUTF8(str, delim := "", omit := "", withDelim := false) {
 		arr.push(A_LoopField . (withDelim ? SubStr(str, count, 1) : ''))
 	}
 	return arr
+}
+
+StrLenUTF8(str) {
+	RegExReplace(str, "s).", "", &i) ; yes this is actually the fastest way to do so.
+	return i
 }
 
 strMaxCharsPerLine(str, maxCharsPerLine) {
