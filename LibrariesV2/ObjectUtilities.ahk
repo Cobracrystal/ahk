@@ -165,7 +165,7 @@ objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) =>
 }
 
 /**
- * Creates a new object with filtered values removed.
+ * Creates a new object containing only values matching filter.
  * @param obj 
  * @param {(k, v) => Boolean} filter 
  * @returns {Integer} 
@@ -996,3 +996,6 @@ objToMap(obj, recursive := true) {
 		clone[i] := (recursive ? objToMap(e, true) : e)
 	return clone
 }
+
+objToArrays(obj) => mapToArrays(objToMap(obj, false))
+objFromArrays(keyArray, valueArray) => MapToObj(mapFromArrays(keyArray, valueArray), false)
