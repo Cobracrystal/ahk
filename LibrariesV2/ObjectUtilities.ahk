@@ -193,7 +193,7 @@ objFilter(obj, filter := (k, v) => (true)) {
 	return clone
 }
 
-objDoForEach(obj, fn := (v) => objToString(v), conditional := (itKey?, itVal?) => true, useKeys := false) {
+objDoForEach(obj, fn := (v) => toString(v), conditional := (itKey?, itVal?) => true, useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || IsObject(obj))
@@ -224,7 +224,7 @@ objGetProd(obj) => objCollect(obj, (b,i) => b*i)
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
  * @returns {Any} Collected Value
  */
-objCollect(obj, fn := ((base, e) => (base . ", " . objToString(e))), initialBase?, conditional := (itKey?, itVal?) => true, useKeys := false) {
+objCollect(obj, fn := ((base, e) => (base . ", " . toString(e))), initialBase?, conditional := (itKey?, itVal?) => true, useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
@@ -512,9 +512,9 @@ objGetClassObject(obj) {
 
 
 ; Aliases for shorthand options
-objToStringNoBases(obj, detailedFunctions := false)	=>	objToString(obj, , false, , , , true, detailedFunctions, true, false)
-objToStringFull(obj, detailedFunctions := false)	=>	objToString(obj, , false, , , , true, detailedFunctions, true, true)
-objToStringClass(obj, detailedFunctions := false)	=>	objToString(obj, , false, , , , true, detailedFunctions, false, false)
+ToStringNoBases(obj, detailedFunctions := false)	=>	toString(obj, , false, , , , true, detailedFunctions, true, false)
+ToStringFull(obj, detailedFunctions := false)	=>	toString(obj, , false, , , , true, detailedFunctions, true, true)
+ToStringClass(obj, detailedFunctions := false)	=>	toString(obj, , false, , , , true, detailedFunctions, false, false)
 /**
  * Return a json-like representation of the given variable, with selectable level of detail.
  * @param {Any} obj Any Value.
@@ -529,7 +529,7 @@ objToStringClass(obj, detailedFunctions := false)	=>	objToString(obj, , false, ,
  * @param {Boolean} [withBases] Whether to print the .Base property. If true,any object will have its Base Chain printed up to Any.Prototype. Does NOT print class.Prototype.base, instead only class.base.Prototype (to avoid printing duplicate information), and furthermore does not print Class.Prototype, Object.Prototype, Any.Prototype at all (since they are included in the base chain anyway, since Any.Base == Class.Prototype)
  * @returns {String} The string representing the object
  */
-objToString(obj, compact := false, compress := true, strEscape := false, mapAsObj := true, spacer := "`t", withInheritedProps?, detailedFunctions?, withClassOrPrototype?, withBases?) {
+toString(obj, compact := false, compress := true, strEscape := false, mapAsObj := true, spacer := "`t", withInheritedProps?, detailedFunctions?, withClassOrPrototype?, withBases?) {
 	if obj is VarRef || obj is ComValue {
 		return "{}"
 	} else if IsObject(obj) {
@@ -544,9 +544,9 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 		overrideAsObj := (flagIncludeClassOrPrototype || flagIncludeInheritedProps)
 	}
 	encounteredObjs := Map() ; to avoid self-reference loops
-	return _objToString(obj, 0)
+	return _toString(obj, 0)
 
-	_objToString(obj, indentLevel, flagOverrideStrEscape := false, flagIsOwnPropDescObject := false) {
+	_toString(obj, indentLevel, flagOverrideStrEscape := false, flagIsOwnPropDescObject := false) {
 		static escapes := [["\", "\\"], ['"', '\"'], ["`n", "\n"], ["`r", "\r"], ["`t", "\t"]]
 		qt := strEscape || flagOverrideStrEscape ? '"' : ''
 		if !(IsObject(obj)) { ; if obj is Primitive, no need for the entire rest.
@@ -621,9 +621,9 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 			if !(IsSet(v)) ; must be array, obj/map keys cannot be unset
 				str := RTrim(str, separator) "," separator
 			else if (overrideAsObj || flagIsObj || (mapAsObj && flagIsMap))
-				str .= _objToString(k ?? "", indentLevel + 1, true) (flagIsMap && !mapAsObj ? "," : ":") trspace _objToString(v ?? "", indentLevel + 1,, isOwnPropDescObject?) "," separator
+				str .= _toString(k ?? "", indentLevel + 1, true) (flagIsMap && !mapAsObj ? "," : ":") trspace _toString(v ?? "", indentLevel + 1,, isOwnPropDescObject?) "," separator
 			else
-				str .= _objToString(v ?? "", indentLevel + 1, flagOverrideStrEscape?) "," separator
+				str .= _toString(v ?? "", indentLevel + 1, flagOverrideStrEscape?) "," separator
 		}
 
 		strFromAllProperties(maxDepth := -1) {
@@ -658,7 +658,7 @@ objToString(obj, compact := false, compress := true, strEscape := false, mapAsOb
 	}
 }
 
-varsToString(vars*) => objToString(vars,0,1,0)
+varsToString(vars*) => toString(vars,0,1,0)
 
 ; Unreliable, may only work in ahk versions around ~2.0.9
 BoundFnName(Obj) {
@@ -852,6 +852,22 @@ arraySort(arr, fn := (a => a), sortMode := "") {
 
 arrayBasicSort(arr, sortMode := "") => objBasicSort(arr, sortMode)
 
+arrayContainsArray(arr, subArray, comparator := (arrVal,subArrVal) => (arrVal == subArrVal)) {
+	sequenceIndex := 1
+	if !subArray.length
+		return 1
+	firstEl := subArray[sequenceIndex]
+	for i, e in arr {
+		if comparator(firstEl, e) {
+			seqStart := i - 1
+			for j, k in subArray
+				if !comparator(arr[seqStart + j], k)
+					return 0
+			return seqStart + 1
+		}
+	}
+	return 0
+}
 
 /**
  * Sorts an object directly, returning the sorted Values Note that this converts everything to strings.

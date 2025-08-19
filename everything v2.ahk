@@ -283,7 +283,7 @@ Alt & Capslock::{
 			case "Vertically":
 				list := WinUtilities.getAllWindowInfo()
 				objRemoveValue(list,,,(key,a,b) => (WinGetMinMax(a) == -1))
-				; msgbox(objToString(list, false))
+				; msgbox(ToString(list, false))
 				; Loop(list.Length) {
 				; 	a := 5
 				; }

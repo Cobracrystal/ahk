@@ -515,7 +515,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 		mbGui.Opt("-SysMenu")
 	mbGui.SetFont(guiFontOptions, MB_FONTNAME)
 	if IsObject(text)
-		text := objToString(text, 0, 0, true)
+		text := toString(text, 0, 0, true)
 	if !IsSet(maxTextWidth) {
 		maxTextWidth := Max(minTextWidth, totalButtonWidth)
 		lens := strGetSplitLen(IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text, "`n")
@@ -996,7 +996,7 @@ doNothing(*) {
 
 print(value, options?, putNewline := true, compress := false, compact := false, strEscape := true) {
 	if IsObject(value) { 
-		value := objToString(value, compact, compress, strEscape)	
+		value := toString(value, compact, compress, strEscape)	
 	}
 	if (putNewline == true || (putNewline == -1 && InStr(value, '`n')))
 		finalChar := '`n'
@@ -1006,6 +1006,7 @@ print(value, options?, putNewline := true, compress := false, compact := false, 
 		FileAppend(value . finalChar, "*", options ?? "UTF-8")
 	catch Error 
 		MsgBoxAsGui(value,,,,,,,1)
+	return value
 }
 
 /**

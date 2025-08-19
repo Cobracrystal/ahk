@@ -335,7 +335,7 @@ class WindowManager {
 									}
 									wInfoArray.push(wInfo)
 								}
-								A_Clipboard := objToString(wInfoArray, false, false, true)
+								A_Clipboard := toString(wInfoArray, false, false, true)
 							case GetKeyState("Ctrl") && GetKeyState("Alt"): ; ctrl + alt C to get title only
 								for rowN in rowNums
 									str .= this.LV.GetText(rowN, 3) "`n"
