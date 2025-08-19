@@ -8,6 +8,7 @@
 ; todo metadata management: edit metadata needs to edit metadata file
 ; todo verify: func that creates metadata file from folder
 ; todo verify: func that directly overrides metadata from file
+; todo verify: warning/note if filename property is unnecessary
 ; todo verify: func that verifies that metadata file matches folder, and add option to overwrite if it doesn't (ie continued messageboxes (in both directions))
 if (A_LineFile == A_ScriptFullPath) { ; NECESSARY TO WORK WHEN INCLUDING
 	SetWorkingDir(A_ScriptDir "\..\script_files\SongDownloader")
@@ -17,8 +18,8 @@ if (A_LineFile == A_ScriptFullPath) { ; NECESSARY TO WORK WHEN INCLUDING
 	; SongDownloader.downloadSong("Never Gonna Give You Up")
 	; playlistdata := SongDownloader.getMetadataJson("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=WL&index=3&pp=gAQBiAQB", false, true)
 	; usage 
-	; SongDownloader.settings.browserCookies := "firefox"
-	; SongDownloader.settings.useCookies := true
+	; SongDownloader.settings.ytdl.browserCookies := "firefox"
+	; SongDownloader.settings.ytdl.useCookies := true
 	; jsonStr := SongDownloader.getMetadataJson("https://www.youtube.com/playlist?list=WL")
 	; SongDownloader.downloadFromJson(jsonStr)
 }
@@ -31,8 +32,6 @@ class SongDownloader {
 			simulate: false,
 			useAliases: true,
 			useVisibleCMD: false,
-			useCookies: true,
-			browserCookies: "firefox",
 			currentTodo: 71,
 			outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
 			outputSubFolder: "",
@@ -41,7 +40,14 @@ class SongDownloader {
 			ffmpegPath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffmpeg.exe"),
 			ffprobePath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffprobe.exe"),
 			ytdlPath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
-			metadataFields: ["title", "artist", "album", "genre"]
+			metadataFields: ["title", "artist", "album", "genre"],
+			ytdl: {
+				useCookies: true,
+				browserCookies: "firefox",
+				embedThumbnail: true,
+				cropThumbnailToSquare: true,
+				skipNonMusic: true
+			}
 		}
 		this.settings.outputSubFolder := Format("p{:03}", this.settings.currentTodo)
 		this.data := {
@@ -88,61 +94,80 @@ class SongDownloader {
 
 	static editMetadataWithGui(filePath) {
 		metadata := this.getMetadataFromFile(filePath)
-		this.editMetadataGui(metadata)
+		this.editMetadataGui(filePath, metadata)
 	}
 
-	static getMetadataFromFile(filePath) {
+	static getMetadataFromFile(filePath, setEmptyDefaultValues := true) {
 		cmd := this.cmdStringBuilder(this.settings.ffprobePath, this.PROFILE_GETMETADATAFROMFILE,, filePath)
 		if this.settings.debug
 			print(cmd)
 		jsonStr := cmdRet(cmd,, "UTF-8")
-		try metadata := jsongo.parse(jsonStr)
+		try tags := jsongo.parse(jsonStr)
 		catch as e {
 			if RegExMatch(jsonStr, '(?:\n|\r)(\[.*\] [^"]+)(?:\n|\r|$)', &o) {
 				jsonStr := RegExReplace(jsonStr, '(?:\n|\r)(\[.*\] [^"]+)(?:\n|\r|$)')
 				print(Format("File {}: Got unexpected data while getting metadata: `n{}", filePath, o[1]))
-				try metadata := jsongo.parse(jsonStr)
+				try tags := jsongo.parse(jsonStr)
 				catch as e {
-					print(Format("File {}: Getting metadata unsuccessful. Setting it as empty. Error was: {}`nFull Command was: {}", filePath, objToString(e,,0,1), cmd))
+					print(Format("File {}: Getting metadata unsuccessful. Setting it as empty. Error was: {}`nFull Command was: {}", filePath, toString(e,,0,1), cmd))
 					return { filePath: filePath }
 				}
 			} else {
-				print(Format("File {}: Getting metadata unsuccessful. Setting it as empty. Error was: {}`nFull Command was: {}", filePath, objToString(e,,0,1), cmd))
+				print(Format("File {}: Getting metadata unsuccessful. Setting it as empty. Error was: {}`nFull Command was: {}", filePath, toString(e,,0,1), cmd))
 				return { filePath: filePath }
 			}
 		}
-		metadata := metadata["format"].has("tags") ? metadata["format"]["tags"] : {}
-		metadata := MapToObj(metadata)
-		metadata.filePath := filePath
-		for tag in this.settings.metadataFields
-			if !metadata.HasOwnProp(tag)
-				metadata.%tag% := ""
-		return metadata
+		tags := tags["format"].has("tags") ? MapToObj(tags["format"]["tags"]) : {}
+		metadata := {
+			artist: 		tags.HasOwnProp("artist") ? tags.artist : "",
+			title: 			tags.HasOwnProp("title") ? tags.title : "",
+			album: 			tags.HasOwnProp("album") ? tags.album : "",
+			genre: 			tags.HasOwnProp("genre") ? tags.genre : "",
+			description: 	tags.HasOwnProp("description") ? tags.description : "",
+			link: 			tags.HasOwnProp("purl") ? tags.purl : ""
+		}
+		fName := this.getFileNameFromMetadata(metadata)
+		SplitPath(filePath,,,,&namenoext)
+		if fName != namenoext
+			metadata.filename := namenoext
+		if tags.HasOwnProp("comment") {
+			if metadata.link != tags.comment
+				metadata.comment := tags.comment
+		}
+		return metadata	
 	}
 
-	static getMetadataFromFolder(folder, setEmptyDefaultValues := true) {
-		if !InStr(folder, "\")
-			folder := this.settings.outputBaseFolder "\" folder
+	static getMetadataFromFolder(folder, setEmptyDefaultValues := true, onlyGetMetadata := false) {
+		SplitPath(folder, &name)
+		folder := this.settings.outputBaseFolder "\" name
 		folder := getFolderAsArr(folder, , , 0, "timeCreated")
-		metadataArr := objDoForEach(folder, v => this.getMetadataFromFile(v.path))
-		fields := arrayMerge(this.settings.metadataFields, ["purl", "comment", "description"])
-		if setEmptyDefaultValues
-			for v in metadataArr
-				for field in fields
-					if !v.HasOwnProp(field)
-						v.%field% := ""
-		return metadataArr
+		if onlyGetMetadata
+			return objDoForEach(folder, v => this.getMetadataFromFile(v.path, setEmptyDefaultValues))
+		for v in folder
+			v.metadata := this.getMetadataFromFile(v.path, setEmptyDefaultValues)
+		return folder
 	}
 
-	static downloadFromJson(jsonAsStr, outputSubFolder := this.settings.outputSubFolder, embedThumbnail := true) {
+	; note: if jsonAsStr defines a file with title/artist containing illegal chars, the file will save correctly, but will obviously not match the json provided.
+	; maybe use an onfinish handler to take the file name outputted and write it (if it did contain illegal chars). This would require a path to a json being given though.
+	static downloadFromJson(jsonAsStr, outputFolder := this.settings.outputSubFolder) {
 		data := MapToObj(jsongo.Parse(jsonAsStr))
 		if !(data is Array)
 			data := [data]
-		finisher := this.onFinish.bind(this, data.length, outputSubFolder, 1, 0)
+		finisher := this.onFinish.bind(this, data.length, outputFolder, 1, 0)
 		for i, dataPoint in data {
-			profile := this.PROFILE_MUSIC[this.PROFILE_PARSE_METADATA[dataPoint], this.constructOutputPatternString(dataPoint), outputSubFolder, this.settings.useCookies, true, embedThumbnail]
+			profile := this.PROFILE_MUSIC[
+				this.PROFILE_PARSE_METADATA[dataPoint], 
+				this.getOutputPatternFromMetadata(dataPoint), 
+				outputFolder, 
+				this.settings.ytdl.useCookies, 
+				this.settings.ytdl.skipNonMusic,
+				this.settings.ytdl.embedThumbnail, 
+				this.settings.ytdl.cropThumbnailToSquare
+			]
 			this.launchYTDL(profile, dataPoint.link, this.settings.useVisibleCMD, finisher)
 		}
+		return data
 	}
 	
 	static getMetadataFromLinks(songLinks, allData := false, withPlaylist := false, printIntermediateSteps := false) {
@@ -202,7 +227,7 @@ class SongDownloader {
 				if open != closed
 					title := RegExReplace(title, Format("i){}\s*(?:Official|Lyric)\s+((Music|Lyric|HD)\s+)?(Video|Audio)\s*{}", '\' open, '\' closed))
 			}
-			artist := videoData.Has("artists") ? Trim(objToString(videoData["artists"],1,0), " []") : videoData.Has("creator") ? artist := videoData["creator"] : ""
+			artist := videoData.Has("artists") ? Trim(toString(videoData["artists"],1,0), " []") : videoData.Has("creator") ? artist := videoData["creator"] : ""
 			if RegexMatch(title, "^(.*?)(?:-|–|—)\s+(.*)$", &m) {
 				if artist == ""
 					artist := m[1]
@@ -259,13 +284,12 @@ class SongDownloader {
 			errEdit.SetFont("cRed Bold")
 		}
 		g.AddText("Section 0x200 R1.45", "Links | Current Folder: " )
-		folder := this.settings.outputSubFolder
+		outputFolder := this.settings.outputSubFolder
 		if IsSet(destination) {
-			SplitPath(destination,, &dir)
-			SplitPath(dir, &fl)
-			folder := fl
+			SplitPath(destination, &fl)
+			outputFolder := fl
 		}
-		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", folder).OnEvent("Change", guiHandler)
+		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", outputFolder).OnEvent("Change", guiHandler)
 		g.AddButton("xs+151 ys-1 w100", "Open Link").OnEvent("Click", (*) => Run(data.link))
 		g.AddEdit("xs w250 R1 vLink " (editableLink ? "" : "ReadOnly"), data.link).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Title")
@@ -279,24 +303,28 @@ class SongDownloader {
 		g.AddEdit("xs w250 vAlbum", metadataVar.album).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Genre")
 		if data.HasOwnProp("shortJson")
-			g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
+			g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(toString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
 		g.AddEdit("xs w250 vGenre", metadataVar.genre).OnEvent("Change", guiHandler)
 		g["Title"].Focus()
-		g.AddCheckbox("xs vEmbedThumbnail Checked" true, "Embed Thumbnail").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs vEmbedThumbnail Checked" this.settings.ytdl.embedThumbnail, "Embed Thumbnail").OnEvent("Click", guiHandler)
 		g.AddCheckbox("xs+125 yp vUseVisibleCMD Checked" this.settings.useVisibleCMD, "Visble CMD")
-		g.AddCheckbox("xs vUseCookies Checked" this.settings.useCookies, "Use Cookies (" this.settings.browserCookies ")").OnEvent("Click", guiHandler)
-		g.AddCheckbox("xs+125 yp vSkipNonMusic Checked" true, "Skip Non-Music Parts").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs vUseCookies Checked" this.settings.ytdl.useCookies, "Use Cookies (" this.settings.ytdl.browserCookies ")").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs+125 yp vSkipNonMusic Checked" this.settings.ytdl.skipNonMusic, "Skip Non-Music Parts").OnEvent("Click", guiHandler)
 		g.AddCheckbox("xs vLogMetadata Checked" this.settings.logMetadata, "Log Metadata")
 		g.AddCheckbox("xs+125 yp vReuseData Checked" false, "Re-Use Data")
+		g.AddCheckbox("xs vOmitArtistName Checked" false, "Omit Artist in Filename").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs+125 yp vCropThumbToSquare Checked" this.settings.ytdl.cropThumbnailToSquare, "Crop Thumb To Square").OnEvent("Click", guiHandler)
 		g.AddText("xs", "Current Command Line")
 		profile := this.PROFILE_MUSIC[
 			this.PROFILE_PARSE_METADATA[data],
-			this.constructOutputPatternString(data),
-			folder,
-			this.settings.useCookies,
-			true,
-			true
+			this.getOutputPatternFromMetadata(data),
+			outputFolder,
+			this.settings.ytdl.useCookies,
+			this.settings.ytdl.skipNonMusic,
+			this.settings.ytdl.embedThumbnail,
+			this.settings.ytdl.cropThumbnailToSquare
 		]
+		cropToSquare := this.settings.ytdl.cropThumbnailToSquare ; for use of the checkbox
 		g.AddEdit("vCMD w250 R1 Readonly", this.cmdStringBuilder(this.settings.ytdlPath, profile,, data.link))
 		g.AddButton("xs-1 h30 w251 Default", "Launch yt-dlp").OnEvent("Click", finishGui)
 		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
@@ -309,26 +337,35 @@ class SongDownloader {
 			val := Trim(guiCtrlObj.Value)
 			switch name {
 				case "Title", "Artist", "Album", "Genre":
-					rem := [{ option: this.ytdloptions.output, param: this.constructOutputPatternString(data)}]
+					rem := [{ option: this.ytdloptions.output, param: this.getOutputPatternFromMetadata(data)}]
 					data.%name% := val ; THIS LINE BEING IN THIS ORDER IS RELEVANT
-					add := [{ option: this.ytdloptions.output, param: this.constructOutputPatternString(data)}]
+					add := [{ option: this.ytdloptions.output, param: this.getOutputPatternFromMetadata(data)}]
 					profile := this.addRemoveProfile(profile, rem, add, true, true)
 				case "Link":
 					data.link := val
 				case "OutputFolder":
-					rem := [{ option: this.ytdloptions.paths, param: this.settings.outputBaseFolder "\" subOutputFolder }]
+					rem := [{ option: this.ytdloptions.paths, param: this.settings.outputBaseFolder "\" outputFolder }]
 					add := [{ option: this.ytdloptions.paths, param: this.settings.outputBaseFolder "\" val }]
-					subOutputFolder := val
+					outputFolder := val
 					profile := this.addRemoveProfile(profile, rem, add, true, true)
 				case "EmbedThumbnail":
-					toggleProfile := this.PROFILE_EMBED_THUMBNAIL
+					toggleProfile := this.PROFILE_EMBED_THUMBNAIL[cropToSquare]
 					profile := this.toggleProfile(profile, toggleProfile)
+				case "CropThumbToSquare":
+					rem := this.PROFILE_EMBED_THUMBNAIL[cropToSquare]
+					add := this.PROFILE_EMBED_THUMBNAIL[val]
+					cropToSquare := val
+					profile := this.addRemoveProfile(profile, rem, add, true) ; not in-place because arr lengths don't match
 				case "UseCookies": ; might cause issues if this setting changes while in GUI but ehhh
-					toggleProfile := [{option: this.ytdloptions.cookies_from_browser, param: this.settings.browserCookies}]
+					toggleProfile := [{option: this.ytdloptions.cookies_from_browser, param: this.settings.ytdl.browserCookies}]
 					profile := this.toggleProfile(profile, toggleProfile)
 				case "SkipNonMusic":
 					toggleProfile := [{option: this.ytdloptions.sponsorblock_remove, param: "music_offtopic"}]
 					profile := this.toggleProfile(profile, toggleProfile)
+				case "OmitArtistName":
+					rem := [{ option: this.ytdloptions.output, param: this.getOutputPatternFromMetadata(data)}]
+					add := [{ option: this.ytdloptions.output, param: this.getOutputPatternFromMetadata(data,val)}]
+					profile := this.addRemoveProfile(profile, rem, add, true, true)
 			}
 			g["CMD"].Value := this.cmdStringBuilder(this.settings.ytdlPath, profile,, data.link)
 		}
@@ -344,12 +381,15 @@ class SongDownloader {
 			}
 			profile := this.PROFILE_MUSIC[
 				this.PROFILE_PARSE_METADATA[songData],
-				this.constructOutputPatternString(songData),
+				this.getOutputPatternFromMetadata(songData, gData.OmitArtistName, &wasIrregular),
 				gData.OutputFolder,
 				gData.UseCookies,
 				gData.SkipNonMusic,
-				gData.EmbedThumbnail
+				gData.embedThumbnail,
+				gData.cropThumbToSquare
 			]
+			if wasIrregular
+				this.getFileNameFromMetadata(songData, gData.OmitArtistName)
 			if (gData.ReuseData)
 				this.data.lastSongMetadata := songData
 			else
@@ -361,27 +401,28 @@ class SongDownloader {
 		}
 	}
 
-	static editMetadataGui(data) {
+	; todo: add checkbox to omit artist here too
+	static editMetadataGui(filePath, metadata) {
 		g := Gui("+Border +OwnDialogs", "Edit Metadata")
 		g.OnEvent("Close", (*) => g.Destroy())
-		SplitPath(data.filePath, &name, &dir, &ext, &nameNoExt)
+		SplitPath(filePath,, &dir)
 		SplitPath(dir, &dirname)
 		g.AddText("Section 0x200 R1.45", "File | Current Folder: " )
 		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", dirname)
-		if (data.HasOwnProp("purl"))
-			g.AddButton("xs+151 ys-1 w100", "Open Link").OnEvent("Click", (*) => Run(data.purl))
-		g.AddEdit("xs w250 R1 ReadOnly vFileName", name)
+		if (metadata.HasOwnProp("link"))
+			g.AddButton("xs+151 ys-1 w100", "Open Link").OnEvent("Click", (*) => Run(metadata.link))
+		g.AddEdit("xs w250 R1 ReadOnly vFileName", this.getFileNameFromMetadata(metadata))
 		g.AddText("0x200 R1.45", "Title")
-		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", guiHandler)
+		g.AddEdit("xs w250 vTitle", metadata.title).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Artist")
 		g.AddButton("xs+151 yp-1 w100 vSwapButton", "Swap Title - Artist").OnEvent("Click", guiHandler)
-		g.AddEdit("xs w250 vArtist", data.artist).OnEvent("Change", guiHandler)
+		g.AddEdit("xs w250 vArtist", metadata.artist).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Album")
-		if data.HasOwnProp("description")
-			g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
-		g.AddEdit("xs w250 vAlbum", data.album).OnEvent("Change", guiHandler)
+		if metadata.HasOwnProp("description")
+			g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(metadata.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
+		g.AddEdit("xs w250 vAlbum", metadata.album).OnEvent("Change", guiHandler)
 		g.AddText("", "Genre")
-		g.AddEdit("xs w250 vGenre", data.genre).OnEvent("Change", guiHandler)
+		g.AddEdit("xs w250 vGenre", metadata.genre).OnEvent("Change", guiHandler)
 		g.AddButton("xs-1 h30 w251 vReDownload", "Re-Download").OnEvent("Click", finishGui)
 		g.AddButton("xs1 h30 w251 vEditMetadata Default", "Edit Metadata").OnEvent("Click", finishGui)
 		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
@@ -392,11 +433,9 @@ class SongDownloader {
 					temp := g["Artist"].Value
 					g["Artist"].Value := g["Title"].Value
 					g["Title"].Value := temp
-					SplitPath(g["FileName"].Value,,,&ext)
-					g["FileName"].Value := g["Artist"].Value " - " g["Title"].Value "." ext
+					g["FileName"].Value := this.getFileNameFromMetadata(metadata,,1)
 				case "Title", "Artist":
-					SplitPath(g["FileName"].Value,,,&ext)
-					g["FileName"].Value := g["Artist"].Value " - " g["Title"].Value "." ext
+					g["FileName"].Value := this.getFileNameFromMetadata(metadata,,1)
 			}
 		}
 
@@ -410,23 +449,24 @@ class SongDownloader {
 					songData := {
 						title: gData.Title, artist: gData.Artist,
 						album: gData.Album, genre: gData.Genre,
-						link: data.HasOwnProp("purl") ? data.purl : "", description: data.HasOwnProp("description") ? data.Description : ""
+						link: metadata.link, description: metadata.Description
 					}
-					this.songDLGui(songData, data.filePath, true)
+					this.getFileNameFromMetadata(songData)
+					this.songDLGui(songData, dirname, true)
 				case "EditMetadata":
-					this.editMetadata(data.filePath, gData)
+					this.editMetadata(filePath, gData)
 			}
 		}
 	}
 
-	static editMetadata(filePath, metadata, extraFields*) {
-		SplitPath(filePath, &oldName, &dir, &ext, &oldNameNoExt)
+	static editMetadata(currentFilePath, metadata, extraFields*) {
+		SplitPath(currentFilePath, &oldName, &dir, &ext, &oldNameNoExt)
 		SplitPath(dir, &dirname)
-		str := ""
-		flagSameFileName := (metadata.filename = oldName) ; with ext. Ignore capitalization since its a filename
-		finalFilePath := dir "\" metadata.filename
-		targetFilePath := flagSameFileName ? dir "\" oldNameNoExt "_." ext : finalFilePath
-		cmd := this.cmdStringBuilder(this.settings.ffmpegPath, this.PROFILE_EDITMETADATA[metadata, filePath, extraFields*],, targetFilePath)
+		newFileName := this.getFileNameFromMetadata(metadata)
+		flagSameFileName := (newFileName = oldNameNoExt) ; with ext. Ignore capitalization since its a filename
+		finalFilePath := dir "\" newFileName "." ext
+		targetFilePath := flagSameFileName ? dir "\" oldNameNoExt "_" Random(1000000, 9999999) "." ext : finalFilePath
+		cmd := this.cmdStringBuilder(this.settings.ffmpegPath, this.PROFILE_EDITMETADATA[metadata, currentFilePath, extraFields*],, targetFilePath)
 		if this.settings.debug
 			print(cmd)
 		cmdRetAsync(cmd, , "UTF-8",,finishEdit, 5000)
@@ -441,18 +481,21 @@ class SongDownloader {
 				if (flagSameFileName)
 					FileMove(targetFilePath, finalFilePath, 1)
 				else
-					FileDelete(filePath)
+					FileDelete(currentFilePath)
 			}
-			logStr := "Edited Metadata of " filePath . (flagSameFileName ? " " : " (now " finalFilePath ")")
+			logStr := "Edited Metadata of " currentFilePath . (flagSameFileName ? " " : " (now " finalFilePath ")")
 			this.logAction(logStr, dirname)
 			MsgBoxAsGui("Done!")
 		}
 	}
 
 	static thumbnailPreviewer(metadata) {
-		static HTML_TEMPLATE := '<!DOCTYPE html><html><head><style>html,body {margin: 0;padding: 0;}.overlay {position: absolute;top: 0;height: {3}px;background-color: #000;filter: alpha(opacity=85);}</style></head><body><div style="width:{2}px;height:{3}px;"><img src="{1}" alt="Picture" style="width:{2}px;height:{3}px;"><div class="overlay" style="left:0;width:{4}px;"></div><div class="overlay" style="right:0;width:{4}px;"></div></div></body></html>'
-		
-		if !metadata.HasOwnProp("thumbnails") {
+		static HTML_TEMPLATE := '<!DOCTYPE html><html><head><style>html,body {margin: 0;padding: 0;}.overlay {position: absolute;top: 0;height: {3};background-color: #000;filter: alpha(opacity=85);}</style></head><body><div style="width:{2};height:{3};"><img src="{1}" alt="Picture" style="width:{2};height:{3};"><div class="overlay" style="left:0;width:{4}px;"></div><div class="overlay" style="right:0;width:{4}px;"></div></div></body></html>'
+		if metadata.HasOwnProp("thumbnails") {
+			RegExMatch(metadata.thumbnails[1], "https:\/\/.*?\/.*?\/([a-zA-Z0-9-_]{11})\/.*?\.", &o)
+			getThumbs := InStr(metadata.link, o[1]) ? 1 : 0
+		}
+		if !metadata.HasOwnProp("thumbnails") || getThumbs {
 			if (!metadata.link)
 				return MsgBoxAsGui("No Link set to retrieve thumbnail from and retrieving it from metadata is not yet implemented.")
 			dataStr := this.getRawMetadataFromLinks(metadata.link)
@@ -460,28 +503,51 @@ class SongDownloader {
 		}
 		
 		for th in arrayInReverse(metadata.thumbnails) {
-			if RegExMatch(th.url, "webp$") ; activex doesn't support webps
+			if InStr(th.url, ".webp") ; activex doesn't support webps
 				continue
 			thumb := th
 			break
 		}
-		height := clamp(thumb.height, 1, 500)
-		width := Round(height/thumb.height * thumb.width)
+		flagHasSize := thumb.HasOwnProp("height")
+		height := flagHasSize ? clamp(thumb.height, 1, 500) : 500
+		width := flagHasSize ? Round(height/thumb.height * thumb.width) : 889
 		squareOffset := (width - height) // 2
 		g := Gui("+Border +OwnDialogs +E" WinUtilities.EXSTYLES.WS_EX_COMPOSITED, "Thumbnail Preview")
 		g.OnEvent("Close", (*) => g.Destroy())
 		sect := g.AddText("Section 0x200 R1.45", "Link | Thumbnail ID: " )
 		sect.GetPos(&sectX)
-		g.AddEdit("xs+110 ys R1 w30 vThumbID", thumb.id)
-		g.AddText("xs+150 0x200 R1.45 ys vThumbInfo", "Dimensions: " thumb.width " x " thumb.height)
-		g.AddButton(Format("xs+{} ys-1 w130", width-129), "View Thumbnails Json").OnEvent("Click", (*) => MsgBoxAsGui(objToString(metadata.thumbnails,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
+		g.AddEdit("xs+110 ys R1 w30 vThumbID", thumb.id).OnEvent("Change", changeThumbId)
+		g.AddText("xs+150 w150 0x200 R1.45 ys vThumbInfo", flagHasSize ? "Dimensions: " thumb.width " x " thumb.height : "Unknown Dimensions")
+		g.AddText("xs+310 w150 0x200 R1.45 ys vThumbInfo2", "")
+		g.AddButton(Format("xs+{} ys-1 w130", width-129), "View Thumbnails Json").OnEvent("Click", (*) => MsgBoxAsGui(toString(metadata.thumbnails,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
 		g.AddEdit(Format("xs w{} R1 vFile", width), thumb.url)
-		g.AddText("vCoverLeft Hidden Section xs w" squareOffset " h" height)
-		g.AddText("vCoverRight Hidden x" sectX + width - squareOffset " yp w" squareOffset " h" height)
-		WBObj := g.AddActiveX(Format("xs ys w{} h{} vThumb", width, height), "Shell.Explorer2").Value ; Explorer2 because persistently vanishing scrollbars.
+		WBObj := g.AddActiveX(Format("xs w{} h{} vThumb", width, height), "Shell.Explorer2").Value ; Explorer2 because persistently vanishing scrollbars.
 		WBObj.Silent := true
-		WBObj.Navigate("about:" Format(HTML_TEMPLATE, thumb.url, width, height, squareOffset))
+		if flagHasSize
+			WBObj.Navigate("about:" Format(HTML_TEMPLATE, thumb.url, width "px", height "px", squareOffset))
+		else
+			WBObj.Navigate("about:" Format(HTML_TEMPLATE, thumb.url, "auto", "auto", 0))	
 		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x + 125 - width//2, this.data.coords.y + 200 - 100 - height//2))
+
+		changeThumbId(ctrlObj, info?) {
+			id := Integer(g["ThumbID"].Value)
+			if i := objContainsValue(metadata.thumbnails, id, (k,v,s) => (v.id == s)) {
+				thumb := metadata.thumbnails[i]
+				if Instr(thumb.url, ".webp")
+					g["ThumbInfo2"].Value := "Webp preview not supported"
+				else {
+					g["ThumbInfo2"].Value := ""
+					flagHasSize := thumb.HasOwnProp("height")
+					height := flagHasSize ? clamp(thumb.height, 1, 500) : 500
+					width := flagHasSize ? Round(height/thumb.height * thumb.width) : 889
+					g["ThumbInfo"].Value := flagHasSize ? "Dimensions: " thumb.width " x " thumb.height : "Unknown Dimensions"
+					if flagHasSize
+						WBObj.Navigate("about:" Format(HTML_TEMPLATE, thumb.url, width "px", height "px", squareOffset))
+					else
+						WBObj.Navigate("about:" Format(HTML_TEMPLATE, thumb.url, "auto", "auto", 0))
+				}
+			}
+		}
 	}
 
 	static launchffmpeg() {
@@ -491,7 +557,8 @@ class SongDownloader {
 	static launchYTDL(profile, link, useVisibleCMD, finisherFunc?) {
 		; profile := this.toggleProfile(profile, this.PROFILE_SPLIT_CHAPTERS)
 		fullCommand := this.cmdStringBuilder(this.settings.ytdlPath, profile,, link)
-		OutputDebug(fullCommand "`n")
+		if this.settings.debug
+			print(fullCommand)
 		if (useVisibleCMD) {
 			modifier := this.settings.debug ? "/k" : "/c"
 			Run("wt cmd " modifier " chcp 65001 && title SongDownloader && echo " fullCommand " && " fullCommand)
@@ -551,16 +618,35 @@ class SongDownloader {
 		return Trim(input)
 	}
 
-	static constructOutputPatternString(songData, withExt := true, &count?) {
-		if songData.HasOwnProp("filename")
-			filename := songData.filename . (withExt ? "." this.TEMPLATES.EXT : "")
-		else {
-			title := songData.title ? songData.title : this.TEMPLATES.TITLE
-			artist := songData.artist ? songData.artist : this.TEMPLATES.ARTIST
-			filename := artist " - " title . (withExt ? "." this.TEMPLATES.EXT : "")
+	static getFileNameFromMetadata(metadata, omitArtistName := false, ignoreFilenameProp := false, &irregularFilename?) {
+		if (metadata.HasOwnProp("filename") && !ignoreFilenameProp) {
+			irregularFilename := 0
+			return metadata.filename
+		} else {
+			filename := ""
+			if !omitArtistName
+				filename := metadata.artist " - "
+			filename .= metadata.title
+			filename := RegExReplace(filename, "\s+", " ") ; normalize spaces
+			filename := strReplaceIllegalChars(filename, &count)
+			if irregularFilename := (count > 0 || omitArtistName)
+				metadata.filename := filename
+			return filename
 		}
-		filename := strReplaceIllegalChars(filename, &count?)
+	}
+
+	static getOutputPatternFromMetadata(songData, omitArtistName := false, &wasIrregular?) {
+		if songData.HasOwnProp("filename")
+			filename := songData.filename
+		else {
+			title := songData.title != "" ? songData.title : this.TEMPLATES.TITLE
+			artist := songData.artist != "" ? songData.artist : this.TEMPLATES.ARTIST
+			filename := (omitArtistName ? "" : artist " - ") . title
+		}
+		filename .= "." this.TEMPLATES.EXT
 		filename := RegExReplace(filename, "\s+", " ") ; normalize spaces
+		filename := strReplaceIllegalChars(filename, &count)
+		wasIrregular := (count > 0 || omitArtistName)
 		return filename
 	}
 
@@ -589,11 +675,19 @@ class SongDownloader {
 	static addRemoveProfile(profile, profileToRemove := [], profileToAdd := [], paramCompare := true, inplace := false) {
 		nProfile := profile.clone() ; deepclone unnecessary.
 		optCompare := (k, v, v2) => (objCompare(v.option, v2.option))
+		optCompare2 := (v, v2) => (objCompare(v.option, v2.option))
+		allCompare2 := (v, v2) => (objCompare(v, v2))
 		allCompare := (k, v, v2) => (objCompare(v, v2))
 		lambda := paramCompare ? allCompare : optCompare
+		lambda2 := paramCompare ? allCompare : optCompare
 		if (inplace) {
-			if (profileToRemove.Length != profileToAdd.Length)
-				throw(ValueError("Given Arrays have different Lengths"))
+			if (profileToRemove.Length != profileToAdd.Length) {
+				if pos := arrayContainsArray(nProfile, profileToRemove, lambda2) {
+					nProfile.RemoveAt(pos, profileToRemove.Length)
+					nProfile.InsertAt(pos, profileToAdd*)
+				} else
+					throw(ValueError("Given Arrays have different Lengths and aren't sequential in profile"))
+			}
 			for e, f in objZip(profileToRemove, profileToAdd)
 				objRemoveValue(nProfile, e,, lambda, f)
 		} else {
@@ -617,8 +711,8 @@ class SongDownloader {
 				profile.push({ option: this.ytdloptions.verbose })
 			if !(withPlaylist)
 				profile.push({ option: this.ytdloptions.no_playlist })
-			if this.settings.useCookies
-				profile.push({ option: this.ytdloptions.cookies_from_browser, param: this.settings.browserCookies})
+			if this.settings.ytdl.useCookies
+				profile.push({ option: this.ytdloptions.cookies_from_browser, param: this.settings.ytdl.browserCookies})
 			if skipJunk { ; don't remove "thumbnails", "subtitles", we might need those for parsing
 				for field in ["automatic_captions", "heatmap"]
 					profile.push({option: this.ytdloptions.parse_metadata, param: Format(":(?P<{}>)", field)})
@@ -648,13 +742,13 @@ class SongDownloader {
 		{ option: this.ffprobeoptions.show_entries, param: "format_tags"},
 	]
 
-	static PROFILE_MUSIC[PROFILE_PARSE_METADATA, outputTemplate, outputSubFolder, withCookies, skipNonMusic, embedThumbnail] {
+	static PROFILE_MUSIC[PROFILE_PARSE_METADATA, outputTemplate, outputSubFolder, withCookies, skipNonMusic, embedThumbnail, cropThumbnailToSquare] {
 		get {
 			profile := [
 				{ option: this.ytdloptions.ignore_config },
 				{ option: this.ytdloptions.retries, param: 1 },
 				{ option: this.ytdloptions.limit_rate, param: "5M" },
-				{ option: this.ytdloptions.no_overwrites },
+				; { option: this.ytdloptions.no_overwrites },
 				{ option: this.ytdloptions.no_playlist },
 				{ option: this.ytdloptions.no_vid },
 				{ option: this.ytdloptions.no_warning },
@@ -671,10 +765,10 @@ class SongDownloader {
 				{ option: this.ytdloptions.embed_metadata }
 			]
 			if embedThumbnail
-				profile.Push(this.PROFILE_EMBED_THUMBNAIL*)
+				profile.Push(this.PROFILE_EMBED_THUMBNAIL[cropThumbnailToSquare]*)
 			profile.Push(PROFILE_PARSE_METADATA*)
 			if withCookies
-				profile.push({ option: this.ytdloptions.cookies_from_browser, param: this.settings.browserCookies})
+				profile.push({ option: this.ytdloptions.cookies_from_browser, param: this.settings.ytdl.browserCookies})
 			if skipNonMusic
 				profile.push({ option: this.ytdloptions.sponsorblock_remove, param: "music_offtopic"})
 			return profile
@@ -688,11 +782,19 @@ class SongDownloader {
 		{ option: this.ytdloptions.force_keyframes_at_cuts }
 	]
 
-	static PROFILE_EMBED_THUMBNAIL => [
-		{ option: this.ytdloptions.embed_thumbnail },
-		{ option: this.ytdloptions.convert_thumbnail, param: "jpg" },
-		{ option: this.ytdloptions.postprocessor_args, param: 'ThumbnailsConvertor+FFmpeg_o:-c:v mjpeg -qmin 1 -qscale:v 1 -vf crop="min(iw\,ih)":"min(iw\,ih)"' } ; crop to square
-	]
+	static PROFILE_EMBED_THUMBNAIL[cropToSquare := false] {
+		get {
+			profile := [
+				{ option: this.ytdloptions.embed_thumbnail },
+				{ option: this.ytdloptions.convert_thumbnail, param: "jpg" }
+			]
+			if cropToSquare
+				profile.push(
+					{ option: this.ytdloptions.postprocessor_args, param: 'ThumbnailsConvertor+FFmpeg_o:-c:v mjpeg -qmin 1 -qscale:v 1 -vf crop="min(iw\,ih)":"min(iw\,ih)"' } ; crop to square
+				)
+			return profile
+		}
+	}
 
 	static PROFILE_PARSE_METADATA[songData] {
 		get {
@@ -790,6 +892,8 @@ class SongDownloader {
 		if addSeparator
 			fullStr .= strMultiply("=", 22) "`n"
 		FileAppend(fullStr, path, "UTF-8")
+		if this.settings.debug
+			print(fullStr)
 	}
 
 	static logMetadata(metadata, action, logID) {
@@ -805,27 +909,95 @@ class SongDownloader {
 			dataArr := jsongo.parse(FileRead(metadatapath, "UTF-8"))
 		dataArr.push(metadata)
 		f := FileOpen(metadatapath, "w", "UTF-8")
-		f.Write(objToString(dataArr,false,false,true))
+		f.Write(toString(dataArr,false,false,true))
 		f.Close()
+	}
+
+	static renameFilesToMatchMetadata(folder) {
+		SplitPath(folder, &name)
+		folder := this.settings.outputBaseFolder "\" folder
+		folderMetadata := this.getMetadataFromFolder(folder)
+		filename := Format(this.TEMPLATES.METADATAFILE, name)
+		path := this.settings.logFolder "\" filename
+		for f in folderMetadata {
+			currentFilename := this.getFileNameFromMetadata(f.metadata) "." f.ext
+			expectedFilename := this.getFileNameFromMetadata(f.metadata,,true) "." f.ext
+			if currentFilename == expectedFilename
+				continue
+			str := Format('Rename "{}" => "{}"', currentFilename, expectedFilename)
+			if askPermissionMsgbox(str, ["Rename File", "Cancel"]) == "Rename File" {
+				if FileExist(folder "\" expectedFilename)
+					str := "[Failure] " str " (Error: File already exists)"
+				else {
+					try {
+						FileMove(folder "\" currentFilename, folder "\" expectedFilename)
+						str := "[Success] " str
+					}
+					catch as e
+						str := "[Failure] " str " (Error: " e.Message ")"
+				}
+			}
+			else
+				str := "[Cancel] " str
+			print(str)
+		}
+
+		askPermissionMsgbox(str, btns) {
+			return MsgBoxAsGui(str, "Confirm",,,true,,,,btns)
+		}
+	}
+
+	static applyMetadataFile(folder, noMsgBoxConfirms := false, applyEvenIfMatching := false, deleteUnspecifiedFiles := false, renameFilesToMatchMetadata := false) {
+		static checkIfValid := (v => !v.exists || !v.specified || v.metadata || v.other)
+		
+		SplitPath(folder, &name)
+		folder := this.settings.outputBaseFolder "\" name
+		metadataFile := Format(this.TEMPLATES.METADATAFILE, name)
+		path := this.settings.logFolder "\" metadataFile
+		try metadataFilepath := MapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
+		catch
+			return
+		comparisons := this.compareFolderToData(folder, metadataFilepath, , false)
+		for comp in comparisons {
+			switch {
+				case comp.exists && comp.specified:
+					if comp.metadata || applyEvenIfMatching {
+						str := "Editing File [" comp.fileName "." comp.ext "]"
+						str .= comp.metadata ? " Metadata Fields: " toString(objFlatten(comp.metadata,,1)) : " (Rule ApplyEvenIfMatching)."
+						if comp.other
+							str .= "`nNote: " comp.other
+						if noMsgBoxConfirms || askPermissionMsgbox(str, ["Edit Metadata", "Cancel"]) == "Edit Metadata"
+							this.editMetadata(folder "\" comp.fileName "." comp.ext, metadataFilepath[comp.index], "description", "link")
+						else
+							str := "[Cancel] " str
+						print(str)
+					}
+				case comp.exists && !comp.specified:
+					str := "Unspecified File [" comp.fileName "] found."
+					if (deleteUnspecifiedFiles && (noMsgBoxConfirms || askPermissionMsgbox(str, ["Delete", "Cancel"]) == "Delete")) {
+						try {
+							FileDelete(comp.filename)
+							str .= " Deleted."
+						} catch as e
+							str .= " Could not delete due to Error " e.Message "."
+					}
+					if comp.other
+						str .= "`nNote: " comp.other
+					print(str)
+				case !comp.exists && comp.specified:
+					print("File " comp.fileName " not found.")
+			}
+		}
+
+		askPermissionMsgbox(str, btns) {
+			return MsgBoxAsGui(str, "Confirm",,,true,,,,btns)
+		}
 	}
 
 	static createMetadataFile(folder, alwaysOverwrite := false) {
 		SplitPath(folder, &name)
-		arr := this.getMetadataFromFolder(folder)
-		arrInFormat := []
-		arrInFormat.Capacity := arr.Length
-		for v in arr {
-			SplitPath(v.filePath,,,, &nameNoExt)
-			nObj := { artist: v.artist,	title: v.title, album: v.album,	genre: v.genre,
-				description: v.description,	link: v.purl,
-				comment: v.comment == v.purl ? unset : v.comment,
-			}
-			this.constructOutputPatternString(v,0,&c)
-			if c > 0
-				nObj.filename := nameNoExt
-			arrInFormat.push(nObj)
-		}
-		json := objToString(arrInFormat, 0, 0, 1)
+		folderMetadata := this.getMetadataFromFolder(folder, , true)
+		json := toString(folderMetadata, 0, 0, 1)
 		filename := Format(this.TEMPLATES.METADATAFILE, name)
 		path := this.settings.logFolder "\" filename
 		if FileExist(path) && !alwaysOverwrite {
@@ -837,15 +1009,15 @@ class SongDownloader {
 
 				Length of existing file: {} Characters / {} Lines / {} Objects
 				Length of new file: {} Characters / {} Lines / {} Objects
-				)", 
-				filename, 
+				)",
+				filename,
 				newName,
 				StrLenUTF8(oldJson), 
 				strCountStr(oldJson, "`n") + 1, 
 				strCountStr(oldJson, '"title":'), 
 				StrLenUTF8(json), 
 				strCountStr(json, "`n") + 1, 
-				arrInFormat.Length
+				folderMetadata.Length
 			)
 			res := MsgBoxAsGui(text, "Confirm", 0x1,, true,,,,["Overwrite", "Rename", "Cancel"])
 			if res == "Cancel"
@@ -856,7 +1028,7 @@ class SongDownloader {
 					newPath := StrReplace(newPath, ".json", "_" FormatTime(FileGetTime(path), "HH-mm-ss") ".json")
 				try FileMove(path, newPath)
 				catch as e {
-					MsgBoxAsGui("Error while moving file:`n" objToString(e))
+					MsgBoxAsGui("Error while moving file:`n" toString(e))
 					return
 				}
 				Sleep(200)
@@ -865,7 +1037,7 @@ class SongDownloader {
 		f := FileOpen(path, 'w', 'UTF-8')
 		f.Write(json)
 		f.close()
-		print(Format("Created Metadata File for folder {}, with {} Objects", folder, arrInFormat.Length))
+		print(Format("Created Metadata File for folder {}, with {} Objects", folder, folderMetadata.Length))
 	}
 
 	static verifyData(folderToCheck := this.settings.outputSubFolder, customJsonObj?, verifyMetadata := true, onlyReturnMismatches := true) {
@@ -876,7 +1048,7 @@ class SongDownloader {
 		else if FileExist(path := Format(this.settings.logFolder '\' this.TEMPLATES.METADATAFILE, name))
 			data := MapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
 		else
-			return "There's nothing to check against"
+			return print("There's nothing to check against")
 		fields := arrayMerge(this.settings.metadataFields, ["link", "description"])
 		for v in data
 			for field in fields
@@ -886,12 +1058,12 @@ class SongDownloader {
 		for e in comparisons { ; beautify these comparisons so that there aren't any monstrous strings in there
 			if e.metadata {
 				for field, val in e.metadata.OwnProps() {
-					str1 := val.expected
-					str2 := val.actual
+					str1 := val.jsonValue
+					str2 := val.fileValue
 					if (StrLen(str1) > 100 || StrLen(str2) > 100) {
-						diff := strLimitToDiffs(str1, str2)
-						val.expected := diff[1]
-						val.actual := diff[2]
+						diff := strLimitToDiffs(str1, str2,,,"")
+						val.jsonValue := diff[1]
+						val.fileValue := diff[2]
 					}
 				}
 			}
@@ -906,49 +1078,67 @@ class SongDownloader {
 			; }
 			; MsgBox("waiting...")
 		}
+		if !comparisons.Length
+			print("All data correct")
+		return comparisons
 	}
 	
 	static compareFolderToData(folder, data, verifyMetadata := true, onlyReturnMismatches := true) {
+		SplitPath(folder, &name)
+		folder := this.settings.outputBaseFolder "\" name
 		comparisons := []
 		expectedFiles := Map()
 		expectedFiles.CaseSense := false
 		if verifyMetadata {
-			folderMetadata := this.getMetadataFromFolder(folder)
-			arrFnames := objDoForEach(folderMetadata, v => (SplitPath(v.filePath,,,,&nne), nne))
+			folderMetadata := this.getMetadataFromFolder(folder,,1)
 			actualMetadata := Map()
 			actualMetadata.CaseSense := false
-			for fName, metadataObj in objzip(arrFnames, folderMetadata)
-				actualMetadata[fName] := metadataObj
+			for v in folderMetadata
+				actualMetadata[this.getFileNameFromMetadata(v)] := v
 		}
 		for i, dataPoint in data {
-			fName := this.constructOutputPatternString(dataPoint, false)
+			fName := this.getFileNameFromMetadata(dataPoint,,,&irregular)
 			o := {
 				fileName: fName,
 				index: i,
 				specified: true,
 				; exists: true,
+				ext: 0,
 				other: 0,
 				metadata: 0
 			}
 			if (FileExist(folder "\" fName ".mp*")) {
+				existingFiles := getFilesAsArr(folder "\" fName ".mp*", 'F')
+				if existingFiles.Length > 1
+					o.other := "Multiple Files Match: " toString(objflatten(existingFiles, v => v.ext))
+				o.ext := existingFiles[1].ext
 				o.exists := true
 				if expectedFiles.Has(fName) {
-					comparisons[expectedFiles[fName]].other := "Duplicate"
-					o.other := "Duplicate"
+					comparisons[expectedFiles[fName]].other := (comparisons[expectedFiles[fName]].other ? comparisons[expectedFiles[fName]].other ", " : "") "Duplicate"
+					o.other := (o.other ? o.other ", " : "") "Duplicate"
 				} else {
 					expectedFiles[fName] := i
 					o.metadata := verifyMetadata ? this.compareMetadata(dataPoint, actualMetadata[fName]): 0
 				}
+				f1 := dataPoint.HasOwnProp("filename") ? dataPoint.filename : ""
+				f2 := actualMetadata[fName].HasOwnProp("filename") ? actualMetadata[fName].filename : ""
+				if f2 == "" && f1
+					o.other := (o.other ? o.other ", " : "") "Unnecessary Filename marked: " f1
+				if f1 == "" && f2
+					o.other := (o.other ? o.other ", " : "") 'Irregular Filename not marked: Filename "' f2 '", Metadata "' fName '"'
 			} else {
 				expectedFiles[fName] := 0
 				o.exists := false
 			}
+			if irregular
+				o.other := (o.other ? o.other ", " : "") "Irregular Filename not marked: Metadata is (" dataPoint.artist " - " dataPoint.title ")"
 			comparisons.push(o)
 		}
 		for f in getFolderAsArr(folder,,,0) {
 			o := {	fileName: f.name,
 					; specified: 0,
 					exists: true,
+					ext: f.ext,
 					metadata: false,
 					other: false  }
 			if (expectedFiles.has(f.nameNoExt)) {
@@ -963,23 +1153,15 @@ class SongDownloader {
 		if onlyReturnMismatches
 			return objFilter(comparisons, (k,v) => !v.exists || !v.specified || v.metadata || v.other)
 		return comparisons
-
 	}
 
 	static compareMetadata(m1, m2) {
-		static fieldMap := Map(
-			"title", "title", 
-			"artist", "artist", 
-			"album", "album", 
-			"genre", "genre", 
-			"description", "description", 
-			"link", "purl"
-		)
+		static fields := ["artist", "title", "album", "genre", "description", "link"]
 		c := {}
-		for f1, f2 in fieldMap {
-			if m1.%f1% == m2.%f2%
+		for key in fields {
+			if m1.%key% == m2.%key%
 				continue
-			c.%f1% := { expected: m1.%f1%, actual: m2.%f2%}
+			c.%key% := { jsonValue: m1.%key%, fileValue: m2.%key% }
 		}
 		if ObjOwnPropCount(c)
 			return c
@@ -988,39 +1170,27 @@ class SongDownloader {
 
 	static writeMetadataFromFile(folder, filepath, index) {
 		SplitPath(folder, &name)
-		fileData := this.getMetadataFromFile(filepath)
-		SplitPath(fileData.filePath,,,, &nameNoExt)
-		metadata := {
-			artist: fileData.artist,
-			title: fileData.title,
-			album: fileData.album,
-			genre: fileData.genre,
-			description: fileData.description,
-			link: fileData.purl,
-			comment: fileData.comment == fileData.purl ? unset : fileData.comment,
-			fileName: this.constructOutputPatternString(fileData,0) == nameNoExt ? unset : nameNoExt
-		}
-		mtlogname := Format(this.TEMPLATES.METADATAFILE, name)
-		path := this.settings.logFolder "\" mtlogname
+		metadata := this.getMetadataFromFile(filepath)
+		path := this.settings.logFolder "\" Format(this.TEMPLATES.METADATAFILE, name)
 		if FileExist(path) {
 			curData := jsongo.Parse(FileRead(path, "UTF-8"))
 			curData[index] := metadata
 		} else {
 			curData := [metadata]
 		}
-		json := objToString(curData, 0, 0, 1)
+		json := toString(curData, 0, 0, 1)
 		f := FileOpen(path, 'w', 'UTF-8')
 		f.Write(json)
 		f.close()
 	}
 
+	; this needs filepath because the new metadata might not match the old one (and thus have a different filename)
 	static writeMetadataToFile(folder, filepath, index) {
-		SplitPath(folder, &name)
+		SplitPath(folder, &folderName)
 		SplitPath(filepath, &fname)
-		path := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILE, name)
+		path := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILE, folderName)
 		metadata := MapToObj(jsongo.parse(FileRead(path, "UTF-8"))[index])
-		metadata.filename := fname
-		this.editMetadata(filepath, metadata, "description") ; doesn't edit description field
+		this.editMetadata(filepath, metadata, "description", "link") ; manually add to edit description field
 	}
 
 	static findMetadataDupes() {
