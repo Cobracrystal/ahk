@@ -375,9 +375,13 @@ strDifferenceSIFT(s1, s2, maxOffset := 5) {
 strLimitToDiffs(str1, str2, maxOffset := 5, radius := 10, fillChar := "#", separator := " ... ") {
 	s1 := s2 := ""
 	diffs := strDifferenceSIFT(str1, str2, maxOffset)
-	for diff in diffs {
-		c1 := strGetContext(str1, diff.index1, diff.index1 + diff.length1, radius)
-		c2 := strGetContext(str2, diff.index2, diff.index2 + diff.length2, radius)
+	for i, diff in diffs {
+		c1 := strGetContext(str1, diff.index1, diff.index1 + diff.length1, radius, &rs1, &re1)
+		c2 := strGetContext(str2, diff.index2, diff.index2 + diff.length2, radius, &rs2, &re2)
+		if (i == 1) {
+			s1 := (rs1 ? "" : LTrim(separator, " `t`r`n"))
+			s2 := (rs2 ? "" : LTrim(separator, " `t`r`n"))
+		}
 		if (diff.length1 > diff.length2) {
 			s1 .= c1[1] strfill(diff.str1, diff.length1,, fillChar) c1[2] separator
 			s2 .= c2[1] strfill(diff.str2, diff.length1,, fillChar) c2[2] separator
@@ -386,16 +390,18 @@ strLimitToDiffs(str1, str2, maxOffset := 5, radius := 10, fillChar := "#", separ
 			s2 .= c2[1] strfill(diff.str2, diff.length2,, fillChar) c2[2] separator
 		}
 	}
-	s1 := SubStr(s1, 1, -1 * StrLen(separator))
-	s2 := SubStr(s2, 1, -1 * StrLen(separator))
+	s1 := re1 ? SubStr(s1, 1, -1 * StrLen(separator)) : RTrim(s1, " `t`r`n")
+	s2 := re2 ? SubStr(s2, 1, -1 * StrLen(separator)) : RTrim(s2, " `t`r`n")
 	return [s1, s2]
 }
 
-strGetContext(str, startIndex, endIndex := startIndex, radius := 15) {
+strGetContext(str, startIndex, endIndex := startIndex, radius := 15, &reachedStart?, &reachedEnd?) {
 	befLen := Min(radius, startIndex - 1)
 	befStart := Max(1, startIndex - radius)
 	afterLen := Min(radius, StrLen(str) - endIndex + 1)
 	afterStart := endIndex
+	reachedStart := (befStart == 1)
+	reachedEnd := (afterLen != radius)
 	return [SubStr(str, befStart, befLen), SubStr(str, afterStart, afterLen)]
 }
 
