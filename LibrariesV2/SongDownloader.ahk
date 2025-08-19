@@ -531,7 +531,7 @@ class SongDownloader {
 
 		changeThumbId(ctrlObj, info?) {
 			id := Integer(g["ThumbID"].Value)
-			if i := objContainsValue(metadata.thumbnails, id, (k,v,s) => (v.id == s)) {
+			if i := objContainsValue(metadata.thumbnails, id, v => v.id) {
 				thumb := metadata.thumbnails[i]
 				if Instr(thumb.url, ".webp")
 					g["ThumbInfo2"].Value := "Webp preview not supported"
@@ -662,11 +662,10 @@ class SongDownloader {
 
 	static mergeProfile(profile, profileToMerge) {
 		nProfile := profile.clone()
-		lambda := (k, v, v2) => (objCompare(v.option, v2.option))
 		for i, e in (profileToMerge) {
 			if !(e.option.param && e.HasOwnProp("param"))
 				throw(ValueError("addRemoveProfile received malformed merge profile"))
-			else if (index := objContainsValue(nProfile, e, lambda))
+			else if (index := objContainsMatch(nProfile, (k,v) => objcompare(v.option, e.option)))
 				nProfile[index].param := e.param
 		}
 		return nProfile

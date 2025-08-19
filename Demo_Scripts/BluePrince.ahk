@@ -91,7 +91,7 @@ class numericCore {
 		a5 := n = 0 ? -1 : m / n * o - p
 		a6 := n = 0 ? -1 : (m / n - o) * p
 		arr := [a1, a2, a3, a4, a5, a6]
-		sI := objContainsValue(arr,0,(e,*) => ((this.beStupid ? e : round(e, 14)) == round(e) && e > 0)) ; round(e,14) to avoid floating point issues
+		sI := objContainsMatch(arr,(i,e) => ((this.beStupid ? e : round(e, 14)) == round(e) && e > 0)) ; round(e,14) to avoid floating point issues
 		if (sI == 0)
 			return [0, 0]
 		for i, e in arr

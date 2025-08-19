@@ -24,13 +24,36 @@ objCountValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = setVal
  * @param {Func} comparator 
  * @returns {Integer} 
  */
-objContainsValue(obj, value, comparator := (itKey,itVal,setVal) => (itVal = setVal)) {
+objContainsValue(obj, value, fn := (v => v)) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
-	condWithKey := comparator.MaxParams == 3 ? 1 : 0
+	for i, v in objGetEnumerator(obj)
+		if fn(v) == value
+			return i
+	return 0
+}
+
+/**
+ * Checks whether obj contains given value and returns index if found, else 0
+ * @param obj 
+ * @param value 
+ * @param {Func} comparator 
+ * @returns {Integer} 
+ */
+objContainsMatch(obj, match := (itKey,itVal) => (true), retAllMatches := 0) {
+	isArrLike := (obj is Array || obj is Map)
+	if !(isArrLike || IsObject(obj))
+		throw(TypeError("objContainsMatch does not handle type " . Type(obj)))
+	if retAllMatches {
+		arr := []
+		for i, e in objGetEnumerator(obj)
+			if (match(i, e))
+				arr.push(i)
+		return arr
+	}
 	for i, e in objGetEnumerator(obj)
-		if (condWithKey ? comparator(i, e, value) : comparator(e, value))
+		if (match(i, e))
 			return i
 	return 0
 }
@@ -50,7 +73,7 @@ objGetRandomValue(obj) {
 	isArrLike := (obj is Array || obj is Map)
 	isArr := obj is Array
 	if !(isArrLike || IsObject(obj))
-		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
+		throw(TypeError("objGetRandomValue does not handle type " . Type(obj)))
 	r := Random(1, objGetValueCount(obj))
 	if isArr
 		return obj[r]

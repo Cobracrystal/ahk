@@ -17,7 +17,7 @@ mainFunc() {
 		folderPath .= "\tN" SubStr(A_YYYY, 3,2) . A_MM . A_DD
 	if !(InStr(FileExist(folderPath), "D"))
 		DirCreate(folderPath)
-	if (objContainsValue(A_Args, "--open-folder", (e,v) => InStr(e,v))) {
+	if (objContainsMatch(A_Args, v => Instr(v, "--open-folder"))) {
 		if (WinExist(SubStr(folderPath, InStr(folderPath, "\",,,-1)+1) . " ahk_exe explorer.exe"))
 			WinActivate()
 		else

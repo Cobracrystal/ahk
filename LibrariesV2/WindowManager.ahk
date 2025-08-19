@@ -503,7 +503,7 @@ class WindowManager {
 	}
 
 	static columnMenuHandler(itemName, itemPos?, menuObj?) {
-		index := objContainsValue(this.config.columnsProfile, itemName, (i,v,iname) => (v.name == iname))
+		index := objContainsValue(this.config.columnsProfile, itemName, v => v.name)
 		if (index) {
 			this.config.columnsProfile.RemoveAt(index)
 			this.LV.DeleteCol(index)

@@ -65,7 +65,7 @@ class FolderSwitch {
 
 	static selectOrLaunch(path) {
 		arr := ShellWrapper.getExplorerIEObjects()
-		if index := objContainsValue(arr, path, (k, v, p) => (ShellWrapper.getExplorerSelfPath(v) == p))
+		if index := objContainsValue(arr, path, v => ShellWrapper.getExplorerSelfPath(v))
 			WinActivate(arr[index].hwnd)
 		else
 			ShellWrapper.Explore(path)
