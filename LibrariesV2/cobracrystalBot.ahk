@@ -1,11 +1,11 @@
-#Include "%A_LineFile%\..\..\LibrariesV2\DiscordClient.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\discordBot.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
-class ccBot extends DiscordClient {
+class ccBot extends DiscordBot {
 
 	__New(token) {
-		super.__New(token, false)
+		super.__New(token)
 		this.workingDir := A_ScriptDir "\script_files\discordBot\"
 		DirCreate(this.workingDir . "output")
 		this.themes := {roles: Map(), channels: Map()}

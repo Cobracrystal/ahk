@@ -4,12 +4,12 @@
 
 class DiscordClient {
 	
-	__New(token, useWS := true) {
+	__New(token) {
 		this.token := token
 		version := "10"
 		this.BaseURL := "https://discord.com/api/v" version
 		this.me := this.getCurrentUser()
-		if (useWS) {
+		if (false) {
 			this.wsData := {
 				heartbeatACK: false,
 				heartbeatInterval: 0,
@@ -31,12 +31,7 @@ class DiscordClient {
 		return this.callApi("POST", "/users/@me/channels", {recipient_id:userID})
 	}
 	
-	sendMessage(content, id, dm := 0) {
-		local channelID
-		if (dm)
-			channelID := this.createDM(id)["id"]
-		else
-			channelID := id
+	sendMessage(channelID, content) {
 		return this.callApi("POST", "/channels/" channelID . "/messages", content)
 	}
 	
@@ -94,12 +89,26 @@ class DiscordClient {
 		return this.callApi("GET", "/users/@me/guilds")
 	}
 	
-	getRoles(serverID) {
-		return this.callAPI("GET", "/guilds/" serverID . "/roles")
+	getRoles(serverID, sortedBy?) {
+		roles := this.callAPI("GET", "/guilds/" serverID . "/roles")
+		if IsSet(sortedBy)
+			return objSort(roles, a => a[sortedBy], sortedBy == "position" ? "N R" : "")
+		return roles
 	}
 
 	modifyGuildRole(serverID, roleID, content) {
 		return this.callApi("PATCH", "/guilds/" serverID "/roles/" roleID, content)
+	}
+
+	/**
+	 * @param content Array of objects of the form { id: snowflake, position?: Integer? } 
+	 */
+	modifyGuildRolePositions(serverID, content) {
+		return this.callApi("PATCH", "/guilds/" serverID "/roles", content)
+	}
+
+	createGuildRole(serverID, role) {
+		return this.callApi("POST", "/guilds/" serverID "/roles", role)
 	}
 
 	modifyChannel(channelID, content) {
@@ -142,12 +151,11 @@ class DiscordClient {
 		return (permissions & p)
 	}
 
-	getHighestRole(userRoles, serverRoles) {
-		highestRole := Map("position", 0)
-		for i, e in serverRoles
-			if (this.inArr(userRoles, e["id"]) && e["position"] >= highestRole["position"])
-				highestRole := e
-		return highestRole
+	getRoleById(serverID, roleID) {
+		roles := this.getroles(serverID)
+		if i := objContainsValue(roles, roleID, v => v["id"])
+			return roles[i]
+		return 0
 	}
 	
 	callApi(method, endPoint, content?) {

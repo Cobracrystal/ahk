@@ -7,7 +7,7 @@
 
 ; if nextTimeMS >= 2**32, do nextTimeMS -= 2**32, custom function that will restart itself until timeMS < 2**32, then launch function.
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\DiscordClient.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\DiscordBot.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 class ReminderManager {
@@ -363,10 +363,10 @@ class ReminderManager {
 	}
 
 	discordReminder(msg, id) {
-		discordBot := DiscordClient(this.settings.token, false)
+		bot := DiscordBot(this.settings.token)
 		time := FormatTime("L1033", "dddd, dd.MM.yyyy, HH:mm:ss") ; L1033 -> en-US for day name.
 		message := "It is " . time . "`nYou set a reminder for this point in time."
 		message .= (msg == "" ? "" : "`nReminder Message: " . msg)
-		discordBot.sendMessage({content:message}, id, 1)
+		bot.sendMessageToUser(id, {content:message})
 	}
 }
