@@ -9,7 +9,7 @@ return
 ; TODO: FOR R34 GET THE LATTER PART OF THE TITLE
 ; TODO: FOR kemono GET THE URL f= TAG AND USE THAT AS THE FILENAME
 mainFunc() {
-	static folderPath := "Q:\stuff\arc-d-k\Zeugs\23894729834-DC2389472934\dc01230123\unsorted\tUnsorted"
+	static folderPath := "Q:\stuff\media\unsorted\tUnsorted"
 	text := A_Clipboard
 	if (InStr(A_ScriptDir, folderPath "\tN"))
 		folderPath := A_ScriptDir
