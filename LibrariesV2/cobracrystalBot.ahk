@@ -2,14 +2,15 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
-class ccBot {
+class ccBot extends DiscordClient {
 
 	__New(token) {
+		super.__New(token, false)
 		this.workingDir := A_ScriptDir "\script_files\discordBot\"
 		DirCreate(this.workingDir . "output")
-		this.bot := DiscordClient(token, false)
 		this.themes := {roles: Map(), channels: Map()}
 	}
+
 	/**
 	 * @param filepathRoles A path to a file which is either a csv or a json containing a theme structure for Roles.
 	 * @param filepathChannels A path to a file which is either a csv or a json containing a theme structure for Channels.
@@ -23,17 +24,17 @@ class ccBot {
 		if (IsSet(filepathRoles)) {
 			SplitPath(filepathRoles, , , &ext)
 			if (ext == "csv")
-				roleThemes := ccBot.parseColorCSV(filepathRoles)
+				roleThemes := this.parseColorCSV(filepathRoles)
 			else if (ext == "json")
-				roleThemes := ccBot.readJson(filepathRoles)
+				roleThemes := this.readJson(filepathRoles)
 			else throw(Error())
 		}
 		if (IsSet(filepathChannels)) {
 			SplitPath(filepathChannels, , , &ext)
 			if (ext == "csv")
-				channelThemes := ccBot.parseColorCSV(filepathChannels)
+				channelThemes := this.parseColorCSV(filepathChannels)
 			else if (ext == "json")
-				channelThemes := ccBot.readJson(filepathChannels)
+				channelThemes := this.readJson(filepathChannels)
 			else throw(Error())
 		}
 		if !(IsSet(roleThemes) || IsSet(channelThemes))
@@ -41,9 +42,9 @@ class ccBot {
 		this.themes := {roles:roleThemes??Map(), channels: channelThemes??Map()}
 		if (save) {
 			if IsSet(roleThemes)
-				ccBot.writeJson(roleThemes, this.workingDir, "rolethemes")
+				this.writeJson(roleThemes, this.workingDir, "rolethemes")
 			if IsSet(channelThemes)
-				ccBot.writeJson(channelThemes, this.workingDir, "channelthemes")
+				this.writeJson(channelThemes, this.workingDir, "channelthemes")
 		}
 	}
 	
@@ -54,13 +55,13 @@ class ccBot {
 	 */
 	applyTheme(serverID, themeName, silentError := 0) {
 		; check if bot has permissions. 
-		if (!this.bot.isInGuild(serverID))
+		if (!this.isInGuild(serverID))
 			throw(Error("Bot is not in given Server."))
 		errorlog := ""
-		userRoles := this.bot.getGuildMember(serverID, this.bot.me["id"])["roles"]
-		guildRoles := this.bot.getRoles(serverID)
+		userRoles := this.getGuildMember(serverID, this.me["id"])["roles"]
+		guildRoles := this.getRoles(serverID)
 		if (this.themes.roles.Has(themeName)) {
-			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_ROLES)) {
+			if (!this.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_ROLES)) {
 				if (silentError)
 					errorlog .= "Missing permission to edit roles`n"
 				else throw(Error("Missing permission to edit roles"))
@@ -69,14 +70,14 @@ class ccBot {
 				rolesEditedCount := 0
 				roleTheme := this.themes.roles[themeName]
 				roleThemeOriginal := this.themes.roles["Original"]
-				highestRole := this.bot.getHighestRole(userRoles, guildRoles)
+				highestRole := this.getHighestRole(userRoles, guildRoles)
 				rolesbyID := Map()
 				for i, e in guildRoles
 					rolesbyID[e["id"]] := e
 				for i, e in roleTheme {
 					if (rolesbyID.Has(i)) {
 						if (rolesbyID[i]["position"] < highestRole["position"]) {
-							this.bot.modifyGuildRole(serverID, i, e)
+							this.modifyGuildRole(serverID, i, e)
 							rolesEditedCount++ 
 						}
 						else 
@@ -93,7 +94,7 @@ class ccBot {
 			}
 		}
 		if (this.themes.channels.Has(themeName)) {
-			if (!this.bot.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_CHANNELS)) {
+			if (!this.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_CHANNELS)) {
 				if (silentError)
 					errorlog .= "Missing permission to edit channels`n"
 				else throw(Error("Missing permission to edit channels"))
@@ -102,13 +103,13 @@ class ccBot {
 				channelsEditedCount := 0
 				channelTheme := this.themes.channels[themeName]
 				channelThemeOriginal := this.themes.channels["Original"]
-				guildChannels := this.bot.getGuildChannels(serverID)
+				guildChannels := this.getGuildChannels(serverID)
 				channelIDs := []
 				for i, e in guildChannels
 					channelIDs.push(e["id"])
 				for i, e in channelTheme {
-					if (this.bot.inArr(channelIDs, i)) {
-						this.bot.modifyChannel(i, e)
+					if (this.inArr(channelIDs, i)) {
+						this.modifyChannel(i, e)
 						channelsEditedCount++
 					}
 					else

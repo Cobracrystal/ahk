@@ -150,15 +150,17 @@ class DiscordClient {
 		return highestRole
 	}
 	
-	callApi(method, endPoint, content := "") {
+	callApi(method, endPoint, content?) {
 		http := ComObject("WinHTTP.WinHTTPRequest.5.1")
+		if IsSet(content)
+			toSend := jsongo.Stringify(content)
 		Loop(2) {
 			http.Open(method, this.BaseURL . endpoint, true)
 			http.SetRequestHeader("Authorization", "Bot " . this.token)
 			http.SetRequestHeader("User-Agent", "DiscordBot ($https://discordapp.com, $1337)")
 			http.SetRequestHeader("Content-Type", "application/json")
-			if (content)
-				http.Send(jsongo.Stringify(content))
+			if (IsSet(content))
+				http.Send(toSend)
 			else 
 				http.Send()
 			http.WaitForResponse()
