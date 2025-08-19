@@ -10,9 +10,11 @@
  * 
  * obj := { name, nameNoExt, ext, path, shortPath shortName dir, attrib, size, sizeKB, sizeMB, timeModified, timeCreated, timeAccessed }
  */
-getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name") {
+getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name") => getFilesAsArr(folder "\" filePattern, mode, getMode, sortedBy)
+
+getFilesAsArr(filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name") {
 	files := []
-	loop files folder . "\" . filePattern, mode {
+	loop files filePattern, mode {
 		switch getMode {
 			case 0:
 				SplitPath(A_LoopFileFullPath,,,, &nameNoExt)
