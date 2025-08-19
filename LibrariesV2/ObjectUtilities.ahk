@@ -886,16 +886,11 @@ objBasicSort(obj, sortMode := "") {
 }
 objSortNumerically(obj, sortMode := "N") => objDoForEach(objBasicSort(obj, sortMode), (e => Number(e)))
 
-/**
- * Given an enumerable object whos values itself are objects, sorts it by value of the inner objects key.
- * @param tObj Object, Array or Map to be used for sorting. tObj must contain Objects which itself have accessable values (that of key)
- * @param key key whos matching value will be used for sorting
- * @param {String} mode Sorting mode. equivalent to sorting options in Sort [String]
- * @returns {Array} The sorted array, where each entry in the array is an object with the original index as property .index and value as .value
- */
-objSort(obj, fn := (a => a), sortMode := "") {
+
+objSort(obj, fn := (a => a), sortMode := "", noKeys := true) {
 	isArrLike := obj is Array || obj is Map
 	sortedArr := []
+	sortedArr.Capacity := objGetValueCount(obj)
 	indexMap := Map()
 	counterMap := Map()
 	if objGetValueCount(obj) == 0
@@ -912,7 +907,14 @@ objSort(obj, fn := (a => a), sortMode := "") {
 	}
 	sortMode := RegExReplace(sortMode, "D.")
 	valArr := StrSplit(Sort(SubStr(str, 1, -1), sortMode . " D╦"), "╦")
-	if isArrLike {
+	if noKeys {
+		if isArrLike
+			for v in valArr
+				sortedArr.push(obj[indexMap[v][counterMap[v]++]])
+		else
+			for v in valArr
+				sortedArr.push(obj.%indexMap[v][counterMap[v]++]%)
+	} else if isArrLike {
 		for v in valArr {
 			key := indexMap[v][counterMap[v]++]
 			sortedArr.push({ key: key, value: obj[key]})

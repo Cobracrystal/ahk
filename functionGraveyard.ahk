@@ -300,7 +300,7 @@ sortYoutubePlaylistLinksByIndex() {
 	s := ""
 	sorted := objSort(o, r => r.index, "N")
 	for i, e in sorted {
-		s .= e.value.link "`n"
+		s .= e.link "`n"
 	}
 	A_Clipboard := s
 }
