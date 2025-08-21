@@ -372,7 +372,7 @@ rainbowArr(num, intensity := 0xFF) {
 	r := intensity * 0x010000
 	g := intensity * 0x000100
 	b := intensity * 0x000001
-	return colorGradientArr(num-2, r, r|g//2, r|g, g, g|b, g//2|b, b, b|r, r)
+	return colorGradientArr(num-2, r, r|g//2, r|g, g, g|b, g//2|b, b, b|r//2, b|r, b//2|r, r)
 }
 
 /**
@@ -994,10 +994,9 @@ doNothing(*) {
 ; }
 
 
-print(value, options?, putNewline := true, compress := false, compact := false, strEscape := true) {
-	if IsObject(value) { 
-		value := toString(value, compact, compress, strEscape)	
-	}
+print(value, options?, putNewline := true, compress := false, compact := false, strEscape := true, fallbackMsgbox := true) {
+	if IsObject(value)
+		value := toString(value, compact, compress, strEscape)
 	if (putNewline == true || (putNewline == -1 && InStr(value, '`n')))
 		finalChar := '`n'
 	else
@@ -1005,7 +1004,8 @@ print(value, options?, putNewline := true, compress := false, compact := false, 
 	try 
 		FileAppend(value . finalChar, "*", options ?? "UTF-8")
 	catch Error 
-		MsgBoxAsGui(value,,,,,,,1)
+		if fallbackMsgbox
+			MsgBoxAsGui(value,,,,,,,1)
 	return value
 }
 
