@@ -14,7 +14,7 @@ class TransparentTaskbar {
 		switch mode {
 			case 0, "Off":
 				SetTimer(this.timer, 0)
-				try this.setToNormal()
+				try this.setTaskbarsToMode(2, 0)
 				TrayMenu.submenus["Timers"].Uncheck("Taskbar Transparency Timer")
 				this.data.isRunning := false
 			case 1, "On":
@@ -79,7 +79,7 @@ class TransparentTaskbar {
 	}
 	
 	; this throws an error if a taskbar is missing. that's intended
-	; it also overwrites prevstate and ismaximized. that's also intended
+	; it also overwrites prevstate and isMaximized. that's also intended
 	static setMonitorData() {
 		this.monitorData := WinUtilities.monitorGetAll(false) ; don't cache, otherwise we will edit it
 		DHW := A_DetectHiddenWindows
@@ -113,14 +113,9 @@ class TransparentTaskbar {
 					return 0
 		return 1
 	}
-	
-	static setToNormal() {
-		for i, e in this.monitorData
-			this.TaskBar_SetAttr(this.config.offMode, e.trayHandle, this.config.offColor, this.config.offTransparency)
-	}
 
 	static retry() {
-		try this.setToNormal()
+		try this.setTaskbarsToMode(2, 0)
 		try this.setMonitorData()
 		if (this.verifyMonitorData()) {
 			try {
@@ -157,7 +152,6 @@ class TransparentTaskbar {
 		static index := 1
 		this.updateMaximizedMonitors()
 		for mHandle, mon in this.monitorData {
-			str .= mon.num ": " mon.prevState " -> " mon.isMaximized ", "
 			if (mon.isMaximized) {
 				if (this.config.maximizedMode == this.modes.RGB) {
 					this.TaskBar_SetAttr(this.modes.TRANSPARENT, mon.trayHandle, this.RGB_Gradient[index], this.config.RGBTransparency)
@@ -168,21 +162,8 @@ class TransparentTaskbar {
 			} else {
 				if (override || mon.prevState != mon.isMaximized)
 					this.TaskBar_SetAttr(this.config.normalMode, mon.trayHandle, this.config.normalColor, this.config.normalTransparency)
-				; this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix
 			}
 		}
-		; for i, el in this.monitorData {
-		; 	if (maximizedMonitors[el.number]) {
-		; 		if (override) {
-		; 			this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix the accented color being wrong
-		; 			this.TaskBar_SetAttr(this.config.maximizedMode, el.number, this.config.maximizedColor)
-		; 		}
-		; 	}
-		; 	else {
-		; 		if (override)
-		; 			this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix
-		; 	}
-		; }
 	}
 
 	static updateMaximizedMonitors() {
@@ -195,9 +176,22 @@ class TransparentTaskbar {
 		for mHandle, mon in this.monitorData
 			mon.isMaximized := maximizedMonitors.has(mHandle) ; ? 1 : 0
 	}
+	
+	; 0 = off, 1 = gradient (+color), 2 = transparent (+color), 3 = blur; color -> ABGR (alpha | blue | green | red) all hex: 0xffd7a78f
+	static setTaskbarsToMode(targets := 2, mode := this.config.offMode, color := this.config.offColor, transparency := this.config.offTransparency) {
+		if targets is Array {
+			for e in targets
+				this.TaskBar_SetAttr(mode, e, color, transparency)
+		} else for i, e in this.monitorData {
+			if targets == 2 || (targets == 1 && e.isMaximized)
+				this.TaskBar_SetAttr(mode, e.trayHandle, color, transparency)
+			else if (targets == 0 && !e.isMaximized)
+				this.TaskBar_SetAttr(mode, e.trayHandle, color, transparency)
+		}
+	}
 
+	; 0 = off, 1 = gradient (+color), 2 = transparent (+color), 3 = blur; color -> ABGR (alpha | blue | green | red) all hex: 0xffd7a78f
 	static TaskBar_SetAttr(accent_state, trayHandle, gradient_RGB := 0xFF8000, gradient_alpha := 0x80) {
-		; 0 = off, 1 = gradient (+color), 2 = transparent (+color), 3 = blur; color -> ABGR (alpha | blue | green | red) all hex: 0xffd7a78f
 		static pad := A_PtrSize == 8 ? 4 : 0
 		static WCA_ACCENT_POLICY := 19
 		if (accent_state < 0) || (accent_state > 3)
@@ -226,15 +220,6 @@ class TransparentTaskbar {
 	static setInvisibility(mode := 0, taskbarMode := 0) {
 		if !this.verifyMonitorData()
 			this.setMonitorData()
-		mode := SubStr(mode, 1, 1)
-		switch mode {
-			case 0:
-				fn := WinShow
-			case 1:
-				fn := WinHide
-			case -1, "T":
-				fn := hwnd => WinUtilities.isVisible(hwnd) ? WinHide(hwnd) : WinShow(hwnd)
-		}
 		relevantHandles := []
 		switch taskbarMode {
 			case 0:
@@ -248,8 +233,26 @@ class TransparentTaskbar {
 			case 2:
 				relevantHandles := objFlatten(this.monitorData, v => v.trayHandle)
 		}
+		mode := SubStr(mode, 1, 1)
+		switch mode {
+			case 0:
+				fn := WinShow
+			case 1:
+				fn := WinHide
+			case -1, "T":
+				if WinUtilities.isVisible(relevantHandles[1]) {
+					fn := WinHide
+					mode := 1
+				}
+				else {
+					fn := WinShow
+					mode := 0
+				}
+		}
 		for e in relevantHandles
 			fn(e)
+		if mode == 0
+			this.setTaskbarsToMode(relevantHandles, this.config.offMode, this.config.offColor, this.config.offTransparency)
 	}
 
 	; En-/Disables Windows Setting 'Only show Taskbar when hovering over it with Mouse'. mode = 0 -> Off, 1 -> On
