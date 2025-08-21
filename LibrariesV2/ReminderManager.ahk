@@ -136,9 +136,9 @@ class ReminderManager {
 					name := "/ (Lambda)"
 			}
 		}
+		function := function.bind(fparams*)
 		if (message != "")
 			function := function.bind(message)
-		function := function.bind(fparams*)
 		return [function, name]
 	}
 
@@ -362,7 +362,7 @@ class ReminderManager {
 			))
 	}
 
-	discordReminder(msg, id) {
+	discordReminder(id, msg) {
 		bot := DiscordBot(this.settings.token)
 		time := FormatTime("L1033", "dddd, dd.MM.yyyy, HH:mm:ss") ; L1033 -> en-US for day name.
 		message := "It is " . time . "`nYou set a reminder for this point in time."

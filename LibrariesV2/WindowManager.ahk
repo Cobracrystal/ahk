@@ -290,14 +290,14 @@ class WindowManager {
 				DetectHiddenWindows(this.config.detectHiddenWindows)
 				switch vKey {
 					case "46": 	;// Del/Entf Key -> Close that window
-						cFunction := GetKeyState("Shift") ? WinKill : WinClose
+						killFunc := GetKeyState("Shift") ? WinKill : WinClose
 						if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
 							return
 						for i, wHandle in arrayInReverse(wHandles)
-							try cFunction(wHandle)
+							try killFunc(wHandle)
 						for i, wHandle in arrayInReverse(wHandles)
 							if WinWaitClose(wHandle, , 0.5) {
-								try this.LV.Delete(rowNums[rowNums.Length - i + 1])
+								try this.LV.Delete(rowNums[i])
 								try objRemoveValue(this.data.currentWinInfo, wHandle,, (it, itV, wHandle) => (itV.hwnd == wHandle))
 							}
 					case "65": ; ctrl A

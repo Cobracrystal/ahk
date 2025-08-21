@@ -9,8 +9,8 @@ class DiscordBot extends DiscordClient {
 	; }
 
 	sendMessageToUser(userID, content) {
-		channelID := this.createDM(channelID)["id"]
-		return this.sendMessage(channelID, content)
+		userID := this.createDM(userID)["id"]
+		return this.sendMessage(userID, content)
 	}
 
 	duplicateRole(serverID, roleID) {
