@@ -87,37 +87,35 @@ class AltDrag {
 		cleanHotkey := RegexReplace(A_ThisHotkey, "#|!|\^|\+|<|>|\$|~", "")
 		SetWinDelay(3)
 		CoordMode("Mouse", "Screen")
-		MouseGetPos(&mouseX1, &mouseY1, &hwnd)
-		if ((this.winInBlacklist(hwnd) && !overrideBlacklist) || WinGetMinMax(hwnd) != 0) {
+		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
+		if ((this.winInBlacklist(wHandle) && !overrideBlacklist) || WinGetMinMax(wHandle) != 0) {
 			this.sendKey(cleanHotkey)
 			return
 		}
-		pos := this.WinGetPosEx(hwnd)
-		WinActivate(hwnd)
+		pos := this.WinGetPosEx(wHandle)
+		WinActivate(wHandle)
 		while (GetKeyState(cleanHotkey, "P")) {
 			MouseGetPos(&mouseX2, &mouseY2)
 			nx := pos.x + mouseX2 - mouseX1
 			ny := pos.y + mouseY2 - mouseY1
 			if (this.boolSnapping) {
-				mHandle := DllCall("MonitorFromWindow", "Ptr", hwnd, "UInt", 0x2, "Ptr")
-				if (!this.monitors.Has(mHandle)) ; this should only call once
-					this.monitors[mHandle] := this.monitorGetWorkArea(mHandle)
+				monitor := this.getMonitorInfoFromWindow(wHandle)
 				calculateSnapping()
 			}
 			; WinUtilities.WinMoveEx(hwnd, nx, ny)
-			DllCall("SetWindowPos", "UInt", hwnd, "UInt", 0, "Int", nx - pos.LB, "Int", ny - pos.TB, "Int", 0, "Int", 0, "Uint", 0x0005)
+			DllCall("SetWindowPos", "UInt", wHandle, "UInt", 0, "Int", nx - pos.LB, "Int", ny - pos.TB, "Int", 0, "Int", 0, "Uint", 0x0005)
 			DllCall("Sleep", "UInt", 5)
 		}
 
 		calculateSnapping() {
-			if (abs(nx - this.monitors[mHandle].left) < this.snappingRadius)
-				nx := this.monitors[mHandle].left			; left edge
-			else if (abs(nx + pos.w - this.monitors[mHandle].right) < this.snappingRadius)
-				nx := this.monitors[mHandle].right - pos.w 	; right edge
-			if (abs(ny - this.monitors[mHandle].top) < this.snappingRadius)
-				ny := this.monitors[mHandle].top				; top edge
-			else if (abs(ny + pos.h - this.monitors[mHandle].bottom) < this.snappingRadius)
-				ny := this.monitors[mHandle].bottom - pos.h	; bottom edge
+			if (abs(nx - monitor.wLeft) < this.snappingRadius)
+				nx := monitor.wLeft			; left edge
+			else if (abs(nx + pos.w - monitor.wRight) < this.snappingRadius)
+				nx := monitor.wRight - pos.w 	; right edge
+			if (abs(ny - monitor.wTop) < this.snappingRadius)
+				ny := monitor.wTop				; top edge
+			else if (abs(ny + pos.h - monitor.wBottom) < this.snappingRadius)
+				ny := monitor.wBottom - pos.h	; bottom edge
 		}
 	}
 
@@ -172,15 +170,13 @@ class AltDrag {
 			return this.sendKey(cleanHotkey)
 		}
 		WinGetPos(&winX, &winY, &winW, &winH, wHandle)
-		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		if (!this.monitors.Has(mHandle))
-			this.monitors[mHandle] := this.monitorGetWorkArea(mHandle)
-		xChange := floor((this.monitors[mHandle].right - this.monitors[mHandle].left) * (scale_factor - 1))
+		monitor := this.getMonitorInfoFromWindow(wHandle)
+		xChange := floor((monitor.right - monitor.left) * (scale_factor - 1))
 		yChange := floor(winH * xChange / winW)
 		wLimit := this.getMinMaxResizeCoords(wHandle)
 		if (direction == 1) {
 			nx := winX - xChange, ny := winY - yChange
-			if ((nw := winW + 2 * xChange) >= wLimit.maxH || (nh := winH + 2 * yChange) >= wLimit.maxH)
+			if ((nw := winW + 2 * xChange) >= wLimit.maxW || (nh := winH + 2 * yChange) >= wLimit.maxH)
 				return
 		}
 		else {
@@ -224,8 +220,7 @@ class AltDrag {
 			WinRestore(wHandle)
 		WinGetPos(&x, &y, &w, &h, wHandle)
 		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
-		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		monitor := this.monitorGetWorkArea(mHandle)
+		monitor := this.getMonitorInfoFromWindow(wHandle)
 		WinMove(
 			monitor.left + (x - cx),
 			monitor.top + (y - cy),
@@ -241,13 +236,12 @@ class AltDrag {
 	 * @param sizePercentage The percentage of the total monitor size that the window will occupy
 	 */
 	static resetWindowPosition(wHandle := Winexist("A"), sizePercentage := 5/7) {
-		monitorHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		mon := this.monitorGetWorkArea(monitorHandle)
+		monitor := this.getMonitorInfoFromWindow(wHandle)
 		WinRestore(wHandle)
-		mWidth := mon.right - mon.left, mHeight := mon.bot - mon.top
+		mWidth := monitor.right - monitor.left, mHeight := monitor.bot - monitor.top
 		WinMove(
-			mon.left + mWidth / 2 * (1 - sizePercentage), ; left edge of screen + half the width of it - half the width of the window, to center it.
-			mon.top + mHeight / 2 * (1 - sizePercentage),  ; same as above but with top bottom
+			monitor.left + mWidth / 2 * (1 - sizePercentage), ; left edge of screen + half the width of it - half the width of the window, to center it.
+			monitor.top + mHeight / 2 * (1 - sizePercentage),  ; same as above but with top bottom
 			mWidth * sizePercentage,
 			mHeight * sizePercentage,
 			wHandle
@@ -261,14 +255,28 @@ class AltDrag {
 		return 0
 	}
 
-	static monitorGetWorkArea(monitorHandle) {
+	static getMonitorInfoFromWindow(wHandle, cache := true) {
+		monitorHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+		if cache && !this.monitors.Has(monitorHandle) {
+			this.monitors[monitorHandle] := this.monitorGetInfo(monitorHandle)
+			return this.monitors[monitorHandle]
+		}
+		return this.monitorGetInfo(monitorHandle)
+	}
+
+	static monitorGetInfo(monitorHandle) {
 		NumPut("Uint", 40, monitorInfo := Buffer(40))
 		DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
 		return {
-			left: NumGet(monitorInfo, 20, "Int"),
-			top: NumGet(monitorInfo, 24, "Int"),
-			right: NumGet(monitorInfo, 28, "Int"),
-			bottom: NumGet(monitorInfo, 32, "Int")
+			left:		NumGet(monitorInfo, 4, "Int"),
+			top:		NumGet(monitorInfo, 8, "Int"),
+			right:		NumGet(monitorInfo, 12, "Int"),
+			bottom:		NumGet(monitorInfo, 16, "Int"),
+			wLeft:		NumGet(monitorInfo, 20, "Int"),
+			wTop:		NumGet(monitorInfo, 24, "Int"),
+			wRight:		NumGet(monitorInfo, 28, "Int"),
+			wBottom:	NumGet(monitorInfo, 32, "Int"),
+			flag:		NumGet(monitorInfo, 36, "UInt") ; flag can be MONITORINFOF_PRIMARY or not
 		}
 	}
 

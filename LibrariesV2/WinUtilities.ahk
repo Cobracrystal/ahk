@@ -3,6 +3,19 @@
 class WinUtilities {
 	static __New() {
 		this.windowCache := Map()
+		this.monitorCache := Map()
+	}
+
+	static getAllWindows(getHidden := false, blacklist := this.defaultBlacklist) {
+		windows := []
+		dHW := A_DetectHiddenWindows
+		DetectHiddenWindows(getHidden)
+		wHandles := WinGetList()
+		for wHandle in wHandles
+			if !this.winInBlacklist(wHandle, blacklist)
+				windows.push(wHandle)
+		DetectHiddenWindows(dHW)
+		return windows
 	}
 	
 	static getAllWindowInfo(getHidden := false, blacklist := this.defaultBlacklist, getCommandLine := false) {
@@ -26,6 +39,31 @@ class WinUtilities {
 		return 0
 	}
 
+	/**
+	 * Gets window Info and optionally updates the cache with unchanging information.
+	 * @param hwnd 
+	 * @param {Integer} getCommandline 
+	 * @param {Integer} updateCache 
+	 * @returns {Object | Any} An object of the following form
+	 * @example 
+	 * obj := {
+	 *		hwnd ; window handle (STATIC)
+	 *		title ; window title
+	 *		class ; ahk_class (STATIC)
+	 *		state ; mmx: 1 maximized, 0 restored, -1 minimized 
+	 *		minX, minY, maxX, maxY ; x and y position while the window is min-/maximized (STATIC)
+	 *		minW, minH, maxW, maxH ; min-/maximum width and height to which the window can be resized (STATIC)
+	 *		xpos, ypos, width, height ; the current x, y, w, h values of the window
+	 *		res_xpos, res_ypos, res_width, res_height ; x, y, w, h of the window if it were restored
+	 *		clientxpos, clientypos, clientwidth, clientheight ; x, y, w, h of the client area of the window
+	 *		flags ; behaviour of the window while minimized (STATIC)
+	 *		pid ; process ID (STATIC)
+	 *		process ; process name (STATIC)
+	 *		processPath ; process path (STATIC)
+	 *		commandLine ; command line (if requested, otherwise blank) (STATIC)
+	 *		triedCommandline ; whether getWindowInfo tried retrieving the command line. This is relevant for caching.
+	 * }
+	 */
 	static getWindowInfo(hwnd, getCommandline := false, updateCache := true) {
 		x := y := w := h := cx := cy := cw := ch := rx := ry := rw := rh := minX := minY := maxX := maxY := ""
 		flags := mmx := winTitle := ""
@@ -35,7 +73,7 @@ class WinUtilities {
 		try	winTitle := WinGetTitle(hwnd)
 		try	WinGetPos(&x, &y, &w, &h, hwnd)
 		try {
-			wInfo := this.getWindowPlacement(hwnd)
+			wInfo := this.getWindowPlacement(hwnd) ; why duplicate data? getwindowplacement can throw an error
 			rx := wInfo.x, ry := wInfo.y, rw := wInfo.w, rh := wInfo.h
 			mmx := wInfo.mmx, flags := wInfo.flags
 			minX := wInfo.minX, minY := wInfo.minY, maxX := wInfo.maxX, maxY := wInfo.maxY
@@ -45,12 +83,15 @@ class WinUtilities {
 			title: winTitle,
 			state: mmx,
 			flags: flags,
+
 			xpos: x, ypos: y,
 			width: w, height: h,
 			res_xpos: rx, res_ypos: ry,
 			res_width: rw, res_height: rh,
+
 			clientxpos: cx, clientypos: cy,
 			clientwidth: cw, clientheight: ch,
+
 			minX: minX, minY: minY,
 			maxX: maxX, maxY: maxY
 		}
@@ -121,7 +162,7 @@ class WinUtilities {
 		WinGetPos(&x, &y, &w, &h, wHandle)
 		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
 		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		mon := this.monitorGetWorkArea(mHandle)
+		mon := this.monitorGetInfo(mHandle)
 		if (mon.left == cx && mon.top == cy && mon.right == mon.left + cw && mon.bottom == mon.top + ch)
 			return true
 		else 
@@ -132,7 +173,17 @@ class WinUtilities {
 		WinGetPos(&x, &y, &w, &h, wHandle)
 		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
 		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		monitor := this.monitorGetWorkArea(mHandle)
+		monitor := this.monitorGetInfo(mHandle)
+		WinMove(
+			monitor.left + (x - cx),
+			monitor.top + (y - cy),
+			monitor.right - monitor.left + (w - cw),
+			monitor.bottom - monitor.top + (h - ch),
+			wHandle
+		)
+		WinGetPos(&x, &y, &w, &h, wHandle)
+		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
+		monitor := this.monitorGetInfoFromWindow(wHandle)
 		WinMove(
 			monitor.left + (x - cx),
 			monitor.top + (y - cy),
@@ -188,8 +239,8 @@ class WinUtilities {
 	 */
 	static getWindowPlacement(hwnd, withClientPos := false) {
 		NumPut("Uint", 44, pos := Buffer(44, 0))
-		DllCall("User32.dll\GetWindowPlacement", "Ptr", hwnd, "Ptr", pos)
-		flags := NumGet(pos, 4, "Int")  ; flags
+		DllCall("GetWindowPlacement", "Ptr", hwnd, "Ptr", pos)
+		flags := NumGet(pos, 4, "Int")  ; flags on behaviour while minimized (irrelevant)
 		mmx   := NumGet(pos, 8, "Int") ; ShowCMD
 		; see https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
 		switch mmx {
@@ -270,9 +321,8 @@ class WinUtilities {
 		if (IsSet(monitorNum)) {
 			MonitorGetWorkArea(monitorNum, &left, &top, &right, &bot)
 		} else {
-			mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-			mon := this.monitorGetWorkArea(mHandle)
-			left := mon.left, right := mon.right, top := mon.top, bot := mon.bottom
+			monitor := this.monitorGetInfoFromWindow(wHandle)
+			left := monitor.wLeft, right := monitor.wRight, top := monitor.wTop, bot := monitor.wBottom
 		}
 		mWidth := right - left, mHeight := bot - top
 		WinRestore(wHandle)
@@ -292,28 +342,102 @@ class WinUtilities {
 			)
 	}
 
-	static getMonitors() {
-		monitors := []
-		Loop(MonitorGetCount()) {
-			MonitorGet(A_Index, &left, &top, &right, &bot)
-			MonitorGetWorkArea(A_Index, &wLeft, &wTop, &wRight, &wBot)
-			monitors.push({number: A_Index,
-				left: left, right: right, top: top, bottom: bot,
-				workLeft: wLeft, workRight: wRight, workTop: wTop, workBottom: wBot,
-			})
-		}
+	static monitorGetAll(cache := true) {
+		static callback := CallbackCreate(enumProc, 'Fast')
+		monitors := Map()
+		if !DllCall("EnumDisplayMonitors", "Ptr", 0, "Ptr", 0, "Ptr", callback, "Ptr", 0)
+			return 0
+		if cache
+			for mHandle, monitor in monitors
+				if !this.monitorCache.Has(mHandle)
+					this.monitorCache[mHandle] := monitor
 		return monitors
+
+		enumProc(monitorHandle, HDC, PRECT, *) {
+			monitors[monitorHandle] := this.monitorGetInfo(monitorHandle, false)
+			return true
+		}
 	}
 
-	static monitorGetWorkArea(monitorHandle) {
-		NumPut("Uint", 40, monitorInfo := Buffer(40))
-		DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
-		return {
-			left: NumGet(monitorInfo, 20, "Int"),
-			top: NumGet(monitorInfo, 24, "Int"),
-			right: NumGet(monitorInfo, 28, "Int"),
-			bottom: NumGet(monitorInfo, 32, "Int")
+	static monitorGetHandleFromWindow(wHandle) => DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
+
+	static monitorGetInfoFromWindow(wHandle, cache := true) {
+		monitorHandle := this.monitorGetHandleFromWindow(wHandle)
+		return this.monitorGetInfo(monitorHandle, cache)
+	}
+
+	static monitorGetHandleFromPoint(x?, y?) {
+		static MONITOR_DEFAULTTONULL := 0x0
+		point := Buffer(8, 0)
+		if IsSet(x) || !IsSet(y) {
+			DllCall("GetCursorPos", "Ptr", point)
+			x := x ?? NumGet(point, 0, "Int")
+			y := y ?? NumGet(point, 4, "Int")
 		}
+		NumPut("Int", x, "Int", y, point)
+		return DllCall("MonitorFromPoint", "Ptr", point, "UInt", MONITOR_DEFAULTTONULL, "Ptr")
+	}
+
+	static monitorGetInfoFromPoint(x?, y?, cache := true) {
+		if !(monitorHandle := this.monitorGetHandleFromPoint(x?, y?))
+			return 0
+		return this.monitorGetInfo(monitorHandle, cache)
+	}
+
+	static monitorGetHandleFromRect(x,y,w,h) {
+		static MONITOR_DEFAULTTONULL := 0x0
+		rect := Buffer(16, 0)
+		NumPut("Int", x, "Int", y, "Int", x+w, "Int", y+h, rect)
+		return DllCall("MonitorFromRect", "Ptr", rect, "UInt", MONITOR_DEFAULTTONULL, "Uptr")
+	}
+
+	static monitorGetInfoFromRect(x, y, w, h, cache := true) {
+		if !(monitorHandle := this.monitorGetHandleFromRect(x,y,w,h))
+			return 0
+		return this.monitorGetInfo(monitorHandle, cache)
+	}
+
+	static monitorGetInfo(monitorHandle, cache := true) {
+		if cache && this.monitorCache.Has(monitorHandle)
+			return this.monitorCache[monitorHandle]
+		NumPut("Uint", 40 + 64, monitorInfo := Buffer(40 + 64))
+		DllCall("GetMonitorInfo", "Ptr", monitorHandle, "Ptr", monitorInfo)
+		monitor := {
+			left:		NumGet(monitorInfo, 4, "Int"),
+			top:		NumGet(monitorInfo, 8, "Int"),
+			right:		NumGet(monitorInfo, 12, "Int"),
+			bottom:		NumGet(monitorInfo, 16, "Int"),
+			wLeft:		NumGet(monitorInfo, 20, "Int"),
+			wTop:		NumGet(monitorInfo, 24, "Int"),
+			wRight:		NumGet(monitorInfo, 28, "Int"),
+			wBottom:	NumGet(monitorInfo, 32, "Int"),
+			primary:	NumGet(monitorInfo, 36, "UInt"), ; flag can be MONITORINFOF_PRIMARY (1) or not (0)
+			name:		name := StrGet(monitorInfo.Ptr + 40),
+			num:		RegExReplace(name, ".*(\d+)$", "$1")
+		}
+		if cache
+			this.monitorCache[monitorHandle] := monitor
+		return monitor
+	}
+
+	static monitorIsPrimary(monitorHandle, useCache := true) => this.monitorGetInfo(monitorHandle, useCache).flag
+
+	/**
+	 * Whether or not the desktop is locked (concretely: we are in lockscreen)
+	 * @returns {Boolean} 
+	 */
+	static sessionIsLocked() {
+		static WTS_CURRENT_SERVER_HANDLE := 0, WTSSessionInfoEx := 25, WTS_SESSIONSTATE_LOCK := 0x00000000
+		ret := false, sessionID := 0, sesInfo := 0, BytesReturned := 0
+		flag1 := DllCall("ProcessIdToSessionId", "UInt", DllCall("GetCurrentProcessId", "UInt"), "UInt*", &sessionId)
+		flag2 := DllCall("wtsapi32\WTSQuerySessionInformation", "Ptr", WTS_CURRENT_SERVER_HANDLE, "UInt", sessionId, "UInt", WTSSessionInfoEx, "Ptr*", &sesInfo, "Ptr*", &BytesReturned)
+		if (flag1 && flag2) {
+			SessionFlags := NumGet(sesInfo+0, 16, "Int")
+			if (SessionFlags == WTS_SESSIONSTATE_LOCK)
+				ret := true
+			DllCall("wtsapi32\WTSFreeMemory", "Ptr", sesInfo)
+		}
+		return ret
 	}
 
 	static defaultBlacklist => [

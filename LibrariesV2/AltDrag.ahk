@@ -9,6 +9,7 @@
 ;  Alt + X4 Button		: Click to minimize a window.
 ;  Alt + X5 Button		: Click to make window enter borderless fullscreen
 
+; Technically, scaling via Alt+ScrollUp stops a bit before the *actual* max window size is reached (due to client area differences)
 */
 
 /* ; <- uncomment this if you intend to use it as a standalone script
@@ -67,7 +68,6 @@ class AltDrag {
 			"ahk_class Shell_SecondaryTrayWnd ahk_exe explorer.exe",
 			"ahk_class Shell_TrayWnd ahk_exe explorer.exe"
 		]	; initial blacklist. Includes alt+tab screen, startmenu, desktop screen and taskbars (in that order).
-		this.monitors := Map()
 		A_TrayMenu.Add("Enable Snapping", this.snappingToggle)
 		A_TrayMenu.ToggleCheck("Enable Snapping")
 	}
@@ -88,37 +88,35 @@ class AltDrag {
 		cleanHotkey := RegexReplace(A_ThisHotkey, "#|!|\^|\+|<|>|\$|~", "")
 		SetWinDelay(3)
 		CoordMode("Mouse", "Screen")
-		MouseGetPos(&mouseX1, &mouseY1, &hwnd)
-		if ((WinUtilities.winInBlacklist(hwnd, this.blacklist) && !overrideBlacklist) || WinGetMinMax(hwnd) != 0) {
+		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
+		if ((WinUtilities.winInBlacklist(wHandle, this.blacklist) && !overrideBlacklist) || WinGetMinMax(wHandle) != 0) {
 			this.sendKey(cleanHotkey)
 			return
 		}
-		pos := WinUtilities.WinGetPosEx(hwnd)
-		WinActivate(hwnd)
+		pos := WinUtilities.WinGetPosEx(wHandle)
+		WinActivate(wHandle)
 		while (GetKeyState(cleanHotkey, "P")) {
 			MouseGetPos(&mouseX2, &mouseY2)
 			nx := pos.x + mouseX2 - mouseX1
 			ny := pos.y + mouseY2 - mouseY1
 			if (this.boolSnapping) {
-				mHandle := DllCall("MonitorFromWindow", "Ptr", hwnd, "UInt", 0x2, "Ptr")
-				if (!this.monitors.Has(mHandle)) ; this should only call once
-					this.monitors[mHandle] := WinUtilities.monitorGetWorkArea(mHandle)
+				monitor := WinUtilities.monitorGetInfoFromWindow(wHandle)
 				calculateSnapping()
 			}
 			; WinUtilities.WinMoveEx(hwnd, nx, ny)
-			DllCall("SetWindowPos", "UInt", hwnd, "UInt", 0, "Int", nx - pos.LB, "Int", ny - pos.TB, "Int", 0, "Int", 0, "Uint", 0x0005)
+			DllCall("SetWindowPos", "UInt", wHandle, "UInt", 0, "Int", nx - pos.LB, "Int", ny - pos.TB, "Int", 0, "Int", 0, "Uint", 0x0005)
 			DllCall("Sleep", "UInt", 5)
 		}
 
 		calculateSnapping() {
-			if (abs(nx - this.monitors[mHandle].left) < this.snappingRadius)
-				nx := this.monitors[mHandle].left			; left edge
-			else if (abs(nx + pos.w - this.monitors[mHandle].right) < this.snappingRadius)
-				nx := this.monitors[mHandle].right - pos.w 	; right edge
-			if (abs(ny - this.monitors[mHandle].top) < this.snappingRadius)
-				ny := this.monitors[mHandle].top				; top edge
-			else if (abs(ny + pos.h - this.monitors[mHandle].bottom) < this.snappingRadius)
-				ny := this.monitors[mHandle].bottom - pos.h	; bottom edge
+			if (abs(nx - monitor.wLeft) < this.snappingRadius)
+				nx := monitor.wLeft			; left edge
+			else if (abs(nx + pos.w - monitor.wRight) < this.snappingRadius)
+				nx := monitor.wRight - pos.w 	; right edge
+			if (abs(ny - monitor.wTop) < this.snappingRadius)
+				ny := monitor.wTop				; top edge
+			else if (abs(ny + pos.h - monitor.wBottom) < this.snappingRadius)
+				ny := monitor.wBottom - pos.h	; bottom edge
 		}
 	}
 
@@ -173,10 +171,8 @@ class AltDrag {
 			return this.sendKey(cleanHotkey)
 		}
 		WinGetPos(&winX, &winY, &winW, &winH, wHandle)
-		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		if (!this.monitors.Has(mHandle))
-			this.monitors[mHandle] := WinUtilities.monitorGetWorkArea(mHandle)
-		xChange := floor((this.monitors[mHandle].right - this.monitors[mHandle].left) * (scale_factor - 1))
+		monitor := WinUtilities.monitorGetInfoFromWindow(wHandle)
+		xChange := floor((monitor.wRight - monitor.wLeft) * (scale_factor - 1))
 		yChange := floor(winH * xChange / winW)
 		wLimit := WinUtilities.getMinMaxResizeCoords(wHandle)
 		if (direction == 1) {

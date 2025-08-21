@@ -57,8 +57,10 @@ try reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBAL
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
-if (StrCompare(A_OSVersion, "10.0.22000") < 0)
-	TransparentTaskbar.TransparentTaskbar(1, 50, 0)
+if (StrCompare(A_OSVersion, "10.0.22000") < 0) {
+	TransparentTaskbar.setMode(4, 2, 50)
+	TransparentTaskbar.setTimer(1)
+}
 ; Start keeping track of desktop window changes
 WindowManager.DesktopState.enable(60000)
 ; import custom blacklist into AltDrag
@@ -157,7 +159,7 @@ if (!GLOBALVAR_WASRELOADED)
 }
 
 ^+K:: { ; Toggle Taskbar Transparency
-	TransparentTaskbar.transparentTaskbar("T")
+	TransparentTaskbar.setTimer("T")
 }
 
 ^+F11:: { ; Gives Key History

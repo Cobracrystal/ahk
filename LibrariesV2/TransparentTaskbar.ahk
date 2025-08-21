@@ -5,227 +5,251 @@
 
 class TransparentTaskbar {
 	
-	static transparentTaskbar(mode := 0, newPeriod := -1, debug := 0, *) {
-		; mode = 0 (turn off), 1 (turn on), -1 or T... (toggle)
-		this.debug := debug
-		if (!this.init)
-			this.initialize()
-		if (SubStr(mode, 1, 1) == "T" || mode == -1)
-			mode := !this.onOffStatus
-		if (mode == 1) {
-			SetTimer(this.taskbar_timer, (newPeriod == -1 ? this.period : (this.period := newPeriod)))
-			TrayMenu.submenus["Timers"].Check("Taskbar Transparency Timer")
-			this.onOffStatus := true
+	/**
+	 * @param {Integer} mode 0/"Off", 1/"On", -1/"Toggle"
+	 */
+	static setTimer(mode := 0) {
+		if !this.verifyMonitorData(false)
+			try this.setMonitorData()
+		switch mode {
+			case 0, "Off":
+				SetTimer(this.timer, 0)
+				try this.setToNormal()
+				TrayMenu.submenus["Timers"].Uncheck("Taskbar Transparency Timer")
+				this.data.isRunning := false
+			case 1, "On":
+				SetTimer(this.timer, this.config.period)
+				TrayMenu.submenus["Timers"].Check("Taskbar Transparency Timer")
+				this.data.isRunning := true
+			case -1, "Toggle", "T":
+				return this.setTimer(!this.data.isRunning)
 		}
-		else if (mode == 0) {
-			SetTimer(this.taskbar_timer, 0)
-			this.reset(1)
-			TrayMenu.submenus["Timers"].Uncheck("Taskbar Transparency Timer")
-			this.onOffStatus := false
+	}
+
+	/**
+	 * Set modes used by this class
+	 * @param {Integer} mode1 The mode of the taskbar while a window on a monitor is maximized.
+	 * @param {Integer} mode2 The mode of the taskbar while no window on a monitor is maximized.
+	 * 
+	 * Mode Values are **0 (Off), 1 (Gradient), 2 (transparent), 3 (blur), 4 (RGB)**
+	 * @param {Integer?} period A period to set 
+	 */
+	static setMode(maximizedMode := 0, normalMode := 0, period?) {
+		if IsSet(period) {
+			this.config.period := period
+			if this.data.isRunning
+				SetTimer(this.timer, this.config.period)
 		}
-		else
-			MsgBox("Invalid mode specified for Transparency manager function.")
+		if !isClamped(maximizedMode, 0, 4) || !isClamped(normalMode, 0, 4)
+			throw ValueError("setMode requires modeWhileMax and normalMode to be of values [0,1,2,3,4]. Got " maximizedMode ", " normalMode " instead")
+		this.config.normalMode := normalMode
+		this.config.maximizedMode := maximizedMode
 	}
 
 	static __New() {
 		timerMenu := TrayMenu.submenus["Timers"]
-		timerMenu.Add("Taskbar Transparency Timer", this.transparentTaskbar.Bind(this, -1, -1, 0))
+		timerMenu.Add("Taskbar Transparency Timer", (*) => this.setTimer(-1))
 		A_TrayMenu.Add("Timers", timerMenu)
-		this.taskbar_timer := this.updateTaskbarTimer.Bind(this)
-		this.retry_timer := this.retry.bind(this)
-		this.period := 200
-		this.isLocked := false
-		this.blacklist := "(Program Manager|NVIDIA GeForce Overlay|^$)"
-		this.debug := 0
-		this.taskbar_accent_color := 0x202020 ; the gray of the taskbar when turning off
-		this.taskbar_accent_transparency := 0xE0
-		this.taskbar_maximized_color := 0x393747 ; color when window is maximized
-		this.taskbar_maximized_transparency := 0xD0
-		this.taskbar_maximized_mode := 2 ; mode when window is max
-		this.taskbar_RGB_mode := true ; if max_mode is 1 / 2, this overwrites maximized_color
-		this.RGB_color_intensity := 0x70 ; if max_mode is 1 / 2, this overwrites maximized_color
-		this.RGB_rotate_duration := 4 ; this * period * 63 is duration per cycle on average, very inconsistently.
-		this.rgbTransparency := 0xD0
-		r := this.RGB_color_intensity * 0x010000, g := this.RGB_color_intensity * 0x000100, b := this.RGB_color_intensity * 0x000001
-		; this.gradient := rainbowArr(round(this.RGB_rotate_duration*63), this.RGB_color_intensity)
-		this.gradient := colorGradientArr(round(this.RGB_rotate_duration*63), r, r|g//2, r|g, g, g|b, g//2|b, b, b|r//2, b|r, b//2|r, r)
-
-		this.onOffStatus := false
-		this.taskbarTransparency := [-1,-1]
-		this.trayHandles := Map()
-		this.initialize()
-	}
-	
-	static initialize() {
-		this.init := false
-		try {
-			this.monitors := WinUtilities.getMonitors()
-			relevantMonitors := []
-			DetectHiddenWindows(1)
-			this.trayHandles[MonitorGetPrimary()] := WinGetID("ahk_class Shell_TrayWnd") 
-			; DllCall("user32\FindWindow", "str", "Shell_TrayWnd", "ptr", 0, "ptr") otherwise. WinExist doesn't throw an error.
-			hSecondaryTray := WinGetList("ahk_class Shell_SecondaryTrayWnd")
-			for i, h in hSecondaryTray
-				this.trayHandles[this.get_window_monitor_number(h)] := h
-			for i, mon in this.monitors { ; only include monitors that have a taskbar on them
-				if (this.trayHandles.Has(mon.number))
-					relevantMonitors.push(mon)
-			}
-			this.monitors := relevantMonitors
+		this.timer := this.updateTaskbarTimer.Bind(this)
+		this.data := {
+			isRunning: false,
+			isLocked: false
 		}
-		catch Error
-			return 0
-		return (this.init := true)
+		this.config := {
+			period: 200,
+			periodWhileLocked: 400,
+			periodOnRetry: 1000,
+			listLines: 0,
+			alwaysUpdate: true, ; this is a crook because opening the start menu resets the taskbar
+			maximizedMode: 3,
+			maximizedColor: 0x393747,
+			maximizedTransparency: 0xD0,
+			normalMode: 2,
+			normalColor: 0x000000,
+			normalTransparency: 0x01,
+			offMode: 1, ; the "default" mode of the taskbar cannot be set with DWMSetcompositionattribute, so this is the closest approximation
+			offColor: 0x202020,
+			offTransparency: 0xE0,
+			RGBColorIntensity: 0x70,
+			RGBTransparency: 0xD0,
+			RGBColorDetail: 255 ; amount of colors to cycle through. Increasing this will increase cycle length
+		}
+		this.RGB_Gradient := rainbowArr(this.config.RGBColorDetail, this.config.RGBColorIntensity)
+		; contains monitors + .isMaximized, .trayHandle, .isUpdated 
 	}
 	
-	static reset(hard := false) {
-		this.taskbarTransparency := [-1,-1]
-		if (hard)
-			this.init := false
-		try for i, e in this.monitors
-			this.TaskBar_SetAttr(1, e.number, this.taskbar_accent_color, this.taskbar_accent_transparency)
-		catch Error
-			return
+	; this throws an error if a taskbar is missing. that's intended
+	; it also overwrites prevstate and ismaximized. that's also intended
+	static setMonitorData() {
+		this.monitorData := WinUtilities.monitorGetAll(false) ; don't cache, otherwise we will edit it
+		DHW := A_DetectHiddenWindows
+		DetectHiddenWindows(1)
+		try {
+			primaryMHandle := WinUtilities.monitorGetHandleFromWindow(hwnd := WinGetID("ahk_class Shell_TrayWnd"))
+			this.monitorData[primaryMHandle].trayHandle := hwnd
+			secondaryTrayHandles := WinGetList("ahk_class Shell_SecondaryTrayWnd")
+			for trayHandle in secondaryTrayHandles {
+				mHandle := WinUtilities.monitorGetHandleFromWindow(trayHandle)
+				this.monitorData[mHandle].trayHandle := trayHandle
+			}
+		} catch as e {
+			throw TargetError("Could not retrieve Taskbar objects or handles.")
+		}
+		this.monitorData := objFilter(this.monitorData, (k, v) => v.HasOwnProp("trayHandle"))
+		for mHandle, mon in this.monitorData {
+			mon.prevState := -1
+			mon.isMaximized := 0
+		}
+		DetectHiddenWindows(DHW)
+		return 1
+	}
+
+	static verifyMonitorData(strict := true) {
+		if !this.HasOwnProp("monitorData") || this.monitorData.Count == 0
+			return 0
+		if strict
+			for mHandle, mon in this.monitorData
+				if !WinExist(mon.trayHandle)
+					return 0
+		return 1
+	}
+	
+	static setToNormal() {
+		for i, e in this.monitorData
+			this.TaskBar_SetAttr(this.config.offMode, e.trayHandle, this.config.offColor, this.config.offTransparency)
 	}
 
 	static retry() {
-		this.reset(1)
-		if (this.initialize()) {
-			try 
-				this.updateTaskbar()
-			catch Error
-				return 0
-			SetTimer(this.retry_timer, 0)
-			this.transparentTaskbar(1)
+		try this.setToNormal()
+		try this.setMonitorData()
+		if (this.verifyMonitorData()) {
+			try {
+				this.updateTaskbars()
+				SetTimer(, 0) ; turns itself off
+				this.setTimer(1)
+			}
 		}
 	}
 	
-	static updateTaskbarTimer(override := false) {
-		ListLines(this.debug)
-		if (this.sessionIsLocked()) {
-			if (!this.isLocked) {
-				this.isLocked := true
-				SetTimer(this.taskbar_timer, 400)
+	static updateTaskbarTimer() {
+		ListLines(!this.config.listLines)
+		if (WinUtilities.sessionIsLocked()) { ; if we are on lockscreen, slow the timer to avoid a lot of checks
+			if (!this.data.isLocked) {
+				this.data.isLocked := true
+				SetTimer(this.timer, this.config.periodWhileLocked)
 			}
-			return
-		}
-		else if (this.isLocked) {
-			this.isLocked := false
-			SetTimer(this.taskbar_timer, this.period)
+			return 0
+		} else if (this.data.isLocked) { ; user has logged in, reenable the fast timer
+			this.data.isLocked := false
+			SetTimer(this.timer, this.config.period)
 		}
 		try
-			this.updateTaskbar(override)
+			this.updateTaskbars(this.config.alwaysUpdate)
 		catch Error as e {
 			ListLines(1)
-			this.transparentTaskbar(0)
-			timedTooltip("Attempting to restart.")
-			SetTimer(this.retry_timer, 2000)
+			this.setTimer(0)
+			timedTooltip("Couldnt apply mode to Taskbar. Hibernating until new Taskbar is found")
+			SetTimer(this.retry.bind(this), this.config.periodOnRetry)
 		}
 	}
 
-	static updateTaskbar(override := false) {
-		static index := 0
-		maximizedMonitors := this.getMaximizedMonitors()
-		for i, el in this.monitors {
-			if (maximizedMonitors[el.number]) {
-				if (this.taskbar_RGB_mode) {
-					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.number, this.gradient[index+1], this.rgbTransparency)
-					this.taskbarTransparency[el.number] := 0
-					index := mod(index + 1, round(this.RGB_rotate_duration*63))
+	static updateTaskbars(override := false) {
+		static index := 1
+		this.updateMaximizedMonitors()
+		for mHandle, mon in this.monitorData {
+			str .= mon.num ": " mon.prevState " -> " mon.isMaximized ", "
+			if (mon.isMaximized) {
+				if (this.config.maximizedMode == this.modes.RGB) {
+					this.TaskBar_SetAttr(this.modes.TRANSPARENT, mon.trayHandle, this.RGB_Gradient[index], this.config.RGBTransparency)
+					index := mod(index, this.config.RGBColorDetail) + 1
+				} else if (override || mon.prevState != mon.isMaximized) {
+					this.TaskBar_SetAttr(this.config.maximizedMode, mon.trayHandle, this.config.maximizedColor, this.config.maximizedTransparency)
 				}
-				else if (this.taskbarTransparency[el.number]) {
-					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.number, this.taskbar_maximized_color, this.taskbar_maximized_transparency)
-					this.taskbarTransparency[el.number] := 0
-				}
-				else if (override) {
-					this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix the accented color being wrong
-					this.TaskBar_SetAttr(this.taskbar_maximized_mode, el.number, this.taskbar_maximized_color)
-				}
-			}
-			else {
-				if (override)
-					this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix
-				this.TaskBar_SetAttr(2, el.number, 0x000000, 0x01)
-				this.taskbarTransparency[el.number] := 1
+			} else {
+				if (override || mon.prevState != mon.isMaximized)
+					this.TaskBar_SetAttr(this.config.normalMode, mon.trayHandle, this.config.normalColor, this.config.normalTransparency)
+				; this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix
 			}
 		}
+		; for i, el in this.monitorData {
+		; 	if (maximizedMonitors[el.number]) {
+		; 		if (override) {
+		; 			this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix the accented color being wrong
+		; 			this.TaskBar_SetAttr(this.config.maximizedMode, el.number, this.config.maximizedColor)
+		; 		}
+		; 	}
+		; 	else {
+		; 		if (override)
+		; 			this.TaskBar_SetAttr(1, el.number, 0x222222, 0x01) ; fix
+		; 	}
+		; }
 	}
 
-	static getMaximizedMonitors() {
-		SetTitleMatchMode("RegEx")
-		DetectHiddenWindows(0)
-		id := WinGetList(,,this.blacklist)
-		maximizedMonitors := [0, 0]
-		for i, e in id
-			try	{
-				if (WinExist("ahk_id " . e) && WinGetMinMax("ahk_id " . e) == 1)
-					maximizedMonitors[this.get_window_monitor_number(e)] := 1
-			}
-		return maximizedMonitors
+	static updateMaximizedMonitors() {
+		maximizedMonitors := Map() ; map for .has
+		for mHandle, mon in this.monitorData
+			mon.prevState := mon.isMaximized
+		for wHandle in WinUtilities.getAllWindows()
+			if WinGetMinMax(wHandle) == 1
+				maximizedMonitors[(WinUtilities.monitorGetHandleFromWindow(wHandle))] := true
+		for mHandle, mon in this.monitorData
+			mon.isMaximized := maximizedMonitors.has(mHandle) ; ? 1 : 0
 	}
 
-	static get_window_monitor_number(hwnd) {
-		WinGetPos(&xpos, &ypos, &width, &height, hwnd)
-		winMiddleX := xpos + width/2
-		winMiddleY := ypos + height/2
-		for i, e in this.monitors
-			if (winMiddleX > e.left && winMiddleX < e.Right && winMiddleY > e.Top && winMiddleY < e.Bottom)
-				return e.number
-	}
-
-	static TaskBar_SetAttr(accent_state := 0, monitor := -1, gradient_RGB := 0xFF8000, gradient_alpha := 0x80) {
+	static TaskBar_SetAttr(accent_state, trayHandle, gradient_RGB := 0xFF8000, gradient_alpha := 0x80) {
 		; 0 = off, 1 = gradient (+color), 2 = transparent (+color), 3 = blur; color -> ABGR (alpha | blue | green | red) all hex: 0xffd7a78f
-		static pad := A_PtrSize == 8 ? 4 : 0, WCA_ACCENT_POLICY := 19
+		static pad := A_PtrSize == 8 ? 4 : 0
+		static WCA_ACCENT_POLICY := 19
 		if (accent_state < 0) || (accent_state > 3)
 			throw(Error("Bad state value passed in.`nValue must be 0-3."))
-		if (!this.trayHandles.Has(monitor))
-			throw(Error("Attempted to set transparency/blur on monitor that doesn't exist.",-1))
-		if (gradient_alpha > 0xFF || gradient_RGB > 0xFFFFFF)
-			throw(Error("Bad Alpha/RGB value passed in.`nMust be between 0x00 and 0xFF`nGot: " gradient_alpha ", " gradient_RGB))
 		gradient_ABGR := (gradient_alpha << 24) | (gradient_RGB << 16 & 0xFF0000) | (gradient_RGB & 0xFF00) | (gradient_RGB >> 16 & 0xFF)
+		if (!isClamped(gradient_ABGR, 0x00000000, 0xFFFFFFFF))
+			throw(Error("Bad Alpha/RGB value passed in.`nMust be between 0x00 and 0xFF`nGot: " gradient_alpha ", " gradient_RGB))
 		ACCENT_POLICY := Buffer(16, 0)
-		NumPut("int", (accent_state > 0 && accent_state < 4) ? 2 : 0, ACCENT_POLICY, 0)
+		NumPut("int", accent_state != 0 ? 2 : 0, ACCENT_POLICY)
 		if (accent_state == 1 || accent_state == 2)
 			NumPut("int", gradient_ABGR, ACCENT_POLICY, 8)
 		WINCOMPATTRDATA := Buffer(4 + pad + A_PtrSize + 4 + pad, 0)
-		NumPut("int", WCA_ACCENT_POLICY, WINCOMPATTRDATA, 0)
+		NumPut("int", WCA_ACCENT_POLICY, WINCOMPATTRDATA)
 		NumPut("ptr", ACCENT_POLICY.Ptr, WINCOMPATTRDATA, 4 + pad)
 		NumPut("uint", ACCENT_POLICY.Size, WINCOMPATTRDATA, 4 + pad + A_PtrSize)
-		if !(DllCall("user32\SetWindowCompositionAttribute", "ptr", this.trayHandles[monitor], "ptr", WINCOMPATTRDATA))
+		if !(DllCall("user32\SetWindowCompositionAttribute", "ptr", trayHandle, "ptr", WINCOMPATTRDATA))
 			throw(Error("Failed to set transparency/blur", -1))
 		return true
 	}
-	
+
+	/**
+	 * Shows or hides corresponding taskbars
+	 * @param {Integer} mode 0 (turn off), 1 (turn on), T[...] (toggle)
+	 * @param {Integer} taskbarMode 0 (primary), 1 (secondary), 2 (all)
+	 */
 	static setInvisibility(mode := 0, taskbarMode := 0) {
-		; mode = 0 (turn off), 1 (turn on), T[...] (toggle)
-		; taskbarMode = 0 (primary), 1 (secondary), 2 (all)
-		if (!this.init) {
-			this.initialize()
+		if !this.verifyMonitorData()
+			this.setMonitorData()
+		mode := SubStr(mode, 1, 1)
+		switch mode {
+			case 0:
+				fn := WinShow
+			case 1:
+				fn := WinHide
+			case -1, "T":
+				fn := hwnd => WinUtilities.isVisible(hwnd) ? WinHide(hwnd) : WinShow(hwnd)
 		}
-		mp := MonitorGetPrimary()
-		if (SubStr(mode, 1, 1) == "T") {
-			mode := (WinGetTransparent("ahk_id " . this.trayHandles[mp]) == "" ? 1 : 0)
+		relevantHandles := []
+		switch taskbarMode {
+			case 0:
+				for h, v in this.monitorData
+					if v.primary
+						relevantHandles.push(v.trayHandle)
+			case 1:
+				for h, v in this.monitorData
+					if !v.primary
+						relevantHandles.push(v.trayHandle)
+			case 2:
+				relevantHandles := objFlatten(this.monitorData, v => v.trayHandle)
 		}
-		if (mode == 1) {
-			if (!taskbarMode || taskbarMode == 2)
-				WinSetTransparent(0, "ahk_id " this.trayHandles[mp])
-			if (taskbarMode) {
-				for i, e in this.trayHandles
-					if (i != mp)
-						WinSetTransparent(0, "ahk_id " this.trayHandles[i])
-			}
-		}
-		else if (mode == 0) {
-			if (!taskbarMode || taskbarMode == 2) {
-				WinSetTransparent("Off", "ahk_id " this.trayHandles[mp])
-			}
-			if (taskbarMode) {
-				for i, e in this.trayHandles
-					if (i != mp)
-						WinSetTransparent("Off", "ahk_id " this.trayHandles[i])
-			}
-			this.updateTaskbarTimer(true)
-		}
+		for e in relevantHandles
+			fn(e)
 	}
 
 	; En-/Disables Windows Setting 'Only show Taskbar when hovering over it with Mouse'. mode = 0 -> Off, 1 -> On
@@ -238,17 +262,11 @@ class TransparentTaskbar {
 		DllCall("Shell32\SHAppBarMessage", "UInt", ABM_SETSTATE, "Ptr", APPBARDATA)
 	}
 
-	static sessionIsLocked() {
-		static WTS_CURRENT_SERVER_HANDLE := 0, WTSSessionInfoEx := 25, WTS_SESSIONSTATE_LOCK := 0x00000000
-		ret := false, sessionID := 0, sesInfo := 0, BytesReturned := 0
-		flag1 := DllCall("ProcessIdToSessionId", "UInt", DllCall("GetCurrentProcessId", "UInt"), "UInt*", &sessionId)
-		flag2 := DllCall("wtsapi32\WTSQuerySessionInformation", "Ptr", WTS_CURRENT_SERVER_HANDLE, "UInt", sessionId, "UInt", WTSSessionInfoEx, "Ptr*", &sesInfo, "Ptr*", &BytesReturned)
-		if (flag1 && flag2) {
-			SessionFlags := NumGet(sesInfo+0, 16, "Int")
-			if (SessionFlags == WTS_SESSIONSTATE_LOCK)
-				ret := true
-			DllCall("wtsapi32\WTSFreeMemory", "Ptr", sesInfo)
-		}
-		return ret
+	static modes => {
+		OFF: 0,
+		GRADIENT: 1,
+		TRANSPARENT: 2,
+		BLUR: 3,
+		RGB: 4
 	}
 }
