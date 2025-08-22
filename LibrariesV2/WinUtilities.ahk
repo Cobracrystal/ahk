@@ -17,6 +17,18 @@ class WinUtilities {
 		DetectHiddenWindows(dHW)
 		return windows
 	}
+
+	static getBasicInfo(getHidden := false, blacklist := this.defaultBlacklist) {
+		winArr := this.getAllWindows(getHidden, blacklist)
+		for i, hwnd in winArr {
+			wObj := this.WinGetPosEx(hwnd)
+			wObj.title := WinGetTitle(hwnd)
+			wObj.state := WinGetMinMax(hwnd)
+			wObj.hwnd := hwnd
+			winArr[i] := wObj
+		}
+		return winArr
+	}
 	
 	static getAllWindowInfo(getHidden := false, blacklist := this.defaultBlacklist, getCommandLine := false) {
 		windows := []
@@ -195,6 +207,8 @@ class WinUtilities {
 
 	/**
 	 * Originally written by https://www.autohotkey.com/boards/viewtopic.php?f=6&t=3392
+	 * @param hwnd 
+	 * @returns {Object} { x: L, y: T, w: R - L, h: B - T, LB: leftBorder, TB: topBorder, RB: rightBorder, BB: bottomBorder}
 	 */
 	static WinGetPosEx(hwnd) {
 		static S_OK := 0x0
