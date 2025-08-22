@@ -1057,13 +1057,13 @@ loadTableAsHotstrings(filePath) {
 }
 
 #HotIf WinActive("Revolution Idle")
-b::{	; Revo Idle: Buy
+^b::{	; Revo Idle: Buy
 	MouseGetPos(&x, &y)
 	MouseClick("L", 1420, 1020)
 	Sleep(40)
 	MouseMove(x,y)
 }
-1::{ ; Revo Idle: Slot 1 Merge
+^1::{ ; Revo Idle: Slot 1 Merge
 	MouseGetPos(&x, &y)
 	Send("{LButton Down}")
 	Sleep(50)
@@ -1073,7 +1073,7 @@ b::{	; Revo Idle: Buy
 	Sleep(100)
 	MouseMove(x,y)
 }
-2::{ ; Revo Idle: Slot 2 Merge
+^2::{ ; Revo Idle: Slot 2 Merge
 	MouseGetPos(&x, &y)
 	Send("{LButton Down}")
 	Sleep(50)
@@ -1083,7 +1083,7 @@ b::{	; Revo Idle: Buy
 	Sleep(100)
 	MouseMove(x,y)
 }
-3::{ ; Revo Idle: Slot 3 Merge
+^3::{ ; Revo Idle: Slot 3 Merge
 	MouseGetPos(&x, &y)
 	Send("{LButton Down}")
 	Sleep(50)
