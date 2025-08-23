@@ -257,8 +257,9 @@ class AltDrag {
 
 	static getMonitorInfoFromWindow(wHandle, cache := true) {
 		monitorHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		if cache && !this.monitors.Has(monitorHandle) {
-			this.monitors[monitorHandle] := this.monitorGetInfo(monitorHandle)
+		if cache {
+			if !this.monitors.Has(monitorHandle) 
+				this.monitors[monitorHandle] := this.monitorGetInfo(monitorHandle)
 			return this.monitors[monitorHandle]
 		}
 		return this.monitorGetInfo(monitorHandle)
