@@ -246,44 +246,46 @@ objIterate(o,f) { ; this could be a oneliner
 	)
 }
 
-
-ao3Functions() {
+ao3GetBookmarkChapterCount(pages) => objCollect(ao3GetBookmarks(pages), (a, b) => a + ((p := InStr(b.chapters, "/")) ? SubStr(b.chapters, 1, p-1) : b.chapters), 0)
+ao3GetBookmarkWordcount(pages) => objCollect(ao3GetBookmarks(pages), (a, b) => a + b.words, 0)
+ao3GetBookmarks(pages) {
 	bigArr := []
-	arr := ao3DLBookMarks(28)
-	for i, e in arr
-		bigArr.push(ao3GetStories(e)*)
-	print("")
-	sArr := objSort(bigArr, a => a.wordcount, "N")
-	print(sArr)
-	print(bigArr.Length)
-	print(objCollect(bigArr, (a, b) => a + b.wordcount, 0))
+	arr := getBookmarks(pages)
+	; return MapToObj(jsongo.Parse(A_Clipboard))
+	for i, key in arr
+		bigArr.push(ao3parseHtml(key)*)
+	return bigArr
 
-	ao3GetStories(str) {
+	ao3parseHtml(str) {
 		pos := 1
 		arr := []
 		len := strlen(str)
+		A_Clipboard := str
 		while (pos <= len) {
-			ob := {}
-			pos := RegexMatch(str, '<!--title, author, fandom-->\s*<div class="header module">\s*<h4 class="heading">\s*<a href="\/works\/(\d+)">(.*)<\/a>', &o, pos)
+			work := {}
+			pos := InStr(str, '<!--title, author, fandom-->',, pos)
 			if (pos == 0)
 				break
-			ob.link := o[1]
-			ob.name := o[2]
-			pos += StrLen(o[0])
-			pos := RegExMatch(str, '<dt class="words">Words:<\/dt>\s*<dd class="words">((?:\d|,|\.)*)<\/dd>', &o, pos)
-			pos += StrLen(o[0])
-			ob.wordcount := StrReplace(o[1], ",")
-			arr.push(ob)
+			RegExMatch(str, '<a href="\/works\/(\d+)">(.*?)<\/a>', &workMatch, pos)
+			posEnd := RegExMatch(str, '<dl class="stats">((?:.|\n)*?)<\/dl>', &workStats, pos)
+			work.id := workMatch[1]
+			work.name := workMatch[2]
+			for key in ["language","words","chapters","comments","kudos","bookmarks","hits"] {
+				if RegExMatch(workstats[1], '<dd class="' key '"[^>]*?>(?:<a[^>]*?>)?([^>]*?)(?:<\/a>[^<>\n]*?)?(?:\s|\n)*\/?<\/dd>', &stat)
+					work.%key% := Trim(StrReplace(stat[1], ","), " `t`n`r\/")
+			}
+			pos := posEnd + StrLen(workStats[0])
+			arr.push(work)
 		}
 		return arr
 	}
 
-	ao3DLBookMarks(pages) {
+	getBookmarks(pages) {
 		static baseURL := "https://archiveofourown.org/users/Cobracrystal/bookmarks"
 		htmlArr := []
 		Loop (pages) {
 			htmlArr.push(sendRequest(baseURL . (A_Index > 1 ? "?page=" A_Index : "")))
-			print(Round(A_Index / pages * 100, 1) "%", , false)
+			print(Round(A_Index / pages * 100, 1) "%")
 		}
 		return htmlArr
 	}
