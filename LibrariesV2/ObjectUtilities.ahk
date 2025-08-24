@@ -874,6 +874,7 @@ arraySort(arr, fn := (a => a), sortMode := "") {
 }
 
 arrayBasicSort(arr, sortMode := "") => objBasicSort(arr, sortMode)
+arraySortNumerically(arr, sortMode := "N") => objSortNumerically(arr, sortMode)
 
 arrayContainsArray(arr, subArray, comparator := (arrVal,subArrVal) => (arrVal == subArrVal)) {
 	sequenceIndex := 1

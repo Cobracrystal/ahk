@@ -973,7 +973,7 @@ getAllPermutations(str1, str2) {
 		i := A_Index
 		arr2 := []
 		for j, e in arr
-			arr2.push(SubStr(str1, 1, -1 * i) . str2Arr[n - i + 1] . SubStr(e, n - i + 2))
+			arr2.push(SubStr(str1, 1, -i) . str2Arr[n - i + 1] . SubStr(e, n - i + 2))
 		arr.push(arr2*)
 	}
 	for i, e in arr

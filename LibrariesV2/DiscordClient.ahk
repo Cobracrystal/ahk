@@ -254,7 +254,7 @@ class DiscordClient {
 	ws_OP10(Data) {
 		this.wsData.heartbeatACK := True
 		this.wsData.heartbeatInterval := Data["d"]["heartbeat_interval"]
-		initRand := Integer(-1 * Random(1, this.wsData.heartbeatInterval))
+		initRand := Integer(-Random(1, this.wsData.heartbeatInterval))
 		SetTimer(this.ws_SendHeartbeat.bind(this), initRand)
 		SetTimer(SetTimer.Bind(this.ws_SendHeartbeat.bind(this), this.wsData.heartbeatInterval), initRand+1)
 	}

@@ -18,6 +18,7 @@ class WinUtilities {
 		return windows
 	}
 
+	; this is not actually that much more performant than getAllWindowInfo.
 	static getBasicInfo(getHidden := false, blacklist := this.defaultBlacklist) {
 		winArr := this.getAllWindows(getHidden, blacklist)
 		for i, hwnd in winArr {

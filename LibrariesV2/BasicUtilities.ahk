@@ -242,7 +242,7 @@ cmdRetAsync(sCmd, callBackFuncObj?, encoding := "CP" . DllCall('GetOEMCP', 'UInt
 	sTemp := Buffer(4096)
 	SetTimer(readFileCheck, timePerCheck)
 	if IsSet(timeout)
-		SetTimer(closeHandle, -1 * timeout)
+		SetTimer(closeHandle, -timeout)
 	return 1
 
 	readFileCheck() {
@@ -421,7 +421,7 @@ colorPreviewGUI(color) {
 
 timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 	ToolTip(text, x?, y?, whichTooltip?)
-	SetTimer(IsSet(whichTooltip) ? stopTooltip.bind(whichTooltip) : stopTooltip, -1 * durationMS)
+	SetTimer(IsSet(whichTooltip) ? stopTooltip.bind(whichTooltip) : stopTooltip, -durationMS)
 
 	stopTooltip(whichTooltip?) {
 		ToolTip(, , , whichTooltip?)
@@ -844,7 +844,7 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 		whr := ComObject("Msxml2.XMLHTTP")
 		whr.Open(method, url, true)
 		whr.OnReadyStateChange := callBackFuncObj
-	whr.Send()
+		whr.Send()
 	}
 	else
 		whr := ComObject("WinHttp.WinHttpRequest.5.1")
@@ -896,102 +896,17 @@ tryEditTextFile(editor := A_WinDir . "\system32\notepad.exe", params := "", *) {
 	; Run('Notepad++ "' . path '"')
 }
 
+; returns a microseconds-precise float representing to seconds elapsed since start of the system
+QPC() {
+	static Freq := 0, init := DllCall("QueryPerformanceFrequency", "Int64P", &Freq)
+	DllCall("QueryPerformanceCounter", "Int64P", &count := 0)
+	Return count / freq
+}
 
 doNothing(*) {
 	return
 }
 
-; class ExGui {
-
-; 	__New(debug := 0, useTrayMenu := 0, name := "ExGUI") {
-
-; 		this.settingsManager("Load")
-; 		this.settings.debug := debug
-
-; 		this.menu := this.createMenu()
-; 		if (useTrayMenu) {
-; 			tableFilterMenu := TrayMenu.submenus["tablefilter"]
-; 			tableFilterMenu.Add("Open GUI", (*) => this.guiCreate())
-; 			tableFilterMenu.Add("Use Dark Mode", (iName, iPos, menuObj) => this.settingsHandler("Darkmode", -1, true, menuObj, iName))
-; 			if (this.settings.darkMode)
-; 				tableFilterMenu.Check("Use Dark Mode")
-; 		}
-; 		A_TrayMenu.Add("ExGUI", tableFilterMenu)
-; 	}
-
-; 	guiCreate() {
-; 		newGui := Gui("+Border")
-; 		newGui.OnEvent("Close", this.guiClose.bind(this))
-; 		newGui.OnEvent("Escape", this.guiClose.bind(this))
-; 		newGui.OnEvent("DropFiles", this.dropFiles.bind(this))
-; 		newGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
-; 		newGui.Show("AutoSize")
-; 	}
-
-; 	toggleGuiDarkMode(_gui, dark) {
-; 		static WM_THEMECHANGED := 0x031A
-; 		;// title bar dark
-; 		if (VerCompare(A_OSVersion, "10.0.17763")) {
-; 			attr := 19
-; 			if (VerCompare(A_OSVersion, "10.0.18985")) {
-; 				attr := 20
-; 			}
-; 			DllCall("dwmapi\DwmSetWindowAttribute", "ptr", _gui.hwnd, "int", attr, "int*", dark ? true : false, "int", 4)
-; 		}
-; 		_gui.BackColor := (dark ? this.settings.darkThemeColor : "Default") ; "" <-> "Default" <-> 0xFFFFFF
-; 		font := (dark ? "c" this.settings.darkThemeFontColor : "cDefault")
-; 		_gui.SetFont(font)
-; 		for cHandle, ctrl in _gui {
-; 			ctrl.Opt(dark ? "+Background" this.settings.darkThemeColor : "-Background")
-; 			ctrl.SetFont(font)
-; 			if (ctrl is Gui.Button || ctrl is Gui.ListView) {
-; 				; todo: listview headers dark -> https://www.autohotkey.com/boards/viewtopic.php?t=115952
-; 				; and https://www.autohotkey.com/board/topic/76897-ahk-u64-issue-colored-text-in-listview-headers/
-; 				; maybe https://www.autohotkey.com/boards/viewtopic.php?t=87318
-; 				DllCall("uxtheme\SetWindowTheme", "ptr", ctrl.hwnd, "str", (dark ? "DarkMode_Explorer" : ""), "ptr", 0)
-; 			}
-; 			if (ctrl.Name && SubStr(ctrl.Name, 1, 10) == "EditAddRow") {
-; 				this.validValueChecker(ctrl)
-; 			}
-; 		}
-; 		; todo: setting to make this look like this ?
-; 		; DllCall("uxtheme\SetWindowTheme", "ptr", _gui.LV.hwnd, "str", "Explorer", "ptr", 0)
-; 	}
-
-; 	guiClose(guiObj) {
-; 		objRemoveValue(this.guis, guiObj)
-; 		guiObj.Destroy()
-; 	}
-
-; 	dropFiles(gui, ctrlObj, fileArr, x, y) {
-; 		if (fileArr.Length > 1)
-; 			return
-; 		this.loadData(fileArr[1], gui)
-; 	}
-
-; 	settingsHandler(setting := "", value := "", save := true, extra*) {
-; 		switch setting, 0 {
-; 			case "darkmode":
-; 				this.settings.darkMode := (value == -1 ? !this.settings.darkMode : value)
-; 				this.toggleDarkMode(this.settings.darkMode, extra*)
-; 			default:
-; 				throw(Error("uhhh setting: " . setting))
-; 		}
-; 		if (save)
-; 			this.settingsManager("Save")
-; 	}
-
-
-; 	static getDefaultSettings() {
-; 		settings := {
-; 			debug: false,
-; 			darkMode: true,
-; 			darkThemeColor: "0x1E1E1E",
-; 			darkThemeFontColor: "0xFFFFFF"
-; 		}
-; 		return settings
-; 	}
-; }
 
 
 print(value, options?, putNewline := true, compress := false, compact := false, strEscape := true, fallbackMsgbox := true) {

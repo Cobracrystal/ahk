@@ -298,7 +298,7 @@ validateTimeUnit(timeUnit) {
 
 convertToSeconds(amount, unit) {
 	if (amount < 0)
-		return -1 * DateDiffW(DateAddW("1601", amount * -1, unit), "1601", "Seconds")
+		return -DateDiffW(DateAddW("1601", amount * -1, unit), "1601", "Seconds")
 	return DateDiffW(DateAddW("1601", amount, unit), "1601", "Seconds")	
 }
 

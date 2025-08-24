@@ -31,7 +31,7 @@ strReverse(str) {
 
 strRotate(str, offset := 0) {
 	offset := Mod(offset, StrLen(str))
-	return SubStr(str, -1 * offset + 1) . SubStr(str, 1, -1 * offset)
+	return SubStr(str, -offset + 1) . SubStr(str, 1, -offset)
 }
 
 strMultiply(str, count) {
@@ -390,8 +390,8 @@ strLimitToDiffs(str1, str2, maxOffset := 5, radius := 10, fillChar := "#", separ
 			s2 .= c2[1] strfill(diff.str2, diff.length2,, fillChar) c2[2] separator
 		}
 	}
-	s1 := re1 ? SubStr(s1, 1, -1 * StrLen(separator)) : RTrim(s1, " `t`r`n")
-	s2 := re2 ? SubStr(s2, 1, -1 * StrLen(separator)) : RTrim(s2, " `t`r`n")
+	s1 := re1 ? SubStr(s1, 1, -StrLen(separator)) : RTrim(s1, " `t`r`n")
+	s2 := re2 ? SubStr(s2, 1, -StrLen(separator)) : RTrim(s2, " `t`r`n")
 	return [s1, s2]
 }
 

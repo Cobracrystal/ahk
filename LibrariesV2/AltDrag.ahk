@@ -67,13 +67,6 @@ class AltDrag {
 		this.aligningRadius := 30
 		this.blacklist := WinUtilities.defaultBlacklist
 		this.modifierKeyList := Map('#', "LWin", '!', "Alt", '^', 'Control', '+', 'Shift')
-		this.blacklist := [
-			"ahk_class MultitaskingViewFrame ahk_exe explorer.exe",
-			"ahk_class Windows.UI.Core.CoreWindow",
-			"ahk_class WorkerW ahk_exe explorer.exe",
-			"ahk_class Shell_SecondaryTrayWnd ahk_exe explorer.exe",
-			"ahk_class Shell_TrayWnd ahk_exe explorer.exe"
-		]	; initial blacklist. Includes alt+tab screen, startmenu, desktop screen and taskbars (in that order).
 		A_TrayMenu.Add("Enable Snapping", this.snappingToggle)
 		A_TrayMenu.ToggleCheck("Enable Snapping")
 	}
@@ -132,7 +125,8 @@ class AltDrag {
 
 		calculateWindowSnapping() {
 			; win := { x: L, y: T, w: R - L, h: B - T, LB: leftBorder, TB: topBorder, RB: rightBorder, BB: bottomBorder}
-			for i, win in arrayInReverse(curWindowPositions) { ; iterate backwards so that the prioritized snap is highest in z-order (and lowest in array)
+			Loop(curWindowPositions.Length) {
+				win := curWindowPositions[-A_Index] ; iterate backwards so that the prioritized snap is highest in z-order (and lowest in array)
 				; check whether the windows are even near each other -> must vertically overlap to have horizontal snap
 				if (isClamped(ny, win.y, win.y2) || isClamped(win.y, ny, ny + pos.h)) {
 					if (isSnap := (abs(nx - win.x2) < this.snappingRadius)) ; left edge of moving window to right edge of desktop window
@@ -325,6 +319,18 @@ class AltDrag {
 		WinUtilities.borderlessFullscreenWindow(wHandle)
 	}
 
+	static getWindowRects(exceptForwHandle) {
+		curWindowPositions := []
+		for i, v in WinUtilities.getBasicInfo() {
+			if v.state != 0 || v.hwnd == exceptForwHandle
+				continue
+			v.x2 := v.x + v.w
+			v.y2 := v.y + v.h
+			curWindowPositions.push(v)	
+		}
+		return curWindowPositions
+	}
+
 	static snappingToggle(*) {
 		AltDrag.snapToMonitorEdges := !AltDrag.snapToMonitorEdges
 		AltDrag.snapToWindowEdges := !AltDrag.snapToWindowEdges
@@ -351,17 +357,5 @@ class AltDrag {
 	static sendClickUp(hhL, hkey) {
 		Click("Up " . hhL)
 		Hotkey(hkey, "Off")
-	}
-
-	static getWindowRects(exceptForwHandle) {
-		curWindowPositions := []
-		for i, v in WinUtilities.getBasicInfo() {
-			if v.state != 0 || v.hwnd == exceptForwHandle
-				continue
-			v.x2 := v.x + v.w
-			v.y2 := v.y + v.h
-			curWindowPositions.push(v)	
-		}
-		return curWindowPositions
 	}
 }
