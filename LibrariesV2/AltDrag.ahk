@@ -65,7 +65,7 @@ class AltDrag {
 		this.snapOnlyWhileHoldingModifierKey := true ; snaps to edges/windows while holding alt (or other modifier)
 		this.snappingRadius := 30 ; in pixels
 		this.aligningRadius := 30
-		this.blacklist := WinUtilities.defaultBlacklist
+		this.blacklist := WinUtilities.defaultBlacklist.Clone()
 		this.modifierKeyList := Map('#', "LWin", '!', "Alt", '^', 'Control', '+', 'Shift')
 		A_TrayMenu.Add("Enable Snapping", this.snappingToggle)
 		A_TrayMenu.ToggleCheck("Enable Snapping")
@@ -125,8 +125,7 @@ class AltDrag {
 
 		calculateWindowSnapping() {
 			; win := { x: L, y: T, w: R - L, h: B - T, LB: leftBorder, TB: topBorder, RB: rightBorder, BB: bottomBorder}
-			Loop(curWindowPositions.Length) {
-				win := curWindowPositions[-A_Index] ; iterate backwards so that the prioritized snap is highest in z-order (and lowest in array)
+			for i, win in arrayInReverse(curWindowPositions) { ; iterate backwards so that the prioritized snap is highest in z-order (and lowest in array)
 				; check whether the windows are even near each other -> must vertically overlap to have horizontal snap
 				if (isClamped(ny, win.y, win.y2) || isClamped(win.y, ny, ny + pos.h)) {
 					if (isSnap := (abs(nx - win.x2) < this.snappingRadius)) ; left edge of moving window to right edge of desktop window

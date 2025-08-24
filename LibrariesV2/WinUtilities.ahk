@@ -463,7 +463,7 @@ class WinUtilities {
 		"ahk_class WorkerW ahk_exe explorer.exe",
 		"ahk_class Progman ahk_exe explorer.exe",
 		"ahk_class Shell_TrayWnd ahk_exe explorer.exe",
-		"ahk_class Shell_SecondaryTrayWnd ahk_exe explorer.exe",
+		"ahk_class Shell_SecondaryTrayWnd ahk_exe explorer.exe"
 		; "Microsoft Text Input Application",
 		; "Default IME",
 		; "MSCTFIME UI"
