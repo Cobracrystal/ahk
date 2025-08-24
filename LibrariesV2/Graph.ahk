@@ -9,8 +9,7 @@
 The resulting graph has 4 nodes, where node 0 connects to points 1,2, node 1 connects to 0,3, 2 to 3, 3 to 1.
 
 EXAMPLE USAGE:
-gr := Graph(true)
-gr.loadFromFile("Graphs\graphSmall.txt")
+gr := GraphUtils.loadFromFile("Graphs\graphSmall.txt", true)
 path := GraphUtils.findPath(gr, gr.nodes[0], gr.nodes[1337]) ; => gives array of nodes in path
 grSmall := GraphUtils.getSpanningArborescence(gr, gr.nodes[0]) => gives back a new graph
 return
@@ -25,13 +24,13 @@ WHAT IF YOU HAVE A SOLITARY NODE WITH NO NEIGHBOURS.
 class GraphUtils {
 
 	/**
-	 * Finds path between start and end with smallest weight (or smallest # of edges).
+	 * Finds path between start and end with smallest # of edges.
 	 * @param {Graph} g 
 	 * @param {Graph.Node} start 
 	 * @param {Graph.Node} end 
 	 * @returns {Bool} 
 	 */
-	static shortestPath(g, start, end, useWeight := true) {
+	static shortestPath(g, start, end) {
 		reverseTree := Graph(true) 
 		reverseTree.addNode(start.id)
 		stack := [start]
@@ -205,6 +204,66 @@ class GraphUtils {
 		return arborescence
 	}
 
+	static loadFromFile(fileName, asDirected?, asWeighted?, withFlow?) {
+		gr := Graph()
+		f := FileOpen(fileName, "r")
+		options := f.ReadLine()
+		if (IsSet(asDirected))
+			gr.isDirected := asDirected
+		else if (InStr(options, "directed") && !InStr(options, "undirected"))
+			gr.isDirected := true
+		if (IsSet(asWeighted))
+			gr.isWeighted := asWeighted
+		else if (InStr(options, "weighted") && !InStr(options, "unweighted"))
+			gr.isWeighted := true
+		if (IsSet(withFlow))
+			gr.hasFlow := withFlow
+		else if (InStr(options, "Flow"))
+			gr.hasFlow := true
+		neighbours := Map()
+		while (line := f.ReadLine()) {
+			if (line = "")
+				break
+			arr := StrSplit(RegexReplace(Trim(line), "\s+", " "), " ")
+			nodeID := Integer(arr[1])
+			if (arr.Length > 1)
+				nodeNeighbours := StrSplit(arr[2], "-")
+			else
+				nodeNeighbours := []
+			if (arr.Length > 2 && !IsSet(asWeighted))
+				gr.isWeighted := true
+			for i, e in nodeNeighbours {
+				nodeNeighbours[i] := {id: Integer(e)}
+				if (gr.isWeighted)
+					nodeNeighbours[i].weight := arr.Has(3) ? Number(arr[3]) : 1
+				if (gr.hasFlow) {
+					j := gr.isWeighted ? 4 : 3
+					nodeNeighbours[i].capacity := arr.Has(j) ? Number(arr[j]) : 1
+					nodeNeighbours[i].flow := arr.Has(j+1) ? Number(arr[j+1]) : 1
+				}
+			}
+			if (gr.nodes.Has(nodeID))
+				neighbours[nodeID].push(nodeNeighbours*)
+			else {
+				gr.addNode(nodeID)
+				neighbours[nodeID] := nodeNeighbours
+			}
+		}
+		for nodeID, nodeNeighbours in neighbours
+			for neighbour in nodeNeighbours {
+				if !(gr.nodes.Has(neighbour.id)) ; neighbours may not be defined as their own node
+					gr.addNode(neighbour.id)
+				gr.nodes[nodeID].addEdge(gr.nodes[neighbour.id], gr.isWeighted ? neighbour.weight : unset, gr.hasFlow ? neighbour.capacity : unset, gr.hasFlow ? neighbour.flow : unset)
+				if (!gr.isDirected)
+					gr.nodes[neighbour.id].addEdge(gr.nodes[nodeID], gr.isWeighted ? neighbour.weight : unset, gr.hasFlow ? neighbour.capacity : unset, gr.hasFlow ? neighbour.flow : unset)
+			}
+		return gr
+	}
+	; load in graph
+	; -> build the graph by iterating over all nodes in the order that they are given, ignoring all nodes given only by connection
+	; -> then, when we have all node objects, we initialize the node objects with their connected nodes by iterating over their saved node IDs.
+	; -> then, we iterate over all edges and add them to the graph
+
 	class FibonacciHeap {
 		__New() {
 			this.graph := Graph(true)
@@ -332,26 +391,25 @@ class GraphUtils {
 
 class Graph {
 	nodes := Map()
+	maxID := ""
+	minID := ""
 	isDirected := false
 	isWeighted := false
 	hasFlow := false
 
 	/**
-	 * Creates new Graph Instance 
-	 * @param {Integer} isDirected Whether the Graph is directed 
-	 * @param filePath a path to a file containing a compatible graph format
+	 * Creates a new graph instance
+	 * @param isDirected Whether the Graph is directed
+	 * @param isWeighted 
+	 * @param hasFlow 
 	 */
-	__New(isDirected?, filePath?, isWeighted?, hasFlow?) {
-		if (IsSet(filePath))
-			this.loadFromFile(filePath, isDirected?, isWeighted?, hasFlow?)
-		else {
-			if (IsSet(isDirected))
-				this.isDirected := isDirected
-			if (IsSet(isWeighted))
-				this.isWeighted := isWeighted
-			if (IsSet(hasFlow))
-				this.hasFlow := hasFlow
-		}
+	__New(isDirected?, isWeighted?, hasFlow?) {
+		if (IsSet(isDirected))
+			this.isDirected := isDirected
+		if (IsSet(isWeighted))
+			this.isWeighted := isWeighted
+		if (IsSet(hasFlow))
+			this.hasFlow := hasFlow
 	}
 
 	getNode(id?) {
@@ -363,25 +421,23 @@ class Graph {
 	
 
 	/**
-	 * @returns {Graph.Node} 
+	 * 
+	 * @param {Integer?} nodeID The ID of the node
+	 * @param nodeName 
+	 * @returns {Graph.Node} The created node 
 	 */
-	addNode(nodeID?) {
+	addNode(nodeID?, nodeName?) {
 		if (IsSet(nodeID)) {
 			if (this.nodes.Has(nodeID))
 				throw(Error(Format("Node {} already exists.", nodeID)))
-		}
-		else {
-			if (!this.nodes.Has(this.nodes.Count + 1))
-				nodeID := this.nodes.Count + 1
-			else
-				Loop(this.nodes.Count) {
-					if !(this.nodes.Has(this.nodes.Count + A_Index + 1)) {
-						nodeID := A_Index
-						break
-					}
-				}
-		}
-		return (this.nodes[nodeID] := Graph.Node(nodeID))
+		} else
+			nodeID := IsInteger(this.maxID) ? this.maxID + 1 : 1
+		if IsInteger(this.maxID) ? nodeID > this.maxID : true
+			this.maxID := nodeID
+		if IsInteger(this.minID) ? nodeID < this.minID : true
+			this.minID := nodeID
+		this.nodes[nodeID] := Graph.Node(nodeID, nodeName?)
+		return this.nodes[nodeID]
 	}
 
 	/**
@@ -403,7 +459,7 @@ class Graph {
 	}
 	
 	/**
-	 * 
+	 * Add an edge to a graph. This will register the edge for node head (and if undirected, also for tail)
 	 * @param {Graph.Node} head 
 	 * @param {Graph.Node} tail 
 	 * @param {Integer} weight 
@@ -420,95 +476,74 @@ class Graph {
 	}
 
 	/**
-	 * Merges given Graph into current graph, without connecting any edges.
+	 * Merges given Graph into current graph, resulting in a graph containing all nodes and edges specified in either graph. 
+	 * Edge properties from current graph are not updated, only missing ones are. (Unless specified in option)
 	 * @param {Graph} g2 
+	 * @param {Boolean} updateProps Whether to update edge properties
 	 * @returns {Graph} 
 	 */
 	mergeGraph(g2) {
+		for nodeID, node in g2.nodes
+			if !this.nodes.has(nodeID)
+				this.addNode(nodeID)
+		for nodeID, node in g2.nodes {
+			for edgeEndID, edge in node.getEdges()
+				this.nodes[nodeID].addEdge(this.nodes[edgeEndID], edge.getAllProperties()*)
+		}
+	}
+
+	/**
+	 * Adds another graph to this graph, without connecting any edges
+	 * @param g2 
+	 */
+	addGraph(g2) {
+		if this.maxID < g2.minID || g2.maxID < this.minID { ; no overlap
+			for nodeID, node in g2.nodes
+				projectedNode := this.addNode(nodeID)
+			for nodeID, node in g2.nodes
+				for edgeEndID, edge in node.edges
+					this.nodes[nodeID].addEdge(this.nodes[edgeEndID], edge.getAllProperties()*)
+		} else {
+			offset := this.maxID - g2.minID + 1
+			for nodeID, node in g2.nodes
+				projectedNode := this.addNode(offset + nodeID)
+			for nodeID, node in g2.nodes
+				for edgeEndID, edge in node.edges
+					this.nodes[offset + nodeID].addEdge(this.nodes[offset + edgeEndID], edge.getAllProperties()*)
+		}
 		return this
 	}
 
-	loadFromFile(fileName, asDirected?, asWeighted?, withFlow?) {
-		f := FileOpen(fileName, "r")
-		options := f.ReadLine()
-		if (IsSet(asDirected))
-			this.isDirected := asDirected
-		else if (InStr(options, "directed") && !InStr(options, "undirected"))
-			this.isDirected := true
-		if (IsSet(asWeighted))
-			this.isWeighted := asWeighted
-		else if (InStr(options, "weighted") && !InStr(options, "unweighted"))
-			this.isWeighted := true
-		if (IsSet(withFlow))
-			this.hasFlow := withFlow
-		else if (InStr(options, "Flow"))
-			this.hasFlow := true
-		neighbours := Map()
-		while (line := f.ReadLine()) {
-			if (line = "")
-				break
-			arr := StrSplit(RegexReplace(Trim(line), "\s+", " "), [" "])
-			nodeID := Integer(arr[1])
-			if (arr.Length > 1)
-				nodeNeighbours := StrSplit(arr[2], "-")
-			else
-				nodeNeighbours := []
-			if (arr.Length > 2)
-				this.isWeighted := true
-			for i, e in nodeNeighbours {
-				nodeNeighbours[i] := {id: Integer(e)}
-				if (this.isWeighted)
-					nodeNeighbours[i].weight := arr.Has(3) ? Number(arr[3]) : 1
-				if (this.hasFlow) {
-					j := this.isWeighted ? 4 : 3
-					nodeNeighbours[i].capacity := arr.Has(j) ? Number(arr[j]) : 1
-					nodeNeighbours[i].flow := arr.Has(j+1) ? Number(arr[j+1]) : 1
-				}
-			}
-			if (this.nodes.Has(nodeID))
-				neighbours[nodeID].push(nodeNeighbours*)
-			else {
-				this.nodes[nodeID] := Graph.Node(nodeID)
-				neighbours[nodeID] := nodeNeighbours
-			}
-		}
-		for nodeID, nodeNeighbours in neighbours
-			for nInfo in nodeNeighbours {
-				if !(this.nodes.Has(nInfo.id))
-					this.nodes[nInfo.id] := Graph.Node(nInfo.id)
-				this.nodes[nodeID].addEdge(this.nodes[nInfo.id], this.isWeighted ? nInfo.weight : unset, this.hasFlow ? nInfo.capacity : unset, this.hasFlow ? nInfo.flow : unset)
-				if (!this.isDirected)
-					this.nodes[nInfo.id].addEdge(this.nodes[nodeID], this.isWeighted ? nInfo.weight : unset, this.hasFlow ? nInfo.capacity : unset, this.hasFlow ? nInfo.flow : unset)
-			}
-	}
-	; load in graph
-	; -> build the graph by iterating over all nodes in the order that they are given, ignoring all nodes given only by connection
-	; -> then, when we have all node objects, we initialize the node objects with their connected nodes by iterating over their saved node IDs.
-	; -> then, we iterate over all edges and add them to the graph
-
-	toString() {
+	/**
+	 * Creates a string representing the Graph Object that can be used when saving Graphs
+	 * @param {Integer} pretty Whether to make the output human-readable. If this is true, the output will be more understandable, but cannot be parsed by GraphUtils.loadfromFile
+	 * @returns {String} 
+	 */
+	toString(pretty := true) {
 		str := this.nodes.Count ", " (this.isDirected ? "Directed" : "Undirected") ", " (this.isWeighted ? "Weighted" : "Unweighted") ", " (this.hasFlow ? "Flow" : "No Flow") "`n"
 		seenNodes := Map()
-		for id, node in this.nodes {
+		for nodeID, node in this.nodes {
 			uniqueEdges := Map()
-			seenNodes[id] := true
+			seenNodes[nodeID] := true
 			for j, edge in node.edges {
-				edgeProperties := (edge.HasOwnProp("weight") ? edge.weight ' ' : "") . (this.HasOwnProp("capacity") ? edge.capacity ' ' : "") . (this.HasOwnProp("flow") ? edge.flow : "")
+				edgeProperties := (edge.HasOwnProp("weight") ? (pretty?'W:':'') edge.weight ' ' : "") 
+					. (this.HasOwnProp("capacity") ? (pretty?'C:':'') edge.capacity ' ' : "") 
+					. (this.HasOwnProp("flow") ? (pretty?'F:':'') edge.flow : "")
 				if (uniqueEdges.Has(edgeProperties))
 					uniqueEdges[edgeProperties].push(edge.tail.id)
 				else
 					uniqueEdges[edgeProperties] := [edge.tail.id]
 			}
-			nodeStr := node.allNeighbours.Count > 0 ? "" : id
+			nodeStr := node.allNeighbours.Count > 0 ? "" : nodeID
 			for edgeProperties, edges in uniqueEdges {
 				edgeStr := ""
 				for tailID in edges {
 					seenNodes[tailID] := true
 					edgeStr .= tailID "-"
 				}
-				nodeStr .= id ' ' RTrim(edgeStr, "-") ' ' edgeProperties "`n"
+				nodeStr .= nodeID (pretty ? '->': ' ') RTrim(edgeStr, "-") ' ' edgeProperties "`n"
 			}
-			str .= nodeStr == "" ? "" : RTrim(nodeStr, "`n") "`n"
+			str .= nodeStr == "" ? "" : RTrim(nodeStr, "`n") . "`n"
 		}
 		return RTrim(str, "`n")
 	}
@@ -565,7 +600,7 @@ class Graph {
 		}
 
 
-		getID() { ; -> ID of node
+		getID() {
 			return this.id
 		}
 
