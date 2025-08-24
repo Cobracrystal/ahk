@@ -1081,6 +1081,40 @@ class SongDownloader {
 			print("All data correct")
 		return comparisons
 	}
+
+	static removeMetadataDuplicates(foldertoCheck := this.settings.outputSubFolder) {
+		SplitPath(folderToCheck, &name)
+		folder := this.settings.outputBaseFolder "\" name
+		if FileExist(path := Format(this.settings.logFolder '\' this.TEMPLATES.METADATAFILE, name))
+			data := MapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
+		else
+			return print("There's nothing to check against")
+		fields := arrayMerge(this.settings.metadataFields, ["link", "description"])
+		for v in data
+			for field in fields
+				if !v.HasOwnProp(field)
+					v.%field% := ""
+		duplicates := objGetDuplicates(data, v => this.getFileNameFromMetadata(v), false, true)
+		print(objDoForEach(duplicates, v => objFromArrays(v, objDoForEach(v, q => this.getFileNameFromMetadata(data[q])))))
+		queue := []
+		for indices in duplicates {
+			j := indices[1]
+			for i, index in indices {
+				if i == 1
+					continue
+				if objCompare(data[j], data[index])
+					queue.push(index)
+			}
+		}
+		queue := arraySortNumerically(queue, "N R")
+		for e in queue
+			data.RemoveAt(e)
+		if queue.length {
+			f := FileOpen(path, "w", "UTF-8")
+			f.Write(toString(data, 0, 0, 1))
+			f.close()
+		}
+	}
 	
 	static compareFolderToData(folder, data, verifyMetadata := true, onlyReturnMismatches := true) {
 		SplitPath(folder, &name)
@@ -1130,7 +1164,7 @@ class SongDownloader {
 				o.exists := false
 			}
 			if irregular
-				o.other := (o.other ? o.other ", " : "") "Irregular Filename not marked: Metadata is (" dataPoint.artist " - " dataPoint.title ")"
+				o.other := (o.other ? o.other ", " : "") "Irregular Filename not marked: Metadata is `"" dataPoint.artist " - " dataPoint.title "`""
 			comparisons.push(o)
 		}
 		for f in getFolderAsArr(folder,,,0) {
