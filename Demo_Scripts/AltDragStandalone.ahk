@@ -11,7 +11,6 @@
 
 ; Technically, scaling via Alt+ScrollUp stops a bit before the *actual* max window size is reached (due to client area differences)
 */
-#Include ..\LibrariesV2\BasicUtilities.ahk
  ; <- uncomment the /* if you intend to use it as a standalone script
 ; Drag Window
 !LButton::{
@@ -104,7 +103,6 @@ class AltDrag {
 			return this.sendKey(cleanHotkey)
 		pos := this.WinGetPosEx(wHandle)
 		curWindowPositions := this.getWindowRects(wHandle)
-		print(curWindowPositions)
 		WinActivate(wHandle)
 		while (GetKeyState(cleanHotkey, "P")) {
 			MouseGetPos(&mouseX2, &mouseY2)
