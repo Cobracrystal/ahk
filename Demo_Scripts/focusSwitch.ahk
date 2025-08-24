@@ -1,5 +1,4 @@
 #SingleInstance Force
-#Include ..\LibrariesV2\BasicUtilities.ahk
 ; switch focus, limited per monitor
 !Up::		focusSwitch.moveFocus("U")
 !Down::		focusSwitch.moveFocus("D")
@@ -118,14 +117,14 @@ class focusSwitch {
 		return 0
 	}
 
-	static objSort(obj, fn := (a => a), mode := "") {
+	static objSort(obj, fn := (a => a), sortMode := "") {
 		isArrLike := obj is Array || obj is Map
 		sortedArr := []
 		indexMap := Map()
 		counterMap := Map()
-		if objGetValueCount(obj) == 0
+		if obj.Length == 0
 			return sortedArr
-		for i, e in objGetEnumerator(obj) {
+		for i, e in obj {
 			v := String(fn(e))
 			if (indexMap.Has(v))
 				indexMap[v].push(i)
