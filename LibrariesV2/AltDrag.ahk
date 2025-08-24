@@ -12,7 +12,7 @@
 ; Technically, scaling via Alt+ScrollUp stops a bit before the *actual* max window size is reached (due to client area differences)
 */
 
-/* ; <- uncomment this if you intend to use it as a standalone script
+/* ; <- uncomment the /* if you intend to use it as a standalone script
 ; Drag Window
 !LButton::{
 	AltDrag.moveWindow()
@@ -54,11 +54,19 @@ class AltDrag {
 
 	static __New() {
 		InstallMouseHook()
-		this.snapToMonitorEdges := true ; can be toggled in TrayMenu, this is the initial setting
-		this.snapToWindowEdges := true ; can be toggled in TrayMenu, this is the initial setting
-		this.snapOnlyWhileHoldingAlt := true 
+		; note:
+		; snapping can be toggled (both at once) in the tray menu.
+		; snapping to window edges includes all windows (that are actual windows on the desktop)
+		; with a window behind another, that can cause snapping to windows which aren't visible
+		; aligning windows is only possible when resizing in the corresponding corner of the window
+		this.snapToMonitorEdges := true
+		this.snapToWindowEdges := true
+		this.snapToAlignWindows := true
+		this.snapOnlyWhileHoldingModifierKey := true ; snaps to edges/windows while holding alt (or other modifier)
 		this.snappingRadius := 30 ; in pixels
+		this.aligningRadius := 30
 		this.blacklist := WinUtilities.defaultBlacklist
+		this.modifierKeyList := Map('#', "LWin", '!', "Alt", '^', 'Control', '+', 'Shift')
 		this.blacklist := [
 			"ahk_class MultitaskingViewFrame ahk_exe explorer.exe",
 			"ahk_class Windows.UI.Core.CoreWindow",
@@ -83,30 +91,28 @@ class AltDrag {
 	}
 
 	static moveWindow(overrideBlacklist := false) {
-		cleanHotkey := RegexReplace(A_ThisHotkey, "#|!|\^|\+|<|>|\$|~", "")
+		RegExMatch(A_ThisHotkey, "((?:#|!|\^|\+|<|>|\$|~)+)(.*)", &hkeyMatch)
+		cleanHotkey := hkeyMatch[2]
+		modifier := RegExReplace(hkeyMatch[1], "\$|~|<|>")
+		modSymbol := this.modifierKeyList.Has(modifier) ? this.modifierKeyList[modifier] : 'Alt'
 		SetWinDelay(3)
 		CoordMode("Mouse", "Screen")
 		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
 		if ((WinUtilities.winInBlacklist(wHandle, this.blacklist) && !overrideBlacklist) || WinGetMinMax(wHandle) != 0)
 			return this.sendKey(cleanHotkey)
 		pos := WinUtilities.WinGetPosEx(wHandle)
-		curWindowPositions := []
-		for i, v in WinUtilities.getBasicInfo() {
-			if v.state != 0 || v.hwnd == wHandle
-				continue
-			v.x2 := v.x + v.w
-			v.y2 := v.y + v.h
-			curWindowPositions.push(v)	
-		}
+		curWindowPositions := this.getWindowRects(wHandle)
 		WinActivate(wHandle)
 		while (GetKeyState(cleanHotkey, "P")) {
 			MouseGetPos(&mouseX2, &mouseY2)
 			nx := pos.x + mouseX2 - mouseX1
 			ny := pos.y + mouseY2 - mouseY1
-			if this.snapToWindowEdges
-				calculateWindowSnapping()
-			if this.snapToMonitorEdges
-				calculateMonitorSnapping()
+			if !this.snapOnlyWhileHoldingModifierKey || GetKeyState(modSymbol) {
+				if this.snapToWindowEdges
+					calculateWindowSnapping()
+				if this.snapToMonitorEdges
+					calculateMonitorSnapping()
+			}
 			; WinUtilities.WinMoveEx(hwnd, nx, ny)
 			DllCall("SetWindowPos", "UInt", wHandle, "UInt", 0, "Int", nx - pos.LB, "Int", ny - pos.TB, "Int", 0, "Int", 0, "Uint", 0x0005)
 			DllCall("Sleep", "UInt", 5)
@@ -126,41 +132,49 @@ class AltDrag {
 
 		calculateWindowSnapping() {
 			; win := { x: L, y: T, w: R - L, h: B - T, LB: leftBorder, TB: topBorder, RB: rightBorder, BB: bottomBorder}
-			for i, win in arrayInReverse(curWindowPositions) {
-				if (isClamped(ny, win.y, win.y2) || isClamped(ny + pos.h, win.y, win.y2)) {
-					if (abs(nx - win.x2) < this.snappingRadius) ; left edge of moving window to right edge of desktop window
+			for i, win in arrayInReverse(curWindowPositions) { ; iterate backwards so that the prioritized snap is highest in z-order (and lowest in array)
+				; check whether the windows are even near each other -> must vertically overlap to have horizontal snap
+				if (isClamped(ny, win.y, win.y2) || isClamped(win.y, ny, ny + pos.h)) {
+					if (isSnap := (abs(nx - win.x2) < this.snappingRadius)) ; left edge of moving window to right edge of desktop window
 						nx := win.x2		; left edge
-					else if (abs(nx + pos.w - win.x) < this.snappingRadius) ; right edge to left edge
+					else if (isSnap |= (abs(nx + pos.w - win.x) < this.snappingRadius)) ; right edge to left edge
 						nx := win.x - pos.w 	; right edge
+					if (this.snapToAlignWindows && isSnap) {
+						if (abs(ny - win.y) < this.aligningRadius)
+							ny := win.y
+						else if (abs(ny + pos.h - win.y2) < this.aligningRadius)
+							ny := win.y2 - pos.h
+					}
 				}
-				if (isClamped(nx, win.x, win.x2) || isClamped(nx + pos.w, win.x, win.x2)) {
-					if (abs(ny - win.y2) < this.snappingRadius) ; top edge to bottom edge
-						ny := win.y2				; top edge
-					else if (abs(ny + pos.h - win.y) < this.snappingRadius)
+				if (isClamped(nx, win.x, win.x2) || isClamped(win.x, nx, nx + pos.w)) {
+					if (isSnap := (abs(ny - win.y2) < this.snappingRadius)) ; top edge to bottom edge
+						ny := win.y2 ; top edge
+					else if (isSnap |= (abs(ny + pos.h - win.y) < this.snappingRadius))
 						ny := win.y - pos.h	; bottom edge
+					if (this.snapToAlignWindows && isSnap) {
+						if (abs(nx - win.x) < this.aligningRadius)
+							nx := win.x
+						else if (abs(ny + pos.x - win.x2) < this.aligningRadius)
+							nx := win.x2 - pos.x
+					}
 				}
 			}
 		}
 	}
 
 	static resizeWindow(overrideBlacklist := false) {
-		cleanHotkey := RegexReplace(A_ThisHotkey, "#|!|\^|\+|<|>|\$|~", "")
+		RegExMatch(A_ThisHotkey, "((?:#|!|\^|\+|<|>|\$|~)+)(.*)", &hkeyMatch)
+		cleanHotkey := hkeyMatch[2]
+		modifier := RegExReplace(hkeyMatch[1], "\$|~|<|>")
+		modSymbol := this.modifierKeyList.Has(modifier) ? this.modifierKeyList[modifier] : 'Alt'
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
 		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
 		if ((WinUtilities.winInBlacklist(wHandle, this.blacklist) && !overrideBlacklist) || WinGetMinMax(wHandle) != 0)
 			return this.sendKey(cleanHotkey)
 		pos := WinUtilities.WinGetPosEx(wHandle)
-		curWindowPositions := []
-		for i, v in WinUtilities.getBasicInfo() {
-			if v.state != 0 || v.hwnd == wHandle
-				continue
-			v.x2 := v.x + v.w
-			v.y2 := v.y + v.h
-			curWindowPositions.push(v)	
-		}
+		curWindowPositions := this.getWindowRects(wHandle)
 		WinActivate(wHandle)
-		; corner from which direction to resize
 		resizeLeft := (mouseX1 < pos.x + pos.w / 2)
 		resizeUp := (mouseY1 < pos.y + pos.h / 2)
 		limits := WinUtilities.getMinMaxResizeCoords(wHandle)
@@ -176,40 +190,63 @@ class AltDrag {
 				ny += clamp(diffY, pos.h - limits.maxH, pos.h - limits.minH)
 			nw := clamp(resizeLeft ? pos.w - diffX : pos.w + diffX, limits.minW, limits.maxW)
 			nh := clamp(resizeUp ? pos.h - diffY : pos.h + diffY, limits.minH, limits.maxH)
-			if this.snapToWindowEdges
-				calculateWindowSnapping()
-			if this.snapToMonitorEdges
-				calculateMonitorSnapping()
-			DllCall("SetWindowPos", "UInt", wHandle, "UInt", 0, "Int", nx, "Int", ny, "Int", nw, "Int", nh, "Uint", 0x0004)
+			if !this.snapOnlyWhileHoldingModifierKey || GetKeyState(modSymbol) {
+				if this.snapToWindowEdges
+					calculateWindowSnapping()
+				if this.snapToMonitorEdges
+					calculateMonitorSnapping()
+			}
+			DllCall("SetWindowPos", "UInt", wHandle, "UInt", 0, "Int", nx - pos.LB, "Int", ny - pos.TB, "Int", nw + pos.LB + pos.RB, "Int", nh + pos.TB + pos.BB, "Uint", 0x0004)
 			DllCall("Sleep", "UInt", 5)
 		}
 
 		calculateMonitorSnapping() {
 			monitor := WinUtilities.monitorGetInfoFromWindow(wHandle)
-			if (abs(nx - monitor.wLeft) < this.snappingRadius)
-				nx := monitor.wLeft			; left edge
-			else if (abs(nx + pos.w - monitor.wRight) < this.snappingRadius)
-				nx := monitor.wRight - pos.w 	; right edge
-			if (abs(ny - monitor.wTop) < this.snappingRadius)
+			if (resizeLeft && abs(nx - monitor.wLeft) < this.snappingRadius) {
+				nw := nw + nx - monitor.wLeft
+				nx := monitor.wLeft
+			} else if (abs(nx + nw - monitor.wRight) < this.snappingRadius)
+				nw := monitor.wRight - nx
+			if (resizeUp && abs(ny - monitor.wTop) < this.snappingRadius) {
+				nh := nh + ny - monitor.wTop
 				ny := monitor.wTop				; top edge
-			else if (abs(ny + pos.h - monitor.wBottom) < this.snappingRadius)
-				ny := monitor.wBottom - pos.h	; bottom edge
+			} else if (abs(ny + nh - monitor.wBottom) < this.snappingRadius)
+				nh := monitor.wBottom - ny
 		}
 
 		calculateWindowSnapping() {
-			; win := { x: L, y: T, w: R - L, h: B - T, LB: leftBorder, TB: topBorder, RB: rightBorder, BB: bottomBorder}
 			for i, win in arrayInReverse(curWindowPositions) {
-				if (isClamped(ny, win.y, win.y2) || isClamped(ny + pos.h, win.y, win.y2)) {
-					if (abs(nx - win.x2) < this.snappingRadius) ; left edge of moving window to right edge of desktop window
-						nx := win.x2		; left edge
-					else if (abs(nx + pos.w - win.x) < this.snappingRadius) ; right edge to left edge
-						nx := win.x - pos.w 	; right edge
+				if (isClamped(ny, win.y, win.y2) || isClamped(win.y, ny, ny + nh)) {
+					if (isSnap := (resizeLeft && isSnap := (abs(nx - win.x2) < this.snappingRadius))) { ; left edge of moving window to right edge of desktop window
+						nw := nw + nx - win.x2
+						nx := win.x2
+					} else if (isSnap |= (abs(nx + nw - win.x) < this.snappingRadius)) { ; right edge to left edge
+						nw := win.x - nx
+					}
+					if (this.snapToAlignWindows && isSnap) {
+						if (resizeUp && abs(ny - win.y) < this.aligningRadius) {
+							nh := nh + ny - win.y
+							ny := win.y
+						} else if (abs(ny + nh - win.y2) < this.aligningRadius) {
+							nh := win.y2 - ny
+						}
+					}
 				}
-				if (isClamped(nx, win.x, win.x2) || isClamped(nx + pos.w, win.x, win.x2)) {
-					if (abs(ny - win.y2) < this.snappingRadius) ; top edge to bottom edge
-						ny := win.y2				; top edge
-					else if (abs(ny + pos.h - win.y) < this.snappingRadius)
-						ny := win.y - pos.h	; bottom edge
+				if (isClamped(nx, win.x, win.x2) || isClamped(win.x, nx, nx + nw)) {
+					if (isSnap := (resizeUp && (abs(ny - win.y2) < this.snappingRadius))) { ; top edge to bottom edge
+						nh := nh + ny - win.y2
+						ny := win.y2
+					} else if (isSnap |= (abs(ny + nh - win.y) < this.snappingRadius)) {
+						nh := win.y - ny
+					}
+					if (this.snapToAlignWindows && isSnap) {
+						if (resizeLeft && abs(nx - win.x) < this.aligningRadius) {
+							nw := nw + nx - win.x
+							nx := win.x
+						} else if (abs(nx + nw - win.x2) < this.aligningRadius) {
+							nw := win.x2 - nx
+						}
+					}
 				}
 			}
 		}
@@ -314,5 +351,17 @@ class AltDrag {
 	static sendClickUp(hhL, hkey) {
 		Click("Up " . hhL)
 		Hotkey(hkey, "Off")
+	}
+
+	static getWindowRects(exceptForwHandle) {
+		curWindowPositions := []
+		for i, v in WinUtilities.getBasicInfo() {
+			if v.state != 0 || v.hwnd == exceptForwHandle
+				continue
+			v.x2 := v.x + v.w
+			v.y2 := v.y + v.h
+			curWindowPositions.push(v)	
+		}
+		return curWindowPositions
 	}
 }
