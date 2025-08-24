@@ -1,4 +1,5 @@
 ﻿; https://github.com/cobracrystal/ahk
+#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\WebSocket.ahk"
 

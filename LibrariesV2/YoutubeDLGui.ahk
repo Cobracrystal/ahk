@@ -1,6 +1,8 @@
 ﻿; https://github.com/cobracrystal/ahk
 
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 class YoutubeDLGui {

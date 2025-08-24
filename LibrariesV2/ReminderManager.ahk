@@ -6,7 +6,8 @@
 ; custom functions -> text body of function that you write just gets saved in file, timer is set to run that file
 
 ; if nextTimeMS >= 2**32, do nextTimeMS -= 2**32, custom function that will restart itself until timeMS < 2**32, then launch function.
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\TimeUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\DiscordBot.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 

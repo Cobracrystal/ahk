@@ -1,4 +1,4 @@
-
+#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
 class unicodeData {
 	
 	; https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/uchar_8h.html#a46c049f7988a44e14d221f68e2e63db2

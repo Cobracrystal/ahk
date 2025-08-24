@@ -4,6 +4,8 @@
 ; create search function in main gui
 
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\FileUtilities.ahk"
 
 class HotkeyManager {
 	

@@ -1,5 +1,4 @@
-; given two folders, compares files and removes duplicates based on size + name, keeping files in folder 1
-
+#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
 /**
  * Gets Specified Files in a folder as an array of filenames (if short) or array of objects with all their associated data
  * @param folder Path to a folder
@@ -302,4 +301,79 @@ class FGP {
 		}
 		return -1
 	}
+}
+
+/**
+ * Get full script of a .ahk script (With all #include files being physically replaced with their content in the script)
+ * @param path 
+ * @returns {Any} 
+ */
+getFullScript(path) {
+	pathList := Map()
+	pathList.CaseSense := false
+	return objCollect(_getFullScript(path), (b,e) => b "`n" e)
+	
+	_getFullScript(path) {
+		pathList[path] := true
+		script := FileRead(path, "UTF-8")
+		fullScript := []
+		pos := 0
+		arr := StrSplit(script, "`n", "`r")
+		for i, line in arr {
+			if (RegexMatch(line, "^\s*#Include")) {
+				includedPath := getIncludePath(line, path) ; keep track of include working directory. THIS IS PER FILE.)
+				if (includedPath && !pathList.Has(includedPath)) {
+					fullScript.push(_getFullScript(includedPath)*)
+				}
+			} else {
+				fullScript.push(line)
+			}
+		}
+		return fullScript
+	}
+}
+
+getIncludePath(line, from := A_ScriptFullPath) {
+	static currentWorkingDirectory := A_ScriptDir
+	RegexMatch(line, '^\s*#Include (?<quot>"?|`'?)(?<ignore>(?:\*i)?\s*)(?<path>.*)(?P=quot)', &m)
+	path := m["path"]
+	for i, e in ["A_AhkPath", "A_AppData", "A_AppDataCommon", "A_ComputerName", "A_ComSpec", "A_Desktop", "A_DesktopCommon", "A_IsCompiled", "A_MyDocuments", "A_ProgramFiles", "A_Programs", "A_ProgramsCommon", "A_ScriptDir", "A_ScriptFullPath", "A_ScriptName", "A_Space", "A_StartMenu", "A_StartMenuCommon", "A_Startup", "A_StartupCommon", "A_Tab", "A_Temp", "A_UserName", "A_WinDir"]
+		path := StrReplace(path, "%" e "%", %e%)
+	path := StrReplace(path, "%A_LineFile%", from)
+	path := StrReplace(path, "``;", ";")
+	if (!RegexMatch(path, "i)^[a-z]:\\"))
+		path := currentWorkingDirectory . (SubStr(path, 1, 1) == "\" ? "" : "\") . path
+	path := normalizePath(path)
+	if (InStr(FileGetAttrib(path), "D")) {
+		currentWorkingDirectory := (SubStr(path, -1) == "\" ? SubStr(path, 1, -1) : path)
+		return ""
+	}
+	return path
+}
+
+/**
+ * Given a path, removes any backtracking of paths through \..\ to create a unique absolute path.
+ * @param path Path to normalize
+ * @returns {string} A normalized Path (if valid) or an empty string if the path could not be resolved.
+ */
+normalizePath(path) {
+	path := StrReplace(path, "\\", "\")
+	path := StrReplace(path, "/", "\")
+	while InStr(path, "\.\") ; \.\ does nothing since . is current file
+		path := StrReplace(path, "\.\", "\")
+	if (SubStr(path, -2) == "\.")
+		path := SubStr(path, 1, -2)
+	path := Trim(path, " `t\")
+	pathArr := StrSplit(path, "\")
+	i := 1
+	while(i <= pathArr.Length) {
+		if (pathArr[i] != "..")
+			i++
+		else {
+			patharr.RemoveAt(i)
+			if i > 2 ; pathArr[1] is the drive. C:\..\Users\..\..\Users => C:\Users
+				pathArr.RemoveAt(--i)
+		}
+	}
+	return objCollect(pathArr, (b, e) => b "\" e)
 }

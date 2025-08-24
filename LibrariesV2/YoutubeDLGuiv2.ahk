@@ -11,6 +11,8 @@ USE A LISTVIEW FOR [URL][TITLE][ARTIST][ALBUM][GENRE][IMAGEYESNO]
 */
 
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 class YoutubeDLGuiv2 {
@@ -164,7 +166,7 @@ class YoutubeDLGuiv2 {
 		}
 		this.ytdlOptionHandler()
 		fullRuncmd := this.controls.editCmdConfig.value . StrReplace(links, "`n", A_Space)
-		for i, link in StrSplitUTF8(links, "`n") {
+		for i, link in StrSplit(links, "`n") {
 			fullRuncmd := this.controls.editCmdConfig.value . '"' link '"'
 			if (this.settings.runHidden) {
 				output := cmdRet(fullRuncmd, , "UTF-8")

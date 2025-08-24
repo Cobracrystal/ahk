@@ -1,5 +1,3 @@
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-
 class WinUtilities {
 	static __New() {
 		this.windowCache := Map()
@@ -112,7 +110,8 @@ class WinUtilities {
 			cacheObj := info
 		else {
 			cacheObj := this.updateSingleCache(hwnd, getCommandline)
-			objMerge(cacheObj, info, false, true)
+			for key, val in info.OwnProps()
+				cacheObj.%key% := val
 		}
 		return cacheObj
 	}
@@ -553,7 +552,10 @@ class ShellWrapper {
 	}
 
 	static getExplorerIEObjects() {
-		return objFlatten(this.shell.windows(),, true)
+		arr := []
+		for i, e in this.shell.windows()
+			arr.push(i)
+		return arr
 	}
 
 	static Explore(path) {

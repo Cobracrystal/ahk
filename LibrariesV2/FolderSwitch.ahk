@@ -1,4 +1,5 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
 
 ; this is to a certain extend based on https://github.com/JoyHak/QuickSwitch
 class FolderSwitch {

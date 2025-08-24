@@ -49,6 +49,8 @@
 }
 ; */
 #Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
 
 class AltDrag {
 

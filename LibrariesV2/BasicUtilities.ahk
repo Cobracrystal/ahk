@@ -1,12 +1,8 @@
 ﻿; https://github.com/cobracrystal/ahk
 
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\TimeUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\FileUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\unicodeData.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
 
 class TrayMenu {
 	; ADD TRACKING FOR CHILD MENUS
@@ -103,7 +99,7 @@ parseHeaders(str) {
 	headersAsText := RTrim(str, "`r`n")
 	headers := Map()
 	Loop Parse headersAsText, "`n", "`r" {
-		arr := StrSplitUTF8(A_LoopField, ":")
+		arr := StrSplit(A_LoopField, ":")
 		headers[Trim(arr[1])] := Trim(arr[2])
 	}
 	return headers
@@ -509,7 +505,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT (MB_FONTISITALIC ? " italic" : "") : ""
 	mbGui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " ownerStr, title)
 	mbGui.OnEvent("Close", finalEvent.bind(0))
-	mbGui.Opt("+" hex(NecessaryStyle))
+	mbGui.Opt("+" Format("0x{:X}", NecessaryStyle))
 	mbGui.Opt("-ToolWindow")
 	if (buttonStyle == 2 || buttonStyle == 4) ; if cancel is not present in option, close and escape have no effect. user must select an option.
 		mbGui.Opt("-SysMenu")
@@ -597,7 +593,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 
 	guiContextMenu(itemName, itemPos, menuObj) {
 		miniGui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox +Owner" mbGui.hwnd, "Select and Copy")
-		miniGui.Opt("+" hex(NecessaryStyle))
+		miniGui.Opt("+" Format("0x{:X}", NecessaryStyle))
 		miniGui.Opt("-ToolWindow")
 		miniGui.OnEvent("Escape", (*) => miniGui.destroy())
 		miniGui.OnEvent("Close", (*) => miniGui.destroy())
@@ -857,32 +853,6 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 	pData := NumGet(ComObjValue(arr) + 8 + A_PtrSize, 0, "UPtr")
 	length := (arr.MaxIndex() - arr.MinIndex()) + 1
 	return Trim(StrGet(pData, length, encoding), "`n`r`t ")
-}
-
-/**
- * Given a path, removes any backtracking of paths through \..\ to create a unique absolute path.
- * @param path Path to normalize
- * @returns {string} A normalized Path (if valid) or an empty string if the path could not be resolved.
- */
-normalizePath(path) {
-	path := StrMultiReplace(path, ["\\", "/"], ["\", "\"]) ; ignore \\, /->\
-	while InStr(path, "\.\") ; \.\ does nothing since . is current file
-		path := StrReplace(path, "\.\", "\")
-	if (SubStr(path, -2) == "\.")
-		path := SubStr(path, 1, -2)
-	path := Trim(path, " `t\")
-	pathArr := StrSplit(path, "\")
-	i := 1
-	while(i <= pathArr.Length) {
-		if (pathArr[i] != "..")
-			i++
-		else {
-			patharr.RemoveAt(i)
-			if i > 2 ; pathArr[1] is the drive. C:\..\Users\..\..\Users => C:\Users
-				pathArr.RemoveAt(--i)
-		}
-	}
-	return objCollect(pathArr, (b, e) => b "\" e)
 }
 
 tryEditTextFile(editor := A_WinDir . "\system32\notepad.exe", params := "", *) {

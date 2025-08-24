@@ -1,4 +1,5 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\TimeUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 sessionBuddyGetObjectFromOneTabHTML(path) {

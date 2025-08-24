@@ -1,5 +1,9 @@
 #Requires AutoHotkey v2
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\FileUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\unicodeData.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
 ; todo: split video chapters into separate files option
 ; todo: attempt to parse artist/title from description if title/uploader doesn't seem correct
