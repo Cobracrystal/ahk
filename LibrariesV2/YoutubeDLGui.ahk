@@ -49,7 +49,7 @@ class YoutubeDLGui {
 	}
 
 	guiCreate() {
-		this.gui := Gui("+Border +OwnDialogs", "YoutubeDL Manager")
+		this.gui := Gui("+Border +OwnDialogs", "YoutubeDL Wrapper")
 		this.gui.OnEvent("Escape", (*) => this.youtubeDLGui("Hide"))
 		this.gui.OnEvent("Close", (*) => this.youtubeDLGui("Close"))
 		this.gui.AddText("Center Section", "Enter Link(s) to download")
