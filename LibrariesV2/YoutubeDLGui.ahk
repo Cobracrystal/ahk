@@ -4,6 +4,7 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\cmdStdoutAsync.ahk"
 
 class YoutubeDLGui {
 	youtubeDLGui(mode := "O") {
@@ -92,6 +93,73 @@ class YoutubeDLGui {
 			this.controls.editOutput.value := this.data.output . this.data.outputLastLine
 			; if (pos == 1) ; bottom
 			SendMessage(WM_VSCROLL, SB_BOTTOM, 0, this.controls.editOutput.hwnd)
+		}
+	}
+	
+	updateGuiOutput2(links, cmdLine, done := 0) {
+		static WM_VSCROLL := 0x115 
+		static SB_BOTTOM  := 7
+		static lastLine := ""
+		static fullOutput := ""
+		static lastLineOverwrite := 0
+		if (Instr(cmdLine, "https://") || Instr(cmdLine, "http://")) && !(Instr(lastLine, "[redirect]") || Instr(cmdLine, "[redirect]")) && (lastLine != "") && (lastLine != YoutubeDLGui.UIComponents.separator . "`n") {
+			lastLine .= YoutubeDLGui.UIComponents.separatorSmall . "`n"
+			lastLineOverwrite := 0
+		}
+		; if not the last line, then there might be `r`n for the end, so remove that. StrSplit Trims on *both* sides, so it does not work (since `r at the start is necessary for overwriting lines)
+		StrReplace(cmdLine, "`r",, , &thisLineOverwrite)
+		if (thisLineOverwrite) { ; if `r in string, only take the last string part.
+			tArr := StrSplit(cmdLine, "`r")
+			cmdLine := tArr[-1]
+		}
+		; if current line AND previous line have `r, then overwrite prev line, otherwise save the line.
+		if !(thisLineOverwrite && lastLineOverwrite)
+			fullOutput .= lastLine
+		lastLine := cmdLine . "`n"
+		lastLineOverwrite := thisLineOverwrite
+		this.controls.editOutput.value := fullOutput . lastLine
+		SendMessage(WM_VSCROLL, SB_BOTTOM, 0, this.controls.editOutput.hwnd)
+
+		if (done) {
+			tFulloutput := fullOutput . lastLine
+			lastLine := fullOutput := ""
+			lastLineOverwrite := 0
+			this.controls.editOutput.value := tFulloutput . '`n' . YoutubeDLGui.UIComponents.separator
+			if (!WinActive(this.gui))
+				this.YoutubeDLGui("Hide")
+			if (links == "" || !this.settings.openExplorer)
+				return
+			if (this.settings.trySelectFile) {
+				arrLong := StrSplit(tFulloutput, YoutubeDLGui.UIComponents.separator)
+				responseArr := StrSplit(arrLong[-1], YoutubeDLGui.UIComponents.separatorSmall)
+				fileNames := []
+				for i, e in responseArr {
+					lineArr := StrSplit(RTrim(e, "`n"), "`n")
+					regexM := StrReplace(this.settings.outputPath, "\", "\\") . "\\([[:ascii:]]*?\." . (this.options["extract-audio"].selected ? "mp3" : "mp4") . ")"
+					for i, e in arrayInReverse(lineArr)
+						if !(Instr(e, "Deleting")) && (RegexMatch(e, regexM, &o))
+							break
+					if (o != "")
+						fileNames.push(o[1])
+				}
+				if (fileNames.Length == 0)
+					return
+				for oWin in ComObject("Shell.Application").Windows
+					if (oWin.Name == "Explorer") && (this.settings.outputPath = oWin.Document.Folder.Self.Path) {
+						WinActivate("ahk_id " . oWin.HWND)
+						PostMessage(0x111, 28931, , , "ahk_id " . oWin.HWND) ; forcibly refresh ?
+						oItems := oWin.Document.Folder.Items
+						oWin.Document.SelectItem(oItems.Item(fileNames[-1]), 29)
+						for i, e in fileNames
+							oWin.Document.SelectItem(oItems.Item(e), 1)
+						oWin := oItems := ""
+						return
+					}
+			}
+			if (WinExist(this.settings.outputPath . " ahk_exe explorer.exe"))
+				WinActivate()
+			else
+				Run('explorer "' . this.settings.outputPath . (fileName ?? "") . (ext ?? "") '"')
 		}
 	}
 
@@ -192,7 +260,8 @@ class YoutubeDLGui {
 		this.ytdlOptionHandler()
 		fullRuncmd := this.controls.editCmdConfig.value . "`"" StrReplace(Trim(links, " `t`n`r"), "`n", "`" `"") "`""
 		if (this.settings.useInlineConsole) {
-			cmdRetAsync(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8", 200, this.__done.bind(this, links))
+			global outputInstance := CmdStdOutAsync(fullRuncmd, 'UTF-8', this.updateGuiOutput2.bind(this, links))
+			; cmdRetAsync(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8", 200, this.__done.bind(this, links))
 		} else {
 			A_Clipboard := fullRuncmd
 ;			Run("cmd /k `"mode con: cols=100 lines=30 && " fullRuncmd "`"")
