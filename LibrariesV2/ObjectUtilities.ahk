@@ -610,7 +610,7 @@ toString(obj, compact := false, compress := true, strEscape := false, mapAsObj :
 			; now, add .__Class for the current object
 			if (flagIncludeClassOrPrototype && !flagIsOwnPropDescObject)
 				strFromCurrentEnums("__Class", className)
-			if (flagWithBases && obj == origin)
+			if (flagWithBases) ;  && obj == origin)
 				strFromCurrentEnums("Base", obj.base)
 			; this would get the class object from an instance. why would we need this?
 			; if !(flagIsOwnPropDescObject || flagIsBadFunction || !flagIncludeClassOrPrototype)
@@ -627,9 +627,9 @@ toString(obj, compact := false, compress := true, strEscape := false, mapAsObj :
 					strFromCurrentEnums(k, (!flagDetailedFunctions && Type(obj.%k%) == "Func") ? Type(obj.%k%) : obj.%k%)
 			}
 			; non-prototypes (class objects) should get their base. for class.prototype, object.prototype we need their base since there isn't a way to get it otherwise. any.prototype is empty and is also enumerated above.
-			flagIsGoodPrototype := (objType == "Prototype" && (className == "Class" || className == "Object"))
+			flagIsGoodPrototype := objType == "Prototype" ; (objType != "Prototype" || (objType == "Prototype" && (className == "Class" || className == "Object")))
 			if (flagWithBases) {
-				if (objType != "Prototype" || (flagIsGoodPrototype))
+				if (flagIsGoodPrototype)
 					strFromCurrentEnums("Base", ObjGetBase(obj))
 				else if className != "Any" ; we are a bad prototype and only get a String base. If we are Any.Prototype, we get no base at all. D:
 					strFromCurrentEnums("Base", obj.base.__Class ".Prototype")
