@@ -1,12 +1,368 @@
-#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
+/************************************************************************
+ * @description A full Wrapper for unicodeData in icu4c + winnls\NormalizeString and winnls\IsNormalizedString
+ * @author cobracrystal
+ * @date 2025/08/24
+ * @version 0.0.1
+ ***********************************************************************/
+; All functions have been extracted from https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/uchar_8h.html#a46c049f7988a44e14d221f68e2e63db2
+
 class unicodeData {
 	
-	; https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/uchar_8h.html#a46c049f7988a44e14d221f68e2e63db2
+	static __New() {
+		; that avoids having to write this.verifyVersion in every single function
+		for e in this.OwnProps()
+			if Type(this.%e%) == "Func" && e != "verifyVersion" {
+				oldFunc := this.%e%
+				fn := makeClosure(oldFunc)
+				this.DefineProp(e, { Call: fn })
+			}
 
-	; Alias of lookup
-	static charFromName(name, nameChoice := this.UCharNameChoice.U_UNICODE_CHAR_NAME, default?) => this.lookup(name, nameChoice, default?)
-	; Look up character by name. If a character with the given name is found, return the corresponding character. If not found, KeyError is raised. 
-	static lookup(name, nameChoice := this.UCharNameChoice.U_UNICODE_CHAR_NAME, default?) {
+		makeClosure(oldFunc) {
+			return (this, params*) => (
+					this.verifyVersion(),
+					oldFunc(this, params*)
+				)
+		}
+	}
+	; ***********************************************************************
+	; These functions are not inside icu4c, but are relevant enough to be listed here
+	; ***********************************************************************
+	
+	/**
+	 * Return the normal form form for the Unicode string unicodeString.
+	 * @description The Unicode standard defines various normalization forms of a Unicode string, based on the definition of canonical equivalence and compatibility equivalence.  
+	 * In Unicode, several characters can be expressed in various ways. For example, the character U+00C7 (LATIN CAPITAL LETTER C WITH CEDILLA) can also be expressed as the sequence U+0043 (LATIN CAPITAL LETTER C) U+0327 (COMBINING CEDILLA).  
+	 * For each character, there are two normal forms: normal form C and normal form D. Normal form D (NFD) is also known as canonical decomposition, and translates each character into its decomposed form. Normal form C (NFC) first applies a canonical decomposition, then composes pre-combined characters again.  
+	 * In addition to these two forms, there are two additional normal forms based on compatibility equivalence. In Unicode, certain characters are supported which normally would be unified with other characters. For example, U+2160 (ROMAN NUMERAL ONE) is really the same thing as U+0049 (LATIN CAPITAL LETTER I). However, it is supported in Unicode for compatibility with existing character sets (e.g. gb2312).  
+	 * The normal form KD (NFKD) will apply the compatibility decomposition, i.e. replace all compatibility characters with their equivalents. The normal form KC (NFKC) first applies the compatibility decomposition, followed by the canonical composition.  
+	 * Even if two unicode strings are normalized and look the same to a human reader, if one has combining characters and the other doesn’t, they may not compare equal.  
+	 * @param normForm "C", "KC", "D", or "KD". 
+	 * @param unicodeString The string to be normalized
+	 * @returns {String} The normalized String
+	 */
+	static normalize(normForm, unicodeString) {
+		normForm := this.getNormFormFromStr(normForm)
+		cwDstLength := DllCall("NormalizeString", "uint", normForm, "Str", unicodeString, "int", -1, "Ptr", 0, "int", 0)
+		VarSetStrCapacity(&lpDstString, cwDstLength)
+		writtenWChars := DllCall("NormalizeString", "int", normForm, "Str", unicodeString, "int", -1, "Str", &lpDstString, "int", cwDstLength)
+		return lpDstString
+	}
+
+	/**
+	 * Return whether the Unicode string unistr is in the form normForm.
+	 * @param normForm "C", "KC", "D", or "KD". 
+	 * @param unicodeString The string to check for normalization
+	 * @returns {Boolean} Whether the string is normalized
+	 */
+	static is_normalized(normForm, uniStr) {
+		normForm := this.getNormFormFromStr(normForm)
+		lpString := Buffer(StrPut(uniStr))
+		cwLength := StrLen(uniStr)
+		StrPut(uniStr, lpString)
+		return DllCall("IsNormalizedString", "int", normForm, "Ptr", lpString, "int",  cwLength)
+	}
+
+	; ***********************************************************************
+	; All icu4c Functions
+	; ***********************************************************************
+	
+	; -
+	; Check a binary Unicode property for a code point. Properties are listed in this.UProperty
+	; Property must be UCHAR_BINARY_START<=whichUProperty<UCHAR_BINARY_LIMIT.
+	static hasBinaryProperty(char, whichUProperty) {
+		this.verifyVersion()
+		if (whichUProperty is String)
+			whichUProperty := this.UProperty.%whichUProperty%
+		return DllCall("icuuc\u_hasBinaryProperty", "uchar", Ord(char), "int", whichUProperty, "char")
+	}
+	
+	;  	Returns true if the property is true for the string. 
+	static stringHasBinaryProperty(str, length, whichUProperty) {
+		this.verifyVersion()
+		strBuf := Buffer(StrPut(str, "UTF-8"))
+		StrPut(str, strBuf, "UTF-8")
+		if (whichUProperty is String)
+			whichUProperty := this.UProperty.%whichUProperty%
+		return DllCall("icuuc\u_stringHasBinaryProperty", "Ptr", strBuf, "int", length, "int", whichUProperty, "char")
+	}
+	
+	;  	Returns a frozen USet for a binary property. 
+	static getBinaryPropertySet(whichUProperty) {
+		this.verifyVersion()
+		errorCode := 0
+		if (whichUProperty is String)
+			whichUProperty := this.UProperty.%whichUProperty%
+		ret := DllCall("icuuc\u_getBinaryPropertySet", "int", whichUProperty, "int*", &errorCode)
+		switch errorCode {
+			case this.UErrorCode.U_ZERO_ERROR:
+				return "NOT IMPLEMENTED, ITS A USET"
+			default:
+				throw(OSError("getBinaryPropertySet returned Error " errorCode))
+		}
+	}
+	
+	;  	Check if a code point has the Alphabetic Unicode property. 
+	static isUAlphabetic(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isUAlphabetic", "uchar", Ord(char), "char")
+	}
+	
+	;  	Check if a code point has the Lowercase Unicode property. 
+	static isULowercase(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isULowercase", "uchar", Ord(char), "char")
+	}
+	
+	;  	Check if a code point has the Uppercase Unicode property. 
+	static isUUppercase(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isUUppercase", "uchar", Ord(char), "char")
+	}
+	
+	;  	Check if a code point has the White_Space Unicode property. 
+	static isUWhiteSpace(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isUWhiteSpace", "uchar", Ord(char), "char")
+	}
+	
+	;  	Get the property value for an enumerated or integer Unicode property for a code point. 
+	static getIntPropertyValue(char, whichUProperty) {
+		this.verifyVersion()
+		if (whichUProperty is String)
+			whichUProperty := this.UProperty.%whichUProperty%
+		return DllCall("icuuc\u_getIntPropertyValue", "uchar", Ord(char), "int", whichUProperty)
+	}
+	
+	;  	Get the minimum value for an enumerated/integer/binary Unicode property. 
+	static getIntPropertyMinValue(whichUProperty) {
+		this.verifyVersion()
+		if (whichUProperty is String)
+			whichUProperty := this.UProperty.%whichUProperty%
+		return DllCall("icuuc\u_getIntPropertyMinValue", "int", whichUProperty)
+	}
+	
+	;  	Get the maximum value for an enumerated/integer/binary Unicode property. 
+	static getIntPropertyMaxValue(whichUProperty) {
+		this.verifyVersion()
+		if (whichUProperty is String)
+			whichUProperty := this.UProperty.%whichUProperty%
+		return DllCall("icuuc\u_getIntPropertyMaxValue", "int", whichUProperty)
+	}
+	
+	;  	Returns an immutable UCPMap for an enumerated/catalog/int-valued property. 
+	static getIntPropertyMap(whichUProperty) {
+		this.verifyVersion()
+		errorCode := 0
+		if (whichUProperty is String)
+			whichUProperty := this.UProperty.%whichUProperty%
+		ret := DllCall("icuuc\u_getIntPropertyMap", "int", whichUProperty, "int*", &errorCode)
+		switch errorCode {
+			case this.UErrorCode.U_ZERO_ERROR:
+				return "NOT IMPLEMENTED, IS UCPMAP"
+			default:
+				throw(OSError("getIntPropertyMap returned Error " errorCode))
+		}
+	}
+	
+	;  	Get the numeric value for a Unicode code point as defined in the Unicode Character Database. 
+	static getNumericValue(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_getNumericValue", "uchar", Ord(char), "double")
+	}
+	
+	;  	Determines whether the specified code point has the general category "Ll" (lowercase letter) => 0. 
+	static islower(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_islower", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point has the general category "Lu" (uppercase letter) => 0. 
+	static isupper(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isupper", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is a titlecase letter. 
+	static istitle(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_istitle", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is a digit character according to Java. 
+	static isdigit(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isdigit", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is a letter character. 
+	static isalpha(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isalpha", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is an alphanumeric character (letter or digit) => 0 according to Java. 
+	static isalnum(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isalnum", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is a hexadecimal digit. 
+	static isxdigit(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isxdigit", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is a punctuation character. 
+	static ispunct(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_ispunct", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is a "graphic" character (printable, excluding spaces) => 0. 
+	static isgraph(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isgraph", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is a "blank" or "horizontal space", a character that visibly separates words on a line. 
+	static isblank(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isblank", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is "defined", which usually means that it is assigned a character. 
+	static isdefined(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isdefined", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines if the specified character is a space character or not. 
+	static isspace(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isspace", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determine if the specified code point is a space character according to Java. 
+	static isJavaSpaceChar(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isJavaSpaceChar", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines if the specified code point is a whitespace character according to Java/ICU. 
+	static isWhitespace(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isWhitespace", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is a control character (as defined by this function) => 0. 
+	static iscntrl(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_iscntrl", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is an ISO control code. 
+	static isISOControl(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isISOControl", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines whether the specified code point is a printable character. 
+	static isprint(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isprint", "uchar", Ord(char), "char")
+	}
+	
+	;  	Non-standard: Determines whether the specified code point is a base character. 
+	static isbase(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isbase", "uchar", Ord(char), "char")
+	}
+	
+	;  	Returns the bidirectional category value for the code point, which is used in the Unicode bidirectional algorithm (UAX #9 http://www.unicode.org/reports/tr9/). 
+	; See UCharDirection Enum
+	static charDirection(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_charDirection", "uchar", Ord(char))
+	}
+	
+	;  	Determines whether the code point has the Bidi_Mirrored property. 
+	static isMirrored(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isMirrored", "uchar", Ord(char), "char")
+	}
+	
+	;  	Maps the specified character to a "mirror-image" character. 
+	static charMirror(char) {
+		codePoint := DllCall("icuuc\u_charMirror", "uchar", Ord(char))
+		return Chr(codePoint)
+	}
+	
+	;  	Maps the specified character to its paired bracket character. 
+	static getBidiPairedBracket(char) {
+		this.verifyVersion()
+		codePoint := DllCall("icuuc\u_getBidiPairedBracket", "uchar", Ord(char))
+		return Chr(codePoint)
+	}
+	
+	;  	Returns the general category value for the code point. 
+	static charType(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_charType", "uchar", Ord(char), "char")
+	}
+	
+	;  	Enumerate efficiently all code points with their Unicode general categories. 
+	; static enumCharTypes(UCharEnumTypeRange *enumRange, const void *context) {
+	; 	this.verifyVersion()
+	; 	ret := DllCall("icuuc\u_enumCharTypes")
+	; }
+	
+	;  	Returns the combining class of the code point as specified in UnicodeData.txt. 
+	static getCombiningClass(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_getCombiningClass", "uchar", Ord(char), "uchar")
+	}
+	
+	;  	Returns the decimal digit value of a decimal digit character. 
+	static charDigitValue(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_charDigitValue", "uchar", Ord(char))
+	}
+	
+	; 	Returns the Unicode allocation block that contains the character. 
+	static ublock_getCode(char) {
+		return DllCall("icuuc\u_ublock_getCode ", "uchar", Ord(char))
+	}
+
+	;  	Retrieve the name of a Unicode character. 
+	static charName(char, nameChoice := this.UCharNameChoice.U_UNICODE_CHAR_NAME) {
+		this.verifyVersion()
+		name := Buffer(512)
+		errorCode := 0
+		length := DllCall("icuuc\u_charName", "uchar", Ord(char), "int", nameChoice, "Ptr", name, "int", name.Size, "int*", &errorCode)
+		switch errorCode {
+			case this.UErrorCode.U_ZERO_ERROR:
+				return StrGet(name, length, "UTF-8")
+			default:
+				throw(OSError("u_charName returned Error " errorCode))
+		}
+	}
+	
+	;  	Returns an empty string. 
+	static getISOComment(char) {
+		this.verifyVersion()
+		errorCode := 0
+		dest := Buffer(512)
+		DllCall("icuuc\u_getISOComment", "uchar", Ord(char), "Ptr", dest, "int", dest.Size, "int*", &errorCode)
+		switch errorCode {
+			case this.UErrorCode.U_ZERO_ERROR:
+				return StrGet(dest,, "UTF-8")
+			default:
+				throw(OSError("u_getISOComment returned Error " errorCode))
+		}
+	}
+	
+	;  	Find a Unicode character by its name and return its code point value. 
+	static charFromName(name, nameChoice := this.UCharNameChoice.U_UNICODE_CHAR_NAME, default?) {
 		this.verifyVersion()
 		errorCode := 0
 		nameBuf := Buffer(StrPut(name, "UTF-8"))
@@ -20,104 +376,176 @@ class unicodeData {
 					return default
 				throw ValueError("Invalid name given: " name)
 			default:
-				throw(OSError("u_charName returned Error " errorCode))
+				throw(OSError("u_charFromName returned Error " errorCode))
 		}
-	}
-
-	; Returns the name assigned to the character char as a string.
-	static charName(char, nameChoice := this.UCharNameChoice.U_UNICODE_CHAR_NAME) {
-		this.verifyVersion()
-		name := Buffer(512)
-		errorCode := 0
-		length := DllCall("icuuc\u_charName", "uchar", Ord(char), "int", nameChoice, "Ptr", name, "int", name.Size, "int*", &errorCode)
-		switch errorCode {
-			case this.UErrorCode.U_ZERO_ERROR:
-				return StrGet(name, length, "UTF-8")
-			default:
-				throw(OSError("u_charName returned Error " errorCode))
-		}
-	}
-
-	; Returns the general category (UCharCategory) value for the code point
-	static charType(char) {
-		this.verifyVersion()
-		charType := DllCall("icuuc\u_charType", "uchar", Ord(char))
-		return charType
 	}
 	
-	; The version of the Unicode database used in this module. 
-	static unidata_version => 0
-
-
-	; Returns the decimal value assigned to the character char as integer. If no such value is defined, default is returned, or, if not given, ValueError is raised. 
-	static decimal(char, default?) => 0
-
-
-	; Returns the digit value assigned to the character char as integer. If no such value is defined, default is returned, or, if not given, ValueError is raised. 
-	static digit(char, default?) => 0
-
-
-	; Returns the numeric value assigned to the character char as float. If no such value is defined, default is returned, or, if not given, ValueError is raised. 
-	static numeric(char, default?) => 0
-
-
-	; Returns the general category assigned to the character char as string. 
-	static category(char) => 0
-
-
-	; Returns the bidirectional class assigned to the character char as string. If no such value is defined, an empty string is returned. 
-	static bidirectional(char) => 0
-
-
-	; Returns the canonical combining class assigned to the character char as integer. Returns 0 if no combining class is defined. 
-	static combining(char) => 0
-
-
-	; Returns the east asian width assigned to the character char as string. 
-	static east_asian_width(char) => 0
-
-
-	; Returns the mirrored property assigned to the character char as integer. Returns 1 if the character has been identified as a “mirrored” character in bidirectional text, 0 otherwise. 
-	static mirrored(char) {
+	;  	Enumerate all assigned Unicode characters between the start and limit code points (start inclusive, limit exclusive) => 0 and call a function for each, passing the code point value and the character name. 
+	; static enumCharNames(start, limit, UEnumCharNamesFn *fn, void *context, nameChoice := this.UCharNameChoice.U_UNICODE_CHAR_NAME) {
+	; 	this.verifyVersion()
+	; 	errorCode := 0
+	; 	ret := DllCall("icuuc\u_enumCharNames", "uchar", Ord(start), "uchar", Ord(limit),,, "int", nameChoice, "int*", &errorCode)
+	; 	switch errorCode {
+			
+	; 	}
+	; }
+	
+	;  	Return the Unicode name for a given property, as given in the Unicode database file PropertyAliases.txt. 
+	static getPropertyName(whichUProperty, nameChoice := this.UPropertyNameChoice.U_LONG_PROPERTY_NAME) {
 		this.verifyVersion()
-		codePoint := DllCall("icuuc\u_charMirror", "uchar", Ord(char))
+		if (whichUProperty is String)
+			whichUProperty := this.UProperty.%whichUProperty%
+		name := DllCall("icuuc\u_getPropertyName", "int", whichUProperty, "int", nameChoice)
+		return StrGet(name,, "UTF-8")
+	}
+	
+	;  	Return the UProperty enum for a given property name, as specified in the Unicode database file PropertyAliases.txt. 
+	; static getPropertyEnum(alias) {
+	; 	this.verifyVersion()
+	; 	aliasBuf := Buffer(StrPut(alias, "UTF-8"))
+	; 	StrPut(alias, aliasBuf, "UTF-8")
+	; 	ret := DllCall("icuuc\u_getPropertyEnum", "Ptr", aliasBuf)
+	; }
+	
+	;  	Return the Unicode name for a given property value, as given in the Unicode database file PropertyValueAliases.txt. 
+	static getPropertyValueName(whichUProperty, value, nameChoice := this.UPropertyNameChoice.U_LONG_PROPERTY_NAME) {
+		this.verifyVersion()
+		if (whichUProperty is String)
+			whichUProperty := this.UProperty.%whichUProperty%
+		ret := DllCall("icuuc\u_getPropertyValueName", "int", whichUProperty, "int", value, "int", nameChoice)
+		return StrGet(ret,, "UTF-8")
+	}
+	
+	;  	Return the property value integer for a given value name, as specified in the Unicode database file PropertyValueAliases.txt. 
+	; static getPropertyValueEnum(whichUProperty, alias) {
+	; 	this.verifyVersion()
+	; 	aliasBuf := Buffer(StrPut(alias, "UTF-8"))
+	; 	StrPut(alias, aliasBuf, "UTF-8")
+	; 	if (whichUProperty is String)
+	; 		whichUProperty := this.UProperty.%whichUProperty%
+	; 	ret := DllCall("icuuc\u_getPropertyValueEnum", "int", whichUProperty, "Ptr", aliasBuf)
+	; }
+	
+	;  	Determines if the specified character is permissible as the first character in an identifier according to UAX #31 Unicode Identifier and Pattern Syntax. 
+	static isIDStart(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isIDStart", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines if the specified character is permissible as a non-initial character of an identifier according to UAX #31 Unicode Identifier and Pattern Syntax. 
+	static isIDPart(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isIDPart", "uchar", Ord(char), "char")
+	}
+	
+	;  	Does the set of Identifier_Type values code point c contain the given type? 
+	; can't find UIDentifierType enum values 
+	; static hasIDType(char, type := this.UIdentifierType) {
+	; 	this.verifyVersion()
+	; 	return DllCall("icuuc\u_hasIDType", "uchar", Ord(char))
+	; }
+	
+	;  	Writes code point c's Identifier_Type as a list of UIdentifierType values to the output types array and returns the number of types. 
+	; can't find UIDentifierType enum values 
+	; static getIDTypes(char, UIdentifierType *types, int32_t capacity) {
+	; 	this.verifyVersion()
+	; 	errorCode := 0
+	; 	ret := DllCall("icuuc\u_getIDTypes", "uchar", Ord(char), "int*", &errorCode)
+	; 	switch errorCode {
+			
+	; 	}
+	; }
+	
+	;  	Determines if the specified character should be regarded as an ignorable character in an identifier, according to Java. 
+	static isIDIgnorable(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isIDIgnorable", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines if the specified character is permissible as the first character in a Java identifier. 
+	static isJavaIDStart(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isJavaIDStart", "uchar", Ord(char), "char")
+	}
+	
+	;  	Determines if the specified character is permissible in a Java identifier. 
+	static isJavaIDPart(char) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_isJavaIDPart", "uchar", Ord(char), "char")
+	}
+	
+	;  	The given character is mapped to its lowercase equivalent according to UnicodeData.txt; if the character has no lowercase equivalent, the character itself is returned. 
+	static tolower(char) {
+		this.verifyVersion()
+		codePoint := DllCall("icuuc\u_tolower", "uchar", Ord(char))
 		return Chr(codePoint)
 	}
-
-	static pairedBracket(char) {
+	
+	;  	The given character is mapped to its uppercase equivalent according to UnicodeData.txt; if the character has no uppercase equivalent, the character itself is returned. 
+	static toupper(char) {
 		this.verifyVersion()
-		codePoint := DllCall("icuuc\u_getBidiPairedBracket", "uchar", Ord(char))
+		codePoint := DllCall("icuuc\u_toupper", "uchar", Ord(char))
 		return Chr(codePoint)
 	}
-
-	static enumCharNames(start, limit, fn, context, nameChoice) => 0
-
-	; Returns the character decomposition mapping assigned to the character char as string. An empty string is returned in case no such mapping is defined. 
-	static decomposition(char) => 0
-
-
-	; Return the normal form form for the Unicode string unistr. Valid values for form are "C", "KC", "D", and "KD". 
-	; The Unicode standard defines various normalization forms of a Unicode string, based on the definition of canonical equivalence and compatibility equivalence. In Unicode, several characters can be expressed in various way. For example, the character U+00C7 (LATIN CAPITAL LETTER C WITH CEDILLA) can also be expressed as the sequence U+0043 (LATIN CAPITAL LETTER C) U+0327 (COMBINING CEDILLA). 
-	; For each character, there are two normal forms: normal form C and normal form D. Normal form D (NFD) is also known as canonical decomposition, and translates each character into its decomposed form. Normal form C (NFC) first applies a canonical decomposition, then composes pre-combined characters again. 
-	; In addition to these two forms, there are two additional normal forms based on compatibility equivalence. In Unicode, certain characters are supported which normally would be unified with other characters. For example, U+2160 (ROMAN NUMERAL ONE) is really the same thing as U+0049 (LATIN CAPITAL LETTER I). However, it is supported in Unicode for compatibility with existing character sets (e.g. gb2312). 
-	; The normal form KD (NFKD) will apply the compatibility decomposition, i.e. replace all compatibility characters with their equivalents. The normal form KC (NFKC) first applies the compatibility decomposition, followed by the canonical composition. 
-	; Even if two unicode strings are normalized and look the same to a human reader, if one has combining characters and the other doesn’t, they may not compare equal. 
-	static normalize(normForm, unistr) {
-		normForm := this._getNormalizationFormFromStr(normForm)
-		cwDstLength := DllCall("NormalizeString", "uint", normForm, "Str", unistr, "int", -1, "Ptr", 0, "int", 0)
-		VarSetStrCapacity(&lpDstString, cwDstLength)
-		writtenWChars := DllCall("NormalizeString", "int", normForm, "Str", unistr, "int", -1, "Str", &lpDstString, "int", cwDstLength)
-		return lpDstString
+	
+	;  	The given character is mapped to its titlecase equivalent according to UnicodeData.txt; if none is defined, the character itself is returned. 
+	static totitle(char) {
+		this.verifyVersion()
+		codePoint := DllCall("icuuc\u_totitle", "uchar", Ord(char))
+		return Chr(codePoint)
 	}
-
-
-	; Return whether the Unicode string unistr is in the normal form form. Valid values for form are "C", "KC", "D", and "KD". 
-	static is_normalized(normForm, uniStr) {
-		normForm := this._getNormalizationFormFromStr(normForm)
-		lpString := Buffer(StrPut(uniStr))
-		cwLength := StrLen(uniStr)
-		StrPut(uniStr, lpString)
-		return DllCall("IsNormalizedString", "int", normForm, "Ptr", lpString, "int",  cwLength)
+	
+	;  	The given character is mapped to its case folding equivalent according to UnicodeData.txt and CaseFolding.txt; if the character has no case folding equivalent, the character itself is returned. 
+	; options are either U_FOLD_CASE_DEFAULT == 0 or U_FOLD_CASE_EXCLUDE_SPECIAL_I == 1
+	static foldCase(char, options := this.FoldOption.U_FOLD_CASE_DEFAULT) {
+		this.verifyVersion()
+		codePoint := DllCall("icuuc\u_foldCase", "uchar", Ord(char), "int", options)
+		return Chr(codePoint)
+	}
+	
+	;  	Returns the decimal digit value of the code point in the specified radix. 
+	static digit(char, radix) {
+		this.verifyVersion()
+		return DllCall("icuuc\u_digit", "uchar", Ord(char), "char", radix) ; int8 == char
+	}
+	
+	;  	Determines the character representation for a specific digit in the specified radix. 
+	static forDigit(digit, radix) {
+		this.verifyVersion()
+		if !(isClamped(radix, 2, 36) && isClamped(digit, 0, radix-1))
+			throw(ValueError("Radix must be between 2 and 36 and digit between 0 and radix, given " radix ", " digit))
+		codePoint := DllCall("icuuc\u_forDigit", "int", digit, "char", radix)
+		return Chr(codePoint)
+	}
+	
+	;  	Get the "age" of the code point. 
+	static charAge(char) {
+		this.verifyVersion()
+		versionArray := Buffer(4)
+		DllCall("icuuc\u_charAge", "uchar", Ord(char), "Ptr", versionArray)
+		return [NumGet(versionArray, 0, "uchar"), NumGet(versionArray, 1, "uchar"), NumGet(versionArray, 2, "uchar"), NumGet(versionArray, 3, "uchar")]
+	}
+	
+	;  	Gets the Unicode version information. 
+	static getUnicodeVersion() {
+		this.verifyVersion()
+		versionArray := Buffer(4)
+		DllCall("icuuc\u_getUnicodeVersion", "Ptr", versionArray)
+		return [NumGet(versionArray, 0, "uchar"), NumGet(versionArray, 1, "uchar"), NumGet(versionArray, 2, "uchar"), NumGet(versionArray, 3, "uchar")]
+	}
+	
+	;  	Get the FC_NFKC_Closure property string for a character. 
+	static getFC_NFKC_Closure(char) {
+		this.verifyVersion()
+		errorCode := 0
+		dest := Buffer(512)
+		length := DllCall("icuuc\u_getFC_NFKC_Closure", "uchar", Ord(char), "Ptr", dest, "int", dest.Size, "int*", &errorCode)
+		switch errorCode {
+			case this.UErrorCode.U_ZERO_ERROR:
+				return StrGet(dest, length, "UTF-8")
+			default:
+				throw(OSError("getFC_NFKC_Closure returned Error " errorCode))
+		}
 	}
 
 	static verifyVersion() {
@@ -125,7 +553,7 @@ class unicodeData {
 			throw(OSError("This function only works in windows build >= 1709"))
 	}
 
-	static _getNormalizationFormFromStr(uniStr) {
+	static getNormFormFromStr(uniStr) {
 		switch unistr {
 			case "C":
 				return this.Normalization.NFC
@@ -135,518 +563,34 @@ class unicodeData {
 				return this.Normalization.NFKC
 			case "KD":
 				return this.Normalization.NFKD
+			case this.Normalization.NFC, this.Normalization.NFD, this.Normalization.NFKC, this.Normalization.NFKD:
+				return Integer(uniStr)
 			default:
 				throw ValueError("Invalid Normalization String given: " uniStr)
 		}
 	}
-
-	class Wrapper {		
-		; Check a binary Unicode property for a code point. Properties are listed in unicodeData.UProperty
-		; Property must be UCHAR_BINARY_START<=whichUProperty<UCHAR_BINARY_LIMIT.
-		static hasBinaryProperty(char, whichUProperty) {
-			this.verifyVersion()
-			if (whichUProperty is String)
-				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			return DllCall("icuuc\u_hasBinaryProperty", "uchar", Ord(char), "int", whichUProperty, "char")
-		}
-		
-		;  	Returns true if the property is true for the string. 
-		static stringHasBinaryProperty(str, length, whichUProperty) {
-			this.verifyVersion()
-			strBuf := Buffer(StrPut(str, "UTF-8"))
-			StrPut(str, strBuf, "UTF-8")
-			if (whichUProperty is String)
-				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			return DllCall("icuuc\u_stringHasBinaryProperty", "Ptr", strBuf, "int", length, "int", whichUProperty, "char")
-		}
-		
-		;  	Returns a frozen USet for a binary property. 
-		static getBinaryPropertySet(whichUProperty) {
-			this.verifyVersion()
-			errorCode := 0
-			if (whichUProperty is String)
-				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			ret := DllCall("icuuc\u_getBinaryPropertySet", "int", whichUProperty, "int*", &errorCode)
-			switch errorCode {
-				case unicodeData.UErrorCode.U_ZERO_ERROR:
-					return "NOT IMPLEMENTED, ITS A USET"
-				default:
-					throw(OSError("getBinaryPropertySet returned Error " errorCode))
-			}
-		}
-		
-		;  	Check if a code point has the Alphabetic Unicode property. 
-		static isUAlphabetic(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isUAlphabetic", "uchar", Ord(char), "char")
-		}
-		
-		;  	Check if a code point has the Lowercase Unicode property. 
-		static isULowercase(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isULowercase", "uchar", Ord(char), "char")
-		}
-		
-		;  	Check if a code point has the Uppercase Unicode property. 
-		static isUUppercase(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isUUppercase", "uchar", Ord(char), "char")
-		}
-		
-		;  	Check if a code point has the White_Space Unicode property. 
-		static isUWhiteSpace(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isUWhiteSpace", "uchar", Ord(char), "char")
-		}
-		
-		;  	Get the property value for an enumerated or integer Unicode property for a code point. 
-		static getIntPropertyValue(char, whichUProperty) {
-			this.verifyVersion()
-			if (whichUProperty is String)
-				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			return DllCall("icuuc\u_getIntPropertyValue", "uchar", Ord(char), "int", whichUProperty)
-		}
-		
-		;  	Get the minimum value for an enumerated/integer/binary Unicode property. 
-		static getIntPropertyMinValue(whichUProperty) {
-			this.verifyVersion()
-			if (whichUProperty is String)
-				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			return DllCall("icuuc\u_getIntPropertyMinValue", "int", whichUProperty)
-		}
-		
-		;  	Get the maximum value for an enumerated/integer/binary Unicode property. 
-		static getIntPropertyMaxValue(whichUProperty) {
-			this.verifyVersion()
-			if (whichUProperty is String)
-				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			return DllCall("icuuc\u_getIntPropertyMaxValue", "int", whichUProperty)
-		}
-		
-		;  	Returns an immutable UCPMap for an enumerated/catalog/int-valued property. 
-		static getIntPropertyMap(whichUProperty) {
-			this.verifyVersion()
-			errorCode := 0
-			if (whichUProperty is String)
-				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			ret := DllCall("icuuc\u_getIntPropertyMap", "int", whichUProperty, "int*", &errorCode)
-			switch errorCode {
-				case unicodeData.UErrorCode.U_ZERO_ERROR:
-					return "NOT IMPLEMENTED, IS UCPMAP"
-				default:
-					throw(OSError("getIntPropertyMap returned Error " errorCode))
-			}
-		}
-		
-		;  	Get the numeric value for a Unicode code point as defined in the Unicode Character Database. 
-		static getNumericValue(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_getNumericValue", "uchar", Ord(char), "double")
-		}
-		
-		;  	Determines whether the specified code point has the general category "Ll" (lowercase letter) => 0. 
-		static islower(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_islower", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point has the general category "Lu" (uppercase letter) => 0. 
-		static isupper(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isupper", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is a titlecase letter. 
-		static istitle(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_istitle", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is a digit character according to Java. 
-		static isdigit(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isdigit", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is a letter character. 
-		static isalpha(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isalpha", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is an alphanumeric character (letter or digit) => 0 according to Java. 
-		static isalnum(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isalnum", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is a hexadecimal digit. 
-		static isxdigit(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isxdigit", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is a punctuation character. 
-		static ispunct(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_ispunct", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is a "graphic" character (printable, excluding spaces) => 0. 
-		static isgraph(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isgraph", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is a "blank" or "horizontal space", a character that visibly separates words on a line. 
-		static isblank(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isblank", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is "defined", which usually means that it is assigned a character. 
-		static isdefined(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isdefined", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines if the specified character is a space character or not. 
-		static isspace(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isspace", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determine if the specified code point is a space character according to Java. 
-		static isJavaSpaceChar(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isJavaSpaceChar", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines if the specified code point is a whitespace character according to Java/ICU. 
-		static isWhitespace(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isWhitespace", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is a control character (as defined by this function) => 0. 
-		static iscntrl(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_iscntrl", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is an ISO control code. 
-		static isISOControl(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isISOControl", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines whether the specified code point is a printable character. 
-		static isprint(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isprint", "uchar", Ord(char), "char")
-		}
-		
-		;  	Non-standard: Determines whether the specified code point is a base character. 
-		static isbase(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isbase", "uchar", Ord(char), "char")
-		}
-		
-		;  	Returns the bidirectional category value for the code point, which is used in the Unicode bidirectional algorithm (UAX #9 http://www.unicode.org/reports/tr9/). 
-		; See UCharDirection Enum
-		static charDirection(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_charDirection", "uchar", Ord(char))
-		}
-		
-		;  	Determines whether the code point has the Bidi_Mirrored property. 
-		static isMirrored(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isMirrored", "uchar", Ord(char), "char")
-		}
-		
-		;  	Maps the specified character to a "mirror-image" character. 
-		static charMirror(char) {
-			this.verifyVersion()
-			codePoint := DllCall("icuuc\u_charMirror", "uchar", Ord(char))
-			return Chr(codePoint)
-		}
-		
-		;  	Maps the specified character to its paired bracket character. 
-		static getBidiPairedBracket(char) {
-			this.verifyVersion()
-			codePoint := DllCall("icuuc\u_getBidiPairedBracket", "uchar", Ord(char))
-			return Chr(codePoint)
-		}
-		
-		;  	Returns the general category value for the code point. 
-		static charType(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_charType", "uchar", Ord(char), "char")
-		}
-		
-		;  	Enumerate efficiently all code points with their Unicode general categories. 
-		; static enumCharTypes(UCharEnumTypeRange *enumRange, const void *context) {
-		; 	this.verifyVersion()
-		; 	ret := DllCall("icuuc\u_enumCharTypes")
-		; }
-		
-		;  	Returns the combining class of the code point as specified in UnicodeData.txt. 
-		static getCombiningClass(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_getCombiningClass", "uchar", Ord(char), "uchar")
-		}
-		
-		;  	Returns the decimal digit value of a decimal digit character. 
-		static charDigitValue(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_charDigitValue", "uchar", Ord(char))
-		}
-		
-		; 	Returns the Unicode allocation block that contains the character. 
-		static ublock_getCode(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_ublock_getCode ", "uchar", Ord(char))
-		}
-
-		;  	Retrieve the name of a Unicode character. 
-		static charName(char, nameChoice := unicodeData.UCharNameChoice.U_UNICODE_CHAR_NAME) {
-			this.verifyVersion()
-			name := Buffer(512)
-			errorCode := 0
-			length := DllCall("icuuc\u_charName", "uchar", Ord(char), "int", nameChoice, "Ptr", name, "int", name.Size, "int*", &errorCode)
-			switch errorCode {
-				case unicodeData.UErrorCode.U_ZERO_ERROR:
-					return StrGet(name, length, "UTF-8")
-				default:
-					throw(OSError("u_charName returned Error " errorCode))
-			}
-		}
-		
-		;  	Returns an empty string. 
-		static getISOComment(char) {
-			this.verifyVersion()
-			errorCode := 0
-			dest := Buffer(512)
-			DllCall("icuuc\u_getISOComment", "uchar", Ord(char), "Ptr", dest, "int", dest.Size, "int*", &errorCode)
-			switch errorCode {
-				case unicodeData.UErrorCode.U_ZERO_ERROR:
-					return StrGet(dest,, "UTF-8")
-				default:
-					throw(OSError("u_getISOComment returned Error " errorCode))
-			}
-		}
-		
-		;  	Find a Unicode character by its name and return its code point value. 
-		static charFromName(name, nameChoice := unicodeData.UCharNameChoice.U_UNICODE_CHAR_NAME) {
-			this.verifyVersion()
-			errorCode := 0
-			nameBuf := Buffer(StrPut(name, "UTF-8"))
-			StrPut(name, nameBuf, "UTF-8")
-			codePoint := DllCall("icuuc\u_charFromName", "int", nameChoice, "Ptr", name, "int*", &errorCode)
-			switch errorCode {
-				case unicodeData.UErrorCode.U_ZERO_ERROR:
-					return Chr(codePoint)
-				default:
-					throw(OSError("u_charName returned Error " errorCode))
-			}
-		}
-		
-		;  	Enumerate all assigned Unicode characters between the start and limit code points (start inclusive, limit exclusive) => 0 and call a function for each, passing the code point value and the character name. 
-		; static enumCharNames(start, limit, UEnumCharNamesFn *fn, void *context, nameChoice := unicodeData.UCharNameChoice.U_UNICODE_CHAR_NAME) {
-		; 	this.verifyVersion()
-		; 	errorCode := 0
-		; 	ret := DllCall("icuuc\u_enumCharNames", "uchar", Ord(start), "uchar", Ord(limit),,, "int", nameChoice, "int*", &errorCode)
-		; 	switch errorCode {
-				
-		; 	}
-		; }
-		
-		;  	Return the Unicode name for a given property, as given in the Unicode database file PropertyAliases.txt. 
-		static getPropertyName(whichUProperty, nameChoice := unicodeData.UPropertyNameChoice.U_LONG_PROPERTY_NAME) {
-			this.verifyVersion()
-			if (whichUProperty is String)
-				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			name := DllCall("icuuc\u_getPropertyName", "int", whichUProperty, "int", nameChoice)
-			return StrGet(name,, "UTF-8")
-		}
-		
-		;  	Return the UProperty enum for a given property name, as specified in the Unicode database file PropertyAliases.txt. 
-		; static getPropertyEnum(alias) {
-		; 	this.verifyVersion()
-		; 	aliasBuf := Buffer(StrPut(alias, "UTF-8"))
-		; 	StrPut(alias, aliasBuf, "UTF-8")
-		; 	ret := DllCall("icuuc\u_getPropertyEnum", "Ptr", aliasBuf)
-		; }
-		
-		;  	Return the Unicode name for a given property value, as given in the Unicode database file PropertyValueAliases.txt. 
-		static getPropertyValueName(whichUProperty, value, nameChoice := unicodeData.UPropertyNameChoice.U_LONG_PROPERTY_NAME) {
-			this.verifyVersion()
-			if (whichUProperty is String)
-				whichUProperty := unicodeData.UProperty.%whichUProperty%
-			ret := DllCall("icuuc\u_getPropertyValueName", "int", whichUProperty, "int", value, "int", nameChoice)
-			return StrGet(ret,, "UTF-8")
-		}
-		
-		;  	Return the property value integer for a given value name, as specified in the Unicode database file PropertyValueAliases.txt. 
-		; static getPropertyValueEnum(whichUProperty, alias) {
-		; 	this.verifyVersion()
-		; 	aliasBuf := Buffer(StrPut(alias, "UTF-8"))
-		; 	StrPut(alias, aliasBuf, "UTF-8")
-		; 	if (whichUProperty is String)
-		; 		whichUProperty := unicodeData.UProperty.%whichUProperty%
-		; 	ret := DllCall("icuuc\u_getPropertyValueEnum", "int", whichUProperty, "Ptr", aliasBuf)
-		; }
-		
-		;  	Determines if the specified character is permissible as the first character in an identifier according to UAX #31 Unicode Identifier and Pattern Syntax. 
-		static isIDStart(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isIDStart", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines if the specified character is permissible as a non-initial character of an identifier according to UAX #31 Unicode Identifier and Pattern Syntax. 
-		static isIDPart(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isIDPart", "uchar", Ord(char), "char")
-		}
-		
-		;  	Does the set of Identifier_Type values code point c contain the given type? 
-		; can't find UIDentifierType enum values 
-		; static hasIDType(char, type := unicodeData.UIdentifierType) {
-		; 	this.verifyVersion()
-		; 	return DllCall("icuuc\u_hasIDType", "uchar", Ord(char))
-		; }
-		
-		;  	Writes code point c's Identifier_Type as a list of UIdentifierType values to the output types array and returns the number of types. 
-		; can't find UIDentifierType enum values 
-		; static getIDTypes(char, UIdentifierType *types, int32_t capacity) {
-		; 	this.verifyVersion()
-		; 	errorCode := 0
-		; 	ret := DllCall("icuuc\u_getIDTypes", "uchar", Ord(char), "int*", &errorCode)
-		; 	switch errorCode {
-				
-		; 	}
-		; }
-		
-		;  	Determines if the specified character should be regarded as an ignorable character in an identifier, according to Java. 
-		static isIDIgnorable(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isIDIgnorable", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines if the specified character is permissible as the first character in a Java identifier. 
-		static isJavaIDStart(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isJavaIDStart", "uchar", Ord(char), "char")
-		}
-		
-		;  	Determines if the specified character is permissible in a Java identifier. 
-		static isJavaIDPart(char) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_isJavaIDPart", "uchar", Ord(char), "char")
-		}
-		
-		;  	The given character is mapped to its lowercase equivalent according to UnicodeData.txt; if the character has no lowercase equivalent, the character itself is returned. 
-		static tolower(char) {
-			this.verifyVersion()
-			codePoint := DllCall("icuuc\u_tolower", "uchar", Ord(char))
-			return Chr(codePoint)
-		}
-		
-		;  	The given character is mapped to its uppercase equivalent according to UnicodeData.txt; if the character has no uppercase equivalent, the character itself is returned. 
-		static toupper(char) {
-			this.verifyVersion()
-			codePoint := DllCall("icuuc\u_toupper", "uchar", Ord(char))
-			return Chr(codePoint)
-		}
-		
-		;  	The given character is mapped to its titlecase equivalent according to UnicodeData.txt; if none is defined, the character itself is returned. 
-		static totitle(char) {
-			this.verifyVersion()
-			codePoint := DllCall("icuuc\u_totitle", "uchar", Ord(char))
-			return Chr(codePoint)
-		}
-		
-		;  	The given character is mapped to its case folding equivalent according to UnicodeData.txt and CaseFolding.txt; if the character has no case folding equivalent, the character itself is returned. 
-		; options are either U_FOLD_CASE_DEFAULT == 0 or U_FOLD_CASE_EXCLUDE_SPECIAL_I == 1
-		static foldCase(char, options := unicodeData.FoldOption.U_FOLD_CASE_DEFAULT) {
-			this.verifyVersion()
-			codePoint := DllCall("icuuc\u_foldCase", "uchar", Ord(char), "int", options)
-			return Chr(codePoint)
-		}
-		
-		;  	Returns the decimal digit value of the code point in the specified radix. 
-		static digit(char, radix) {
-			this.verifyVersion()
-			return DllCall("icuuc\u_digit", "uchar", Ord(char), "char", radix) ; int8 == char
-		}
-		
-		;  	Determines the character representation for a specific digit in the specified radix. 
-		static forDigit(digit, radix) {
-			this.verifyVersion()
-			if !(isClamped(radix, 2, 36) && isClamped(digit, 0, radix-1))
-				throw(ValueError("Radix must be between 2 and 36 and digit between 0 and radix, given " radix ", " digit))
-			codePoint := DllCall("icuuc\u_forDigit", "int", digit, "char", radix)
-			return Chr(codePoint)
-		}
-		
-		;  	Get the "age" of the code point. 
-		static charAge(char) {
-			this.verifyVersion()
-			versionArray := Buffer(4)
-			DllCall("icuuc\u_charAge", "uchar", Ord(char), "Ptr", versionArray)
-			return [NumGet(versionArray, 0, "uchar"), NumGet(versionArray, 1, "uchar"), NumGet(versionArray, 2, "uchar"), NumGet(versionArray, 3, "uchar")]
-		}
-		
-		;  	Gets the Unicode version information. 
-		static getUnicodeVersion() {
-			this.verifyVersion()
-			versionArray := Buffer(4)
-			DllCall("icuuc\u_getUnicodeVersion", "Ptr", versionArray)
-			return [NumGet(versionArray, 0, "uchar"), NumGet(versionArray, 1, "uchar"), NumGet(versionArray, 2, "uchar"), NumGet(versionArray, 3, "uchar")]
-		}
-		
-		;  	Get the FC_NFKC_Closure property string for a character. 
-		static getFC_NFKC_Closure(char) {
-			this.verifyVersion()
-			errorCode := 0
-			dest := Buffer(512)
-			length := DllCall("icuuc\u_getFC_NFKC_Closure", "uchar", Ord(char), "Ptr", dest, "int", dest.Size, "int*", &errorCode)
-			switch errorCode {
-				case unicodeData.UErrorCode.U_ZERO_ERROR:
-					return StrGet(dest, length, "UTF-8")
-				default:
-					throw(OSError("getFC_NFKC_Closure returned Error " errorCode))
-			}
-		}
-
-		; alias
-		static verifyVersion() => unicodeData.verifyVersion()
-
-		
-	}
 	
-	static Normalization => {
+	static Normalization := {
 		NFC: 0x1, ; Unicode normalization form C, canonical composition. Transforms each decomposed grouping, consisting of a base character plus combining characters, to the canonical precomposed equivalent. For example, A + ¨ becomes Ä.
 		NFD: 0x2, ; Unicode normalization form D, canonical decomposition. Transforms each precomposed character to its canonical decomposed equivalent. For example, Ä becomes A + ¨.
 		NFKC: 0x5, ; Unicode normalization form KC, compatibility composition. Transforms each base plus combining characters to the canonical precomposed equivalent and all compatibility characters to their equivalents. For example, the ligature ﬁ becomes f + i; similarly, A + ¨ + ﬁ + n becomes Ä + f + i + n.
 		NFKD: 0x6 ; Unicode normalization form KD, compatibility decomposition. Transforms each precomposed character to its canonical decomposed equivalent and all compatibility characters to their equivalents. For example, Ä + ﬁ + n becomes A + ¨ + f + i + n.
 	}
 
-	static FoldOption => {
+	static FoldOption := {
 		U_FOLD_CASE_DEFAULT: 0,
 		U_FOLD_CASE_EXCLUDE_SPECIAL_I: 1
 	}
 
-	static U_NO_NUMERIC_VALUE => -123456789.0
+	static U_NO_NUMERIC_VALUE := -123456789.0
 	
-	static UIdentifierStatus => {}
+	static UIdentifierStatus := {}
 
-	static UIdentifierType => {}
+	static UIdentifierType := {}
 
-	static UIndicConjunctBreak => {}
+	static UIndicConjunctBreak := {}
 
-	static UNumericType => {
+	static UNumericType := {
 		U_NT_NONE: 0,
 		U_NT_DECIMAL: 1,
 		U_NT_DIGIT: 2,
@@ -654,7 +598,7 @@ class unicodeData {
 		U_NT_COUNT: 4
 	}
 
-	static UHangulSyllableType => {
+	static UHangulSyllableType := {
 		U_HST_NOT_APPLICABLE: 0,
 		U_HST_LEADING_JAMO: 1,
 		U_HST_VOWEL_JAMO: 2,
@@ -664,7 +608,7 @@ class unicodeData {
 		U_HST_COUNT: 6
 	}
 
-	static UIndicPositionalCategory => {
+	static UIndicPositionalCategory := {
 		U_INPC_NA: 0,
 		U_INPC_BOTTOM: 1,
 		U_INPC_BOTTOM_AND_LEFT: 2,
@@ -683,7 +627,7 @@ class unicodeData {
 		U_INPC_TOP_AND_BOTTOM_AND_LEFT: 15
 	}
 
-	static UIndicSyllabicCategory => {
+	static UIndicSyllabicCategory := {
 		U_INSC_OTHER: 0,
 		U_INSC_AVAGRAHA: 1,
 		U_INSC_BINDU: 2,
@@ -722,14 +666,14 @@ class unicodeData {
 		U_INSC_VOWEL_INDEPENDENT: 35
 	}
 
-	static UVerticalOrientation => {
+	static UVerticalOrientation := {
 		U_VO_ROTATED: 0,
 		U_VO_TRANSFORMED_ROTATED: 1,
 		U_VO_TRANSFORMED_UPRIGHT: 2,
 		U_VO_UPRIGHT: 3
 	}
 
-	static ULineBreak => {
+	static ULineBreak := {
 		U_LB_UNKNOWN: 0,
 		U_LB_AMBIGUOUS: 1,
 		U_LB_ALPHABETIC: 2,
@@ -777,7 +721,7 @@ class unicodeData {
 		U_LB_COUNT: 40
 	}
 	
-	static USentenceBreak => {
+	static USentenceBreak := {
 		U_SB_OTHER: 0,
 		U_SB_ATERM: 1,
 		U_SB_CLOSE: 2,
@@ -796,7 +740,7 @@ class unicodeData {
 		U_SB_COUNT: 15
 	}
 
-	static UWordBreakValues => {
+	static UWordBreakValues := {
 		U_WB_OTHER: 0,
 		U_WB_ALETTER: 1,
 		U_WB_FORMAT: 2,
@@ -823,7 +767,7 @@ class unicodeData {
 		U_WB_COUNT: 17
 	}
 
-	static UGraphemeClusterBreak => {
+	static UGraphemeClusterBreak := {
 		U_GCB_OTHER: 0,
 		U_GCB_CONTROL: 1,
 		U_GCB_CR: 2,
@@ -845,7 +789,7 @@ class unicodeData {
 		U_GCB_COUNT: 13
 	}
 
-	static UJoiningType => {
+	static UJoiningType := {
 		U_JT_NON_JOINING: 0,
 		U_JT_JOIN_CAUSING: 1,
 		U_JT_DUAL_JOINING: 2,
@@ -855,7 +799,7 @@ class unicodeData {
 		U_JT_COUNT: 6
 	}
 
-	static UDecompositionType => {
+	static UDecompositionType := {
 		U_DT_NONE: 0,
 		U_DT_CANONICAL: 1,
 		U_DT_COMPAT: 2,
@@ -877,13 +821,13 @@ class unicodeData {
 		U_DT_COUNT: 18
 	}
 
-	static UPropertyNameChoice => {
+	static UPropertyNameChoice := {
 		U_SHORT_PROPERTY_NAME: 0,
 		U_LONG_PROPERTY_NAME: 1,
 		U_PROPERTY_NAME_CHOICE_COUNT: 2
 	}
 
-	static UCharNameChoice => {
+	static UCharNameChoice := {
 		U_UNICODE_CHAR_NAME: 0x0,
 		U_UNICODE_10_CHAR_NAME: 0x1,
 		U_EXTENDED_CHAR_NAME: 0x2,
@@ -891,7 +835,7 @@ class unicodeData {
 		U_CHAR_NAME_CHOICE_COUNT: 0x4
 	}
 
-	static UEastAsianWidth => {
+	static UEastAsianWidth := {
 		U_EA_NEUTRAL: 0, 
 		U_EA_AMBIGUOUS: 1, 
 		U_EA_HALFWIDTH: 2, 
@@ -901,7 +845,7 @@ class unicodeData {
 		U_EA_COUNT: 6
 	}
 
-	static UBlockCode => {	
+	static UBlockCode := {	
 		UBLOCK_NO_BLOCK: 0,
 		UBLOCK_BASIC_LATIN: 1,
 		UBLOCK_LATIN_1_SUPPLEMENT: 2,
@@ -1247,14 +1191,14 @@ class unicodeData {
 		UBLOCK_INVALID_CODE: -1
 	}
 
-	static UBidiPairedBracketType => {
+	static UBidiPairedBracketType := {
 		U_BPT_NONE: 0, 
 		U_BPT_OPEN: 1, 
 		U_BPT_CLOSE: 2, 
 		U_BPT_COUNT: 3 
 	}
 
-	static UCharDirection => {	
+	static UCharDirection := {	
 		U_LEFT_TO_RIGHT: 0,
 		U_RIGHT_TO_LEFT: 1,
 		U_EUROPEAN_NUMBER: 2,
@@ -1281,7 +1225,7 @@ class unicodeData {
 		U_CHAR_DIRECTION_COUNT: 23
 	}
 
-	static UCharCategory => {
+	static UCharCategory := {
 		U_UNASSIGNED: 0,
 		U_GENERAL_OTHER_TYPES: 0,
 		U_UPPERCASE_LETTER: 1,
@@ -1316,7 +1260,7 @@ class unicodeData {
 		U_CHAR_CATEGORY_COUNT: 30
 	}
 
-	static UProperty => {
+	static UProperty := {
 		UCHAR_ALPHABETIC: 0,
 		UCHAR_BINARY_START: 0,
 		UCHAR_ASCII_HEX_DIGIT: 1,
@@ -1453,7 +1397,7 @@ class unicodeData {
 		UCHAR_INVALID_CODE:  -1
 	}
 
-	static UErrorCode => {
+	static UErrorCode := {
 		U_USING_FALLBACK_WARNING:	-128,
 		U_ERROR_WARNING_START:	-128,
 		U_USING_DEFAULT_WARNING:	-127,

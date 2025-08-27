@@ -227,7 +227,7 @@ class SongDownloader {
 			}
 			if RegExMatch(title, "i)(.)\s*\b(?:Official|Lyric)\s.*(?:Video|Audio)", &char) { ; clean (Official Lyric Video) and similar from title.
 				open := char[1]
-				closed := unicodeData.Wrapper.getBidiPairedBracket(open)
+				closed := unicodeData.getBidiPairedBracket(open)
 				if open != closed
 					title := RegExReplace(title, Format("i){}\s*(?:Official|Lyric)\s+((Music|Lyric|HD)\s+)?(Video|Audio)\s*{}", '\' open, '\' closed))
 			}
@@ -241,7 +241,7 @@ class SongDownloader {
 				artist := videoData["uploader"]
 			if RegExMatch(title, "i)^(.*?)(\S)\s*\b(?:feat|ft)\b\.?(.*)", &match) {
 				open := match[2]
-				closed := unicodeData.Wrapper.getBidiPairedBracket(match[2])
+				closed := unicodeData.getBidiPairedBracket(match[2])
 				if (open != closed && RegExMatch(title, Format("i){}\s*(?:feat|ft)\.?(.*?){}(.*)", '\' open, '\' closed), &match2)) { ; eg Artist - Title (feat. Thing) [some other stuff]
 					artist := Trim(artist) " ft " Trim(match2[1])
 					title := Trim(match[1]) . " " . Trim(match2[2])
@@ -252,7 +252,7 @@ class SongDownloader {
 			}
 			if RegExMatch(artist, "(.*)(\S)\s*\b(?:feat|ft)\b\.?(.*)", &match) {
 				open := match[2]
-				closed := unicodeData.Wrapper.getBidiPairedBracket(match[2])
+				closed := unicodeData.getBidiPairedBracket(match[2])
 				if (open != closed && RegExMatch(title, Format("(.*){}\s*(?:feat|ft)\.?(.*?){}(.*)", open, closed), &match2)) ; eg Artist (feat. Thing) [some other stuff]
 					artist := Trim(match2[1]) " ft " Trim(match2[2]) . " " Trim(match2[3])
 				else ; of the form Artist - Title feat. Singer (and thus there isn't a bracket) (or they forgot to close the bracket)

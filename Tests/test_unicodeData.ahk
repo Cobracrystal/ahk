@@ -22,7 +22,7 @@ RunTests() {
 		forDigit: { inputValid: 9, inputInvalid: 11, expectedValid: "9", expectedInvalid: "", additionalparams: [10] },
 		getNumericValue: { inputValid: "5", inputInvalid: "A", expectedValid: 5, expectedInvalid: -123456789.0, additionalparams: [] }
 	}
-	wr := unicodeData.Wrapper
+	ud := unicodeData
 	resultSummary := ""
 	for fnName, testCase in ObjOwnProps(icuTests) {
 		; Prepare parameters
@@ -31,11 +31,11 @@ RunTests() {
 
 		; Call function dynamically
 		try
-			validResult := wr.%fnName%(validParams*)
+			validResult := ud.%fnName%(validParams*)
 		catch as e
 			validResult := "Error in function " fnName " with param " testCase.inputInvalid  ": " e.Message
 		try
-			invalidResult := wr.%fnName%(invalidParams*)
+			invalidResult := ud.%fnName%(invalidParams*)
 		catch as e
 			invalidResult := "Error in function " fnName " with param " testCase.inputInvalid ": " e.Message
 
