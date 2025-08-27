@@ -1063,35 +1063,12 @@ loadTableAsHotstrings(filePath) {
 	Sleep(40)
 	MouseMove(x,y)
 }
-^1::{ ; Revo Idle: Slot 1 Merge
-	MouseGetPos(&x, &y)
-	Send("{LButton Down}")
-	Sleep(50)
-	MouseMove(295,722)
-	Sleep(50)
-	Send("{LButton Up}")
-	Sleep(100)
-	MouseMove(x,y)
-}
-^2::{ ; Revo Idle: Slot 2 Merge
-	MouseGetPos(&x, &y)
-	Send("{LButton Down}")
-	Sleep(50)
-	MouseMove(390,722)
-	Sleep(50)
-	Send("{LButton Up}")
-	Sleep(100)
-	MouseMove(x,y)
-}
-^3::{ ; Revo Idle: Slot 3 Merge
-	MouseGetPos(&x, &y)
-	Send("{LButton Down}")
-	Sleep(50)
-	MouseMove(475,722)
-	Sleep(50)
-	Send("{LButton Up}")
-	Sleep(100)
-	MouseMove(x,y)
+^e::{
+	MouseClick("L", 400, 965,,, 'D')
+	Sleep(200)
+	MouseClick("L", 400, 700,,, 'U')
+	Sleep(200)
+	MouseMove(400, 965)
 }
 #HotIf
 
