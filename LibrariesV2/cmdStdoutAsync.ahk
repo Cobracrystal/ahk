@@ -11,12 +11,13 @@ circular reference now
 */
 
 #Requires AutoHotkey v2
-; example:
-F3:: {
+/* ; example:
+F3::
+F4::{
 	static g := createGui()
 	static updateGui := ReadOutput.bind(g)
 	updateGui("", -3) ; reset the gui. -3 is arbitrary unused value
-	CmdStdOutAsync('ping google.com', , updateGui)
+	CmdStdOutAsync('ping google.com', , updateGui, A_ThisHotkey == 'F4' ? 2000 : unset)
 }
 
 createGui() {
@@ -38,12 +39,15 @@ ReadOutput(myGui, line, complete := 0) {
 		return myGui.show()
 	fullOutput .= line
 	myGui["Edit"].Value := fullOutput
-	myGui["Complete"].Value := complete == -1 ? 'timed out' : complete = false ? 'false' : 'true'
-	if complete {
+	myGui["Complete"].Value := complete == -1 ? 'timed out' : complete ? 'true' : 'false'
+	if complete == -3
+		return
+	else if complete {
 		MsgBox(fullOutput, 'Complete stdout', 0x2040)
 		fullOutput := ""
 	}
 }
+; */
 
 class CmdStdOutAsync {
 	__New(cmd, encoding?, callback?, timeOut?) {
