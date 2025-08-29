@@ -1164,3 +1164,95 @@ WinSetVolume(level, target?) {
 ^!9::] ; GTNH: Fix Ctrl Alt
 ^!0::} ; GTNH: Fix Ctrl Alt
 #HotIf
+
+#HotIf WinActive("Revolution Idle")
+^Numpad1::doRefinePrestige()
+^Numpad2::PrestigeLoop.toggle()
+class PrestigeLoop {
+	static isOn := 0
+	static toggle() {
+		if this.isOn := !this.isOn
+			SetTimer(this.loop.bind(this), -10)
+	}
+	static loop() {
+		while(this.isOn) {
+			Loop(5) {
+				spawnAndIncrease()
+				Sleep(50)
+			}
+			doPolishPrestige()
+			Sleep(50)
+			Loop(5) {
+				spawnAndIncrease()
+				Sleep(40)
+			}
+			doRefinePrestige()
+			Sleep(50)
+		}
+	}
+}
+
+^Numpad3::{
+	Loop(5)
+		spawnAndIncrease()
+}
+
+openPolishMenu() {
+	static polish := [1050, 1000]
+	MouseClick("L", polish*)
+}
+
+closePolishMenu() {
+	static polishexit := [1555, 255]
+	MouseClick("L", polishexit*)
+}
+
+doPolishPrestige() {
+	static polishPrestige := [1178, 362]
+	static polishPrestigeConfirm := [1180, 640]
+	static swordlvlup := [1420, 896]
+	openPolishMenu()
+	sleep(75)
+	MouseClick("L", polishPrestige*)
+	Sleep(75)
+	MouseClick("L", polishPrestigeConfirm*)
+	Sleep(75)
+	loop(3) {
+		MouseClick("L", swordlvlup*)
+		Sleep(30)
+	}
+	Sleep(75)
+	closePolishMenu()
+}
+
+spawnAndIncrease() {
+	static spawn := [675, 990]
+	static spawnlvl := [740, 898]
+	MouseClick("L", spawn*)
+	Sleep(75)
+	MouseClick("L", spawnlvl*)
+	Sleep(75)
+	Send("999")
+}
+
+doRefinePrestige() {
+	static refinePrestige := [1450, 410]
+	static refinePrestigeConfirm := [1200, 650]
+	openRefineMenu()
+	Sleep(75)
+	MouseClick('L', refinePrestige*)
+	Sleep(75)
+	MouseClick('L', refinePrestigeConfirm*)
+	Sleep(75)
+	closeRefineMenu()
+	
+}
+openRefineMenu() {
+	static refine := [1441, 991]
+	MouseClick('L', refine*)
+}
+closeRefineMenu() {
+	static refineClose := [62, 260]
+	MouseClick('L', refineClose*)
+}
+#HotIf
