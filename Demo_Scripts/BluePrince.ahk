@@ -6,21 +6,21 @@
 mainfunc()
 
 mainfunc() {
-	; input := A_Clipboard
-	coatOfArms := [1000, 200, 11, 2]
-	bigPuzzle := "PIGS SAND MAIL DATE HEAD CLAM PEAK HEAT JOYA WELL TOAD CARD WILL TAPE LEGS TREE ROAD MAID SLAB ROCK HAND VASE SAFE CLAY TOES"
-	test := "HEAT"
+	; basicCore := "HEAT"
+	; print(numericCore.solveCores(basicCore))
+	; coatOfArms := [1000, 200, 11, 2]
 	; print(numericCore.numericCore(coatOfArms*))
-	; print(numericCore.solveCores(test))
+	bigPuzzle := "PIGS SAND MAIL DATE HEAD CLAM PEAK HEAT JOYA WELL TOAD CARD WILL TAPE LEGS TREE ROAD MAID SLAB ROCK HAND VASE SAFE CLAY TOES"
 	; numericCore.beStupid := false
-	print(numericCore.solveCores(test))
+	bigSolution := numericCore.solveCoreString(bigPuzzle)
+	print(tostring(objFlatten(bigSolution, e => e[1])))
 }
 
 class numericCore {
 
 	static beStupid := true
 
-	static solveCores(str) {
+	static solveCoreString(str) {
 		arr := []
 		str := StrReplace(str, "`n", " ")
 		for i, e in StrSplitUTF8(str, " ")
@@ -30,34 +30,9 @@ class numericCore {
 		arr2 := objDoForEach(arr2, o => objCollect(o, (b,e) => b . e))
 		arr2 := objDoForEach(arr2, n => Number(n))
 		for i, e, f in objZip(arr, arr2) {
-			core := this.numericCore(e*)
-			core2 := this.bestNumericCorePermutative(e*)
-			; core3 := bestNumericCore(f)
-			; core.push(core2*)
-			; core.push(core3*)
-			solutions.push(core)
+			solutions.push(this.numericCore(e*))
 		}
 		return objDoForEach(solutions, a => (a.insertAt(1, Chr(a[1] + Ord("A") - 1)), a))
-	}
-
-	static bestNumericCorePermutative(n,m,o,p) {
-		values := permutations(n,m,o,p)
-		solutions := []
-		for i, e in values {
-			f := this.numericCore(e*)
-			if (f[2] != 0)
-				solutions.push(f)
-		}
-		if solutions.Length == 0
-			return 0
-		sortedSolutions := objSort(solutions, a => a[1], "N")
-		s := sortedSolutions[1]
-		; if (s[1] >= 1000) {
-		; 	ncr := this.bestNumericCorePermutative(s[1]*)
-		; 	ncr.push(s*)
-		; 	return ncr
-		; }
-		return s
 	}
 
 	static bestNumericCore(n) {
