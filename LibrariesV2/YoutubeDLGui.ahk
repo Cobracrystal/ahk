@@ -37,7 +37,7 @@ class YoutubeDLGui {
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; establish basic data necessary for handling
 		this.data := {
-			coords: {x: 750, y: 425},
+			coords: {x: 625, y: 400},
 			savePath: A_Appdata . "\Autohotkey\YTDL",
 			output: "",
 			outputLastLine: "",
@@ -65,36 +65,6 @@ class YoutubeDLGui {
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 		this.data.guiVisibility := 1
 	}
-
-	updateGuiOutput(cmdLine) {
-		static WM_VSCROLL := 0x115 
-		static SB_BOTTOM  := 7
-		lineArray := StrSplit(Rtrim(StrReplace(cmdLine, "`r`n", "`n"), "`n"), "`n")
-		for i, newLine in lineArray {
-			if (Instr(newLine, "https://") || Instr(newLine, "http://")) && !(Instr(this.data.outputLastLine, "[redirect]") || Instr(newLine, "[redirect]")) && (this.data.outputLastLine != "") && (this.data.outputLastLine != YoutubeDLGui.UIComponents.separator . "`n") {
-				this.data.outputLastLine .= YoutubeDLGui.UIComponents.separatorSmall . "`n"
-				this.data.outputLastLineCFlag := 0
-			}
-			; if not the last line, then there might be `r`n for the end, so remove that. StrSplit Trims on *both* sides, so it does not work (since `r at the start is necessary for overwriting lines)
-			if (i != lineArray.Length)
-				newLine := RTrim(newLine, "`r")
-			StrReplace(newLine, "`r", "`r", , &carriageCount)
-			if (carriageCount) { ; if `r in string, only take the last string part.
-				tArr := StrSplit(newLine, "`r")
-				newLine := tArr[-1]
-			}
-			; if current line AND previous line have `r, then overwrite prev line, otherwise save the line.
-			if !(carriageCount && this.data.outputLastLineCFlag)
-				this.data.output .= this.data.outputLastLine
-			this.data.outputLastLine := newLine . "`n"
-			this.data.outputLastLineCFlag := carriageCount
-			; write saved output and current line to gui
-			; pos := scrollbarGetPosition(this.controls.editOutput.Hwnd)
-			this.controls.editOutput.value := this.data.output . this.data.outputLastLine
-			; if (pos == 1) ; bottom
-			SendMessage(WM_VSCROLL, SB_BOTTOM, 0, this.controls.editOutput.hwnd)
-		}
-	}
 	
 	updateGuiOutput2(links, cmdLine, done := 0) {
 		static WM_VSCROLL := 0x115 
@@ -106,17 +76,13 @@ class YoutubeDLGui {
 			lastLine .= YoutubeDLGui.UIComponents.separatorSmall . "`n"
 			lastLineOverwrite := 0
 		}
-		; if not the last line, then there might be `r`n for the end, so remove that. StrSplit Trims on *both* sides, so it does not work (since `r at the start is necessary for overwriting lines)
-		StrReplace(cmdLine, "`r",, , &thisLineOverwrite)
-		if (thisLineOverwrite) { ; if `r in string, only take the last string part.
-			tArr := StrSplit(cmdLine, "`r")
-			cmdLine := tArr[-1]
-		}
-		; if current line AND previous line have `r, then overwrite prev line, otherwise save the line.
-		if !(thisLineOverwrite && lastLineOverwrite)
-			fullOutput .= lastLine
-		lastLine := cmdLine . "`n"
-		lastLineOverwrite := thisLineOverwrite
+		carriageReturnPos := InStr(cmdLine, '`r',,,-1) ; carriage return means overwrite last line
+		if (carriageReturnPos)
+			cmdLine := SubStr(cmdLine, carriageReturnPos + 1)
+		if !(carriageReturnPos && lastLineOverwrite)
+			fullOutput .= lastLine ; only add line if no carriage return in cur string and last string
+		lastLine := cmdLine
+		lastLineOverwrite := carriageReturnPos
 		this.controls.editOutput.value := fullOutput . lastLine
 		SendMessage(WM_VSCROLL, SB_BOTTOM, 0, this.controls.editOutput.hwnd)
 
@@ -124,7 +90,7 @@ class YoutubeDLGui {
 			tFulloutput := fullOutput . lastLine
 			lastLine := fullOutput := ""
 			lastLineOverwrite := 0
-			this.controls.editOutput.value := tFulloutput . '`n' . YoutubeDLGui.UIComponents.separator
+			this.controls.editOutput.value := tFulloutput . YoutubeDLGui.UIComponents.separator
 			if (!WinActive(this.gui))
 				this.YoutubeDLGui("Hide")
 			if (links == "" || !this.settings.openExplorer)
@@ -214,8 +180,6 @@ class YoutubeDLGui {
 			case "CheckboxUseAliases":
 				this.settings.useAliases := !this.settings.useAliases
 				this.ytdlOptionHandler()
-			case "CheckboxUseInlineConsole":
-				this.settings.useInlineConsole := !this.settings.useInlineConsole
 			case "CheckboxOnlyPrintFilename":
 				this.ytdlOptionHandler("print")
 			case "CheckboxOpenExplorer":
@@ -259,58 +223,8 @@ class YoutubeDLGui {
 		}
 		this.ytdlOptionHandler()
 		fullRuncmd := this.controls.editCmdConfig.value . "`"" StrReplace(Trim(links, " `t`n`r"), "`n", "`" `"") "`""
-		if (this.settings.useInlineConsole) {
-			global outputInstance := CmdStdOutAsync(fullRuncmd, 'UTF-8', this.updateGuiOutput2.bind(this, links))
-			; cmdRetAsync(fullRuncmd, this.updateGuiOutput.bind(this), "UTF-8", 200, this.__done.bind(this, links))
-		} else {
-			A_Clipboard := fullRuncmd
-;			Run("cmd /k `"mode con: cols=100 lines=30 && " fullRuncmd "`"")
-		}
-	}
-
-	__done(links, fullOutput, status) {
-		this.updateGuiOutput(YoutubeDLGui.UIComponents.separator)
-		if (!WinActive(this.gui))
-			this.YoutubeDLGui("Hide")
-		if (links == "" || !this.settings.openExplorer)
-			return
-		if (this.settings.trySelectFile) {
-			arrLong := StrSplit(fullOutput, YoutubeDLGui.UIComponents.separator)
-			responseArr := StrSplit(arrLong[-1], YoutubeDLGui.UIComponents.separatorSmall)
-			fileNames := []
-			for i, e in responseArr
-			{
-				lineArr := StrSplit(RTrim(e, "`n"), "`n")
-				regexM := StrReplace(this.settings.outputPath, "\", "\\") . "\\([[:ascii:]]*?\." . (this.options["extract-audio"].selected ? "mp3" : "mp4") . ")"
-				for i, e in arrayInReverse(lineArr)
-					if !(Instr(e, "Deleting")) && (RegexMatch(e, regexM, &o))
-						break
-				if (o != "")
-					fileNames.push(o[1])
-			}
-			if (this.settings.debug)
-				for i, e in fileNames
-					this.updateGuiOutput(e)
-			if (fileNames.Length == 0)
-				return
-			for oWin in ComObject("Shell.Application").Windows
-				if (oWin.Name == "Explorer") && (this.settings.outputPath = oWin.Document.Folder.Self.Path) {
-					WinActivate("ahk_id " . oWin.HWND)
-					PostMessage(0x111, 28931, , , "ahk_id " . oWin.HWND) ; forcibly refresh ?
-					oItems := oWin.Document.Folder.Items
-					oWin.Document.SelectItem(oItems.Item(fileNames[-1]), 29)
-					for i, e in fileNames
-						oWin.Document.SelectItem(oItems.Item(e), 1)
-					oWin := oItems := ""
-					return
-				}
-		}
-		if (WinExist(this.settings.outputPath . " ahk_exe explorer.exe"))
-			WinActivate()
-		else
-			Run('explorer "' . this.settings.outputPath . (fileName ?? "") . (ext ?? "") '"')
-		;	Run, % "explorer /select, """ . this.settings.outputPath . "\" . o.Value(1) . """" ; THIS IF THE INPUT IS ONLY ONE LINE (AKA ONE FILE)
-	
+		CmdStdOutAsync(fullRuncmd, 'UTF-8', this.updateGuiOutput2.bind(this, links))
+		
 	}
 
 	settingsGUI(*) {
@@ -321,7 +235,6 @@ class YoutubeDLGui {
 		settingsGui.OnEvent("DropFiles", settingsGUIDropFiles)
 		settingsGui.AddText("Center Section", "Settings for YoutubeDL Gui")
 		settingsGui.AddCheckbox("vCheckboxUseAliases Checked" this.settings.useAliases, "Use aliases for arguments").OnEvent("Click", this.settingsHandler.bind(this))
-		settingsGui.AddCheckbox("vCheckboxUseInlineConsole Checked" this.settings.useInlineConsole, "Use the inbuilt Console").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxDownloadPlaylist Checked" . !this.options["no-playlist"].selected, "Download playlist?").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxOnlyPrintFilename Checked" . this.options["print"].selected, "Only print filename").OnEvent("Click", this.settingsHandler.bind(this))
 		settingsGui.AddCheckbox("vCheckboxOpenExplorer Checked" this.settings.openExplorer, "Open Explorer after download").OnEvent("Click", this.settingsHandler.bind(this))
@@ -437,7 +350,6 @@ class YoutubeDLGui {
 	static defaultSettings => {
 		resetConverttoAudio: 1,
 		useAliases: 0,
-		useInlineConsole: 1,
 		openExplorer: 1,
 		trySelectFile: 0,
 		outputPath: A_ScriptDir,
