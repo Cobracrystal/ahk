@@ -4,6 +4,7 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\FileUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\unicodeData.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\cmdStdoutAsync.ahk"
 
 ; todo: split video chapters into separate files option
 ; todo: attempt to parse artist/title from description if title/uploader doesn't seem correct
@@ -496,7 +497,7 @@ class SongDownloader {
 	static thumbnailPreviewer(metadata) {
 		static HTML_TEMPLATE := '<!DOCTYPE html><html><head><style>html,body {margin: 0;padding: 0;}.overlay {position: absolute;top: 0;height: {3};background-color: #000;filter: alpha(opacity=85);}</style></head><body><div style="width:{2};height:{3};"><img src="{1}" alt="Picture" style="width:{2};height:{3};"><div class="overlay" style="left:0;width:{4}px;"></div><div class="overlay" style="right:0;width:{4}px;"></div></div></body></html>'
 		if metadata.HasOwnProp("thumbnails") {
-			RegExMatch(metadata.thumbnails[1], "https:\/\/.*?\/.*?\/([a-zA-Z0-9-_]{11})\/.*?\.", &o)
+			RegExMatch(metadata.thumbnails[1].url, "https:\/\/.*?\/.*?\/([a-zA-Z0-9-_]{11})\/.*?\.", &o)
 			getThumbs := InStr(metadata.link, o[1]) ? 1 : 0
 		}
 		if !metadata.HasOwnProp("thumbnails") || getThumbs {
