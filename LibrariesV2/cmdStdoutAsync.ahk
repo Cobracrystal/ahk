@@ -50,7 +50,7 @@ ReadOutput(myGui, line, complete := 0) {
 ; */
 
 class CmdStdOutAsync {
-	__New(cmd, encoding?, callback?, timeOut?) {
+	__New(cmd, encoding?, callback?, timeOut?, finalCallback?) {
 		encoding := encoding ?? 'cp' . DllCall('GetOEMCP', 'UInt')
 		this.event := CmdStdOutAsync.Event()
 		this.params := {
@@ -63,6 +63,8 @@ class CmdStdOutAsync {
 		}
 		if IsSet(callback)
 			this.params.callback := callback
+		if IsSet(finalCallback) ; MODIFIED: Final callback
+			this.params.finalCallback := finalCallback
 		if IsSet(timeOut) {
 			this.params.timeOut := timeOut
 			this.params.startTime := A_TickCount
@@ -149,10 +151,11 @@ class CmdStdOutAsync {
 			}
 			else if !bool && A_LastError != ERROR_IO_PENDING := 997 {
 				this.info.complete := true
-				if this.info.HasProp('callback') {
+				if this.info.HasProp('callback')
 					SetTimer(this.info.callback.Bind('', true), -10)
-					this.classObj.Clear() ; MODIFIED: Remove circular reference
-				}
+				if this.info.HasProp('finalCallback') ; MODIFIED: Final Callback
+					SetTimer(this.info.finalCallback.bind(this.info.outData, true), -10)
+				this.classObj.Clear() ; MODIFIED: Remove circular reference
 			}
 		}
 
@@ -178,12 +181,16 @@ class CmdStdOutAsync {
 			if timedOut {
 				if this.info.HasProp('callback')
 					SetTimer(this.info.callback.Bind('', -1), -10)
+				if this.info.HasProp('finalCallback') ; MODIFIED: Final callback
+					SetTimer(this.info.finalCallback.bind(this.info.outData, -1), -10)
 				this.classObj.Clear()  ; MODIFIED: Remove circular reference
 				return
 			}
 			if !DllCall('GetOverlappedResult', 'Ptr', handle, 'Ptr', this.info.overlapped, 'UIntP', &size := 0, 'UInt', false) {
 				if this.info.HasProp('callback')
 					SetTimer(this.info.callback.Bind('', true), -10)
+				if this.info.HasProp('finalCallback') ; MODIFIED: Final callback
+					SetTimer(this.info.finalCallback.bind(this.info.outData, true), -10)
 				this.classObj.Clear()  ; MODIFIED: Remove circular reference
 				return this.info.complete := true
 			}
@@ -244,10 +251,8 @@ class CmdStdOutAsync {
 			__new() => super.__new(A_PtrSize * 5, 0)
 			__delete() => this.Unregister()
 			_unlock() {
-				if p := this.locked {
+				if p := this.locked
 					this.locked := 0
-					OutputDebug("rel: " ObjRelease(p) "`n")
-				}
 			}
 			Unregister() {
 				wh := this.waitHandle, this.waitHandle := 0
