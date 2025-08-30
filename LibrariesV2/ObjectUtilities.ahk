@@ -234,7 +234,7 @@ objDoForEach(obj, fn := (v) => toString(v), conditional := (itKey?, itVal?) => t
 
 objGetMinimum(obj) => objCollect(obj, (a,b) => Min(a,b))
 objGetMaximum(obj) => objCollect(obj, (a,b) => Max(a,b))
-objGetSum(obj) => objCollect(obj, (a,b) => (a+b))
+objGetSum(obj) => objCollect(obj, (a,b) => (a+b), 0)
 objGetAverage(obj) => objGetSum(obj) / objGetValueCount(obj)
 objGetProd(obj) => objCollect(obj, (b,i) => b*i)
 
