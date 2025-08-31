@@ -7,7 +7,8 @@ a) fix the example which had issues with async (and also wasnt the most readable
 and b) 
 allow instances from the class to be handled without having to declare them global or have the thread wait until the function is finished.
 RegisterWaitCallback's handling of params caused ahk to garbage collect the entire class before it finished operating, which is why there is a
-circular reference now
+circular reference now. Also forces Persistent() to prevent scripts from exiting while process is ongoing
+c) Add finalcallback parameter
 */
 
 #Requires AutoHotkey v2
@@ -51,6 +52,7 @@ ReadOutput(myGui, line, complete := 0) {
 
 class CmdStdOutAsync {
 	__New(cmd, encoding?, callback?, timeOut?, finalCallback?) {
+		Persistent()
 		encoding := encoding ?? 'cp' . DllCall('GetOEMCP', 'UInt')
 		this.event := CmdStdOutAsync.Event()
 		this.params := {
