@@ -1123,7 +1123,6 @@ class SongDownloader {
 			}
 			if !comparisons.Length
 				print("All data correct")
-			print(qpc())
 			return comparisons
 		}
 	}
