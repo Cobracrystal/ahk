@@ -85,10 +85,14 @@ replaceCharacters(text, replacer) {
 	return result
 }
 
-strChangeEncoding(str, encoding) {
-	buf := Buffer(StrPut(str, encoding))
-	StrPut(str, buf, encoding)
-	return StrGet(buf, "UTF-16")
+strBuffer(str, encoding := 'UTF-8', fillValue?) {
+	buf := Buffer(StrPut(str, "UTF-8"), fillValue?)
+	StrPut(str, buf, "UTF-8")
+	return buf
+}
+
+strChangeEncoding(str, encodingFrom, encodingTo := 'UTF-16') {
+	return StrGet(strBuffer(str, encodingFrom), encodingTo)
 }
 
 /**
@@ -503,6 +507,9 @@ strSplitRecursive(str, splits := StrLen(str)) {
 	return arr
 }
 
+strSplitOnSpace(str) => StrSplit(str, " ")
+strSplitOnNewLine(str, omitCarriageReturn := true) => StrSplit(str, '`n', omitCarriageReturn ? '`r' : unset)
+
 class Uri {
 ; stolen from https://github.com/ahkscript/libcrypt.ahk/blob/master/src/URI.ahk
 	static encode(str) { ; keep ":/;?@,&=+$#."
@@ -514,19 +521,18 @@ class Uri {
 	}
 
 	static LC_UriEncode(uri, RE := "[0-9A-Za-z]") {
-		var := Buffer(StrPut(uri, "UTF-8"), 0)
-		StrPut(uri, var, "UTF-8")
+		var := strBuffer(uri)
 		while(code := NumGet(Var, A_Index - 1, "UChar"))
-			res .= RegExMatch(char := Chr(Code), RE) ? char : Format("%{:02X}", Code)
+			res .= ((char := Chr(Code)) ~= RE ) ? char : Format("%{:02X}", Code)
 		return res
 	}
 
 	static LC_UriDecode(uri) {
 		pos := 1
 		while(pos := RegExMatch(uri, "i)(%[\da-f]{2})+", &code, pos)) {
-			var := Buffer(StrLen(code[1]) // 3, 0)
-			Code := SubStr(code[1], 2)
-			Loop Parse, code, "`%"
+			var := Buffer(StrLen(code[0]) // 3, 0)
+			Code := SubStr(code[0], 2)
+			Loop Parse, code, '%'
 				NumPut("UChar", "0x" A_LoopField, var, A_Index - 1)
 			decoded := StrGet(var, "UTF-8")
 			uri := SubStr(uri, 1, pos - 1) . decoded . SubStr(uri, pos+StrLen(Code)+1)

@@ -158,16 +158,13 @@ ExecHelperScript(expression, wait := true, void := false) {
 ExecScript(input, Wait := true) {
 	static shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
-	strConvBuf := Buffer(StrPut(input, "UTF-8"))
-	StrPut(input, strConvBuf, "UTF-8")
+	strConvBuf := strBuffer(input)
 	exec.StdIn.Write(StrGet(strConvBuf, "CP0"))
 	exec.StdIn.Close()
 	if !Wait
 		return
 	output := exec.StdOut.ReadAll()
-	buf := Buffer(StrPut(output, "CP0"))
-	StrPut(output, buf, "CP0")
-	return RTrim(StrGet(buf, "UTF-8"), " `t`n")
+	return RTrim(strChangeEncoding(output, 'CP0', 'UTF-8'), " `t`n")
 }
 
 cmdRet(sCmd, callBackFuncObj?, encoding := "CP" . DllCall("GetOEMCP", "UInt")) {
@@ -812,8 +809,7 @@ base64Encode(str, encoding := "UTF-8") {
 	static CRYPT_STRING_BASE64 := 0x00000001
 	static CRYPT_STRING_NOCRLF := 0x40000000
 
-	binary := Buffer(StrPut(str, encoding))
-	StrPut(str, binary, encoding)
+	binary := strBuffer(str, encoding)
 	if !(DllCall("crypt32\CryptBinaryToStringW", "Ptr", binary, "UInt", binary.Size - 1, "UInt", (CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF), "Ptr", 0, "UInt*", &size := 0))
 		throw(OSError())
 	base64 := Buffer(size << 1, 0)
