@@ -99,7 +99,7 @@ whoami(ByRef req, ByRef res, ByRef server) {
 logger(ByRef req) {
 	logFile := A_WorkingDir . "\logAllRequests.txt"
 	str := "-----------------------------------------------------`nNEW REQUEST MADE AT " . formatTimeFunc(,"dd-MM-yyyy HH:mm:ss.") . Mod(A_TickCount,1000) . " (System Time)`n"
-	str .= "Path: " . req.path . "`nIP: " req.headers["CF-Connecting-IP"] . (req.headers["CF-Connecting-IP" == CURRENT_PUBLIC_IP ? " (Self) ": "") . " (Country: " . req.headers["CF-IPCountry"] . ")`nUser Agent: " . req.headers["user-agent"] . "`nQueries: "
+	str .= "Path: " . req.path . "`nIP: " req.headers["CF-Connecting-IP"] . (req.headers["CF-Connecting-IP"] == CURRENT_PUBLIC_IP ? " (Self) ": "") . " (Country: " . req.headers["CF-IPCountry"] . ")`nUser Agent: " . req.headers["user-agent"] . "`nQueries: "
 	for i, e in req.queries
 		if (e != req.path)
 			str .= i . ": " . e . ", "
