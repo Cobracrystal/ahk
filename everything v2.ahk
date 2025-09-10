@@ -52,9 +52,9 @@ GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND
 GroupAdd("nonMenuWindows", "ahk_exe cs2.exe")
 GroupAdd("nonMenuWindows", "Satisfactory ahk_class UnrealWindow")
 GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
-reminders := ReminderManager(, , token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
-try reminders.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBALVAR_WASRELOADED)
-; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", reminders.discordReminder.bind(0, token, "CHANNELID"))
+remInst := ReminderManager(, , token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
+try remInst.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBALVAR_WASRELOADED, remInst.discordReminder.bind(remInst, "245189840470147072"))
+; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", remInst.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
 if (StrCompare(A_OSVersion, "10.0.22000") < 0) {
@@ -155,7 +155,7 @@ if (!GLOBALVAR_WASRELOADED)
 }
 
 ^F8:: {	; Shows Reminder GUI
-	reminders.ReminderManagerGUI("T")
+	remInst.ReminderManagerGUI("T")
 }
 
 ^+K:: { ; Toggle Taskbar Transparency
@@ -1056,22 +1056,6 @@ loadTableAsHotstrings(filePath) {
 	}
 }
 
-#HotIf WinActive("Revolution Idle")
-^b::{	; Revo Idle: Buy
-	MouseGetPos(&x, &y)
-	MouseClick("L", 1420, 1020)
-	Sleep(40)
-	MouseMove(x,y)
-}
-^e::{
-	MouseClick("L", 400, 965,,, 'D')
-	Sleep(200)
-	MouseClick("L", 400, 700,,, 'U')
-	Sleep(200)
-	MouseMove(400, 965)
-}
-#HotIf
-
 
 
 ^F6::{	; Controller Test
@@ -1086,10 +1070,14 @@ loadTableAsHotstrings(filePath) {
 	g := Gui()
 	ed := g.AddEdit("w300 R20 ReadOnly")
 	g.show()
+	g.OnEvent("Close", (*) => (SetTimer(updategui, 0), g.Destroy()))
+	g.OnEvent("Escape", (*) => (SetTimer(updategui, 0), g.Destroy()))
 	conBtns := GetKeyState(conIndex "JoyButtons")
 	conName := GetKeyState(conIndex "JoyName")
 	conInfo := GetKeyState(conIndex "JoyInfo")
-	Loop {
+	SetTimer(updategui, 100)
+
+	updategui() {
 		btnsActive := ""
 		conSticks := ""
 		Loop conBtns
@@ -1100,7 +1088,6 @@ loadTableAsHotstrings(filePath) {
 		for i, e in conArr
 			conSticks .= (e == "P" ? "POV" : e) . Round(GetKeyState(conIndex "Joy" (e == "P" ? "POV" : e))) " "
 		ed.Value := Format("Controller Name: {} (#{})`nCon Info: {}`nAxis: {}`nButtons Down: {}", conName, conIndex, conInfo, conSticks, btnsActive)
-		Sleep(100)
 	}
 }
 
@@ -1166,6 +1153,16 @@ WinSetVolume(level, target?) {
 #HotIf
 
 #HotIf WinActive("Revolution Idle")
+^q::{
+	MouseGetPos(&x, &y)
+	Send("{LButton Down}")
+	Sleep(30)
+	MouseMove(767, 700)
+	Sleep(30)
+	Send("{LButton Up}")
+	Sleep(30)
+	MouseMove(x, y)
+}
 ^Numpad1::doRefinePrestige()
 ^Numpad2::PrestigeLoop.toggle()
 class PrestigeLoop {
@@ -1176,12 +1173,14 @@ class PrestigeLoop {
 	}
 	static loop() {
 		while(this.isOn) {
-			Loop(5) {
-				spawnAndIncrease()
+			Loop(3) {
+				Loop(5) {
+					spawnAndIncrease()
+					Sleep(50)
+				}
+				doPolishPrestige()
 				Sleep(50)
 			}
-			doPolishPrestige()
-			Sleep(50)
 			Loop(5) {
 				spawnAndIncrease()
 				Sleep(40)
