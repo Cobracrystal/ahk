@@ -176,11 +176,7 @@ class SongDownloader {
 		data := MapToObj(jsongo.Parse(jsonAsStr))
 		if !(data is Array)
 			data := [data]
-		if this.settings.useVisibleCMD
-			for i, dataPoint in data
-				Run("wt cmd " (this.settings.debug ? "/k" : "/c") " chcp 65001 && title SongDownloader && echo " fullCommand " && " fullCommand)
-		else
-			asyncQueueJson(0)
+		asyncQueueJson(0)
 		return data
 
 		asyncQueueJson(index, output?, success := 0) {
@@ -207,6 +203,10 @@ class SongDownloader {
 			fullCommand := this.cmdStringBuilder(this.settings.ytdlPath, profile, 0, dataPoint.link)
 			if (this.settings.debug)
 				print(fullCommand)
+			if this.settings.useVisibleCMD {
+				Run("wt cmd " (this.settings.debug ? "/k" : "/c") " chcp 65001 && title SongDownloader && echo " fullCommand " && " fullCommand)
+				return asyncQueueJson(index)
+			}
 			CmdStdOutAsync(fullCommand, "UTF-8",,, asyncQueueJson.bind(index))
 		}
 	}
