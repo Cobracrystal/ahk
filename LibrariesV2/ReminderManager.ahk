@@ -107,10 +107,7 @@ class ReminderManager {
 		if !(function is Func) {
 			switch function {
 				case "discordReminder", "ReminderManager.discordReminder":
-					if (fparams.Length == 1)
-						function := this.discordReminder
-					else
-						function := this.defaultReminder
+					function := this.discordReminder
 				case "reminder1337", "ReminderManager.reminder1337":
 					function := this.reminder1337
 				default:
@@ -317,7 +314,7 @@ class ReminderManager {
 		return 1
 	}
 
-	importReminders(filePath, ignoreMissedReminders := false, encoding := "UTF-8") {
+	importReminders(filePath, ignoreMissedReminders := false, defaultReminderFunc?, encoding := "UTF-8") {
 		if (!FileExist(filepath))
 			throw(TargetError("Nonexistent Reminder File Given"))
 		jsonStr := FileRead(filePath, encoding)
@@ -332,6 +329,8 @@ class ReminderManager {
 			fparArr := rObj.HasOwnProp("fparams") ? rObj.fparams : []
 			if (ignoreMissedReminders && Abs(DateDiff(nextMatchingTime(y?,mo?,d?,h?,m?,s?), A_Now, "Seconds")) <= 1)
 				continue
+			if !rObj.HasOwnProp("function") || !rObj.function
+				rObj.function := defaultReminderFunc ?? this.defaultReminder
 			if (rObj.multi)
 				this.setPeriodicTimerOnParser(y?,mo?,d?,h?,m?,s?, rObj.period, rObj.periodUnit, rObj.message, rObj.function, fparArr*)			
 			else
