@@ -7,23 +7,6 @@
 ; All functions have been extracted from https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/uchar_8h.html#a46c049f7988a44e14d221f68e2e63db2
 
 class unicodeData {
-	
-	static __New() {
-		; that avoids having to write this.verifyVersion in every single function
-		for e in this.OwnProps()
-			if Type(this.%e%) == "Func" && e != "verifyVersion" {
-				oldFunc := this.%e%
-				fn := makeClosure(oldFunc)
-				this.DefineProp(e, { Call: fn })
-			}
-
-		makeClosure(oldFunc) {
-			return (this, params*) => (
-					this.verifyVersion(),
-					oldFunc(this, params*)
-				)
-		}
-	}
 	; ***********************************************************************
 	; These functions are not inside icu4c, but are relevant enough to be listed here
 	; ***********************************************************************
