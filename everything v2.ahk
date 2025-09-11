@@ -1082,7 +1082,7 @@ loadTableAsHotstrings(filePath) {
 		conSticks := ""
 		Loop conBtns
 			btnsActive .= GetKeyState(conIndex "Joy" A_Index) ? " " A_Index : ""
-		conArr := StrSplitUTF8(conInfo)
+		conArr := StrSplit(conInfo)
 		objRemoveValues(conArr, ["D"])
 		conArr.InsertAt(1, "X", "Y")
 		for i, e in conArr

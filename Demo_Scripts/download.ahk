@@ -142,7 +142,7 @@ betterFileNames(linkArray) {
 		newFileName := SubStr(newFileName, 1, 150)
 		for i, e in Map(":", "-", "/", ",", "\", "", "*", "_", "?", "!", '"', "'", "<", "", ">", "", "|", ",")
 			newFileName := StrReplace(newFileName, i, e)
-		newFileName :=	objCollect(objGetUniques(StrSplitUTF8(newFileName, "-,_",,true), v => Substr(v,1,-1)))
+		newFileName :=	objCollect(objGetUniques(StrSplit(newFileName, "-,_",,true), v => Substr(v,1,-1)))
 		newFileName := Trim(newFileName, " `t-_,")
 		linkArray[i].fileName := newFileName
 	}

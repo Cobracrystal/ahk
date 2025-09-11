@@ -158,8 +158,7 @@ ExecHelperScript(expression, wait := true, void := false) {
 ExecScript(input, Wait := true) {
 	static shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
-	strConvBuf := strBuffer(input)
-	exec.StdIn.Write(StrGet(strConvBuf, "CP0"))
+	exec.StdIn.Write(strChangeEncoding(input, 'UTF-8', 'CP0'))
 	exec.StdIn.Close()
 	if !Wait
 		return
@@ -733,76 +732,6 @@ structRectGet(rect) {
 	x2 := NumGet(rect, 8, "int")
 	y2 := NumGet(rect, 12, "int")
 	return [x1, y1, x2, y2]
-}
-
-class DataListView { ; this is (mostly) based on Pulover's LV_Rows class, ignoring LV_EX. See https://github.com/Pulover/Class_LV_Rows
-	
-	__New(LV) {
-		this.LV := LV
-		this.Base := LV ; !!!!!!!!!!!!!!!!!!!!
-		this.rowData := {}
-		this.headers := []
-		return this
-	}
-	
-	Add(Options?, Cols*) => this.LV.Add(options?, cols*)
-	Insert(RowNumber , Options?, Cols*)  => this.LV.Insert(RowNumber , Options?, Cols*) 
-	Modify(RowNumber, Options?, NewCols*)  => this.LV.Modify(RowNumber, Options?, NewCols*) 
-	Delete(RowNumber?) => this.LV.Delete(rowNumber?)
-	
-	InsertCol(ColumnNumber, Options?, ColumnTitle?)  => this.LV.InsertCol(ColumnNumber, Options?, ColumnTitle?) 
-	ModifyCol(ColumnNumber?, Options?, ColumnTitle?)  => this.LV.ModifyCol(ColumnNumber?, Options?, ColumnTitle?) 
-	DeleteCol(ColumnNumber) => this.LV.DeleteCol(ColumnNumber)
-	
-	GetCount(Mode?)  => this.LV.GetCount(Mode?) 
-	GetNext(StartingRowNumber?, RowType?)  => this.LV.GetNext(StartingRowNumber?, RowType?) 
-	GetText(RowNumber, ColumnNumber?) => this.LV.GetText(RowNumber, ColumnNumber?)
-	
-	SetImageList(ImageListID, IconType?)  => this.LV.SetImageList(ImageListID, IconType?)
-
-	OnEvent(EventName, Callback, AddRemove?) => (this.LV.OnEvent(EventName, Callback, AddRemove?), this)
-
-	Rows() {
-		; enumerator
-		index := 1
-		return (&n) => (
-			; this.rowData ; enumerate this
-			index++
-			true 
-		)
-	}
-
-	Copy() {
-		return 0
-	}
-
-	Cut() {
-		return 0
-	}
-
-	Paste() {
-		return 0
-	}
-
-	Duplicate() {
-		return 0
-	}
-
-	; Delete() {
-	; 	return 0
-	; }
-
-	MoveUp() {
-		return 0
-	}
-
-	MoveDown() {
-		return 0
-	}
-
-	Drag() {
-		return 0
-	}
 }
 
 base64Encode(str, encoding := "UTF-8") {

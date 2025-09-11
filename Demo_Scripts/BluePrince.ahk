@@ -23,8 +23,8 @@ class numericCore {
 	static solveCoreString(str) {
 		arr := []
 		str := StrReplace(str, "`n", " ")
-		for i, e in StrSplitUTF8(str, " ")
-			arr.push(objDoForEach(StrSplitUTF8(e), char => (ord(char) - ord("A") + 1)))
+		for i, e in StrSplit(str, " ")
+			arr.push(objDoForEach(StrSplit(e), char => (ord(char) - ord("A") + 1)))
 		solutions := []
 		arr2 := objClone(arr)
 		arr2 := objDoForEach(arr2, o => objCollect(o, (b,e) => b . e))

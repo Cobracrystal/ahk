@@ -217,7 +217,7 @@ class SongDownloader {
 
 	static getRawMetadataFromLinks(songLinks, returnCallback, printIntermediateSteps := false, withPlaylist := false) {
 		if !(songLinks is Array)
-			songLinks := StrSplitUTF8(Trim(songLinks, "`n`r"), "`n", "`r")
+			songLinks := StrSplit(Trim(songLinks, "`n`r"), "`n", "`r")
 		songLinks := objDoForEach(songLinks, (e => this.constructLink(e)))
 		command := this.cmdStringBuilder(this.settings.ytdlPath, this.PROFILE_GETMETADATA[printIntermediateSteps, withPlaylist, true],,songLinks*)
 		CmdStdOutAsync(command, 'UTF-8', callback)

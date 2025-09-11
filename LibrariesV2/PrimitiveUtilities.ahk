@@ -86,8 +86,8 @@ replaceCharacters(text, replacer) {
 }
 
 strBuffer(str, encoding := 'UTF-8', fillValue?) {
-	buf := Buffer(StrPut(str, "UTF-8"), fillValue?)
-	StrPut(str, buf, "UTF-8")
+	buf := Buffer(StrPut(str, encoding), fillValue?)
+	StrPut(str, buf, encoding)
 	return buf
 }
 
@@ -410,31 +410,27 @@ strGetContext(str, startIndex, endIndex := startIndex, radius := 15, &reachedSta
 }
 
 /**
- * Behaves exactly as strsplit except that if it is called without a delim and thus parses char by char, doesn't split unicode characters in two.
+ * Behaves exactly as strsplit without optional parameters except that it doesn't split unicode characters in two.
  * @param str 
- * @param {String} delim 
- * @param {String} omit If omit and withDelim are both nonzero values, it will lead to unexpected behaviour.
- * @param {Integer} withDelim 
  * @returns {Array} 
  */
-StrSplitUTF8(str, delim := "", omit := "", withDelim := false) {
+StrSplitUTF8(str) {
 	arr := []
 	skip := false
-	count := 0
-	Loop Parse, str, delim, omit {
-		char := A_LoopField
+	pos := 1
+	Loop Parse str {
 		if (skip) {
 			skip := false
 			continue
 		}
-		if (StrLen(A_LoopField) == 1 && Ord(A_LoopField) > 0xD7FF && Ord(A_LoopField) < 0xDC00) {
-			arr.push(A_Loopfield . SubStr(str, count + 1, 1) . (withDelim ? SubStr(str, count+2, 1): ''))
+		if (isClamped(Ord(A_LoopField), 0xD7FF, 0xDC00)) {
+			arr.push(A_LoopField . SubStr(str, pos + 1, 1))
 			skip := true
-			count += 2
+			pos += 2
 			continue
 		}
-		count += StrLen(A_LoopField) + 1
-		arr.push(A_LoopField . (withDelim ? SubStr(str, count, 1) : ''))
+		arr.push(A_LoopField)
+		pos++
 	}
 	return arr
 }
