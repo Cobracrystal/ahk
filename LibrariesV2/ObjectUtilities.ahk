@@ -227,7 +227,10 @@ objDoForEach(obj, fn := (v) => toString(v), conditional := (itKey?, itVal?) => t
 	for i, e in objGetEnumerator(obj) {
 		t := useKeys ? i : e
 		v := conditional(i, e?) ? fn(t?) : t
-		isArrLike ? clone[i] := v : clone.%i% := v
+		if useKeys
+			isArrLike ? clone[v] := e : clone.%v% := e
+		else
+			isArrLike ? clone[i] := v : clone.%i% := v
 	}
 	return clone
 }
@@ -237,6 +240,14 @@ objGetMaximum(obj) => objCollect(obj, (a,b) => Max(a,b))
 objGetSum(obj) => objCollect(obj, (a,b) => (a+b), 0)
 objGetAverage(obj) => objGetSum(obj) / objGetValueCount(obj)
 objGetProd(obj) => objCollect(obj, (b,i) => b*i)
+
+objDoForEachRecursive(obj, fn := v => v, conditional := (itKey?, itVal?) => true, useKeys := false) {
+	return recurse(obj)
+
+	recurse(q) {
+		return IsObject(q) ? objDoForEach(q, recurse, conditional, useKeys) : fn(q)
+	}
+}
 
 /**
  * 
