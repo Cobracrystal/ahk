@@ -6,22 +6,19 @@
 class TextEditMenu {
 
 	static __New() {
-		if (FileExist(A_WorkingDir "\TextEditMenu\dictionary.json"))
-			this.dictionaryPath := A_WorkingDir "\TextEditMenu\dictionary.json"
-		else if (FileExist(A_LineFile "\..\..\script_files\TextEditMenu\dictionary.json"))
-			this.dictionaryPath := A_LineFile "\..\..\script_files\TextEditMenu\dictionary.json"
-		else
-			this.dictionaryPath := A_ScriptFullPath . "\..\script_files\TextEditMenu\dictionary.json"
-		this.dictionary := Map()
-		if !(FileExist(this.dictionaryPath)) {
-			SplitPath(this.dictionaryPath, , &dir)
-			if !(DirExist(dir))
-				DirCreate(dir)
+		possiblePaths := [A_WorkingDir, A_LineFile "\..\..\script_files", A_ScriptFullPath . "\..\script_files"]
+		pathEnd := "\TextEditMenu\dictionary.json"
+		try
+			for e in possiblePaths
+				if FileExist(e . pathEnd)
+					this.dictionary := jsongo.Parse(FileRead(e . pathEnd, 'UTF-8'))
+		if !this.HasOwnProp('dictionary') {
+			defaultPath := possiblePaths[-1]
+			if !(DirExist(defaultPath '\TextEditMenu'))
+				DirCreate(defaultPath '\TextEditMenu')
 			this.dictionary := this.generateDictionary()
-			FileAppend(jsongo.Stringify(this.dictionary,,"`t"), this.dictionaryPath, "UTF-8")
+			FileAppend(jsongo.Stringify(this.dictionary,,"`t"), defaultPath . pathEnd, "UTF-8")
 		}
-		else
-			this.dictionary := jsongo.Parse(FileRead(this.dictionaryPath, "UTF-8"))
 		replFN := (alphTo) => modifySelectedText(this.replaceCharacters.bind(this), "mixed", alphTo)
 		caseMenu := Menu()
 		caseMenu.Add("Random Case", (*) => modifySelectedText(this.randomCase.bind(this)))
