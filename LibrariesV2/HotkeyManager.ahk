@@ -30,15 +30,16 @@ class HotkeyManager {
 		this.LV := [-1,-1,-1]
 		this.data := { 
 			coords: {x: 300, y: 135}, 
-			savedHotkeysPath: A_WorkingDir "\HotkeyManager\SavedHotkeys.txt", 
-			thisScript:""
+			savedHotkeysPath: A_WorkingDir "\HotkeyManager\SavedHotkeys.txt",
 		}
+		this.defaultEditor := this.vscode
+		this.customEditor := 0
 		; Tray Menu
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Hotkey Manager", this.hotkeyManager.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
 		fileMenu := TrayMenu.submenus["Files"]
-		fileMenu.Add("Edit Hotkey File", (*) => tryEditTextFile("Notepad++", this.data.savedHotkeysPath))
+		fileMenu.Add("Edit Hotkey File", (*) => this.runEditor(this.data.savedHotkeysPath))
 		A_TrayMenu.Add("Files", fileMenu)
 		; init class variables
 	}
@@ -49,25 +50,27 @@ class HotkeyManager {
 		this.gui.OnEvent("Close", (*) => this.hotkeyManager("Close"))
 		OnMessage(0x0100, this.onKeyPress.bind(this))
 		this.gui.AddEdit("vEditFilterHotkeys").OnEvent("Change", (ctrlObj, Info) => this.guiListviewCreate(this.tabObj.Value, false, false))
-		this.data.scripts := this.getFullScript(A_ScriptFullPath)
+		this.data.scripts := this.getScripts(A_ScriptFullPath)
 		this.data.hotkeys := this.getHotkeys()
 		this.data.savedHotkeys := this.getSavedHotkeys()	
-		this.data.hotstrings := this.getHotstrings()	
+		this.data.hotstrings := this.getHotstrings()
 		this.tabObj := this.gui.AddTab3("w526 h500", ["AHK Hotkeys", "Other Hotkeys", "Hotstrings", "Settings"])
 		this.tabObj.UseTab(1)
 			this.lv[1] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Keys", "Comment", "Source"])
 			this.guiListviewCreate(1, true, true)
-			this.lv[1].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' obj.GetText(rowN, 1)) : 0)
+			this.lv[1].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.runEditor(A_ScriptFullPath, obj.GetText(rowN, 1)) : 0)
 		this.tabObj.UseTab(2)	
 			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["Keys","Program","Comment"])
 			this.guiListviewCreate(2, true, true)
-			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? tryEditTextFile("Notepad++", this.data.savedHotkeysPath) : 0)
+			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.runEditor(this.data.savedHotkeysPath) : 0)
 		this.tabObj.UseTab(3)
 			this.lv[3] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Options", "Text", "Correction", "Comment", "Source"])
 			this.guiListviewCreate(3, true, true)
-			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN && IsDigit(obj.GetText(rowN, 1)) ? tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' obj.GetText(rowN, 1)) : 0)
+			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN && IsDigit(obj.GetText(rowN, 1)) ? this.runEditor(A_ScriptFullPath, obj.GetText(rowN, 1)) : 0)
 		this.tabObj.UseTab(4)
-		this.gui.AddText(,"SETTINGS HERE LATER")
+			this.gui.AddText("Section yp+10", "Command Line For Editing")
+			this.editRunCmd := this.gui.AddEdit("xs w500", this.defaultEditor.exe ' ' this.defaultEditor.path . this.defaultEditor.line)
+			this.gui.AddButton("xs w100", 'Save').OnEvent('Click', (*) => this.customEditor := this.editRunCmd.Value)
 		this.tabObj.UseTab()
 		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", this.onEnter.bind(this))
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
@@ -128,11 +131,11 @@ class HotkeyManager {
 		switch ctrl {
 			case this.lv[1], this.lv[3]:
 				if (rowN := ctrl.GetNext()) {
-					tryEditTextFile('Notepad++', '"' A_ScriptFullPath '" -n' ctrl.GetText(rowN, 1))
+					this.runEditor(A_ScriptFullPath, ctrl.getText(rowN, 1))
 				}
 			case this.lv[2]:
-				if (ctrl.GetNext())
-					tryEditTextFile("Notepad++", this.data.savedHotkeysPath)
+				if (ctrl.GetNext())	
+					this.runEditor(this.data.savedHotkeysPath)
 		}
 	}
 
@@ -153,39 +156,10 @@ class HotkeyManager {
 		}
 	}
 
-	static getFullScript(path := A_ScriptFullPath) {
-		stack := [normalizePath(path)], scripts := []
-		for i, p in stack {
-			script := FileRead(p, "UTF-8")
-			flagComment := false
-			cleanScript := ""
-			Loop Parse, script, "`n", "`r"
-			{
-				line := A_LoopField
-				if (flagComment) {
-					if (RegexMatch(line, "\*\/\s*$"))
-						flagComment := false
-					cleanScript .= "`n"
-					continue
-				}
-				else if (RegExMatch(line, "^\s*\/\*")) { ; /* comments MUST be at start of line
-					if (!RegexMatch(line, "^\s*\/*.*\*\/\h*$")) ; these lines are ENTIRELY comments regardless. /* */ [text] is the same as ; [text]
-						flagComment := true
-					cleanScript .= "`n"
-					continue
-				}
-				else if (RegexMatch(line, "^\s*#Include")) {
-					path := getIncludePath(line, p) ; keep track of include working directory. THIS IS PER FILE.)
-					if (path && !objContainsValue(stack, path))
-						stack.push(path)
-				}
-				cleanScript .= line . "`n"
-			}
-			scripts.push({path:p, script:cleanScript})
-		}
-		return scripts
-	;	return RegExReplace(script, "ms`a)(?:^\s*\/\*.*?\*\/\s*\v|^\s*\/\*(?!.*\*\/\s*\v).*)")
-		; ^this works but it doesn't keep line numbers intact for obvious reasons
+	static getScripts(path := A_ScriptFullPath) {
+		inclusions := getInclusions(path)
+		inclusions.InsertAt(1, normalizePath(path))
+		return objDoForEach(inclusions, v => {script: getUncommentedScript(FileRead(v, 'UTF-8')), path: v})
 	}
 
 	static getHotkeys()	{
@@ -295,5 +269,35 @@ class HotkeyManager {
 			if RegExMatch(A_LoopField,"^(?!\s*;|//)Hotkey:\s*(.*)\s*,\s*(.*)\s*,\s*(.*)\s*", &match)
 				savedHotkeys.Push({hotkey:match[1], program:match[2], comment:(match[3] == "" ? "None" : match[3])})
 		return savedHotkeys
+	}
+
+	static runEditor(filePath, line?) {
+		if this.customEditor {
+			fullCmd := StrReplace(this.customEditor, '%PATH', filePath)
+			fullCmd := StrReplace(fullCmd, '%LINE', line ?? '')
+		} else {
+			path := StrReplace(this.defaultEditor.path, "%PATH", filePath)
+			line := IsSet(line) ? StrReplace(this.defaultEditor.line, "%LINE", line) : ''
+			fullCmd := this.defaultEditor.exe . " " path . line
+		}
+		Run(fullCmd)
+	}
+
+	static notepad := {
+		exe: A_WinDir . '\system32\notepad.exe',
+		path: '"%PATH"',
+		line: '',
+	}
+	
+	static notepadplusplus := {
+		exe: 'Notepad++',
+		path: '"%PATH"',
+		line: ' -n%LINE',
+	}
+	
+	static vscode := {
+		exe: '"' normalizePath(A_AppData '\..\Local\Programs\Microsoft VS Code\Code.exe') '"',
+		path: '-g "%PATH"',
+		line: ':%LINE',
 	}
 }

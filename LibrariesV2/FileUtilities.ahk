@@ -450,6 +450,8 @@ getUncommentedScript(text, removeSemicolonComments := false, keepLineNumbersAccu
 			cleanScript .= A_LoopField . '`n'
 	}
 	return cleanScript
+	; return RegExReplace(script, "ms`a)(?:^\s*\/\*.*?\*\/\s*\v|^\s*\/\*(?!.*\*\/\s*\v).*)")
+	; ^this works but it doesn't keep line numbers intact for obvious reasons
 }
 
 /**
