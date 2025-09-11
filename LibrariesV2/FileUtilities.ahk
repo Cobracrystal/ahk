@@ -311,44 +311,171 @@ class FGP {
 getFullScript(path) {
 	pathList := Map()
 	pathList.CaseSense := false
+	SplitPath(path, , &dir)
+	currentIncludeDirectory := dir
 	return objCollect(_getFullScript(path), (b,e) => b "`n" e)
 	
-	_getFullScript(path) {
-		pathList[path] := true
-		script := FileRead(path, "UTF-8")
-		fullScript := []
-		pos := 0
-		arr := StrSplit(script, "`n", "`r")
-		for i, line in arr {
-			if (RegexMatch(line, "^\s*#Include")) {
-				includedPath := getIncludePath(line, path) ; keep track of include working directory. THIS IS PER FILE.)
-				if (includedPath && !pathList.Has(includedPath)) {
-					fullScript.push(_getFullScript(includedPath)*)
+	_getFullScript(currentPath) {
+		pathList[currentPath] := true
+		script := getUncommentedScript(FileRead(currentPath, "UTF-8"),, false)
+		fullScript := ""
+		Loop Parse, script, '`n', '`r' {
+			if (RegexMatch(A_LoopField, "^\s*#Include")) {
+				include := getIncludePath(A_LoopField, currentPath, path, currentIncludeDirectory)
+				if !FileExist(include.path) && !include.ignoreErrors
+					throw OSError("Specified File does not exist")
+				if InStr(FileGetAttrib(include.path), 'D')
+					currentIncludeDirectory := include.path
+				else if (include.path && (!pathList.Has(include.path) || include.includeAgain)) {
+					pathList[include.path] := true
+					fullScript .= _getFullScript(include.path) '`n'
 				}
-			} else {
-				fullScript.push(line)
-			}
+			} else
+				fullScript .= A_LoopField '`n'
 		}
 		return fullScript
 	}
 }
 
-getIncludePath(line, from := A_ScriptFullPath) {
-	static currentWorkingDirectory := A_ScriptDir
-	RegexMatch(line, '^\s*#Include (?<quot>"?|`'?)(?<ignore>(?:\*i)?\s*)(?<path>.*)(?P=quot)', &m)
-	path := m["path"]
-	for i, e in ["A_AhkPath", "A_AppData", "A_AppDataCommon", "A_ComputerName", "A_ComSpec", "A_Desktop", "A_DesktopCommon", "A_IsCompiled", "A_MyDocuments", "A_ProgramFiles", "A_Programs", "A_ProgramsCommon", "A_ScriptDir", "A_ScriptFullPath", "A_ScriptName", "A_Space", "A_StartMenu", "A_StartMenuCommon", "A_Startup", "A_StartupCommon", "A_Tab", "A_Temp", "A_UserName", "A_WinDir"]
-		path := StrReplace(path, "%" e "%", %e%)
-	path := StrReplace(path, "%A_LineFile%", from)
-	path := StrReplace(path, "``;", ";")
-	if (!RegexMatch(path, "i)^[a-z]:\\"))
-		path := currentWorkingDirectory . (SubStr(path, 1, 1) == "\" ? "" : "\") . path
-	path := normalizePath(path)
-	if (InStr(FileGetAttrib(path), "D")) {
-		currentWorkingDirectory := (SubStr(path, -1) == "\" ? SubStr(path, 1, -1) : path)
-		return ""
+/**
+ * Returns a dependency structure for the given file
+ * @param path 
+ * @param relativePaths Causes all paths to be stored relative to the given path, if possible
+ * @returns Map
+ */
+getDependencies(path, relativePaths := true) {
+	dependencies := Map()
+	dependencies.CaseSense := false
+	SplitPath(path, , &dir)
+	currentIncludeDirectory := dir
+	deps := _getDependencies(path, [])
+	if !relativePaths
+		return deps
+	return recursiveHelper(deps)
+	
+	_getDependencies(currentPath, encounteredDependencies) {
+		currentDependencies := Map()
+		script := getUncommentedScript(FileRead(currentPath, "UTF-8"),, false)
+		Loop Parse, script, '`n', '`r' {
+			if (RegexMatch(A_LoopField, "^\s*#Include")) {
+				include := getIncludePath(A_LoopField, currentPath, path, currentIncludeDirectory)
+				if !FileExist(include.path)
+					currentDependencies[include.path] := "Missing"
+				else if InStr(FileGetAttrib(include.path), 'D')
+					currentIncludeDirectory := include.path
+				else if (include.path && (!encounteredDependencies.Has(include.path) || include.includeAgain)) {
+					encDep := encounteredDependencies.clone()
+					encDep.push(include.path)
+					currentDependencies[include.path] := _getDependencies(include.path, encDep)
+				}
+			}
+		}
+		return currentDependencies.Count ? currentDependencies : "None"
 	}
-	return path
+
+	recursiveHelper(m) {
+		if !IsObject(m)
+			return m
+		c := Map()
+		for k, v in m
+			c[StrReplace(k, dir '\')] := recursiveHelper(v)
+		return c
+	}
+
+}
+
+/**
+ * Recursively gets all included files in the specified file, while assuming that the given file is A_ScriptFile.
+ * @param path Path to the file to read. If path is included in another file while files included in path mention A_ScriptDir, this will be inaccurate.
+ * @returns {Array} Array of all included files in the order that they were encountered
+ */
+getInclusions(path) {
+	includes := Map()
+	includesArr := []
+	includes.CaseSense := false
+	SplitPath(path, , &dir)
+	currentIncludeDirectory := dir
+	_getIncludes(path)
+	return includesArr
+	
+	_getIncludes(currentPath) {
+		includes[currentPath] := true
+		script := getUncommentedScript(FileRead(currentPath, "UTF-8"),, false)
+		Loop Parse, script, '`n', '`r' {
+			if (RegexMatch(A_LoopField, "^\s*#Include")) {
+				include := getIncludePath(A_LoopField, currentPath, path, currentIncludeDirectory)
+				if !FileExist(include.path) && !include.ignoreErrors
+					throw OSError("Specified File does not exist:" include.path)
+				if InStr(FileGetAttrib(include.path), 'D')
+					currentIncludeDirectory := include.path
+				else if (include.path && (!includes.Has(include.path) || include.includeAgain)) {
+					includes[include.path] := true
+					includesArr.push(include.path)
+					_getIncludes(include.path)
+				}
+			}
+		}
+		return includes
+	}
+}
+
+/**
+ * Given a text, returns the text content without multiline and optionally single-line comments
+ * @param {String} text
+ * @param {Boolean} removeSemicolonComments Whether to remove single-line comments
+ * @param {Boolean} keepLineNumbersAccurate Whether to omit comments fully or replace them with a newline. This only applies to multiline comments.
+ * @returns {String}
+ */
+getUncommentedScript(text, removeSemicolonComments := false, keepLineNumbersAccurate := true) {
+	cleanScript := ""
+	flagComment := 0
+	Loop Parse, text, "`n", "`r" {
+		if (flagComment) {
+			if (RegexMatch(A_LoopField, "\*\/\s*$"))
+				flagComment := false
+			if keepLineNumbersAccurate
+				cleanScript .= "`n"
+			continue
+		} 
+		if (RegExMatch(A_LoopField, "^\s*\/\*")) { ; /* comments MUST be at start of line, so this is valid
+			if (!RegexMatch(A_LoopField, "^\s*\/*.*\*\/\h*$")) ; these lines are ENTIRELY comments regardless. /* */ [text] is the same as ; [text]
+				flagComment := true
+			if keepLineNumbersAccurate
+				cleanScript .= "`n"
+			continue
+		}
+		if removeSemicolonComments && InStr(A_LoopField, ";")
+			cleanScript .= RegExReplace(A_LoopField, "(\s+);.*", "$1") . '`n'
+		else
+			cleanScript .= A_LoopField . '`n'
+	}
+	return cleanScript
+}
+
+/**
+ * Gets path of an included file
+ * @description Given a line potentially containing an autohotkey #Include directive, creates a path leading to the file specified by the directive. If the include path contains A_ScriptDir or A_ScriptFile, assumes it is the same as A_LineFile and thus scriptfile. Use workingdir to circumvent this.
+ * @param line The line to parse
+ * @param {String} scriptFile the script file the line is from.
+ * @param withWorkingDir A potentially set working directory (via #Include <folder>)
+ * @returns {String} The created path
+ * @throws 
+ */
+getIncludePath(line, scriptFile, originalScript := scriptFile, withWorkingDir?) {
+	static AHK_VARS := ["A_AhkPath", "A_AppData", "A_AppDataCommon", "A_ComputerName", "A_ComSpec", "A_Desktop", "A_DesktopCommon", "A_IsCompiled", "A_MyDocuments", "A_ProgramFiles", "A_Programs", "A_ProgramsCommon", "A_Space", "A_StartMenu", "A_StartMenuCommon", "A_Startup", "A_StartupCommon", "A_Tab", "A_Temp", "A_UserName", "A_WinDir"]
+	RegexMatch(line, '^\s*#Include(?<again>(?:Again)?)\s+(?<quot>"?|`'?)(?<ignore>(?:\*i)?)\s*(?<path>.*)(?P=quot)', &m)
+	path := m["path"]
+	for e in AHK_VARS
+		path := StrReplace(path, "%" e "%", %e%)
+	SplitPath(originalScript, &name, &dir)
+	path := StrReplace(path, '%A_ScriptDir%', dir)
+	path := StrReplace(path, '%A_ScriptFullPath%', originalScript)
+	path := StrReplace(path, '%A_ScriptName%', name)
+	path := StrReplace(path, '%A_LineFile%', scriptFile)
+	path := StrReplace(path, "``;", ";")
+	if (!RegexMatch(path, "i)^[a-z]:\\")) ; path is relative
+		path := (withWorkingDir ?? dir) . (SubStr(path, 1, 1) == "\" ? "" : "\") . path
+	return { path: normalizePath(path), ignoreErrors: m["ignore"] ? 1 : 0, includeAgain: m["again"] ? 1 : 0 }
 }
 
 /**
@@ -375,5 +502,5 @@ normalizePath(path) {
 				pathArr.RemoveAt(--i)
 		}
 	}
-	return objCollect(pathArr, (b, e) => b "\" e)
+	return objCollect(pathArr, (b, e) => (b '\' e))
 }
