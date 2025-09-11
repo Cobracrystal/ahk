@@ -18,15 +18,17 @@ class WinUtilities {
 
 	; this is not actually that much more performant than getAllWindowInfo.
 	static getBasicInfo(getHidden := false, blacklist := this.defaultBlacklist) {
-		winArr := this.getAllWindows(getHidden, blacklist)
-		try for i, hwnd in winArr {
-			wObj := this.WinGetPosEx(hwnd)
-			wObj.title := WinGetTitle(hwnd)
-			wObj.state := WinGetMinMax(hwnd)
-			wObj.hwnd := hwnd
-			winArr[i] := wObj
+		infoArr := []
+		for i, hwnd in this.getAllWindows(getHidden, blacklist) {
+			try {
+				wObj := this.WinGetPosEx(hwnd)
+				wObj.title := WinGetTitle(hwnd)
+				wObj.state := WinGetMinMax(hwnd)
+				wObj.hwnd := hwnd
+				infoArr.push(wObj)
+			}
 		}
-		return winArr
+		return infoArr
 	}
 	
 	static getAllWindowInfo(getHidden := false, blacklist := this.defaultBlacklist, getCommandLine := false) {
