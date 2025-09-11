@@ -312,23 +312,22 @@ getFullScript(path) {
 	pathList := Map()
 	pathList.CaseSense := false
 	SplitPath(path, , &dir)
-	currentIncludeDirectory := dir
-	return objCollect(_getFullScript(path), (b,e) => b "`n" e)
+	return _getFullScript(path, dir)
 	
-	_getFullScript(currentPath) {
+	_getFullScript(currentPath, lastIncludeDirectory) {
 		pathList[currentPath] := true
 		script := getUncommentedScript(FileRead(currentPath, "UTF-8"),, false)
 		fullScript := ""
 		Loop Parse, script, '`n', '`r' {
 			if (RegexMatch(A_LoopField, "^\s*#Include")) {
-				include := getIncludePath(A_LoopField, currentPath, path, currentIncludeDirectory)
+				include := getIncludePath(A_LoopField, currentPath, path, lastIncludeDirectory)
 				if !FileExist(include.path) && !include.ignoreErrors
 					throw OSError("Specified File does not exist")
 				if InStr(FileGetAttrib(include.path), 'D')
-					currentIncludeDirectory := include.path
+					lastIncludeDirectory := include.path
 				else if (include.path && (!pathList.Has(include.path) || include.includeAgain)) {
 					pathList[include.path] := true
-					fullScript .= _getFullScript(include.path) '`n'
+					fullScript .= _getFullScript(include.path, lastIncludeDirectory) '`n'
 				}
 			} else
 				fullScript .= A_LoopField '`n'
@@ -347,26 +346,25 @@ getDependencies(path, relativePaths := true) {
 	dependencies := Map()
 	dependencies.CaseSense := false
 	SplitPath(path, , &dir)
-	currentIncludeDirectory := dir
-	deps := _getDependencies(path, [])
+	deps := _getDependencies(path, [], dir)
 	if !relativePaths
 		return deps
 	return recursiveHelper(deps)
 	
-	_getDependencies(currentPath, encounteredDependencies) {
+	_getDependencies(currentPath, encounteredDependencies, lastIncludeDirectory) {
 		currentDependencies := Map()
 		script := getUncommentedScript(FileRead(currentPath, "UTF-8"),, false)
 		Loop Parse, script, '`n', '`r' {
 			if (RegexMatch(A_LoopField, "^\s*#Include")) {
-				include := getIncludePath(A_LoopField, currentPath, path, currentIncludeDirectory)
+				include := getIncludePath(A_LoopField, currentPath, path, lastIncludeDirectory)
 				if !FileExist(include.path)
 					currentDependencies[include.path] := "Missing"
 				else if InStr(FileGetAttrib(include.path), 'D')
-					currentIncludeDirectory := include.path
+					lastIncludeDirectory := include.path
 				else if (include.path && (!encounteredDependencies.Has(include.path) || include.includeAgain)) {
 					encDep := encounteredDependencies.clone()
 					encDep.push(include.path)
-					currentDependencies[include.path] := _getDependencies(include.path, encDep)
+					currentDependencies[include.path] := _getDependencies(include.path, encDep, lastIncludeDirectory)
 				}
 			}
 		}
@@ -394,24 +392,23 @@ getInclusions(path) {
 	includesArr := []
 	includes.CaseSense := false
 	SplitPath(path, , &dir)
-	currentIncludeDirectory := dir
-	_getIncludes(path)
+	_getIncludes(path, dir)
 	return includesArr
 	
-	_getIncludes(currentPath) {
+	_getIncludes(currentPath, lastIncludeDirectory) {
 		includes[currentPath] := true
 		script := getUncommentedScript(FileRead(currentPath, "UTF-8"),, false)
 		Loop Parse, script, '`n', '`r' {
 			if (RegexMatch(A_LoopField, "^\s*#Include")) {
-				include := getIncludePath(A_LoopField, currentPath, path, currentIncludeDirectory)
+				include := getIncludePath(A_LoopField, currentPath, path, lastIncludeDirectory)
 				if !FileExist(include.path) && !include.ignoreErrors
 					throw OSError("Specified File does not exist:" include.path)
 				if InStr(FileGetAttrib(include.path), 'D')
-					currentIncludeDirectory := include.path
+					lastIncludeDirectory := include.path
 				else if (include.path && (!includes.Has(include.path) || include.includeAgain)) {
 					includes[include.path] := true
 					includesArr.push(include.path)
-					_getIncludes(include.path)
+					_getIncludes(include.path, lastIncludeDirectory)
 				}
 			}
 		}
