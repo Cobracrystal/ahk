@@ -175,7 +175,7 @@ class HotkeyManager {
 					continue
 				}
 				else if (RegexMatch(line, "^\s*#Include")) {
-					path := this.getIncludePath(line, p) ; keep track of include working directory. THIS IS PER FILE.)
+					path := getIncludePath(line, p) ; keep track of include working directory. THIS IS PER FILE.)
 					if (path && !objContainsValue(stack, path))
 						stack.push(path)
 				}
@@ -186,24 +186,6 @@ class HotkeyManager {
 		return scripts
 	;	return RegExReplace(script, "ms`a)(?:^\s*\/\*.*?\*\/\s*\v|^\s*\/\*(?!.*\*\/\s*\v).*)")
 		; ^this works but it doesn't keep line numbers intact for obvious reasons
-	}
-
-	static getIncludePath(line, from := A_ScriptFullPath) {
-		static currentWorkingDirectory := A_ScriptDir
-		RegexMatch(line, '^\s*#Include (?<quot>"?|`'?)(?<ignore>(?:\*i)?\s*)(?<path>.*)(?P=quot)', &m)
-		path := m["path"]
-		for i, e in ["A_AhkPath", "A_AppData", "A_AppDataCommon", "A_ComputerName", "A_ComSpec", "A_Desktop", "A_DesktopCommon", "A_IsCompiled", "A_MyDocuments", "A_ProgramFiles", "A_Programs", "A_ProgramsCommon", "A_ScriptDir", "A_ScriptFullPath", "A_ScriptName", "A_Space", "A_StartMenu", "A_StartMenuCommon", "A_Startup", "A_StartupCommon", "A_Tab", "A_Temp", "A_UserName", "A_WinDir"]
-			path := StrReplace(path, "%" e "%", %e%)
-		path := StrReplace(path, "%A_LineFile%", from)
-		path := StrReplace(path, "``;", ";")
-		if (!RegexMatch(path, "i)^[a-z]:\\"))
-			path := currentWorkingDirectory . (SubStr(path, 1, 1) == "\" ? "" : "\") . path
-		path := normalizePath(path)
-		if (InStr(FileGetAttrib(path), "D")) {
-			currentWorkingDirectory := (SubStr(path, -1) == "\" ? SubStr(path, 1, -1) : path)
-			return ""
-		}
-		return path
 	}
 
 	static getHotkeys()	{
