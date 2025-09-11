@@ -8,7 +8,6 @@ Just include this file instead of all the smaller ones separately.
 #Include "%A_ScriptDir%\LibrariesV2"
 #Include "NumberNameDictionary.ahk"
 #Include "openDTU.ahk"
-#Include "PermanentTemporaryHelperfunctions.ahk"
 #Include "RandomNameGenerator.ahk"
 #Include "ReminderManager.ahk"
 
