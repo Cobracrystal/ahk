@@ -19,7 +19,7 @@ class WinUtilities {
 	; this is not actually that much more performant than getAllWindowInfo.
 	static getBasicInfo(getHidden := false, blacklist := this.defaultBlacklist) {
 		winArr := this.getAllWindows(getHidden, blacklist)
-		for i, hwnd in winArr {
+		try for i, hwnd in winArr {
 			wObj := this.WinGetPosEx(hwnd)
 			wObj.title := WinGetTitle(hwnd)
 			wObj.state := WinGetMinMax(hwnd)
@@ -34,11 +34,9 @@ class WinUtilities {
 		dHW := A_DetectHiddenWindows
 		DetectHiddenWindows(getHidden)
 		wHandles := WinGetList()
-		for wHandle in wHandles {
-			if !this.winInBlacklist(wHandle, blacklist) {
+		for wHandle in wHandles
+			if !this.winInBlacklist(wHandle, blacklist)
 				windows.push(this.getWindowInfo(wHandle, getCommandLine))
-			}
-		}
 		DetectHiddenWindows(dHW)
 		return windows
 	}
