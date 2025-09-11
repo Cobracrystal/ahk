@@ -1170,21 +1170,24 @@ WinSetVolume(level, target?) {
 }
 
 bigLoop() {
-	clickAutospawn()
-	Sleep(75)
-	doRefinePrestige()
-	Sleep(75)
-	Loop(2) {
+	Loop {
+		clickAutospawn()
+		Sleep(50)
+		doRefinePrestige()
+		Sleep(50)
 		Loop(5) {
-			spawnAndIncrease()
-			Sleep(75)
+			spawnAndIncrease("150")
+			Sleep(50)
 		}
 		doPolishPrestige()
-		Sleep(75)
+		Sleep(50)
+		Loop(5) {
+			spawnAndIncrease("150")
+			Sleep(50)
+		}
+		clickAutoSpawn()
+		Sleep(7000)
 	}
-	Loop(5)
-		spawnAndIncrease("138")
-	clickAutoSpawn()
 }
 
 openPolishMenu() {
