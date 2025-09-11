@@ -166,10 +166,9 @@ class TextEditMenu {
 	}
 
 	static generateDictionary() {
-		toAlphabet := Map()
-		fromAlphabet := Map()
-		serif := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-		toStrings := Map(
+		; symbols
+		static serif := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+		static unicodeFonts := Map(
 			"serifItalic", "𝑎𝑏𝑐𝑑𝑒𝑓𝑔ℎ𝑖𝑗𝑘𝑙𝑚𝑛𝑜𝑝𝑞𝑟𝑠𝑡𝑢𝑣𝑤𝑥𝑦𝑧𝐴𝐵𝐶𝐷𝐸𝐹𝐺𝐻𝐼𝐽𝐾𝐿𝑀𝑁𝑂𝑃𝑄𝑅𝑆𝑇𝑈𝑉𝑊𝑋𝑌𝑍0123456789",
 			"serifBold", "𝐚𝐛𝐜𝐝𝐞𝐟𝐠𝐡𝐢𝐣𝐤𝐥𝐦𝐧𝐨𝐩𝐪𝐫𝐬𝐭𝐮𝐯𝐰𝐱𝐲𝐳𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗",
 			"serifBoldItalic", "𝒂𝒃𝒄𝒅𝒆𝒇𝒈𝒉𝒊𝒋𝒌𝒍𝒎𝒏𝒐𝒑𝒒𝒓𝒔𝒕𝒖𝒗𝒘𝒙𝒚𝒛𝑨𝑩𝑪𝑫𝑬𝑭𝑮𝑯𝑰𝑱𝑲𝑳𝑴𝑵𝑶𝑷𝑸𝑹𝑺𝑻𝑼𝑽𝑾𝑿𝒀𝒁𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗",
@@ -190,54 +189,69 @@ class TextEditMenu {
 			"upsidedown", "ɐqɔpǝⅎƃɥᴉɾʞʅɯuodbɹsʇnʌʍxʎz∀ꓭϽᗡƎᖵ⅁HIᒋꓘ⅂ꟽNOԀꝹꓤSꓕՈɅϺX⅄Z0⇂↊↋ᔭ59𝘓86",
 			"sharpscript", "闩⻏⼕ᗪ🝗ﾁᎶ卄讠丿长㇄爪𝓝ㄖ尸Ɋ尺丂〸ㄩᐯ山〤丫Ⲍ闩乃⼕ᗪ㠪千Ꮆ廾工丿长㇄爪𝓝龱尸Ɋ尺丂ㄒㄩᐯ山乂ㄚ乙0丨己㇌丩567〥9"
 		)
-		; [small letters] [CAPITAL LETTERS] [NUMBERS]
-		; https://milde.users.sourceforge.net/LUCR/Math/unimathsymbols.pdf
-		; https://en.wikipedia.org/wiki/Mathematical_Alphanumeric_Symbols
-		for i, e in toStrings {
+		static zalgo := ["̾", "̿", "̀", "́", "͂", "̓", "̈́", "ͅ", "͆", "͇", "͈", "͉", "͊", "͋", "͌", "͍", "͎", "͏", "͐", "͑", "͒", "͓", "͔", "͕", "͖", "͗", "͘", "͙", "͚", "͛", "͜", "͝", "͞", "͟", "͠", "͡", "͢", "ͣ", "ͤ", "ͥ", "ͦ", "ͧ", "ͨ", "ͩ", "ͪ", "ͫ", "ͬ", "ͭ", "ͮ"]
+		static dictSkeleton := {
+			latinBidirectional: ["a","b","d","e","f","g","h","i","l","m","n","o","p","r","s","t","u","v","x","z","ch","sh","th","ei","ng"],
+			runesBidirectional: ["ᚫ","ᛒ","ᛞ","ᛖ","ᚠ","ᚷ","ᚻ","ᛁ","ᛚ","ᛗ","ᚾ","ᛟ","ᛈ","ᚱ","ᛋ","ᛏ","ᚢ","ᚹ","ᚲᛋ","ᛉ","ᚳ","ᛪ","ᚦ","ᛇ","ᛝ"],
+			translateOneDirectional1: ["c","k","j","y"],
+			translateOneDirectional2: ["ᚲ","ᚲ","ᛃ","ᛃ"],
+			translateCircular1: ["ä","ö","ü","ß"],
+			translateCircular2: ["ᚨᛖ","ᛟᛖ","ᚢᛖ","ᛋᛋ"],
+			translateCircular3: ["ae","oe","ue","ss"],
+			translateLanguageLatin: ["q", "w"],
+			translateLanguageRunicDE: ["ᚲᚹ","ᚹ"],
+			translateLanguageRunicEN: ["ᚲᚢ","ᚢ"],
+			translateLanguageRunes: ["ᚲ","ᛃ","ᚲᚹ","ᚲᚢ"],
+			translateLanguageLatinDE: ["k","j","q","ku"],
+			translateLanguageLatinEN: ["c","y","cv","q"],
+			runesExtra: ["ᚠ","ᚡ","ᚢ","ᚣ","ᚤ","ᚥ","ᚧ","ᚨ","ᚩ","ᚪ","ᚫ","ᚬ","ᚭ","ᚮ","ᚯ","ᚰ","ᚱ","ᚲ","ᚳ","ᚴ","ᚵ","ᚶ","ᚷ","ᚸ","ᚹ","ᚺ","ᚻ","ᚼ","ᚽ","ᚾ","ᚿ","ᛀ","ᛁ","ᛂ","ᛃ","ᛄ","ᛅ","ᛆ","ᛇ","ᛈ","ᛉ","ᛊ","ᛋ","ᛌ","ᛍ","ᛎ","ᛏ","ᛐ","ᛑ","ᛒ","ᛓ","ᛔ","ᛕ","ᛖ","ᛗ","ᛘ","ᛙ","ᛚ","ᛛ","ᛜ","ᛝ","ᛞ","ᛟ","ᛠ","ᛡ","ᛢ","ᛣ","ᛤ","ᛥ","ᛦ","ᛧ","ᛨ","ᛩ","ᛪ"],
+			latinExtra: ["f","v","u","y","y","w","th","a","o","a","a","o","o","o","ö","o","r","k","ch","k","g","eng","g","g","v","h","h","h","h","n","n","n","i","e","y","j","a","a","ei","p","z","s","s","s","c","z","t","t","d","b","b","p","p","e","m","m","m","l","l","ng","ng","d","o","ea","io","qu","ch","k","st","r","y","rr","qu","sch"]
+		}
+		toAlphabet := Map()
+		fromAlphabet := Map()
+		for i, e in unicodeFonts {
 			toAlphabet[i] := mapFromArrays(StrSplitUTF8(serif), StrSplitUTF8(e))
 			fromAlphabet[i] := mapFromArrays(StrSplitUTF8(e), StrSplitUTF8(serif))
 		}
 		otherAlphabet := Map()
-		otherAlphabet["zalgo"] := ["̾", "̿", "̀", "́", "͂", "̓", "̈́", "ͅ", "͆", "͇", "͈", "͉", "͊", "͋", "͌", "͍", "͎", "͏", "͐", "͑", "͒", "͓", "͔", "͕", "͖", "͗", "͘", "͙", "͚", "͛", "͜", "͝", "͞", "͟", "͠", "͡", "͢", "ͣ", "ͤ", "ͥ", "ͦ", "ͧ", "ͨ", "ͩ", "ͪ", "ͫ", "ͬ", "ͭ", "ͮ"]
+		otherAlphabet["zalgo"] := zalgo
 		otherAlphabet["serif"] := StrSplitUTF8(serif)
 		; RUNES
-		runes := Map("to", Map( "DE", Map("multichar", Map(), "singlechar", Map()), 
-								"EN", Map("multichar", Map(), "singlechar", Map()),
-								"global", Map("multichar", Map(), "singlechar", Map())),
-					"from", Map("DE", Map("multichar", Map(), "singlechar", Map()), 
-								"EN", Map("multichar", Map(), "singlechar", Map()), 
-								"extra", Map("multichar", Map(), "singlechar", Map()),
-								"global", Map("multichar", Map(), "singlechar", Map())))
-		latinBidirectional := ["a","b","d","e","f","g","h","i","l","m","n","o","p","r","s","t","u","v","x","z","ch","sh","th","ei","ng"]
-		runesBidirectional := ["ᚫ","ᛒ","ᛞ","ᛖ","ᚠ","ᚷ","ᚻ","ᛁ","ᛚ","ᛗ","ᚾ","ᛟ","ᛈ","ᚱ","ᛋ","ᛏ","ᚢ","ᚹ","ᚲᛋ","ᛉ","ᚳ","ᛪ","ᚦ","ᛇ","ᛝ"]
-		for i, letter in latinBidirectional {
-			rune := runesBidirectional[i]
+		runes := Map(
+			"to", Map(
+				"DE", Map("multichar", Map(), "singlechar", Map()), 
+				"EN", Map("multichar", Map(), "singlechar", Map()),
+				"global", Map("multichar", Map(), "singlechar", Map())
+			),
+			"from", Map(
+				"DE", Map("multichar", Map(), "singlechar", Map()), 
+				"EN", Map("multichar", Map(), "singlechar", Map()), 
+				"extra", Map("multichar", Map(), "singlechar", Map()),
+				"global", Map("multichar", Map(), "singlechar", Map())
+			)
+		)
+		for i, letter in dictSkeleton.latinBidirectional {
+			rune := dictSkeleton.runesBidirectional[i]
 			runes["to"]["global"][(StrLen(letter) > 1 ? "multichar" : "singlechar")][letter] := rune
 			runes["from"]["global"][(StrLen(rune) > 1 ? "multichar" : "singlechar")][rune] := letter
 		}
-		translateOneDirectional1 := ["c","k","j","y"], translateOneDirectional2 := ["ᚲ","ᚲ","ᛃ","ᛃ"]
-		for i, letter in translateOneDirectional1 {
-			runes["to"]["global"]["singlechar"][letter] := translateOneDirectional2[i]
+		for i, letter in dictSkeleton.translateOneDirectional1 {
+			runes["to"]["global"]["singlechar"][letter] := dictSkeleton.translateOneDirectional2[i]
 		}
-		translateCircular1 := ["ä","ö","ü","ß"], translateCircular2 := ["ᚨᛖ","ᛟᛖ","ᚢᛖ","ᛋᛋ"], translateCircular3 := ["ae","oe","ue","ss"]
-		for i, letter in translateCircular1 {
-			runes["to"]["global"]["singlechar"][letter] := translateCircular2[i]
-			runes["from"]["global"]["multichar"][translateCircular2[i]] := translateCircular3[i]
+		for i, letter in dictSkeleton.translateCircular1 {
+			runes["to"]["global"]["singlechar"][letter] := dictSkeleton.translateCircular2[i]
+			runes["from"]["global"]["multichar"][dictSkeleton.translateCircular2[i]] := dictSkeleton.translateCircular3[i]
 		}
-		translateLanguageLatin := ["q", "w"], translateLanguageRunicDE := ["ᚲᚹ","ᚹ"], translateLanguageRunicEN := ["ᚲᚢ","ᚢ"]
-		for i, letter in translateLanguageLatin {
-			runes["to"]["DE"]["singlechar"][letter] := translateLanguageRunicDE[i]
-			runes["to"]["EN"]["singlechar"][letter] := translateLanguageRunicEN[i]
+		for i, letter in dictSkeleton.translateLanguageLatin {
+			runes["to"]["DE"]["singlechar"][letter] := dictSkeleton.translateLanguageRunicDE[i]
+			runes["to"]["EN"]["singlechar"][letter] :=dictSkeleton.translateLanguageRunicEN[i]
 		}
-		translateLanguageRunes := ["ᚲ","ᛃ","ᚲᚹ","ᚲᚢ"], translateLanguageLatinDE := ["k","j","q","ku"], translateLanguageLatinEN := ["c","y","cv","q"]
-		for i, rune in translateLanguageRunes {
-			runes["from"]["DE"][(StrLen(rune) > 1 ? "multichar" : "singlechar")][rune] := translateLanguageLatinDE[i]
-			runes["from"]["EN"][(StrLen(rune) > 1 ? "multichar" : "singlechar")][rune] := translateLanguageLatinEN[i]
+		for i, rune in dictSkeleton.translateLanguageRunes {
+			runes["from"]["DE"][(StrLen(rune) > 1 ? "multichar" : "singlechar")][rune] := dictSkeleton.translateLanguageLatinDE[i]
+			runes["from"]["EN"][(StrLen(rune) > 1 ? "multichar" : "singlechar")][rune] := dictSkeleton.translateLanguageLatinEN[i]
 		}
-		runesExtra := ["ᚠ","ᚡ","ᚢ","ᚣ","ᚤ","ᚥ","ᚧ","ᚨ","ᚩ","ᚪ","ᚫ","ᚬ","ᚭ","ᚮ","ᚯ","ᚰ","ᚱ","ᚲ","ᚳ","ᚴ","ᚵ","ᚶ","ᚷ","ᚸ","ᚹ","ᚺ","ᚻ","ᚼ","ᚽ","ᚾ","ᚿ","ᛀ","ᛁ","ᛂ","ᛃ","ᛄ","ᛅ","ᛆ","ᛇ","ᛈ","ᛉ","ᛊ","ᛋ","ᛌ","ᛍ","ᛎ","ᛏ","ᛐ","ᛑ","ᛒ","ᛓ","ᛔ","ᛕ","ᛖ","ᛗ","ᛘ","ᛙ","ᛚ","ᛛ","ᛜ","ᛝ","ᛞ","ᛟ","ᛠ","ᛡ","ᛢ","ᛣ","ᛤ","ᛥ","ᛦ","ᛧ","ᛨ","ᛩ","ᛪ"]
-		latinExtra := ["f","v","u","y","y","w","th","a","o","a","a","o","o","o","ö","o","r","k","ch","k","g","eng","g","g","v","h","h","h","h","n","n","n","i","e","y","j","a","a","ei","p","z","s","s","s","c","z","t","t","d","b","b","p","p","e","m","m","m","l","l","ng","ng","d","o","ea","io","qu","ch","k","st","r","y","rr","qu","sch"]
-		for i, e in runesExtra {
-			runes["from"]["extra"]["singlechar"][e] := latinExtra[i]
+		for i, e in dictSkeleton.runesExtra {
+			runes["from"]["extra"]["singlechar"][e] := dictSkeleton.latinExtra[i]
 		}
 		otherAlphabet["runes"] := runes
 		dictionary := Map("toAlphabet", toAlphabet, "fromAlphabet", fromAlphabet, "otherAlphabet", otherAlphabet)
