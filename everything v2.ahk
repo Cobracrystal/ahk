@@ -581,7 +581,8 @@ SystemCursor(mode := 1) {   ;// stolen from https://www.autohotkey.com/boards/vi
 }
 
 getSelfIp() {
-	return cmdRet("dig @resolver4.opendns.com myip.opendns.com +short")
+	return sendRequest("https://icanhazip.com")
+	; return cmdRet("dig @resolver4.opendns.com myip.opendns.com +short") ; this is about 5x slower than requesting any ip site
 }
 
 ; ###########################################################################
