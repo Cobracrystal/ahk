@@ -1153,7 +1153,7 @@ WinSetVolume(level, target?) {
 #HotIf
 
 #HotIf WinActive("Revolution Idle")
-^q::{
+^q::{ ; trash item under cursor
 	MouseGetPos(&x, &y)
 	Send("{LButton Down}")
 	Sleep(30)
@@ -1163,37 +1163,28 @@ WinSetVolume(level, target?) {
 	Sleep(30)
 	MouseMove(x, y)
 }
-^Numpad1::doRefinePrestige()
-^Numpad2::PrestigeLoop.toggle()
-class PrestigeLoop {
-	static isOn := 0
-	static toggle() {
-		if this.isOn := !this.isOn
-			SetTimer(this.loop.bind(this), -10)
-	}
-	static loop() {
-		while(this.isOn) {
-			Loop(3) {
-				Loop(5) {
-					spawnAndIncrease()
-					Sleep(50)
-				}
-				doPolishPrestige()
-				Sleep(50)
-			}
-			Loop(5) {
-				spawnAndIncrease()
-				Sleep(40)
-			}
-			doRefinePrestige()
-			Sleep(50)
-		}
-	}
-}
-
+^Numpad2::bigLoop()
 ^Numpad3::{
 	Loop(5)
 		spawnAndIncrease()
+}
+
+bigLoop() {
+	clickAutospawn()
+	Sleep(75)
+	doRefinePrestige()
+	Sleep(75)
+	Loop(2) {
+		Loop(5) {
+			spawnAndIncrease()
+			Sleep(75)
+		}
+		doPolishPrestige()
+		Sleep(75)
+	}
+	Loop(5)
+		spawnAndIncrease("138")
+	clickAutoSpawn()
 }
 
 openPolishMenu() {
@@ -1224,14 +1215,19 @@ doPolishPrestige() {
 	closePolishMenu()
 }
 
-spawnAndIncrease() {
+clickAutospawn() {
+	static autospawn := [800, 840]
+	MouseClick('L', autospawn*)
+}
+
+spawnAndIncrease(num := "999") {
 	static spawn := [675, 990]
 	static spawnlvl := [740, 898]
 	MouseClick("L", spawn*)
 	Sleep(75)
 	MouseClick("L", spawnlvl*)
 	Sleep(75)
-	Send("999")
+	Send(num)
 }
 
 doRefinePrestige() {
@@ -1244,7 +1240,6 @@ doRefinePrestige() {
 	MouseClick('L', refinePrestigeConfirm*)
 	Sleep(75)
 	closeRefineMenu()
-	
 }
 openRefineMenu() {
 	static refine := [1441, 991]
