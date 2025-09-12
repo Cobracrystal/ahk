@@ -123,7 +123,7 @@ if (!GLOBALVAR_WASRELOADED)
 	TimestampConverter.textTimestampConverter()
 }
 
-^q:: {
+^q:: { ; Show Folderswitch Menu
 	FolderSwitch.showMenu()
 }
 
@@ -1092,12 +1092,12 @@ loadTableAsHotstrings(filePath) {
 	}
 }
 
-^+WheelUp::{
+^+WheelUp::{ ; Increase Volume of current Window by +5
 	MouseGetPos(,,&hwnd)
 	WinSetVolume("+5", hwnd)
 }
 
-^+WheelDown::{
+^+WheelDown::{ ; Decrease Volume of current Window by -5
 	MouseGetPos(,,&hwnd)
 	WinSetVolume("-5", hwnd)
 }
@@ -1154,7 +1154,7 @@ WinSetVolume(level, target?) {
 #HotIf
 
 #HotIf WinActive("Revolution Idle")
-^q::{ ; trash item under cursor
+^q::{ ; Revo Idle: trash item under cursor
 	MouseGetPos(&x, &y)
 	Send("{LButton Down}")
 	Sleep(30)
@@ -1165,7 +1165,7 @@ WinSetVolume(level, target?) {
 	MouseMove(x, y)
 }
 ^Numpad2::bigLoop()
-^Numpad3::{
+^Numpad3::{ ; Revo Idle: Basic spawn increase
 	Loop(5)
 		spawnAndIncrease()
 }
@@ -1176,18 +1176,20 @@ bigLoop() {
 		Sleep(50)
 		doRefinePrestige()
 		Sleep(50)
-		Loop(5) {
-			spawnAndIncrease("150")
+		Loop(2) {
+			Loop(5) {
+				spawnAndIncrease("151")
+				Sleep(50)
+			}
+			doPolishPrestige()
 			Sleep(50)
 		}
-		doPolishPrestige()
-		Sleep(50)
 		Loop(5) {
-			spawnAndIncrease("150")
+			spawnAndIncrease("151")
 			Sleep(50)
 		}
 		clickAutoSpawn()
-		Sleep(7000)
+		Sleep(2500)
 	}
 }
 
