@@ -470,6 +470,15 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 		DEFAULT_ICONS["MB_ICONEXCLAMATION"], "*48",
 		DEFAULT_ICONS["MB_ICONASTERISKINFO"], "*64"
 	)
+	static BUTTON_STYLE_ALIASES := Map(
+		'OK', 						0, 'O',		0,
+		'OKCancel', 				1, 'O/C', 	1, 'OC', 1,
+		'AbortRetryIgnore', 		2, 'A/R/I', 2, 'ARI', 2,
+		'YesNoCancel', 				3, 'Y/N/C', 3, 'YNC', 3,
+		'YesNo', 					4, 'Y/N', 	4, 'YN', 4,
+		'RetryCancel', 				5, 'R/C', 	5, 'RC', 5,
+		'CancelTryAgainContinue', 	6, 'C/T/C', 6, 'CTC', 6,
+	)
 	static MB_FONTNAME, MB_FONTSIZE, MB_FONTWEIGHT, MB_FONTISITALIC
 	static MB_HASFONTINFORMATION := getMsgBoxFontInfo(&MB_FONTNAME, &MB_FONTSIZE, &MB_FONTWEIGHT, &MB_FONTISITALIC)
 
@@ -490,6 +499,8 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	static WM_KEYDOWN := 0x0100
 	static WM_RBUTTONDOWN := 0x0204
 	
+	if BUTTON_STYLE_ALIASES.Has(buttonStyle)
+		buttonStyle := BUTTON_STYLE_ALIASES[buttonStyle]
 	if (buttonNames.Length == 0) {
 		if !(MB_BUTTON_TEXT.Has(buttonStyle + 1)) ; offset since this is not 0-indexed
 			throw Error("Invalid button Style")
