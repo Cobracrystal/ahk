@@ -76,7 +76,9 @@ class SongDownloader {
 			}
 		} else if FileExist(str) || (RegExMatch(str, '^(?:filelist:)?(")?(\w:\\.*?)\1?$', &o) && FileExist(o[2])) {
 			this.editMetadataWithGui(IsSet(o) ? o[2] : str)
-		} else if (strCountStr(str, "https") > 1) { ; assume its multiple songs, so retrieve metadata
+		} else if ((count := strCountStr(str, "`n")) > 1) { ; assume its multiple songs, so retrieve metadata
+			if !(MsgBoxAsGui("You are about to download metadata for " count " Links/Searches. Continue?",,'YNC',2,true) == 'Yes')
+				return
 			if (A_LineFile == A_ScriptFullPath)
 				this.getMetadataFromLinks(str, MsgBoxAsGui.bind(, "Metadata",,0,,,,1,,"i",,1000))
 			else
