@@ -1,5 +1,6 @@
+#Requires AutoHotkey v2
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
-SetWorkingDir(A_WorkingDir "\script_files")
+SetWorkingDir(A_WorkingDir "\..\script_files")
 fileNameFrom := A_WorkingDir "\TableFilter\Kayoogis.json"
 
 str := transformTableIntoHotstring(fileNameFrom, "Deutsch", "Kayoogis", "")

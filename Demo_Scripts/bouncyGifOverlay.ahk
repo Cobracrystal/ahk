@@ -1,3 +1,4 @@
+#Requires AutoHotkey v2
 KeyHistory(500)
 Persistent()
 pic := "https://cdn.discordapp.com/emojis/783760070831112232.gif"

@@ -1,4 +1,5 @@
 ﻿#SingleInstance Force
+#Requires AutoHotkey v2
 num := 200
 height := 1
 period := 2
