@@ -596,7 +596,7 @@ toString(obj, compact := false, compress := true, strEscape := false, mapAsObj :
 			return obj
 		}
 		if (encounteredObjs.Has(ObjPtr(obj)))
-			return "{}"
+			return "<DUPLICATE REF> Type " Type(obj)
 		encounteredObjs[ObjPtr(obj)] := true
 		; for very small objects, this may be excessive to do, but it would be very messy otherwise
 		objType := Type(obj)
