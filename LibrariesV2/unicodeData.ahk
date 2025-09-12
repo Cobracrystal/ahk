@@ -495,7 +495,7 @@ class unicodeData {
 	;  	Determines the character representation for a specific digit in the specified radix. 
 	static forDigit(digit, radix) {
 		this.verifyVersion()
-		if !(isClamped(radix, 2, 36) && isClamped(digit, 0, radix-1))
+		if !(radix >= 2 && radix <= 36 && digit >= 0 && digit <= radix - 1)
 			throw(ValueError("Radix must be between 2 and 36 and digit between 0 and radix, given " radix ", " digit))
 		codePoint := DllCall("icuuc\u_forDigit", "int", digit, "char", radix)
 		return Chr(codePoint)
