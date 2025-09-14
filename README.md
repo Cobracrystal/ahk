@@ -8,3 +8,4 @@ Most scripts in *Libraries* are not written by me;
 Scripts in *LibrariesV2* are written by me, with the exception of the following:
 - *jsongo.ahk* by [@GroggyOtter](https://github.com/GroggyOtter)
 - *Websocket.ahk* by [@thqby](https://github.com/thqby)
+- *cmdStdOutAsync* by [teadrinker](https://www.autohotkey.com/boards/viewtopic.php?t=112734) 
