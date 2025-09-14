@@ -33,11 +33,11 @@ class BigInteger {
 			this.magnitude := [0]
 			return
 		}
-		this.magnitude := BigInteger.getMagnitudes(anyInt)
+		this.magnitude := BigInteger.getMagnitude(anyInt)
 	}
 
 	/**
-	 * Returns a new BigInteger. Synonymous with directly calling BigInteger
+	 * Returns a new BigInteger. Synonymous with creating a BigInteger instance
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
 	 * @returns {BigInteger} 
 	 */
@@ -45,7 +45,7 @@ class BigInteger {
 
 	/**
 	 * Returns a String representing this.
-	 * @returns {String} The number stored this BigInteger represents. May start with -. Never starts with +.
+	 * @returns {String} The number this BigInteger represents. May start with -. Never starts with +.
 	 */
 	toString() {
 		if (this._signum == 0)
@@ -120,31 +120,36 @@ class BigInteger {
 	}
 
 	/**
-	 * 
+	 * Divides (this) by the given Integer Representation and returns a new BigInteger representing the new result
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
-	 * @returns {BigInteger} 
+	 * @returns {BigInteger} The result of division, rounded down to the nearest BigInteger. 22/7 = 3
 	 */
-	Divide(anyInt) => 0
+	Divide(anyInt) {
+		if !(anyInt is BigInteger)
+			anyInt := BigInteger(anyInt)
+		magQuotient := BigInteger.divideMagnitudes(this.magnitude, anyInt.magnitude)
+		return BigInteger.fromMagnitude(magQuotient, this.signum() * anyInt.signum()) 
+	}
 
 	/**
 	 * 
 	 * @returns {BigInteger} 
 	 */
-	divideAndRemainder() => 0
+	divideAndRemainder() => this
 	
 	/**
 	 * 
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
 	 * @returns {BigInteger} 
 	 */
-	Mod(anyInt) => 0
+	Mod(anyInt) => this
 
 	/**
 	 * 
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
 	 * @returns {BigInteger} 
 	 */
-	Pow(anyInt) => 0
+	Pow(anyInt) => this
 	
 	
 	/**
@@ -245,7 +250,7 @@ class BigInteger {
 	 * @param signum The signum of the number. 1 for positive, -1 for negative, 0 for 0. If magnitude is an array containing only 0, signum will be automatically set to 0.
 	 * @returns {BigInteger} The Constructed Value 
 	 */
-	static fromMagnitude(magnitude, signum) {
+	static fromMagnitude(magnitude, signum := 1) {
 		obj := BigInteger(0) ; can't construct empty biginteger instance
 		obj._signum := (magnitude.Length = 1 && magnitude[1] = 0) ? 0 : signum
 		obj.magnitude := magnitude.Clone()
@@ -257,7 +262,7 @@ class BigInteger {
 	 * @param str A positive Integer String of arbitrary length. Must not contain -/+ at the beginning.
 	 * @returns {Array} The strings base-n digit representation as an Array
 	 */
-	static getMagnitudes(str, base := BigInteger.INT32) {
+	static getMagnitude(str, base := BigInteger.INT32) {
 		mag := []
 		while (str != "") { ; Divide string by base, get quotient and remainder
 			q := ""
@@ -344,9 +349,8 @@ class BigInteger {
 			a := mag1[-i]
 			b := i <= l2 ? mag2[-i] : 0
 			diff := a - b - carry
-			if diff >= 0
-				carry := 0
-			else {
+			carry := 0
+			if diff < 0 {
 				diff += BigInteger.INT32
 				carry := 1
 			}
@@ -358,7 +362,6 @@ class BigInteger {
 	}
 
 	static multiplyMagnitudes(mag1, mag2) {
-		static INT_MASK := 0xFFFFFFFF
 		len1 := mag1.Length
 		len2 := mag2.Length
 		result := []
@@ -373,16 +376,127 @@ class BigInteger {
 				b := mag2[-j]
 				pos := i + j - 1
 				s := result[-pos] + (a * b) + carry
-				result[-pos] := s & INT_MASK
-				carry := (s >> 32) & INT_MASK ; since s might be >2**63-1, when shifting right the high bit is still interpreted as negative value. thus, we cut it off
+				result[-pos] := s & BigInteger.INT_MASK
+				carry := (s >>> 32) ; since s might be >2**63-1, when shifting right the high bit is still interpreted as negative value. thus, we cut it off
 			}
 			result[-(i + j)] += carry ; write carry to the position left to the last written value
 		}
-		while (result.Length > 1 && result[1] == 0)
-			result.RemoveAt(1)
-		return result
+		return this.removeLeadingZeros(result)
 	}
 
+	/**
+	 * Divides one magnitude by another magnitude using Knuth's Algorithm D (long division).
+	 * @param {Array} mag1 Dividend magnitude
+	 * @param {Array} mag2 Divisor magnitude
+	 * @returns {Array} Quotient magnitude
+	 */
+	static divideMagnitudes(mag1, mag2) {
+		len2 := mag2.Length
+		lenDiff := mag1.Length - len2
+		if lenDiff < 0 ; mag2 > mag1
+			return [0]
+		d := 1
+		if !(mag2[1] & 0x80000000) { ; highest bit is 0
+			d := (BigInteger.INT32 // (mag2[1] + 1))
+			mag2 := BigInteger.multiplyMagnitudes(mag2, [d])
+			mag1 := BigInteger.multiplyMagnitudes(mag1, [d])
+		}
+		mag1.InsertAt(1, 0)
+		q := []
+		Loop lenDiff + 1 {
+			j := A_Index
+			u_j := mag1[j]
+			u_j1 := mag1[j + 1]
+			u_j2 := (j + 2 <= mag1.Length) ? mag1[j + 2] : 0
+			v1 := mag2[1]
+			v2 := (mag2.Length >= 2) ? mag2[2] : 0
+			num := BigInteger.divideMagnitudeByDigit([u_j, u_j1], v1)
+			qhat := num[1][1]
+			rhat := num[2]
+			while (qhat >= BigInteger.INT32 || ((qhat * v2) & BigInteger.LONG_MASK) > (((rhat * BigInteger.INT32 + u_j2) & BigInteger.LONG_MASK))) {
+				qhat -= 1
+				rhat := (rhat + v1) & BigInteger.LONG_MASK
+				if rhat >= BigInteger.INT32
+					break
+			}
+			; Multiply and subtract
+			carry := 0
+			borrow := 0
+			Loop(mag2.Length) {
+				i := A_Index
+				p := ((mag2[-i] * qhat) & BigInteger.LONG_MASK) + carry
+				carry := (p // BigInteger.INT32) & BigInteger.LONG_MASK
+				p := p & BigInteger.INT_MASK
+				sub := (mag1[j + len2 - i] - p - borrow) & BigInteger.LONG_MASK
+				borrow := 0
+				if sub < 0 {
+					sub += BigInteger.INT32
+					borrow := 1
+				}
+				mag1[j + len2 - i] := sub & BigInteger.INT_MASK
+			}
+			sub := mag1[j] - carry - borrow
+			mag1[j] := sub
+			if sub < 0 {
+				sub += BigInteger.INT32
+				; Correction: qhat--
+				qhat -= 1
+				carry := 0
+				Loop (mag2.Length) {
+					i := A_Index
+					s := mag1[j + len2 - i] + mag2[-i] + carry
+					carry := 0
+					if s >= BigInteger.INT32 {
+						s -= BigInteger.INT32
+						carry := 1
+					}
+					mag1[j + len2 - i] := s
+				}
+				mag1[j] += carry
+			}
+			q.Push(qhat)
+		}
+		return BigInteger.removeLeadingZeros(q)
+	}
+
+	/**
+	 * Divides a magnitude by a given digit in base 2**32
+	 * @param mag 
+	 * @param divisorDigit An Integer > 0 and < 2**32
+	 * @returns {Array} 
+	 */
+	static divideMagnitudeByDigit(mag, divisorDigit) {
+		result := []
+		remainder := 0
+		for digit in mag {
+			quotient := (BigInteger.INT32 // divisorDigit) * remainder
+			tmp := Mod(BigInteger.INT32, divisorDigit) * remainder + digit
+			quotient := (quotient + tmp // divisorDigit) & BigInteger.INT_MASK
+			remainder := Mod(tmp, divisorDigit) ; no mask because divisorDigit <= MASK
+			result.push(quotient)
+			; this is the arithmetically sound calculation, which fails due to overflows. 
+			; dividend := remainder * BigInteger.INT32 + digit
+			; q := dividend // divisorDigit
+			; remainder := Mod(dividend, divisorDigit)
+		}
+		return [this.removeLeadingZeros(result), remainder]
+	}
+
+	/**
+	 * Computes the greatest common divisor between digit1 and digit2
+	 * @param digit1 Must be >0 and <2**32 - 1
+	 * @param digit2 Must be >0 and <2**32 - 1
+	 * @returns {Integer} The greatest common divisor
+	 */
+	static gcdDigit(digit1, digit2) {
+		while digit1 > 0 && digit2 > 0 {
+			if digit1 > digit2
+				digit1 := Mod(digit1, digit2)
+			else
+				digit2 := Mod(digit2, digit1)
+		}
+		return digit1 || digit2
+	}
 
 	/**
 	 * Multiplies a string of arbitrary length by a positive integer
@@ -432,6 +546,12 @@ class BigInteger {
 		return result
 	}
 
+	static removeLeadingZeros(magnitude) {
+		while (magnitude.Length > 1 && magnitude[1] = 0)
+        	magnitude.RemoveAt(1)
+		return magnitude
+	}
+
 	; BigInteger constant -1
 	static MINUS_ONE => BigInteger(-1)
 	; BigInteger constant 0
@@ -447,6 +567,10 @@ class BigInteger {
 
 	; The Maximum Value of an unsigned int: 2^32
 	static INT32 := 1 << 32
+	; Masks values to < 2**64 - 1 
+	static LONG_MASK := 0xFFFFFFFFFFFFFFFF
+	; Masks values to < 2**32 - 1
+	static INT_MASK := 0xFFFFFFFF
 	; The Maximum Value of an ahk integer, or long long int: 2^63-1
 	static MAX_INT_VALUE := (1 << 63) - 1
 	; The number of bytes necessary to store an ahk integer, or long long int: 64
