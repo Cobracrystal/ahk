@@ -702,15 +702,18 @@ BoundFnName(Obj) {
 	return Obj.Name
 }
 
-range(startEnd, end?, step?, inclusive := true) {
-	start := IsSet(end) ? startEnd : 1
-	end := end ?? startEnd
+range(startOrEnd, end?, step?, inclusiveEnd := true) {
+	start := IsSet(end) ? startOrEnd : 1
+	end := end ?? startOrEnd
 	step := step ?? 1
+	backwards := step < 0
+	if backwards && end > startOrEnd
+		throw ValueError('Positive Range with negative step')
 	index := 1
 	return (&n, &m := -1) => (
 		!IsSet(m) ? 
-			(n := index++, m := start, start := numRoundProper(start + step), inclusive ? m <= end : m < end) : 
-			(n := start, start := numRoundProper(start + step), inclusive ? n <= end : n < end)
+			(n := index++, m := start, start += step, backwards ? (inclusiveEnd ? m >= end : m > end) : inclusiveEnd ? m <= end : m < end) : 
+			(n := start, start += step, backwards ? (inclusiveEnd ? n >= end : n > end) : inclusiveEnd ? n <= end : n < end)
 	)
 }
 
