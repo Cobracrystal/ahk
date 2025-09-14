@@ -172,9 +172,9 @@ class TransparentTaskbar {
 		maximizedMonitors := Map() ; map for .has
 		for mHandle, mon in this.monitorData
 			mon.prevState := mon.isMaximized
-		for win in WinUtilities.getBasicInfo()
-			if win.state == 1
-				maximizedMonitors[(WinUtilities.monitorGetHandleFromWindow(win.hwnd))] := true
+		try for win in WinUtilities.getAllWindows()
+			try if WinGetMinMax(win) == 1
+				maximizedMonitors[WinUtilities.monitorGetHandleFromWindow(win)] := true
 		for mHandle, mon in this.monitorData
 			mon.isMaximized := maximizedMonitors.has(mHandle) ; ? 1 : 0
 	}
