@@ -815,7 +815,7 @@ doNothing(*) {
 
 
 
-print(value, options?, putNewline := true, compress := false, compact := false, strEscape := true, fallbackMsgbox := true) {
+print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true, fallbackMsgbox := true) {
 	if IsObject(value)
 		value := toString(value, compact, compress, strEscape)
 	if (putNewline == true || (putNewline == -1 && InStr(value, '`n')))
