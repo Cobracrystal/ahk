@@ -50,14 +50,11 @@ class BigInteger {
 	toString() {
 		if (this._signum == 0)
 			return '0'
-		str := '0'
-		base := BigInteger.INT32
-		for int in this.magnitude {
-			str := BigInteger.MultiplyStringByInt(str, base)
-			str := BigInteger.AddIntToString(str, int)
-		}
-		if (this._signum < 0)
-			str := "-" . str
+		convertedMagnitude := BigInteger.convertToBase1B(this.magnitude)
+		str := this._signum < 0 ? '-' : ''
+		str .= convertedMagnitude[1]
+		Loop(convertedMagnitude.Length - 1)
+			str .= Format("{:09}", convertedMagnitude[A_Index + 1])
 		return str
 	}
 
@@ -256,28 +253,55 @@ class BigInteger {
 		obj.magnitude := magnitude.Clone()
 		return obj
 	}
-
+	
 	/**
-	 * Given a string of arbitrary length, returns an array of its digits in the specified base (default: 2^32)
+	 * Given a string of arbitrary length in base 10, returns an array of its digits in the specified base (default: 2^32)
 	 * @param str A positive Integer String of arbitrary length. Must not contain -/+ at the beginning.
 	 * @returns {Array} The strings base-n digit representation as an Array
 	 */
 	static getMagnitude(str, base := BigInteger.INT32) {
-		mag := []
-		while (str != "") { ; Divide string by base, get quotient and remainder
-			q := ""
-			carry := 0
-			for char in StrSplit(str) {
-				digit := Integer(char)
-				carry := carry * 10 + digit
-				qDigit := carry // base
-				q .= qDigit
-				carry := Mod(carry, base)
-			}
-			mag.InsertAt(1, carry)
-			str := LTrim(q, '0')
+		; parse string into base-10**9 magnitude
+		magBaseB := []
+		Loop((len := StrLen(str)) // 9) { ; interpret as base 10**9
+			chunk := len - A_Index * 9 + 1
+			magBaseB.InsertAt(1, Integer(SubStr(str, chunk, 9)))
 		}
-		return mag
+		if Mod(len, 9)
+			magBaseB.InsertAt(1, Integer(SubStr(str, 1, Mod(len, 9))))
+		; divide base-10**9-magnitude by 2**32 and store remainder for base-2**32-digit
+		magnitude := []
+		while (magBaseB.Length > 1 || magBaseB[1] != 0) {
+			quotient := []
+			remainder := 0
+			for digit in magBaseB {
+				dividend := remainder * 10**9 + digit ; 10**9 * 2**32 < 2**63 so no overflow
+				q := dividend // base
+				remainder := Mod(dividend, base)
+				quotient.push(q)
+			}
+			magBaseB := BigInteger.removeLeadingZeros(quotient)
+			magnitude.InsertAt(1, remainder)
+		}
+		return magnitude
+	}
+
+	static convertToBase1B(magnitude) {
+		static b := 10**9
+		magBaseB := []
+		mag := magnitude.clone()
+		while (mag.Length > 1 || mag[1] != 0) {
+			quotient := []
+			remainder := 0
+			for digit in mag {
+				dividend := remainder * BigInteger.INT32 + digit
+				q := dividend // b
+				remainder := Mod(dividend, b)
+				quotient.push(q)
+			}
+			mag := BigInteger.removeLeadingZeros(quotient)
+			magBaseB.InsertAt(1, remainder)
+		}
+		return magBaseB
 	}
 
 	/**
@@ -460,7 +484,7 @@ class BigInteger {
 	}
 
 	/**
-	 * Divides a magnitude by a given digit in base 2**32
+	 * Divides a magnitude in base 2**32 by a given digit
 	 * @param mag 
 	 * @param divisorDigit An Integer > 0 and < 2**32
 	 * @returns {Array} 
@@ -496,54 +520,6 @@ class BigInteger {
 				digit2 := Mod(digit2, digit1)
 		}
 		return digit1 || digit2
-	}
-
-	/**
-	 * Multiplies a string of arbitrary length by a positive integer
-	 * @param str A positive Integer String of arbitrary length. Must not contain -/+ at the beginning.
-	 * @param factor A positive integer.
-	 * @returns {String} The product of the two values
-	 */
-	static MultiplyStringByInt(str, factor) {
-		carry := 0
-		result := ""
-		c := StrLen(str)
-		Loop(c) {
-			i := c - A_Index + 1
-			digit := Integer(SubStr(str, i, 1))
-			total := digit * factor + carry
-			result := Mod(total, 10) . result
-			carry := total // 10
-		}
-		while (carry > 0) {
-			result := Mod(carry, 10) . result
-			carry := carry // 10
-		}
-		return result
-	}
-
-	/**
-	 * Adds a positive integer to a string of arbitrary length
-	 * @param str A positive Integer String of arbitrary length. Must not contain -/+ at the beginning.
-	 * @param addend A positive integer.
-	 * @returns {String} The sum of the two values
-	 */
-	static AddIntToString(str, addend) {
-		carry := addend
-		result := ""
-		c := StrLen(str)
-		Loop(c) {
-			i := c - A_Index + 1
-			digit := Integer(SubStr(str, i, 1))
-			_sum := digit + carry
-			result := Mod(_sum, 10) . result
-			carry := _sum // 10
-		}
-		while (carry > 0) {
-			result := Mod(carry, 10) . result
-			carry := carry // 10
-		}
-		return result
 	}
 
 	static removeLeadingZeros(magnitude) {
