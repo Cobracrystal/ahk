@@ -4,27 +4,31 @@
 #Include BasicUtilities.ahk
 #Include BigInteger.ahk
 methods := ["add", "sub", "mul", "div", "rem"]
-RunTests('add')
+fileEnum := {
+	fileDigit: 'tests_digit.txt',
+	fileFull: 'tests_full.txt',
+	filePow: 'tests_pow.txt'
+}
+	
+RunTests('add', fileEnum.fileDigit)
 RunTests('sub')
 RunTests('mul')
-RunTests('rem')
+RunTests('Pow')
 
-RunTests(method) {
-	static fileDigit := 'tests_digit.txt'
-	static fileFull := 'tests_full.txt'
-	static filePow := 'tests_pow.txt'
+RunTests(method, givenFile?) {
 	static methodMap := Map(
 		"add", "Add",
 		"sub", "Subtract",
 		"mul", "Multiply",
 		"div", "Divide",
-		"rem", "Mod"
+		"rem", "Mod",
+		"Pow", "Pow"
 	)
 	static testsCache := []
 	; Test data lines from test_digit and test_full
 	if testsCache.Length == 0 {
 		snap := qpc()
-		testfile := FileRead(fileFull, 'UTF-8')
+		testfile := FileRead(givenFile, 'UTF-8')
 		loop parse testfile, '`n', '`r' {
 			RegExMatch(A_LoopField, "NUM1:(?<num1>\d+), NUM2:(?<num2>\d+), ADD:(?<add>\d+), SUB:(?<sub>-?\d+), MUL:(?<mul>\d+), DIV:(?<div>\d+), REM:(?<rem>\d+)", &o)
 			testsCache.push({
@@ -34,7 +38,8 @@ RunTests(method) {
 				raw_sub: o["sub"], sub: BigInteger(o["sub"]), 
 				raw_mul: o["mul"], mul: BigInteger(o["mul"]), 
 				raw_div: o["div"], div: BigInteger(o["div"]), 
-				raw_rem: o["rem"], rem: BigInteger(o["rem"])  
+				raw_rem: o["rem"], rem: BigInteger(o["rem"]),
+				raw_rem: o["pow"], rem: BigInteger(o["pow"]),
 			})
 		}
 		elapsed := qpc() - snap
