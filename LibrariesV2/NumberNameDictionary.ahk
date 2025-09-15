@@ -10,14 +10,21 @@ class NumberNames {
 		numName := ""
 		numNameNum := "0"
         r := ""
+		snap := qpc()
+		counter := 0
 		Loop(10000) {
-			Loop(5)
-				r .= Random(0, 2**31-1)
+			r := ''
+			Loop(3)
+				r .= Random(0, 10**20)
 			numName := this.getName(String(r))
 			numNameNum := this.getValue(numName)
-			nextLine := r . ", " . numName . ": " . (numNameNum == String(r) ? "Correct" : "Incorrect, " . numNameNum)
-			print(nextLine)
+			correct := numNameNum == String(r)
+			counter += correct
+			nextLine := r . ", " . numName . ": " . (correct ? "Correct" : "Incorrect, " . numNameNum)
+			if Mod(A_Index, 100) == 0
+				print(Format("{}% done, {}/{} correct", A_Index // 100, A_Index, counter))
 		}
+		print(qpc() - snap)
 	}
 	
 
@@ -168,14 +175,14 @@ class NumberNames {
 		TO: {
 			ONES: Map('1', "ein", '2', "zwei", '3', "drei", '4', "vier", '5', "fünf", '6', "sechs", '7', "sieben", '8', "acht", '9', "neun"),
 			TENS: Map('1', "zehn", '2', "zwanzig", '3', "dreißig", '4', "vierzig", '5', "fünfzig", '6', "sechzig", '7', "siebzig", '8', "achtzig", '9', "neunzig" ),
-			LATIN: Map(6, "Mi", 12, "Bi", 18, "Tri", 24, "Quadri", 30, "Quinti", 36, "Sexti", 42, "Septi", 48, "Okti", 56, "Noni", 60, "Dezi"),
+			LATIN: Map(6, "Mi", 12, "Bi", 18, "Tri", 24, "Quadri", 30, "Quinti", 36, "Sexti", 42, "Septi", 48, "Okti", 54, "Noni", 60, "Dezi"),
 			EXTRA: Map('11', "elf", '12', "zwölf", '16', "sechzehn", '17', "siebzehn")
 		},
 		FROM: {
 			ONES: Map("ein", '1', "eine", '1', "eins", '1', "zwei", '2', "drei", '3', "vier", '4', "fünf", '5', "sech", '6', "sechs", '6', "sieb", '7', "sieben", '7', "acht", '8', "neun", '9'),
 			TENS: Map("zehn", '10', "elf", '11', "zwölf", '12', "zwanzig", '20', "dreißig", '30', "vierzig", '40', "fünfzig", '50', "sechzig", '60', "siebzig", '70', "achtzig", '80', "neunzig", '90'),
 			HUNDREDS: Map("ein", '100', "zwei", '200', "drei", '300', "vier", '400', "fünf", '500', "sechs", '600', "sieben", '700', "acht", '800', "neun", '900'),
-			LATIN: Map("mi", '6', "bi", '12', "tri", '18', "quadri", '24', "quinti", '30', "sexti", '36', "septi", '42', "okti", '48', "noni", '56', "dezi", '60')
+			LATIN: Map("mi", '6', "bi", '12', "tri", '18', "quadri", '24', "quinti", '30', "sexti", '36', "septi", '42', "okti", '48', "noni", '54', "dezi", '60')
 		}
 	}
 }
