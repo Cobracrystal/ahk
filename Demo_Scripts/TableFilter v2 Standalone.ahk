@@ -1629,13 +1629,7 @@ strRotate(str, offset := 0) {
 }
 
 strMultiply(str, count) {
-	s := ""
-	if count <= 0
-		return ""
-	VarSetStrCapacity(&s, count * StrLen(str))
-	Loop(count)
-		s .= str
-	return s
+	return StrReplace(Format("{:0" count "}",''), '0', str)
 }
 
 strFill(str, width, alignRight := true, char := A_Space) {
