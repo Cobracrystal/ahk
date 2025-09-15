@@ -1,18 +1,15 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 ; this class exists to generate german number names from a numeric string and vice versa.
 
-NumberNames.main()
+NumberNames.test()
 
 class NumberNames {
 
-	static main() {
-		nextLine := ""
-		numName := ""
-		numNameNum := "0"
-        r := ""
+	static test() {
+		iterations := 10000
 		snap := qpc()
 		counter := 0
-		Loop(10000) {
+		Loop(iterations) {
 			r := ''
 			Loop(3)
 				r .= Random(0, 10**20)
@@ -21,7 +18,7 @@ class NumberNames {
 			correct := numNameNum == String(r)
 			counter += correct
 			nextLine := r . ", " . numName . ": " . (correct ? "Correct" : "Incorrect, " . numNameNum)
-			if Mod(A_Index, 100) == 0
+			if Mod(A_Index, iterations//10) == 0
 				print(Format("{}% done, {}/{} correct", A_Index // 100, A_Index, counter))
 		}
 		print(qpc() - snap)
@@ -32,10 +29,10 @@ class NumberNames {
 		static dict := this.DE_DICT.FROM
 		name := Format("{:L}", name)
 		if name == "null"
-			return "0"
+			return '0'
 		arr := StrSplit(name, " ")
 		flagIsNegative := false
-		result := "0"
+		magBase1000 := [] ; using substrings is about 6% faster, but much less readable.
 		i := 0
 		while (i < arr.Length) {
 			word := arr[i + 1]
@@ -44,31 +41,37 @@ class NumberNames {
 			else if InStr(word, 'llion') || InStr(word, 'lliarde') {
 				prefix := SubStr(word, 1, InStr(word, 'lli') - 1)
 				if (dict.LATIN.Has(prefix)) {
-					amountZeroes := dict.LATIN[prefix] + (InStr(word, 'lliarde') ? 3 : 0)
+					amountZeros := dict.LATIN[prefix] + (InStr(word, 'lliarde') ? 3 : 0)
 					num := this.triGroupDigitValue(arr[i])
-					result := SubStr(result, 1, -(StrLen(num) + amountZeroes)) . num . strMultiply('0', amountZeroes)
+					if (magBase1000.Length == 0) {
+						magBase1000.push(num)
+						Loop(amountZeros // 3)
+							magBase1000.push(0)
+					} else {
+						magBase1000[-amountZeros // 3 - 1] := num
+					}
 				} else 
 					throw ValueError("Unrecognized Number")
 			}
 			else if (i >= arr.length - 2 && SubStr(word, -7) == 'tausend') {
 				thousandsValue := this.triGroupDigitValue(SubStr(word, 1, InStr(word, 'tausend') - 1))
-				result := SubStr(result, 1, -(StrLen(thousandsValue) + 3)) . thousandsValue . '000'
+				magBase1000[-2] := thousandsValue
 			} else if (i == arr.length - 1) {
 				singles := word
 				if (InStr(word, "tausend")) {
 					arr2 := StrSplit(word, 'tausend')
 					thousandsValue := this.triGroupDigitValue(arr2[1])
-					result := SubStr(result, 1, -(StrLen(thousandsValue) + 3)) . thousandsValue . '000'
+					magBase1000[-2] := thousandsValue
 					singles := arr2[2]
 				}
-				last := this.triGroupDigitValue(singles)
-				result := SubStr(result, 1, -StrLen(last)) . last
+				magBase1000[-1] := this.triGroupDigitValue(singles)
 			}
 			i++
 		}
-		if (flagIsNegative)
-			result := '-' . result
-		return result
+		result := ''
+		for e in magBase1000
+			result .= Format("{:03}", e)
+		return LTrim(result, 0)
 	}
 
 	static getName(num) {
