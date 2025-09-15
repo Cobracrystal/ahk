@@ -1,5 +1,6 @@
 .vscode/
 *.code-workspace
+tests_*.txt
 not_mine_or_examples/
 Unfinished_or_Abandoned/
 test.ahk
