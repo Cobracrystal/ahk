@@ -4,63 +4,77 @@
 #Include BasicUtilities.ahk
 #Include BigInteger.ahk
 methods := ["add", "sub", "mul", "div", "rem"]
-fileEnum := {
-	fileDigit: 'tests_digit.txt',
-	fileFull: 'tests_full.txt',
-	filePow: 'tests_pow.txt'
-}
+
 	
-RunTests('add', fileEnum.fileDigit)
+RunTests('add')
 RunTests('sub')
 RunTests('mul')
-RunTests('Pow')
+RunTests('pow')
 
 RunTests(method, givenFile?) {
 	static methodMap := Map(
-		"add", "Add",
-		"sub", "Subtract",
-		"mul", "Multiply",
-		"div", "Divide",
-		"rem", "Mod",
-		"Pow", "Pow"
+		"add", "add",
+		"sub", "subtract",
+		"mul", "multiply",
+		"div", "divide",
+		"rem", "mod",
+		"pow", "pow"
 	)
-	static testsCache := []
-	; Test data lines from test_digit and test_full
-	if testsCache.Length == 0 {
+	static testsCache := Map()
+	if (testsCache.Count == 0) {
 		snap := qpc()
-		testfile := FileRead(givenFile, 'UTF-8')
-		loop parse testfile, '`n', '`r' {
-			RegExMatch(A_LoopField, "NUM1:(?<num1>\d+), NUM2:(?<num2>\d+), ADD:(?<add>\d+), SUB:(?<sub>-?\d+), MUL:(?<mul>\d+), DIV:(?<div>\d+), REM:(?<rem>\d+)", &o)
-			testsCache.push({
-				raw_num1: o["num1"], num1: BigInteger(o["num1"]),
-				raw_num2: o["num2"], num2: BigInteger(o["num2"]), 
-				raw_add: o["add"], add: BigInteger(o["add"]), 
-				raw_sub: o["sub"], sub: BigInteger(o["sub"]), 
-				raw_mul: o["mul"], mul: BigInteger(o["mul"]), 
-				raw_div: o["div"], div: BigInteger(o["div"]), 
-				raw_rem: o["rem"], rem: BigInteger(o["rem"]),
-				raw_rem: o["pow"], rem: BigInteger(o["pow"]),
-			})
-		}
+		testsCache := parseTests()
 		elapsed := qpc() - snap
 		print('Parsed to BigIntegers in ' elapsed 's')
 	}
+	; Test data lines from test_digit and test_full
 	snap := qpc()
-	for e in testsCache {
+	for e in testsCache[method] {
 		e.%'res_' method% := e.num1.%methodMap[method]%(e.num2)
 		; e.%method% := BigInteger.fromMagnitude(BigInteger.divideMagnitudeByDigit(e.num1.magnitude, e.num2.magnitude[1])[1])
 	}
 	elapsed := qpc() - snap
 	c := e := 0
 	print('Performed Calculations [' method '] in ' elapsed 's')
-	for i, r in testsCache {
-		t := testsCache[i]
-		if (r.%method%.equals(r.%'res_' method%)) {
+	for i, r in testsCache[method] {
+		if (r.%method%.equals(r.%'res_' method%))
 			c++
-		} else {
-			e++
+		else {
 			print("Test failed for " method ": " r.num1.toString() " " method " " r.num2.toString() "`nExpected: " r.%method%.toString() "`nGot:      " r.%'res_' method%.toString())
+			e++
 		}
 	}
 	print('Total Errors: ' e ', Total Passes: ' c)
+}
+
+parseTests() {
+	static files := {
+		fileDigit: 'tests_digit.txt',
+		fileFull: 'tests_full.txt',
+		filePow: 'tests_pow.txt'
+	}
+	static fileMap := [
+		{ path: files.fileDigit, names: ["NUM1", "NUM2", "ADD", "SUB", "MUL", "DIV", "REM"] },
+		; { path: files.fileFull, names: ["NUM1", "NUM2", "ADD", "SUB", "MUL", "DIV", "REM"] },
+		{ path: files.filePow, names: ["NUM1", "NUM2", "POW"] }
+	]
+	tests := Map()
+	tests.CaseSense := false
+	for fObj in fileMap {
+		regStr := ''
+		for i, e in fObj.names
+			regStr .= Format("{1}:(?<{1}>-?\d+)", e) (i == fObj.names.Length ? '' : ',\s*')
+		testfile := FileRead(fObj.path, 'UTF-8')
+		arr := []
+		loop parse testfile, '`n', '`r' {
+			RegExMatch(A_LoopField, regStr, &o)
+			obj := {}
+			for e in fObj.names
+				obj.%e% := BigInteger(o[e])
+			arr.push(obj)
+		}
+		for i, e in fObj.names
+			tests[e] := arr
+	}
+	return tests
 }
