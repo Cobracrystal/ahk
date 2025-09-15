@@ -348,6 +348,7 @@ class unicodeData {
 	static charFromName(name, nameChoice := this.UCharNameChoice.U_UNICODE_CHAR_NAME, default?) {
 		this.verifyVersion()
 		errorCode := 0
+		name := Trim(name)
 		nameBuf := Buffer(StrPut(name, "UTF-8"))
 		StrPut(name, nameBuf, "UTF-8")
 		codePoint := DllCall("icuuc\u_charFromName", "int", nameChoice, "Ptr", nameBuf, "int*", &errorCode)
