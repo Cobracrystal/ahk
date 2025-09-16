@@ -63,7 +63,7 @@ class RandomNameGenerator {
 	
 			;Randomly chooses the next letter, based on the probabilities listed above.
 			rand := Random(0.0, 1.0)
-			Sum := "0"
+			local Sum := "0"
 			next := ""
 			for i, prob in this.dataSet[previous] {
 				sum += prob
