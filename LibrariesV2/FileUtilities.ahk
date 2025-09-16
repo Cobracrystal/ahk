@@ -334,13 +334,13 @@ normalizePath(absolutePath) {
 	return nPath
 }
 
-class Dependency {
+class Dependencies {
 		
 	/**
 	 * Returns a string depicting the dependency structure for the given file
-	 * @param path Path to the file to get dependencies of
+	 * @param path (Absolute) Path to the file to get dependencies of. Assumes that path == A_ScriptFullPath. This may work most of the time with relative paths, but wasnt tested extensively.
 	 * @param relativePaths Causes all paths to be returned relative to the given path, if possible
-	 * @param {Boolean} includeRedundantDependencies Whether to include dependencies that, if the script were to be compiled, would be ignored as they are already included by previous include statements. This only applies when considering the context of the main script given to this function, not in the context of its included scripts on their own.
+	 * @param {Boolean} includeRedundantDependencies Whether to include dependencies that, if the script were to be compiled, would be ignored as they are already included by previous include statements. This only applies when considering the context of the main script given to this function, not in the context of its included scripts on their own. Redundant Dependencies are marked as duplicate while their dependencies are not shown.
 	 * @returns {String} A string representing the dependency tree of the path.
 	 */
 	static getDependencyTreePretty(path, relativePaths := true, includeRedundantDependencies := true, indent := '  ') {
@@ -349,12 +349,11 @@ class Dependency {
 		charI := _charI . indent
 		charL := _charL . RegExReplace(indent, '.', char_)
 		deps := this.getDependencyTree(path, relativePaths, includeRedundantDependencies)
-		return _beautifyStr({_path: path, dependencies: deps}, '')
+		dummyObj := {_path: path, _state: '', dependencies: deps}
+		return _beautifyStr(dummyObj, '')
 
 		_beautifyStr(obj, indentStr) {
-			if !IsObject(obj.dependencies)
-				return obj._path
-			str := obj._path
+			str := obj._path . (obj._state ? ' (' obj._state ')' : '')
 			nextIndentStr := indentStr . charI
 			symbol := charT
 			for i, o in obj.dependencies {
@@ -370,46 +369,57 @@ class Dependency {
 
 	/**
 	 * Returns a dependency structure for the given file
-	 * @param path Path to the file to get dependencies of. Assumes that path == A_ScriptFullPath
+	 * @param path (Absolute) Path to the file to get dependencies of. Assumes that path == A_ScriptFullPath. This may work most of the time with relative paths, but wasnt tested extensively.
 	 * @param relativePaths Causes all paths to be stored relative to the given path, if possible
 	 * @param {Boolean} includeRedundantDependencies Whether to include dependencies that, if the script were to be compiled, would be ignored as they are already included by previous include statements. This only applies when considering the context of the main script given to this function, not in the context of its included scripts on their own.
 	 * @returns {Array} An array of objects. Each entry is a dependency with the properties 
-	 * _path: <filepath>,
-	 * dependencies: <Array|String> Either an array of dependency objects or the string 'None' or 'Missing'
+	 * _path: {String} <filepath>,
+	 * dependencies: {Array} Array of dependency objects. May be empty
+	 * _state: {String} An empty string or the words 'Again', 'Ignore', 'Duplicate Directive', 'Missing' or any combination of the four (in that order)
 	 */
 	static getDependencyTree(path, relativePaths := true, includeRedundantDependencies := true) {
-		dependencies := Map()
+		local dependencies := Map()
 		dependencies.CaseSense := false
-		SplitPath(path, , &dir)
-		deps := _getDependencies(path, Map(), dir)
+		deps := _getDependencies(path, Map())
 		if !relativePaths
 			return deps
+		SplitPath(path, , &dir)
 		recursiveHelper(deps)
 		return deps
 		
-		_getDependencies(currentPath, encounteredDependencies, lastIncludeDirectory) {
+		_getDependencies(currentPath, dependenciesInBranch, lastIncludeDirectory?) {
 			currentDependencies := []
 			RedundantDependencies := []
+			localDependencies := Map()
 			script := this.getUncommentedScript(FileRead(currentPath, "UTF-8"),, false)
 			Loop Parse, script, '`n', '`r' {
 				if (RegexMatch(A_LoopField, "^\s*#Include")) {
-					include := this.getIncludePath(A_LoopField, currentPath, path, lastIncludeDirectory)
-					if !FileExist(include.path)
-						currentDependencies.push({_path: include.path, dependencies: "File is Missing"})
+					include := this.getIncludePath(A_LoopField, currentPath, path, lastIncludeDirectory?)
+					state := include.includeAgain ? 'Again, ' : ''
+					state .= include.ignoreErrors ? 'Ignore, ' : ''
+					if !FileExist(include.path) {
+						localDependencies[include.path] := true
+						if localDependencies.Has(include.path) && !include.includeAgain
+							state .= 'Duplicate Directive, '
+						currentDependencies.push({_path: include.path, _state: state . 'Missing', dependencies: []})
+					}
 					else if InStr(FileGetAttrib(include.path), 'D')
 						lastIncludeDirectory := include.path
 					else if (include.path) {
-						if (!encounteredDependencies.Has(include.path) || include.includeAgain) {
-							encDep := includeRedundantDependencies ? encounteredDependencies.clone() : encounteredDependencies
+						if localDependencies.Has(include.path) && !include.includeAgain
+							currentDependencies.push({_path: include.path, _state: state . 'Duplicate Directive', dependencies: []})
+						else if (!dependenciesInBranch.Has(include.path) || include.includeAgain) {
+							localDependencies[include.path] := true
+							encDep := includeRedundantDependencies ? dependenciesInBranch.clone() : dependenciesInBranch
 							encDep[include.path] := true
-							currentDependencies.push({_path: include.path, dependencies: _getDependencies(include.path, encDep, lastIncludeDirectory)})
+							currentDependencies.push({_path: include.path, _state: RTrim(state, ', '), dependencies: _getDependencies(include.path, encDep, lastIncludeDirectory?)})
 						} else {
-							RedundantDependencies.push(include.path)
+							currentDependencies.push({_path: include.path, _state: state . 'Redundant', dependencies: []})
 						}
 					}
 				}
 			}
-			return currentDependencies.Length ? currentDependencies : "None"
+			return currentDependencies
 		}
 
 		recursiveHelper(m) {
@@ -425,7 +435,7 @@ class Dependency {
 
 	/**
 	 * Returns a flat Array of all paths recursively included in the given path. Assumes that path == A_ScriptFullPath
-	 * @param path Path to the file to read. If path is included in another file while files included in path mention A_ScriptDir, this function will return inaccurate results
+	 * @param path (Absolute) Path to the file to get dependencies of. Assumes that path == A_ScriptFullPath. This may work most of the time with relative paths, but wasnt tested extensively.
 	 * @param relativePaths Causes all paths to be stored relative to the given path, if possible
 	 * @returns {Array} Array of all included files in the order that they were encountered
 	 */
@@ -467,17 +477,12 @@ class Dependency {
 	}
 
 	/**
-	 * Get full script of a .ahk script (With all #include files being physically replaced with their content in the script)
-	 * @param path 
-	 * @returns {Any} 
+	 * Generates a standalone script without #include directives given a path. Assumes that path == A_ScriptFullPath
+	 * @param path (Absolute) Path to the file to get dependencies of. Assumes that path == A_ScriptFullPath, affecting %A_ScriptDir% and %A_ScriptFullPath%. This may work most of the time with relative paths, but wasnt tested extensively.
+	 * @param commentIncludes If this is set to true, adds a comment of the form [; #Include [relative path]] above the replacement for every #include directive
+	 * @returns {String} The script located in path as if it were compiled by replacing #include directives with the script located at their specified file.
 	 */
-	/**
-	 * Returns a flat Array of all paths recursively included in the given path. Assumes that path == A_ScriptFullPath
-	 * @param path Path to the file to read. If path is included in another file while files included in path mention A_ScriptDir, this function will return inaccurate results
-	 * @param relativePaths Causes all paths to be stored relative to the given path, if possible
-	 * @returns {String} Array of all included files in the order that they were encountered
-	 */
-	static getFullScript(path) {
+	static getFullScript(path, commentIncludes := false) {
 		includes := Map()
 		includes.CaseSense := false
 		SplitPath(path, , &dir)
@@ -503,6 +508,8 @@ class Dependency {
 					}
 					if (include.path && (!includes.Has(include.path) || include.includeAgain)) {
 						includes[include.path] := true
+						if commentIncludes
+							fullScript .= '; #Include "' StrReplace(include.path, dir '\') '"`n'
 						fullScript .= _getFullScript(include.path, lastIncludeDirectory) '`n'
 					}
 				} else
@@ -514,10 +521,10 @@ class Dependency {
 
 	/**
 	 * Given a text, returns the text content without comments (/* comment */) and optionally single-line comments
-	 * @param {String} text
+	 * @param {String} text A String representing an autohotkey script or similar text
 	 * @param {Boolean} removeSemicolonComments Normally, this function only removes multiline (/* comment */) comments. Set this to true to also remove single-line comments ( ; comment)
 	 * @param {Boolean} keepLineNumbersAccurate Whether to omit comments fully or replace them with a newline. This only applies to multiline comments.
-	 * @returns {String}
+	 * @returns {String} The text without multi- or single-line comments
 	 */
 	static getUncommentedScript(text, removeSemicolonComments := false, keepLineNumbersAccurate := true) {
 		cleanScript := ""
@@ -550,17 +557,18 @@ class Dependency {
 	 * Gets path of an included file
 	 * @description Given a line potentially containing an autohotkey #Include directive, creates a path leading to the file specified by the directive.
 	 * @param line The line to parse
-	 * @param {String} scriptFile The script specified by A_LineFile
-	 * @param {String} originalScript The script specified by A_ScriptFullPath. Defaults to A_LineFile
-	 * @param {String} withWorkingDir A potentially set working directory (that was formerly specified via #Include <folder>)
+	 * @param {String} scriptFile Path to the script specified by A_LineFile. Should be absolute or cover all backtracking in the include directive
+	 * @param {String} originalScript The script specified by A_ScriptFullPath. Defaults to scriptFile (ie assuming that the supplied script file is the 'main' script file). Should be absolute or cover all backtracking in the include directive
+	 * @param {String} withWorkingDir A potentially set working directory (that was formerly specified via #Include directory). Should be absolute.
 	 * @returns {Object} An Object of the form { path: path, ignoreErrors: 1 | 0, includeAgain: 1 | 0}
 	 */
 	static getIncludePath(line, scriptFile, originalScript := scriptFile, withWorkingDir?) {
 		static AHK_VARS := ["A_AhkPath", "A_AppData", "A_AppDataCommon", "A_ComputerName", "A_ComSpec", "A_Desktop", "A_DesktopCommon", "A_IsCompiled", "A_MyDocuments", "A_ProgramFiles", "A_Programs", "A_ProgramsCommon", "A_Space", "A_StartMenu", "A_StartMenuCommon", "A_Startup", "A_StartupCommon", "A_Tab", "A_Temp", "A_UserName", "A_WinDir"]
-		if !RegexMatch(line, '^\s*#Include(?<again>(?:Again)?)\s+(?<quot>"?|`'?)(?<ignore>(?:\*i)?)\s*(?<path>.*)(?P=quot)', &m)
+		if !RegexMatch(line, '^\s*#Include(?<again>(?:Again)?)\s+(?<quot>(?:"|`')?)(?<ignore>(?:\*i)?)\s*(?<path>.*)(?P=quot)', &m)
 			return ''
 		path := m["path"]
 		SplitPath(originalScript, &name, &dir)
+		SplitPath(scriptFile, , &scriptDir)
 		if SubStr(path, 1, 1) == '<' && SubStr(path, -1, 1) == '>' { ; is library inclusion
 			if m['ignore'] ; illegal
 				return ''
@@ -576,8 +584,8 @@ class Dependency {
 			path := StrReplace(path, '%A_ScriptName%', name)
 			path := StrReplace(path, '%A_LineFile%', scriptFile)
 			path := StrReplace(path, "``;", ";")
-			if (!RegexMatch(path, "i)^[a-z]:\\")) ; path is relative
-				path := (withWorkingDir ?? dir) . (SubStr(path, 1, 1) == "\" ? "" : "\") . path
+			if (!RegexMatch(path, "i)^[a-z]:\\") && RegexMatch(scriptFile, "i)^[a-z]:\\")) ; path is relative, but we have an absolute path supplied. If supplied path is relative too, ignore.
+				path := (withWorkingDir ?? scriptDir) . (SubStr(path, 1, 1) == "\" ? "" : "\") . path
 		}
 		return { path: normalizePath(path), ignoreErrors: m["ignore"] ? 1 : 0, includeAgain: m["again"] ? 1 : 0 }
 
