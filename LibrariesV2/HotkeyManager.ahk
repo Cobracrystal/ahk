@@ -157,9 +157,9 @@ class HotkeyManager {
 	}
 
 	static getScripts(path := A_ScriptFullPath) {
-		inclusions := getInclusions(path)
+		inclusions := Dependency.getDependencies(path)
 		inclusions.InsertAt(1, normalizePath(path))
-		return objDoForEach(inclusions, v => {script: getUncommentedScript(FileRead(v, 'UTF-8')), path: v})
+		return objDoForEach(inclusions, v => {script: Dependency.getUncommentedScript(FileRead(v, 'UTF-8')), path: v})
 	}
 
 	static getHotkeys()	{
