@@ -15,12 +15,12 @@ class Dependencies {
 	 * @param {Boolean} includeRedundantDependencies Whether to include dependencies that, if the script were to be compiled, would be ignored as they are already included by previous include statements. This only applies when considering the context of the main script given to this function, not in the context of its included scripts on their own. Redundant Dependencies are marked as duplicate while their dependencies are not shown.
 	 * @returns {String} A string representing the dependency tree of the path.
 	 */
-	static getDependencyTreePretty(path, relativePaths := true, includeRedundantDependencies := true, indent := '  ') {
+	static prettyTree(path, relativePaths := true, includeRedundantDependencies := true, indent := '  ') {
 		static _charT := '┣', _charL := '┗', _charI := '┃', char_ := '━'
 		charT := _charT . RegExReplace(indent, '.', char_)
 		charI := _charI . indent
 		charL := _charL . RegExReplace(indent, '.', char_)
-		deps := this.getDependencyTree(path, relativePaths, includeRedundantDependencies)
+		deps := this.tree(path, relativePaths, includeRedundantDependencies)
 		dummyObj := {_path: path, _state: '', dependencies: deps}
 		return _beautifyStr(dummyObj, '')
 
@@ -49,7 +49,7 @@ class Dependencies {
 	 * dependencies: {Array} Array of dependency objects. May be empty
 	 * _state: {String} An empty string or the words 'Again', 'Ignore', 'Duplicate Directive', 'Missing' or any combination of the four (in that order)
 	 */
-	static getDependencyTree(path, relativePaths := true, includeRedundantDependencies := true) {
+	static tree(path, relativePaths := true, includeRedundantDependencies := true) {
 		local dependencies := Map()
 		dependencies.CaseSense := false
 		deps := _getDependencies(path, Map())
@@ -111,8 +111,8 @@ class Dependencies {
 	 * @param relativePaths Causes all paths to be stored relative to the given path, if possible
 	 * @returns {Array} Array of all included files in the order that they were encountered
 	 */
-	static getDependencies(path, relativePaths := false) {
-		includes := Map()
+	static asArray(path, relativePaths := false) {
+		local includes := Map()
 		includesArr := []
 		includes.CaseSense := false
 		SplitPath(path, , &dir)
@@ -155,7 +155,7 @@ class Dependencies {
 	 * @returns {String} The script located in path as if it were compiled by replacing #include directives with the script located at their specified file.
 	 */
 	static getFullScript(path, commentIncludes := false) {
-		includes := Map()
+		local includes := Map()
 		includes.CaseSense := false
 		SplitPath(path, , &dir)
 		return _getFullScript(path, dir)
