@@ -5,7 +5,7 @@
 
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\FileUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\Dependencies.ahk"
 
 class HotkeyManager {
 	
@@ -158,7 +158,7 @@ class HotkeyManager {
 
 	static getScripts(path := A_ScriptFullPath) {
 		inclusions := Dependencies.getDependencies(path)
-		inclusions.InsertAt(1, normalizePath(path))
+		inclusions.InsertAt(1, Dependencies.normalizePath(path))
 		return objDoForEach(inclusions, v => {script: Dependencies.getUncommentedScript(FileRead(v, 'UTF-8')), path: v})
 	}
 
@@ -296,7 +296,7 @@ class HotkeyManager {
 	}
 	
 	static vscode := {
-		exe: '"' normalizePath(A_AppData '\..\Local\Programs\Microsoft VS Code\Code.exe') '"',
+		exe: '"' Dependencies.normalizePath(A_AppData '\..\Local\Programs\Microsoft VS Code\Code.exe') '"',
 		path: '-g "%PATH"',
 		line: ':%LINE',
 	}
