@@ -67,6 +67,8 @@ class Dependencies {
 			Loop Parse, script, '`n', '`r' {
 				if (RegexMatch(A_LoopField, "^\s*#Include")) {
 					include := this.getIncludePath(A_LoopField, currentPath, path, lastIncludeDirectory?)
+					if !include
+						continue
 					state := include.includeAgain ? 'Again, ' : ''
 					state .= include.ignoreErrors ? 'Ignore, ' : ''
 					if !FileExist(include.path) {
@@ -128,6 +130,8 @@ class Dependencies {
 			Loop Parse, script, '`n', '`r' {
 				if (RegexMatch(A_LoopField, "^\s*#Include")) {
 					include := this.getIncludePath(A_LoopField, currentPath, path, lastIncludeDirectory)
+					if !include
+						continue
 					if !FileExist(include.path) {
 						if !include.ignoreErrors
 							throw OSError("Specified File does not exist:" include.path)
@@ -169,6 +173,8 @@ class Dependencies {
 			for i, line in cleanScript {
 				if (RegexMatch(line, "^\s*#Include")) {
 					include := this.getIncludePath(line, currentPath, path, lastIncludeDirectory)
+					if !include
+						continue
 					if !FileExist(include.path) {
 						if !include.ignoreErrors
 							throw OSError("Specified File does not exist:" include.path)
@@ -249,8 +255,9 @@ class Dependencies {
 		SplitPath(originalScript, &name, &dir)
 		SplitPath(scriptFile, , &scriptDir)
 		if SubStr(path, 1, 1) == '<' && SubStr(path, -1, 1) == '>' { ; is library inclusion
-			if m['ignore'] ; library file errors cannot be ignored
+			if m['ignore'] ; library file errors cannot be ignored, malformed include
 				return ''
+			libInclude := true
 			fname := SubStr(path, 2, -1)
 			path := checkLibs(fname)
 			if !path && (pos := InStr(path, '_'))
@@ -266,7 +273,7 @@ class Dependencies {
 			if (!RegexMatch(path, "i)^[a-z]:\\") && RegexMatch(scriptFile, "i)^[a-z]:\\")) ; path is relative, but we have an absolute path supplied. If supplied path is relative too, ignore.
 				path := (withWorkingDir ?? scriptDir) . (SubStr(path, 1, 1) == "\" ? "" : "\") . path
 		}
-		return { path: this.normalizePath(path), ignoreErrors: m["ignore"] ? 1 : 0, includeAgain: m["again"] ? 1 : 0 }
+		return { path: this.normalizePath(path), ignoreErrors: m["ignore"] ? 1 : 0, includeAgain: m["again"] ? 1 : 0, libraryInclude: libInclude ?? 0 }
 
 		checkLibs(fName) {
 			static ahkExeDir := 0
