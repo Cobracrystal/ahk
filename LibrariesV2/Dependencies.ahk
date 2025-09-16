@@ -52,9 +52,6 @@ class Dependencies {
 	 * _state: {String} An empty string, 'Malformed Directive' or any combination of the words 'Again', 'Ignore Errors', 'Duplicate Directive', 'Missing', 'Redundant' (in that order)
 	 */
 	static tree(path, relativePaths := true, includeRedundantDependencies := true) {
-		local dependencies := Map()
-		dependencies.CaseSense := false
-		dependencies[path] := 1
 		branchDeps := Map()
 		branchDeps.CaseSense := false
 		branchDeps[path] := true
