@@ -129,7 +129,7 @@ class TransparentTaskbar {
 	}
 	
 	static updateTaskbarTimer() {
-		ListLines(!this.config.listLines)
+		ListLines(this.config.listLines)
 		if (WinUtilities.sessionIsLocked()) { ; if we are on lockscreen, slow the timer to avoid a lot of checks
 			if (!this.data.isLocked) {
 				this.data.isLocked := true
