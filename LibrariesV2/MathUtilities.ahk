@@ -33,7 +33,7 @@ class expressionCalculator {
 	}
 
 	static readableFormat(numStr) {
-		if (InStr(numStr, "."))
+		if (InStr(numStr, ".") && !InStr(numStr, "e"))
 			numStr := RTrim(numStr, "0")
 		if (SubStr(numStr, -1) = ".")
 			numStr := SubStr(numStr, 1, -1)
