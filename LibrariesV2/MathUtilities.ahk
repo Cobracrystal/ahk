@@ -216,12 +216,12 @@ powerset(arr) {
  * Given a list of parameters, returns array of all permutations of its members
  * @param arr 
  */
-permutations(variables*) {
+permutations(variables) {
 	if variables.Length == 1
 		return [variables]
 	local permutationArr := []
 	for i, e in variables {
-		perms := permutations(arrayIgnoreIndex(variables, i)*)
+		perms := permutations(arrayIgnoreIndex(variables, i))
 		for f in perms
 			permutationArr.push([e, f*])
 	}
@@ -233,15 +233,26 @@ permutations(variables*) {
  * @param nums 
  * @returns {Integer} 
  */
-gcd(nums*) {
-	objRemoveValue(nums, 0)
-	if (nums.Length == 1)
-		return nums[1]
-	tMin := Min(nums*)
-	index := objContainsValue(nums, tMin)
-	for i, e in nums
-		nums[i] := (index == i ? e : Mod(e, tMin))
-	return gcd(nums*)
+gcd(num, nums*) {
+	nums.push(num)
+	copyNums := nums
+	while (copyNums.Length > 1) {
+		tNums := []
+		curMin := Min(copyNums*)
+		firstEncounter := true
+		for i, e in copyNums {
+			if (firstEncounter && e == curMin) {
+				tNums.Push(e)
+				firstEncounter := false
+				continue
+			}
+			m := Mod(e, curMin)
+			if m != 0
+				tNums.push(m)
+		}
+		copyNums := tNums
+	}
+	return copyNums[1]
 }
 
 /**
@@ -319,6 +330,23 @@ closestPrime(n) {
 		if primetest(k)
 			return k
 		i++
+	}
+}
+
+/**
+ * Given a number, returns next prime number
+ * This is incredibly inefficient
+ * @param n 
+ */
+nextPrime(n) {
+	if self := primetest(n)
+		return n
+	k := n + (Mod(n, 2) == 0)
+	while(true) {
+		k += 2
+		if primetest(k)
+			return k
+		print(k)
 	}
 }
 
