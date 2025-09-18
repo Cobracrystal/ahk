@@ -907,6 +907,7 @@ class WindowManager {
 		static __New() {
 			this.timer := this.save.bind(this)
 			this.prevState := []
+			this.listLines := 0
 			this.customStates := Map()
 		}
 
@@ -920,6 +921,7 @@ class WindowManager {
 		}
 
 		static save(custom?) {
+			ListLines(this.listLines)
 			if (IsSet(custom))
 				this.customStates[custom] := WinUtilities.getAllWindowInfo()
 			else
