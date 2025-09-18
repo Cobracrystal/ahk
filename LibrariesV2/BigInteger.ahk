@@ -2,15 +2,15 @@
  * @description A class to handle arbitrary precision Integers
  * @author cobracrystal
  * @date 2025/09/10
- * @version 0.3.5
+ * @version 0.4.9
 ***********************************************************************/
 
-; NEXT, CREAT STATIC ALIASES FOR ALL OF THESE
-
+; static alias for these?
+; FINAL DOESN'T MEAN THAT DOCS ARE ADDED!!!!
 
 /**
  * METHODS
- * @example
+ * @example													; NOTES:
  * ; Construction from and output to native values
  * BigInteger.Prototype.__New(intOrString) 					; IMPLEMENTED, FINAL
  * BigInteger.valueOf(intOrString) 							; IMPLEMENTED, FINAL
@@ -20,28 +20,28 @@
  * BigInteger.Prototype.toStringApprox(radix)				; IMPLEMENTED, FINAL
  * BigInteger.Prototype.Length(radix) 						; IMPLEMENTED, FINAL
  * ; Type conversion
- * BigInteger.Prototype.asShort() 							; TODO
- * BigInteger.Prototype.asInt32() 							; TODO 32bit
- * BigInteger.Prototype.asUInt32() 							; TODO 32bit (same as asInt just positive signum)
- * BigInteger.Prototype.asInt(int) 							; TODO
- * BigInteger.Prototype.asUInt(int) 						; TODO Forcetransform
+ * BigInteger.Prototype.shortValue() 						; IMPLEMENTED, FINAL
+ * BigInteger.Prototype.int32Value() 						; IMPLEMENTED, FINAL
+ * BigInteger.Prototype.intValue() 							; IMPLEMENTED, FINAL
+ * BigInteger.Prototype.uintValue() 						; IMPLEMENTED, FINAL
  * BigInteger.Prototype.getBitLength()						; IMPLEMENTED, FINAL
  * BigInteger.Prototype.getLowestSetBit()					; IMPLEMENTED, FINAL
  * ; bitwise arithmetic
- * BigInteger.Prototype.and(anyInt) 						; TODO
+ * BigInteger.Prototype.and(anyInt) 						; IMPLEMENTED, lazy (only for positive)
  * BigInteger.Prototype.not()							 	; IMPLEMENTED, INEFFICIENT (lazy)
- * BigInteger.Prototype.andNot(anyInt) 						; TODO
- * BigInteger.Prototype.or(anyInt) 							; TODO
- * BigInteger.Prototype.xor(anyInt) 						; TODO
+ * BigInteger.Prototype.andNot(anyInt) 						; IMPLEMENTED, FINAL
+ * BigInteger.Prototype.or(anyInt) 							; IMPLEMENTED, lazy (only for positive)
+ * BigInteger.Prototype.xor(anyInt) 						; IMPLEMENTED, lazy (only for positive)
  * BigInteger.Prototype.shiftLeft(int) 						; IMPLEMENTED, FINAL
  * BigInteger.Prototype.shiftRight(int) 					; IMPLEMENTED, FINAL
+ * BigInteger.Prototype.maskBits(int) 						; IMPLEMENTED, FINAL
  * ; Comparison
  * BigInteger.Prototype.equals(anyInt) 						; IMPLEMENTED, FINAL
  * BigInteger.Prototype.compareTo(anyInt) 					; IMPLEMENTED, FINAL
  * BigInteger.Prototype.min(anyInt*)						; IMPLEMENTED, FINAL
  * BigInteger.Prototype.max(anyInt*)						; IMPLEMENTED, FINAL
- * BigInteger.min(anyInt*)									; TODO
- * BigInteger.max(anyInt*)									; TODO
+ * BigInteger.min(anyInt*)									; IMPLEMENTED, FINAL
+ * BigInteger.max(anyInt*)									; IMPLEMENTED, FINAL
  * BigInteger.Sort(anyInt*) 								; TODO
  * ; Arithmetic
  * BigInteger.Prototype.abs()							 	; IMPLEMENTED, FINAL
@@ -49,7 +49,7 @@
  * BigInteger.Prototype.add(anyInt) 						; IMPLEMENTED, INEFFICIENT
  * BigInteger.Prototype.subtract(anyInt) 					; IMPLEMENTED, INEFFICIENT
  * BigInteger.Prototype.multiply(anyInt) 					; IMPLEMENTED, INEFFICIENT
- * BigInteger.Prototype.pow(anyInt) 						; IMPLEMENTED, INEFFICIENT (VERY)
+ * BigInteger.Prototype.pow(anyInt) 						; IMPLEMENTED, INEFFICIENT
  * BigInteger.Prototype.divide(anyInt) 						; TODO (incorrect implementation atm)
  * BigInteger.Prototype.divideAndRemainder(anyInt) 			; TODO
  * BigInteger.Prototype.mod(anyInt) 						; TODO
@@ -58,8 +58,11 @@
  * BigInteger.Prototype.sqrtAndRemainder()					; TODO
  * ; Primes and Hashing
  * BigInteger.Prototype.isProbablePrime()					; TODO
+ * BigInteger.isProbablePrime()								; TODO
  * BigInteger.Prototype.nextProbablePrime()					; TODO
+ * BigInteger.nextProbablePrime()							; TODO
  * BigInteger.Prototype.hashCode()							; TODO
+ * BigInteger.hashCode()									; TODO
  * ; Properties
  * BigInteger.Prototype.getSignum()							; IMPLEMENTED, FINAL
  * BigInteger.Prototype.getMagnitude()						; IMPLEMENTED, FINAL
@@ -305,7 +308,7 @@ class BigInteger {
 			if !this.signum
 				return anyInt.negate()
 			if !anyInt.signum
-				return BigInteger.fromMagnitude(this.mag, this.signum)
+				return this.Clone()
 			return BigInteger.fromMagnitude(this.abs().add(anyInt.abs()).mag, this.signum)
 		} else {
 			comparison := BigInteger.compareMagnitudes(this.mag, anyInt.mag)
@@ -425,7 +428,20 @@ class BigInteger {
 	sqrt() => this
 	sqrtAndRemainder() => this
 	
-	and(anyInt) => this
+	and(anyInt) {
+		anyInt := BigInteger.validateBigInteger(anyInt)
+		newMag := []
+		n1 := this.mag.Length
+		n2 := anyInt.mag.Length
+		largerMag := n1 >= n2 ? this.mag : anyInt.mag
+		smallerMag := n1 >= n2 ? anyInt.mag : this.mag
+		if true || (this.signum == 1 && anyInt.signum == 1) {
+			d := Abs(n1 - n2)
+			Loop(Min(n1, n2))
+				newMag.push(smallerMag[A_Index] & largerMag[A_Index + d])
+		}
+		return BigInteger.fromMagnitude(newMag, this.signum & anyInt.signum)
+	}
 
 	/**
 	 * Returns a BigInteger whose value is equivalent to ~this as if it was stored in twos complement.
@@ -442,20 +458,37 @@ class BigInteger {
 		n2 := anyInt.mag.Length
 		largerMag := n1 >= n2 ? this.mag : anyInt.mag
 		smallerMag := n1 >= n2 ? anyInt.mag : this.mag
-		Loop(d := Abs(n1 - n2))
-			newMag.push(largerMag[A_Index])
-		Loop(Min(n1, n2))
-			newMag.push('?') ; ????????
+		if true || (this.signum == 1 && anyInt.signum == 1) {
+			Loop(d := Abs(n1 - n2))
+				newMag.push(largerMag[A_Index])
+			Loop(Min(n1, n2))
+				newMag.push(smallerMag[A_Index] | largerMag[A_Index + d])
+		}
 		return BigInteger.fromMagnitude(newMag, this.signum | anyInt.signum)
 	}
 
-	xor(anyInt) => this
+	xor(anyInt) {
+		anyInt := BigInteger.validateBigInteger(anyInt)
+		newMag := []
+		n1 := this.mag.Length
+		n2 := anyInt.mag.Length
+		largerMag := n1 >= n2 ? this.mag : anyInt.mag
+		smallerMag := n1 >= n2 ? anyInt.mag : this.mag
+		if true || (this.signum == 1 && anyInt.signum == 1) {
+			Loop(d := Abs(n1 - n2))
+				newMag.push(largerMag[A_Index])
+			Loop(Min(n1, n2))
+				newMag.push(smallerMag[A_Index] ^ largerMag[A_Index + d])
+		}
+		signum := this.signum * anyInt.signum ? this.signum * anyInt.signum : this.signum | anyInt.signum ; x ^ 0 == x | 0
+		return BigInteger.fromMagnitude(newMag, signum)
+	}
 
 	shiftLeft(n) {
 		shiftBits := n & 0x1F
 		shiftWords := n >>> 5
 		if n <= 0
-			return n == 0 ? BigInteger.fromMagnitude(this.mag, this.signum) : this.shiftRight(-n)
+			return n == 0 ? this.Clone() : this.shiftRight(-n)
 		newMag := []
 		len := this.mag.Length
 		if shiftWords > len
@@ -498,7 +531,7 @@ class BigInteger {
 		shiftBits := n & 0x1F
 		shiftWords := n >>> 5
 		if n <= 0
-			return n == 0 ? BigInteger.fromMagnitude(this.mag, this.signum) : this.shiftLeft(-n)
+			return n == 0 ? this.Clone() : this.shiftLeft(-n)
 		len := this.mag.Length
 		if shiftWords > len
 			return this.signum >= 0 ? BigInteger.ZERO : BigInteger.MINUS_ONE
@@ -527,21 +560,33 @@ class BigInteger {
 	}
 
 	/**
-	 * Performs this >> n and returns the newly created number as well as the part that was cut off
-	 * @param {Integer} n Must be smaller than 2**32 
-	 * @returns {Array} [A new biginteger representing this >> n, the cutoff part]
+	 * Gets the last n bits
+	 * @param {Integer} n
+	 * @returns {BigInteger} A BigInteger which represents the n bits.
 	 */
-	shiftRightAndRemainder(n) {
-		if n <= 0
-			return n == 0 ? [BigInteger.fromMagnitude(this.mag, this.signum), 0] : [this.shiftLeft(-n), 0]
-		newMag := []
-		p := 0
-		for i, e in this.mag {
-			newMag.push((e >> n) | p << (32 - n))
-			p := e & ((1 << n) - 1) ; last 5 digits -> e & 0000...011111 -> 1 << 5 -> 100000 - 1 -> 011111 << 27 -> 000..00011111[27 zeros]
-		}
-		return [BigInteger.fromMagnitude(newMag, this.signum), p]
+	maskBits(n) {
+		bitMask := (1 << (n & 0x1F)) - 1 ; mask
+		words := n >>> 5
+		if n == 0
+			return [0]
+		len := this.mag.Length
+		if words >= len
+			return this.Clone()
+		mag := []
+		Loop(words)
+			mag.push(this.mag[len - words + A_Index])
+		if bitMask
+			mag.InsertAt(1, this.mag[len - words - 1] & bitMask)
+		return BigInteger.fromMagnitude(mag, this.signum)
 	}
+
+	shortValue() => this.signum * (this.mag[-1] & 0xFFFF)
+
+	int32Value() => this.signum * this.mag[-1]
+
+	intValue() => this.signum * ((this.mag.Length > 1 ? (this.mag[-2] & 0x7FFFFFFF) << 32 : 0) + this.mag[-1])
+
+	uintValue() => this.signum * ((this.mag.Length > 1 ? (this.mag[-2]) << 32 : 0) + this.mag[-1])
 
 	/**
 	 * Returns the index of the first one-bit in this BigInteger in little-endian
@@ -658,9 +703,15 @@ class BigInteger {
 			curMax := curMax.compareTo(bigInt) == -1 ? bigInt : curMax
 		return curMax
 	}
+
+	static Min(anyInt, anyint32Values*) => this.validateBigInteger(anyInt).Min(anyint32Values*)
+	static Max(anyInt, anyint32Values*) => this.validateBigInteger(anyInt).Max(anyint32Values*)
+	
 	
 	isProbablePrime() => false
+	static isProbablePrime(anyInt) => this.validateBigInteger(anyInt).isProbablePrime()
 	nextProbablePrime() => this
+	static nextProbablePrime(anyInt) => this.validateBigInteger(anyInt).nextProbablePrime()
 	hashCode() => 0
 
 	/**
@@ -675,6 +726,7 @@ class BigInteger {
 	 */
 	getMagnitude() => this.mag.Clone()
 
+	Clone() => BigInteger.fromMagnitude(this.mag, this.signum)
 	
 	/**
 	 * Given a string of arbitrary length in base 10, returns an array of its digits in base 2**32
@@ -1028,7 +1080,7 @@ class BigInteger {
 	 * @param {Integer | String | BigInteger} anyInt 
 	 * @returns {BigInteger} A BigInteger representing the given value 
 	 */
-	static validateBigInteger(anyInt) => anyInt is BigInteger ? anyInt : BigInteger(anyInt)
+	static validateBigInteger(anyInt) => anyInt is BigInteger ? anyInt : BigInteger.valueOf(anyInt)
 
 	; BigInteger constant -1
 	static MINUS_ONE => BigInteger(-1)
