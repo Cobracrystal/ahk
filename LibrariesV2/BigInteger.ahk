@@ -76,8 +76,6 @@ class BigInteger {
 	__New(anyInt, radix := 10) {
 		if (Type(anyInt) != "String")
 			anyInt := String(anyInt)
-		if !IsAlnum(anyInt)
-			throw BigInteger.Error.NOT_INTEGER[anyInt]
 		if (SubStr(anyInt, 1, 1) = "-") {
 			this.signum := -1
 			anyInt := SubStr(anyInt, 2)
@@ -92,6 +90,8 @@ class BigInteger {
 			this.mag := [0]
 			return
 		}
+		if !IsAlnum(anyInt)
+			throw BigInteger.Error.NOT_INTEGER[anyInt]
 		this.mag := BigInteger.magnitudeFromString(anyInt, radix)
 	}
 
@@ -528,7 +528,7 @@ class BigInteger {
 			mask := (1 << shiftBits) - 1 ; binary with <shiftBits> one-bits at the end 
 			shiftBitsLeft := 32 - shiftBits
 			for i, e in tMag {
-				mag.push((e >> shiftBits) | p << shiftBitsLeft)
+				mag.push((e >> shiftBits) | (p << shiftBitsLeft))
 				p := e & mask
 			}
 			BigInteger.stripLeadingZeros(mag)
@@ -879,10 +879,12 @@ class BigInteger {
 			baseRemPrecompute := Mod(BigInteger.INT32, base)
 		}
 		while (mag[1] != 0) {
-			if overflow
-				arr := BigInteger.magDivHelperOverflowDivide(mag, base, baseDivPrecompute, baseRemPrecompute, z?)
-			else
-				arr := BigInteger.magDivHelperDivide(mag, base, z?)
+			if isPowerOfTwo
+				arr := BigInteger.magDivHelperShiftRight(mag, z)
+			else if overflow
+				arr := BigInteger.magDivHelperOverflowDivide(mag, base, baseDivPrecompute, baseRemPrecompute)
+			else 
+				arr := BigInteger.magDivHelperDivide(mag, base)
 			mag := arr[1]
 			result.InsertAt(1, arr[2])
 		}
@@ -1020,14 +1022,26 @@ class BigInteger {
 		return BigInteger.ZERO
 	}
 
-	static magDivHelperDivide(mag, divisor, powerOfTwo := 0) {
+	static magDivHelperShiftRight(mag, shift) {
 		quotient := []
 		remainder := 0
-		mask := (1 << powerOfTwo) - 1
+		mask := (1 << shift) - 1
+		shiftLeft := 32 - shift
+		for digit in mag {
+			quotient.push((digit >> shift) | (remainder << shiftLeft))
+			remainder := digit & mask
+		}
+		BigInteger.stripLeadingZeros(quotient)
+		return [quotient, remainder]
+	}
+
+	static magDivHelperDivide(mag, divisor) {
+		quotient := []
+		remainder := 0
 		for digit in mag {
 			dividend := (remainder << 32) + digit
-			q := powerOfTwo ? dividend >> powerOfTwo : dividend // divisor
-			remainder := powerOfTwo ? dividend & mask : Mod(dividend, divisor)
+			q := dividend // divisor
+			remainder := Mod(dividend, divisor)
 			quotient.push(q)
 		}
 		BigInteger.stripLeadingZeros(quotient)
@@ -1047,7 +1061,7 @@ class BigInteger {
 		return [quotient, remainder]
 	}
 
-	static magDivHelperOverflowDivide(mag, divisor, baseDivPrecompute, baseRemPrecompute, powerOfTwo := 0) {
+	static magDivHelperOverflowDivide(mag, divisor, baseDivPrecompute, baseRemPrecompute) {
 		/**
 		 * Long Division:
 		 * Go most significant to least significant
@@ -1085,12 +1099,11 @@ class BigInteger {
 		; baseRemPrecompute := Mod(BigInteger.INT32, divisor)
 		quotient := []
 		remainder := 0
-		mask := (1 << powerOfTwo) - 1
 		for digit in mag {
 			qtmp1 := baseDivPrecompute * remainder
 			qtmp2 := baseRemPrecompute * remainder + digit
-			quotDigit := (qtmp1 + (powerOfTwo ? qtmp2 >> powerOfTwo : qtmp2 // divisor)) & BigInteger.INT_MASK
-			remainder := powerOfTwo ? qtmp2 & mask : Mod(qtmp2, divisor) ; no mask, divisor <= MASK
+			quotDigit := (qtmp1 + qtmp2 // divisor) & BigInteger.INT_MASK
+			remainder := Mod(qtmp2, divisor) ; no mask, divisor <= MASK
 			quotient.push(quotDigit)
 		}
 		BigInteger.stripLeadingZeros(quotient)
