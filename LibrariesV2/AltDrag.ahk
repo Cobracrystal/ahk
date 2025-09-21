@@ -249,38 +249,55 @@ class AltDrag {
 
 	/**
 	 * In- or decreases window size.
-	 * @param {Integer} direction Whether to scale up or down. If 1, scales the window larger, if -1 (or any other value), smaller.
-	 * @param {Float} scale_factor Amount by which to increase window size per function trigger. NOT exponential. eg if scale factor is 1.05, window increases by 5% of monitor width every function call.
-	 * @param {Integer} wHandle The window handle upon which to operate. If not given, assumes the window over which mouse is hovering.
+	 * @param {Integer} direction 1 or -1. Whether to scale up or down. If 1, scales the window larger, if -1, smaller.
+	 * @param {Float} scale_factor Amount by which to increase window size per function call. NOT exponential. eg if scale factor is 1.05, window increases by 5% of monitor width every function call.
+	 * @param {Integer} wHandle The window handle upon which to operate. If not given, assumes the window over which mouse is hovering. Set this to WinExist('A') to operate on the active window instead.
 	 * @param {Integer} overrideBlacklist Whether to trigger the function regardless if the window is blacklisted or not.
+	 * @param {Integer} withMousePos Whether to scale the window based on the position of the mouse in a 3x3 grid of the window.
 	 */
-	static scaleWindow(direction := 1, scale_factor := 1.025, wHandle := 0, overrideBlacklist := false) {
+	static scaleWindow(direction := 1, scale_factor := 1.025, wHandle := 0, overrideBlacklist := false, withMousePos := true) {
 		cleanHotkey := RegexReplace(A_ThisHotkey, "#|!|\^|\+|<|>|\$|~", "")
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
 		if (!wHandle)
 			MouseGetPos(,,&wHandle)
 		mmx := WinGetMinMax(wHandle)
-		if ((WinUtilities.winInBlacklist(wHandle, this.blacklist) && !overrideBlacklist) || mmx != 0) {
+		if ((WinUtilities.winInBlacklist(wHandle) && !overrideBlacklist) || mmx != 0) {
 			return this.sendKey(cleanHotkey)
 		}
 		WinGetPos(&winX, &winY, &winW, &winH, wHandle)
 		monitor := WinUtilities.monitorGetInfoFromWindow(wHandle)
-		xChange := floor((monitor.wRight - monitor.wLeft) * (scale_factor - 1))
-		yChange := floor(winH * xChange / winW)
 		wLimit := WinUtilities.getMinMaxResizeCoords(wHandle)
-		if (direction == 1) {
-			nx := winX - xChange, ny := winY - yChange
-			if ((nw := winW + 2 * xChange) >= wLimit.maxW || (nh := winH + 2 * yChange) >= wLimit.maxH)
-				return
+		xChange := floor((monitor.wRight - monitor.wLeft) * (scale_factor - 1))
+		yChange := floor(winH * xChange / winW )
+		MouseGetPos(&mouseX, &mouseY)
+		mouseNonantH := (mouseX < winX + winW / 3 ? -1 : (mouseX > winX + 2 * winW / 3 ? 1 : 0))
+		mouseNonantV := (mouseY < winY + winH / 3 ? -1 : (mouseY > winY + 2 * winH / 3 ? 1 : 0))
+
+		if (withMousePos && (mouseNonantH || mouseNonantV)) { ; if in middle nonant, use other method
+			xChange := clamp(direction * xChange, wLimit.minW - winW, wLimit.maxW - winW)
+			yChange := clamp(direction * yChange, wLimit.minH - winH, wLimit.maxH - winH)
+			if (mouseNonantH == -1) {
+				winW += xChange
+			} else if (mouseNonantH == 1) {
+				winX -= xChange
+				winW += xChange
+			}
+			if (mouseNonantV == -1) {
+				winH += yChange
+			} else if (mouseNonantV == 1) {
+				winY -= yChange
+				winH += yChange
+			}
+		} else {
+			xChange := clamp(2 * direction * xChange, wLimit.minW - winW, wLimit.maxW - winW)
+			yChange := clamp(2 * direction * yChange, wLimit.minH - winH, wLimit.maxH - winH)
+			winX -= xChange // 2
+			winY -= yChange // 2
+			winW += xChange
+			winH += yChange
 		}
-		else {
-			nx := winX + xChange, ny := winY + yChange
-			if ((nw := winW - 2 * xChange) <= wLimit.minW || (nh := winH - 2 * yChange) <= wLimit.minH)
-				return
-		}
-		;	tooltip % "x: " nx "`ny: " ny "`nw: " nw "`nh: " nh "`nxCh: " xChange "`nyCh: " yChange "`nminW: " wLimit.minW "`nminH: " wLimit.minH "`nmaxW: " wLimit.maxW "`nmaxH: " wLimit.maxH
-		DllCall("SetWindowPos", "UInt", wHandle, "UInt", 0, "Int", nx, "Int", ny, "Int", nw, "Int", nh, "Uint", 0x0004)
+		DllCall("SetWindowPos", "UInt", wHandle, "UInt", 0, "Int", winX, "Int", winY, "Int", winW, "Int", winH, "Uint", 0x0004)
 	}
 
 	static minimizeWindow(overrideBlacklist := false) {
