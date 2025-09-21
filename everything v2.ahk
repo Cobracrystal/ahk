@@ -1164,95 +1164,127 @@ WinSetVolume(level, target?) {
 	Sleep(30)
 	MouseMove(x, y)
 }
-^Numpad2::bigLoop()
+^Numpad2::{
+	static toggle := false
+	if toggle := !toggle {
+		RevoIdle.instantExit := false
+		SetTimer(RevoIdle.bigLoop.bind(RevoIdle), -1)
+	}
+	else
+		RevoIdle.instantExit := true
+}
 ^Numpad3::{ ; Revo Idle: Basic spawn increase
 	Loop(5)
-		spawnAndIncrease()
+		RevoIdle.spawnAndIncrease()
 }
-
-bigLoop() {
-	Loop {
-		clickAutospawn()
-		Sleep(50)
-		doRefinePrestige()
-		Sleep(50)
-		Loop(2) {
-			Loop(5) {
-				spawnAndIncrease("151")
+class RevoIdle {
+	static instantExit := false
+	static bigLoop() {
+		static num := String(183)
+		Critical(0)
+		Loop {
+			this.clickNormalMinerals()
+			Sleep(60)
+			this.clickAutospawn()
+			Sleep(50)
+			this.doRefinePrestige()
+			Sleep(50)
+			Loop(2) {
+				Loop(5) {
+					this.spawnAndIncrease(num)
+					Sleep(50)
+				}
+				this.doPolishPrestige()
 				Sleep(50)
 			}
-			doPolishPrestige()
-			Sleep(50)
+			Loop(5) {
+				this.spawnAndIncrease(num)
+				Sleep(50)
+			}
+			this.clickAutospawn()
+			Sleep(120000)
 		}
-		Loop(5) {
-			spawnAndIncrease("151")
-			Sleep(50)
-		}
-		clickAutoSpawn()
-		Sleep(2500)
 	}
-}
 
-openPolishMenu() {
-	static polish := [1050, 1000]
-	MouseClick("L", polish*)
-}
-
-closePolishMenu() {
-	static polishexit := [1555, 255]
-	MouseClick("L", polishexit*)
-}
-
-doPolishPrestige() {
-	static polishPrestige := [1178, 362]
-	static polishPrestigeConfirm := [1180, 640]
-	static swordlvlup := [1420, 896]
-	openPolishMenu()
-	sleep(75)
-	MouseClick("L", polishPrestige*)
-	Sleep(75)
-	MouseClick("L", polishPrestigeConfirm*)
-	Sleep(75)
-	loop(3) {
-		MouseClick("L", swordlvlup*)
-		Sleep(30)
+	static openPolishMenu() {
+		static polish := [1050, 1000]
+		if this.instantExit
+			Exit()
+		MouseClick("L", polish*)
 	}
-	Sleep(75)
-	closePolishMenu()
-}
 
-clickAutospawn() {
-	static autospawn := [800, 840]
-	MouseClick('L', autospawn*)
-}
+	static closePolishMenu() {
+		static polishexit := [1555, 255]
+		if this.instantExit
+			Exit()
+		MouseClick("L", polishexit*)
+	}
 
-spawnAndIncrease(num := "999") {
-	static spawn := [675, 990]
-	static spawnlvl := [740, 898]
-	MouseClick("L", spawn*)
-	Sleep(75)
-	MouseClick("L", spawnlvl*)
-	Sleep(75)
-	Send(num)
-}
+	static doPolishPrestige() {
+		static polishPrestige := [1178, 362]
+		static polishPrestigeConfirm := [1180, 640]
+		static swordlvlup := [1420, 896]
+		if this.instantExit
+			Exit()
+		this.openPolishMenu()
+		sleep(75)
+		MouseClick("L", polishPrestige*)
+		Sleep(75)
+		MouseClick("L", polishPrestigeConfirm*)
+		Sleep(75)
+		this.closePolishMenu()
+	}
 
-doRefinePrestige() {
-	static refinePrestige := [1450, 410]
-	static refinePrestigeConfirm := [1200, 650]
-	openRefineMenu()
-	Sleep(75)
-	MouseClick('L', refinePrestige*)
-	Sleep(75)
-	MouseClick('L', refinePrestigeConfirm*)
-	Sleep(75)
-	closeRefineMenu()
-}
-openRefineMenu() {
-	static refine := [1441, 991]
-	MouseClick('L', refine*)
-}
-closeRefineMenu() {
-	static refineClose := [62, 260]
-	MouseClick('L', refineClose*)
+	static clickNormalMinerals() {
+		static normalMinerals := [250, 380]
+		if this.instantExit
+			Exit()
+		MouseClick('L', normalMinerals*)
+	}
+
+	static clickAutospawn() {
+		static autospawn := [800, 840]
+		if this.instantExit
+			Exit()
+		MouseClick('L', autospawn*)
+	}
+
+	static spawnAndIncrease(num := "999") {
+		static spawn := [675, 990]
+		static spawnlvl := [740, 898]
+		if this.instantExit
+			Exit()
+		MouseClick("L", spawn*)
+		Sleep(75)
+		MouseClick("L", spawnlvl*)
+		Sleep(75)
+		Send(num)
+	}
+
+	static doRefinePrestige() {
+		static refinePrestige := [1450, 410]
+		static refinePrestigeConfirm := [1200, 650]
+		if this.instantExit
+			Exit()
+		this.openRefineMenu()
+		Sleep(75)
+		MouseClick('L', refinePrestige*)
+		Sleep(75)
+		MouseClick('L', refinePrestigeConfirm*)
+		Sleep(75)
+		this.closeRefineMenu()
+	}
+	static openRefineMenu() {
+		static refine := [1441, 991]
+		if this.instantExit
+			Exit()
+		MouseClick('L', refine*)
+	}
+	static closeRefineMenu() {
+		static refineClose := [62, 260]
+		if this.instantExit
+			Exit()
+		MouseClick('L', refineClose*)
+	}
 }
 #HotIf
