@@ -912,7 +912,8 @@ class WindowManager {
 		}
 
 		static enable(period := 20000) {
-			this.save()
+			SetTimer(this.timer, -1)
+			Sleep(10)
 			SetTimer(this.timer, period)
 		}
 
