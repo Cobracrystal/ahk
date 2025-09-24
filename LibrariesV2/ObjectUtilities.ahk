@@ -88,15 +88,24 @@ objGetRandomValue(obj) {
  * @returns {Object} A deep clone of the given object
  */
 objClone(obj) {
-	isArrLike := (obj is Array || obj is Map)
-	if !(IsObject(obj))
-		return obj
-	copy := obj.Clone()
-	for i, e in objGetEnumerator(obj)
-		isArrLike ? copy[i] := objClone(e) : copy.%i% := objClone(e)
-	return copy
-}
+	encountered := Map()
+	return _clone(obj)
 
+	_clone(obj) {
+		isArrLike := (obj is Array || obj is Map)
+		if !(IsObject(obj))
+			return obj
+		if encountered.Has(ptr := ObjPtr(obj))
+			return encountered[ptr]
+		copy := obj.clone()
+		encountered[ptr] := copy
+		for i, e in objGetEnumerator(obj)
+			for i, e in obj
+				if IsObject(e)
+					isArrLike ? copy[i] := _clone(e) : copy.%i% := _clone(e)
+		return copy
+	}
+}
 /**
  * Merges obj2 into obj1 or creates a new object if desired. Prefers obj1 keys over obj2 unless specified.
  * This only works for Maps and Objects. For merging arrays, use arrayMerge instead.
@@ -596,7 +605,7 @@ toString(obj, compact := false, compress := true, strEscape := false, mapAsObj :
 			return obj
 		}
 		if (encounteredObjs.Has(ObjPtr(obj)))
-			return "<DUPLICATE REF> Type " Type(obj)
+			return "<DUPLICATE REF> Type " Type(obj) ' @ ' ObjPtr(obj)
 		encounteredObjs[ObjPtr(obj)] := true
 		; for very small objects, this may be excessive to do, but it would be very messy otherwise
 		objType := Type(obj)
