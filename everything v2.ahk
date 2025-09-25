@@ -11,7 +11,7 @@ if !InStr(FileExist(A_ScriptDir "\script_files\everything"), "D")
 	DirCreate("script_files\everything")
 SetWorkingDir(A_ScriptDir . "\script_files")
 TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think.ico", , true)
-OnExit(customExit)
+; OnExit(customExit)
 Hotstring("EndChars", "-()[]{}:;`'`"/\,.?!" . A_Space . A_Tab)
 
 GLOBALVAR_WASRELOADED := (InStr(DllCall("GetCommandLine", "str"), "/restart") ? true : false)
@@ -35,7 +35,6 @@ A_TrayMenu.Delete()
 #Include "BasicUtilities.ahk"
 #Include "HotstringLoader.ahk"
 #Include "TableFilter v2.ahk"
-#Include "openDTU.ahk"
 #Include "DiscordClient.ahk"
 ; #Include "%A_ScriptDir%\not_mine_or_examples\AquaHotkey\AquaHotkey.ahk"
 ; #Include "jsongo.ahk"
@@ -76,8 +75,6 @@ AltDrag.addBlacklist([
 SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't interrupt
 ; Initialize Internet Logging Script
 internetConnectionLogger("Init")
-openDTUScript("Init")
-openDTUman := openDTU("http://192.168.178.48", 80, "admin", FileRead(A_Desktop "\programs\Files\openDTUAuth.pw"))
 ; Load LaTeX Hotstrings
 ; TODO: ADD WINDOW OPTION FOR HOTSTRINGLOADER. IE GIVEN AHK CRITERIA IT ADDS HOTIF BEFORE REGISTERING THEM (makes editing harder tho)
 try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX",,,false)
@@ -144,10 +141,6 @@ if (!GLOBALVAR_WASRELOADED)
 
 ^F11:: { ; Shows a list of all Windows
 	WindowManager.windowManager("T") ; this is actually decorative and only for hotkeymanager
-}
-
-^F10::{	; Shows DTU Script
-	openDTUScript("T")
 }
 
 ^F9:: {	; Shows Internet Connection
@@ -507,44 +500,6 @@ internetConnectionLogger(mode := "T") {
 	return
 }
 
-openDTUScript(mode := "T") {
-	static consolePID
-	static dtuConsoleTitle := "openDTU NetZero"
-	static dtuDirectory := A_Desktop "\programs\programming\Python\openDTU\openDTU"
-	static dtuScript := "openDTU-NetZeroInput.py"
-	static consoleString := Format('{} /c "title={} && mode con: cols=80 lines=16 && cd "{}" && python {}"', 
-			A_ComSpec, 
-			dtuConsoleTitle, 
-			dtuDirectory, 
-			dtuScript
-		)
-	DetectHiddenWindows(1)
-	flagExist := WinExist(dtuConsoleTitle " ahk_exe cmd.exe")
-	DetectHiddenWindows(0)
-	flagVisible := WinExist(dtuConsoleTitle " ahk_exe cmd.exe")
-	mode := SubStr(mode, 1, 1)
-	if (mode == "T")
-		mode := (flagVisible ? "C" : "O")
-	if (mode == "C" && flagExist) {
-		WinHide("ahk_pid " . consolePID)
-		return
-	}
-	DetectHiddenWindows(1)
-	if (flagExist)
-		consolePID := WinGetPID("ahk_id " flagExist)
-	else {
-		Run(consoleString, , "Hide", &consolePID)
-		if !(WinWait("ahk_pid " consolePID, , 2))
-			return
-		WinSetAlwaysOnTop(1, "ahk_pid " consolePID)
-		WinSetStyle(-0x70000, "ahk_pid " consolePID)
-	}
-	DetectHiddenWindows(0)
-	if (mode == "O")
-		WinShow("ahk_pid " . consolePID)
-	return
-}
-
 ; ^j:: { ; this doesn't work
 ;	static init := false
 ;	if (!init) {
@@ -669,14 +624,8 @@ trayMenuHandler(itemName, *) {
 }
 
 customExit(ExitReason, ExitCode) {
-	global openDTUman
 	if (ExitReason == "Shutdown" || ExitReason == "Logoff") {
-		DetectHiddenWindows(1)
-		id := WinExist("openDTU NetZero ahk_exe cmd.exe")
-		if (id)
-			WinKill(id)
-		main_inverter := openDTUman.getInverterList()["inverter"][1]["serial"]
-		openDTUman.setInverterLimitConfig(main_inverter, {limit_type:1, limit_value:20})
+		ExitApp()
 	}
 	ExitApp() ; this is technically unnecessary.
 }
@@ -1168,7 +1117,8 @@ WinSetVolume(level, target?) {
 	static toggle := false
 	if toggle := !toggle {
 		RevoIdle.instantExit := false
-		SetTimer(RevoIdle.bigLoop.bind(RevoIdle), -1)
+		SetTimer(RevoIdle.bigLoop.bind(RevoIdle), 10000)
+		RevoIdle.bigLoop()
 	}
 	else
 		RevoIdle.instantExit := true
@@ -1180,30 +1130,29 @@ WinSetVolume(level, target?) {
 class RevoIdle {
 	static instantExit := false
 	static bigLoop() {
-		static num := String(183)
+		static num := String(188)
+		if this.instantExit
+			SetTimer(,0)
 		Critical(0)
-		Loop {
-			this.clickNormalMinerals()
-			Sleep(60)
-			this.clickAutospawn()
-			Sleep(50)
-			this.doRefinePrestige()
-			Sleep(50)
-			Loop(2) {
-				Loop(5) {
-					this.spawnAndIncrease(num)
-					Sleep(50)
-				}
-				this.doPolishPrestige()
-				Sleep(50)
-			}
+		this.clickNormalMinerals()
+		Sleep(60)
+		this.clickAutospawn()
+		Sleep(50)
+		this.doRefinePrestige()
+		Sleep(50)
+		Loop(2) {
 			Loop(5) {
 				this.spawnAndIncrease(num)
 				Sleep(50)
 			}
-			this.clickAutospawn()
-			Sleep(120000)
+			this.doPolishPrestige()
+			Sleep(50)
 		}
+		Loop(5) {
+			this.spawnAndIncrease(num)
+			Sleep(50)
+		}
+		this.clickAutospawn()
 	}
 
 	static openPolishMenu() {
