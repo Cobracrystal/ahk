@@ -701,7 +701,7 @@ toString(obj, compact := false, compress := true, strEscape := false, mapAsObj :
 	}
 }
 
-varsToString(vars*) => toString(vars,0,1,0)
+varsToString(vars*) => toString(vars,0,1,1)
 
 ; Unreliable, may only work in ahk versions around ~2.0.9
 BoundFnName(Obj) {
@@ -745,20 +745,48 @@ arrayMerge(arrs*) {
 	return ret
 }
 
+/**
+ * Performs (iterative) mergesort on the array nums. Nums will not be operated on.
+ * @param {Array} nums Array of values
+ * @param {Func} comparator (a,b) => (a <= b) or any other comparator function which returns TRUE if a should be sorted BEFORE b and FALSE otherwise. 
+ * @returns {Array} 
+ */
+arrayMergeSort(nums, comparator := (a,b) => (a <= b)) { ; iterative mergesort
+	len := nums.length
+	res := []
+	res.Length := len
+	sliceLen := 1
+	while(sliceLen <= len) {
+		c := 1
+		while (c <= len) {
+			i := c
+			j := indexB := min(c + sliceLen, len)
+			lastIndex := min(c + 2 * sliceLen - 1, len)
+			Loop(lastIndex - c + 1) {
+				k := c + A_Index - 1
+				if (i < indexB && (j > lastIndex || comparator(nums[i], nums[j])))
+					res[k] := nums[i++]
+				else
+					res[k] := nums[j++]
+			}
+			c += 2 * sliceLen
+		}
+		sliceLen *= 2
+		nums := res.clone()
+	}
+	return res
+}
+
 arrayMergeSorted(arr1, arr2) {
 	ret := []
 	p1 := 1, p2 := 1
 	l1 := arr1.Length, l2 := arr2.Length
-	while(p1 <= l1 && p2 <= l2) {
-		if (arr1[p1] < arr2[p2])
+	while(p1 <= l1 || p2 <= l2) {
+		if (p1 < l1 && (p2 >= l2 || arr1[p1] <= arr2[p2]))
 			ret.push(arr1[p1++])
 		else
 			ret.push(arr2[p2++])
 	}
-	while(p1 <= l1)
-		ret.push(arr1[p1++])
-	while(p2 <= l2)
-		ret.push(arr2[p2++])
 	return ret
 }
 
