@@ -16,8 +16,9 @@
  * BigInteger.valueOf(intOrString) 							; IMPLEMENTED, FINAL
  * BigInteger.fromMagnitude([digits*], 1) 					; IMPLEMENTED, FINAL
  * BigInteger.fromAnyMagnitude([digits*], radix, signum)	; IMPLEMENTED, FINAL
- * BigInteger.Prototype.toString(radix) 					; IMPLEMENTED, FINAL (?)
+ * BigInteger.Prototype.toString(radix) 					; IMPLEMENTED, FINAL
  * BigInteger.Prototype.toStringApprox(radix)				; IMPLEMENTED, FINAL
+ * BigInteger.Prototype.getFirstNDigits(radix, digits)		; IMPLEMENTED, FINAL
  * BigInteger.Prototype.Length(radix) 						; IMPLEMENTED, FINAL
  * ; Type conversion
  * BigInteger.Prototype.shortValue() 						; IMPLEMENTED, FINAL
@@ -28,7 +29,7 @@
  * BigInteger.Prototype.getLowestSetBit()					; IMPLEMENTED, FINAL
  * ; bitwise arithmetic
  * BigInteger.Prototype.and(anyInt) 						; IMPLEMENTED, lazy (only for positive)
- * BigInteger.Prototype.not()							 	; IMPLEMENTED, INEFFICIENT (lazy)
+ * BigInteger.Prototype.not()							 	; IMPLEMENTED, FINAL
  * BigInteger.Prototype.andNot(anyInt) 						; IMPLEMENTED, FINAL
  * BigInteger.Prototype.or(anyInt) 							; IMPLEMENTED, lazy (only for positive)
  * BigInteger.Prototype.xor(anyInt) 						; IMPLEMENTED, lazy (only for positive)
@@ -42,7 +43,7 @@
  * BigInteger.Prototype.max(anyInt*)						; IMPLEMENTED, FINAL
  * BigInteger.min(anyInt*)									; IMPLEMENTED, FINAL
  * BigInteger.max(anyInt*)									; IMPLEMENTED, FINAL
- * BigInteger.Sort(anyInt*) 								; TODO
+ * BigInteger.Sort(anyInt, anyInts*) 								; IMPLEMENTED, FINAL
  * ; Arithmetic
  * BigInteger.Prototype.abs()							 	; IMPLEMENTED, FINAL
  * BigInteger.Prototype.negate()							; IMPLEMENTED, FINAL
@@ -52,20 +53,56 @@
  * BigInteger.Prototype.pow(anyInt) 						; IMPLEMENTED, INEFFICIENT
  * BigInteger.Prototype.divide(anyInt) 						; TODO (incorrect implementation atm)
  * BigInteger.Prototype.divideAndRemainder(anyInt) 			; TODO
+ * BigInteger.Prototype.divideByDigitPower(int, int) 		; IMPLEMENTED, FINAL
  * BigInteger.Prototype.mod(anyInt) 						; TODO
  * BigInteger.Prototype.gcd(anyInt) 						; TODO
  * BigInteger.Prototype.sqrt()							 	; TODO
  * BigInteger.Prototype.sqrtAndRemainder()					; TODO
  * ; Primes and Hashing
  * BigInteger.Prototype.isProbablePrime()					; TODO
- * BigInteger.isProbablePrime()								; TODO
  * BigInteger.Prototype.nextProbablePrime()					; TODO
- * BigInteger.nextProbablePrime()							; TODO
  * BigInteger.Prototype.hashCode()							; TODO
+ * BigInteger.nextProbablePrime()							; TODO
+ * BigInteger.isProbablePrime()								; TODO
  * BigInteger.hashCode()									; TODO
  * ; Properties
  * BigInteger.Prototype.getSignum()							; IMPLEMENTED, FINAL
  * BigInteger.Prototype.getMagnitude()						; IMPLEMENTED, FINAL
+ * BigInteger.signum
+ * BigInteger.mag
+ * ; Other
+ * BigInteger.Prototype.Clone()								; IMPLEMENTED, FINAL (Overriding default .Clone())
+ * 
+ * 
+ * ; Helper functions
+ * ; Magnitude arithmetic
+ * BigInteger.addMagnitudes()
+ * BigInteger.subtractMagnitudes()
+ * BigInteger.multiplyMagnitudes()
+ * BigInteger.squareMagnitude()
+ * BigInteger.divideMagnitudes()
+ * ; magnitude manipulation
+ * BigInteger.convertMagnitudeBase()
+ * BigInteger.normalizeMagnitudeBase()
+ * BigInteger.expandMagnitudeToRadix()
+ * BigInteger.shrinkMagnitudeToPowRadix()
+ * BigInteger.stripLeadingZeros()
+ * BigInteger.magnitudeFromString()
+ * BigInteger.compareMagnitudes()
+ * BigInteger.magDivHelperDivide()
+ * BigInteger.magDivHelperNormalize()
+ * BigInteger.magDivHelperOverflowDivide()
+ * BigInteger.magDivHelperOverflowNormalize()
+ * BigInteger.magDivHelperShiftRight()
+ * ; int32 functions
+ * BigInteger.gcdInt()
+ * BigInteger.isPowerOf()
+ * BigInteger.getMaxComputableRadixPower()
+ * BigInteger.numberOfLeadingZeros()
+ * BigInteger.numberOfTrailingZeros()
+ * ; validation
+ * BigInteger.validateBigInteger()
+ * BigInteger.validateMagnitudeRadix()
  */
 class BigInteger {
 	/**
@@ -149,21 +186,15 @@ class BigInteger {
 		
 		ex := BigInteger.getMaxComputableRadixPower(radix)
 		powRadix := radix**ex
+		newMag := BigInteger.convertMagnitudeBase(this.mag, powRadix)
 		if (radix == 10) {
-			newMag := BigInteger.convertMagnitudeBase(this.mag, powRadix)
 			str .= newMag[1]
 			Loop(newMag.Length - 1)
 				str .= Format("{:09}", newMag[A_Index + 1])
 		} else { ; this is *significantly* faster than directly converting to radix
-			newMag := BigInteger.convertMagnitudeBase(this.mag, powRadix) ; checks powers of two
 			newMag := BigInteger.expandMagnitudeToRadix(newMag, powRadix, radix)
-			if (radix < 10) {
-				for d in newMag
-					str .= d
-			} else {
-				for d in newMag
-					str .= d > 9 ? Chr(d+55) : d
-			}
+			for d in newMag
+				str .= d > 9 ? Chr(d+55) : d
 		}
 		return str
 	}
@@ -338,7 +369,7 @@ class BigInteger {
 		workingExponent := exponent
 		result := [1]
 		magSquare := this.mag.Clone()
-		while (workingExponent != 0) {
+		while (workingExponent != 0) { ; this is *not* more speed-efficient than just multiplying self n times. Both are O(n²k²) with n=exp, k=maglen. however squaremagnitude can be improved to linear instead of O(k²).
 			if (workingExponent & 1)
 				result := BigInteger.multiplyMagnitudes(result, magSquare)
 			if ((workingExponent >>>= 1) != 0) ; cuts off right-most bit if it is 1
@@ -369,7 +400,6 @@ class BigInteger {
 	 */
 	divideByDigitPower(divisor, pow := 1) {
 		if (isPowerOfTwo := (divisor & (divisor - 1) == 0)) { ; base is power of two
-			mask := divisor - 1
 			shiftBits := BigInteger.numberOfTrailingZeros(divisor) * pow
 			return this.shiftRight(shiftBits)
 		}
@@ -426,7 +456,7 @@ class BigInteger {
 	 */
 	not() => this.negate().subtract(1)
 	
-	andnot(anyInt) => this.and(BigInteger.validateBigInteger(anyInt).not())
+	andNot(anyInt) => this.and(BigInteger.validateBigInteger(anyInt).not())
 
 	or(anyInt) {
 		anyInt := BigInteger.validateBigInteger(anyInt)
@@ -681,16 +711,52 @@ class BigInteger {
 			curMax := curMax.compareTo(bigInt) == -1 ? bigInt : curMax
 		return curMax
 	}
-
-	static Min(anyInt, anyint32Values*) => this.validateBigInteger(anyInt).Min(anyint32Values*)
-	static Max(anyInt, anyint32Values*) => this.validateBigInteger(anyInt).Max(anyint32Values*)
-	
 	
 	isProbablePrime() => false
-	static isProbablePrime(anyInt) => this.validateBigInteger(anyInt).isProbablePrime()
 	nextProbablePrime() => this
-	static nextProbablePrime(anyInt) => this.validateBigInteger(anyInt).nextProbablePrime()
 	hashCode() => 0
+
+	; static methods that correspond to Prototype methods
+	static Min(anyInt, anyintValues*) 	=> this.validateBigInteger(anyInt).Min(anyintValues*)
+	static Max(anyInt, anyintValues*) 	=> this.validateBigInteger(anyInt).Max(anyintValues*)
+	static isProbablePrime(anyInt) 		=> this.validateBigInteger(anyInt).isProbablePrime()
+	static nextProbablePrime(anyInt) 	=> this.validateBigInteger(anyInt).nextProbablePrime()
+	static hashCode(anyInt) 			=> this.validateBigInteger(anyInt).hashCode()
+
+	/**
+	 * Given any number of BigIntegers, sorts them numerically ascending using a custom mergesort.
+	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
+	 * @param {Integer | String | BigInteger} anyIntValues* Any number of Integers, strings representing an integer or BigIntegers
+	 * @returns {Array} A numerically ascending sorted array containing BigIntegers. Note that these BigIntegers are not clones, but the same as the original BigIntegers referenced in the parameters.
+	 */
+	static Sort(anyInt, anyIntValues*) {
+		nums := [this.validateBigInteger(anyInt)]
+		for i, e in anyIntValues
+			nums.push(this.validateBigInteger(e)) ; while compareTo validates too, it is called O(nlogn) times, so this is better
+		len := anyIntValues.length + 1
+		res := []
+		res.Length := len
+		sliceLen := 1
+		while(sliceLen <= len) {
+			c := 1
+			while (c <= len) {
+				i := c
+				j := indexB := min(c + sliceLen, len)
+				lastIndex := min(c + 2 * sliceLen - 1, len)
+				Loop(lastIndex - c + 1) {
+					k := c + A_Index - 1
+					if (i < indexB && (j > lastIndex || (nums[i].compareTo(nums[j]) == -1)))
+						res[k] := nums[i++]
+					else
+						res[k] := nums[j++]
+				}
+				c += 2 * sliceLen
+			}
+			sliceLen *= 2
+			nums := res.clone()
+		}
+		return res
+	}
 
 	/**
 	 * Returns the signum of the number.
@@ -976,7 +1042,7 @@ class BigInteger {
 		len1 := mag1.Length
 		len2 := mag2.Length
 		result := []
-		Loop len1 + len2 ; minimum is max(len1, len2), maximum is len1+len2 (in case of 0xFF * 0xFF = 0xFE01)
+		Loop len1 + len2 ; minimum is max(len1, len2), maximum is len1+len2 (eg 0xFF * 0xFF = 0xFE01)
 			result.Push(0)
 		Loop(len1) {
 			i := A_Index
@@ -1272,7 +1338,6 @@ class BigInteger {
 	static MAX_INT_SIZE := 64
 
 	class Error {
-		static BASE_ZERO => ValueError("Parameters was base 0, which doesn't exist. If you do think that it exists, please explain to me how.")
 		static NOT_INTEGER[n] => ValueError("Received non-integer input: " (IsObject(n) ? Type(n) : n))
 		static INVALID_RADIX[n] => ValueError("Invalid Radix: " (IsObject(n) ? Type(n) : n))
 		static EXPONENT_OUT_OF_RANGE[n] => ValueError("Exponent out of range for supported values (>= 2**32): " (n is BigInteger ? n.toStringApprox() : n))
