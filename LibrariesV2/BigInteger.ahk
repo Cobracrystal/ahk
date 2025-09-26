@@ -387,11 +387,43 @@ class BigInteger {
 	 */
 	divide(anyInt) {
 		anyInt := BigInteger.validateBigInteger(anyInt)
+		if anyInt.signum == 0
+			throw ZeroDivisionError()
+		cmp := BigInteger.compareMagnitudes(this.mag, anyInt.mag)
+		if cmp == 0
+			return this.signum * anyInt.signum > 0 ? BigInteger.ONE : BigInteger.MINUS_ONE
+		if cmp == -1
+			return BigInteger.ZERO
+		if anyInt.mag.Length == 1
+			return this.divideByDigitPower(anyInt.mag[1])
+		if anyInt.mag.Length == 2 && anyInt.mag[1] < 2**31 ; BigInteger is < 2**63 - 1
+			return this.divideByDigitPower(anyInt.mag[1] * BigInteger.INT32 + anyInt.mag[2])
 		magQuotient := BigInteger.divideMagnitudes(this.mag, anyInt.mag)
 		return BigInteger.fromMagnitude(magQuotient, this.signum * anyInt.signum)
 	}
 
-	divideAndRemainder(anyInt) => this
+	/**
+	 * Divides (this) by the given Integer Representation and returns a new BigInteger representing the new result as well as the divisions remainder
+	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
+	 * @returns {Array} An array containing the result of division, rounded down to the nearest BigInteger and its remainder. Both are always in BigInteger format. eg. 22/7 => [3, 1]
+	 */
+	divideAndRemainder(anyInt) {
+		anyInt := BigInteger.validateBigInteger(anyInt)
+		if anyInt.signum == 0
+			throw ZeroDivisionError()
+		cmp := BigInteger.compareMagnitudes(this.mag, anyInt.mag)
+		if cmp == 0
+			return [this.signum * anyInt.signum > 0 ? BigInteger.ONE : BigInteger.MINUS_ONE, BigInteger.ZERO]
+		if cmp == -1
+			return [BigInteger.ZERO, this.Clone()]
+		; NO REMAINDER ????????????
+		if anyInt.mag.Length == 1
+			return [this.divideByDigitPower(anyInt.mag[1])]
+		if anyInt.mag.Length == 2 && anyInt.mag[1] < 2**31 ; BigInteger is < 2**63 - 1
+			return this.divideByDigitPower(anyInt.mag[1] * BigInteger.INT32 + anyInt.mag[2])
+		arr := BigInteger.divideMagnitudes(this.mag, anyInt.mag)
+		return [BigInteger.fromMagnitude(arr[1], this.signum * anyInt.signum), BigInteger.fromMagnitude(arr[2], this.signum)]
+	}
 
 	/**
 	 * Divides this by the given digit raised to pow.
@@ -1082,11 +1114,23 @@ class BigInteger {
 	 * Divides one magnitude by another magnitude using Knuth's Algorithm D (long division).
 	 * @param {Array} mag1 Dividend magnitude
 	 * @param {Array} mag2 Divisor magnitude
-	 * @returns {Array} Quotient magnitude
+	 * @returns {Array} Quotient magnitude and remainder magnitude
 	 */
 	static divideMagnitudes(mag1, mag2) {
-		return BigInteger.ZERO
-	}
+        ; assert div.intLen > 1
+        ; D1 normalize the divisor
+        shift := BigInteger.numberOfLeadingZeros(mag2[1])
+        ; Copy divisor value to protect divisor
+        dlen := mag2.intLen
+        if (shift > 0) {
+			divisor := BigInteger.fromMagnitude(mag2).shiftLeft(shift).mag
+			remarr := BigInteger.fromMagnitude(mag1).shiftLeft(shift).mag
+        } else {
+			divisor := mag2.Clone()
+			remarr := mag1.Clone()
+        }
+	
+    }
 
 	static magDivHelperShiftRight(mag, shift) {
 		quotient := []
