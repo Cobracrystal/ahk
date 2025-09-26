@@ -996,7 +996,7 @@ loadTableAsHotstrings(filePath) {
 		Hotkey("XButton1", (*) => (SetTimer(turnSelfOff, -300000), Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")))
 		Hotkey("XButton2", (*) => Run('"' A_WorkingDir '\..\Demo_Scripts\download.ahk" --open-folder'))
 	}
-	if (RegExMatch(A_Clipboard, "\.(?:png|jpeg|jpg|webp|mp4|gif|mov)"))
+	if (RegExMatch(A_Clipboard, "\.(?:png|jpeg|jpg|webp|mp4|gif|mov|webm)"))
 		Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")
 
 	toggleDLKeys(mode := -1) {
@@ -1117,7 +1117,7 @@ WinSetVolume(level, target?) {
 	static toggle := false
 	if toggle := !toggle {
 		RevoIdle.instantExit := false
-		SetTimer(RevoIdle.bigLoop.bind(RevoIdle), 10000)
+		SetTimer(RevoIdle.bigLoop.bind(RevoIdle), 180000)
 		RevoIdle.bigLoop()
 	}
 	else
@@ -1130,7 +1130,7 @@ WinSetVolume(level, target?) {
 class RevoIdle {
 	static instantExit := false
 	static bigLoop() {
-		static num := String(188)
+		static num := String(192)
 		if this.instantExit
 			SetTimer(,0)
 		Critical(0)
