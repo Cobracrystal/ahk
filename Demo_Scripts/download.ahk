@@ -129,7 +129,7 @@ betterFileNames(linkArray) {
 		for badName in ["Rule 34 - "]
 			newFileName := StrReplace(newFileName, badName)
 		flagHasUrlComponent := false
-		for url, urlFileComponent in Map("rule34", "Rule34_", "redgif", "RedGifs_") {
+		for url, urlFileComponent in Map("rule34", "Rule34_", "redgif", "RedGifs_", "Gelbooru", "Gelbooru_") {
 			if InStr(e.url, url) {
 				newFileName := urlFileComponent . newFileName
 				flagHasUrlComponent := true
