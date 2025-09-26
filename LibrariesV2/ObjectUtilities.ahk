@@ -45,15 +45,16 @@ objContainsMatch(obj, match := (itKey,itVal) => (true), retAllMatches := 0) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objContainsMatch does not handle type " . Type(obj)))
+	lambda := match.MaxParams == 1 ? (i, e) => match(e) : (i, e) => match(i, e)
 	if retAllMatches {
 		arr := []
 		for i, e in objGetEnumerator(obj)
-			if (match(i, e))
+			if (lambda(i, e))
 				arr.push(i)
 		return arr
 	}
 	for i, e in objGetEnumerator(obj)
-		if (match(i, e))
+		if (lambda(i, e))
 			return i
 	return 0
 }
