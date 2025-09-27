@@ -18,10 +18,10 @@ mainFunc(folderToCopyTo) {
 			if (oldList != list) {
 				arr1 := StrSplit(oldList)
 				arr2 := StrSplit(list)
-				if arr1.Length > arr2.Length
+				if arr1.Length > arr2.Length ; USB was removed
 					continue
-				for i, driveLetter in arr2 {
-					if (driveLetter != arr1[i]) {
+				for i, driveLetter in arr2 { ; USB was inserted
+					if (driveLetter != arr1[i]) { ; letter of the inserted USB
 						Sleep(1000)
 						copyContent(driveLetter, folderToCopyTo)
 						break
@@ -39,8 +39,17 @@ mainFunc(folderToCopyTo) {
 
 
 copyContent(driveLetter, folderToCopyTo) {
+	path := folderToCopyTo '\' driveLetter '_backup\'
 	try {
-		DirCopy(driveLetter ':\', folderToCopyTo '\' driveLetter '_backup', 1)
+		loop files driveLetter ':\*', 'FD' {
+			if InStr(A_LoopFileAttrib, 'S') ; skip system files
+				continue
+			if InStr(A_LoopFileAttrib, 'D')
+				DirCopy(A_LoopFileFullPath, path . A_LoopFileName, 1)
+			else
+				FileCopy(A_LoopFileFullPath, path '*.*', 1)
+		}
+
 	} catch {
 		return
 	}
