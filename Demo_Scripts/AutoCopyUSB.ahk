@@ -11,29 +11,40 @@ mainFunc(folderToCopyTo)
 
 mainFunc(folderToCopyTo) {
 	try {
-		list := DriveGetList('REMOVABLE')
-		while (true) {
-			oldList := list
-			list := DriveGetList('REMOVABLE')
-			if (oldList != list) {
-				arr1 := StrSplit(oldList)
-				arr2 := StrSplit(list)
-				if arr1.Length > arr2.Length ; USB was removed
+		oldDrives := DriveGetList()
+	} catch {
+		Sleep(100)
+		mainFunc(folderToCopyTo)
+		return
+	}
+	while (true) {
+		try {
+			newDrives := DriveGetList()
+			if (newDrives != oldDrives) {
+				compare := oldDrives
+				oldDrives := newDrives
+				if StrLen(compare) > StrLen(newDrives)
 					continue
-				for i, driveLetter in arr2 { ; USB was inserted
-					if (driveLetter != arr1[i]) { ; letter of the inserted USB
-						Sleep(1000)
-						copyContent(driveLetter, folderToCopyTo)
+				loop parse newDrives {
+					if !InStr(compare, A_LoopField) {
+						Sleep(300)
+						copyContent(A_LoopField, folderToCopyTo)
 						break
 					}
 				}
-				break
 			}
-			Sleep(100)
+		} catch as e {
+			error_map := Map(
+				82, "ERROR_CANNOT_MAKE",
+				80, "ERROR_FILE_EXISTS",
+				83, "ERROR_FAIL_I24"
+			)
+			MsgBox(error_map[A_LastError])
+			throw e
+			; Sleep(1000)
+			; continue
 		}
-	} catch {
-		Sleep(10000)
-		mainFunc(folderToCopyTo)
+		Sleep(100)
 	}
 }
 
@@ -49,8 +60,7 @@ copyContent(driveLetter, folderToCopyTo) {
 			else
 				FileCopy(A_LoopFileFullPath, path '*.*', 1)
 		}
-
-	} catch {
-		return
+	} catch as e {
+		throw e
 	}
 }
