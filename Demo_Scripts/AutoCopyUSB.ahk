@@ -35,14 +35,15 @@ mainFunc(folderToCopyTo) {
 			}
 		} catch as e {
 			error_map := Map(
+				3, "ERROR_PATH_NOT_FOUND",
 				82, "ERROR_CANNOT_MAKE",
 				80, "ERROR_FILE_EXISTS",
 				83, "ERROR_FAIL_I24"
 			)
-			MsgBox(error_map[A_LastError])
-			throw e
-			; Sleep(1000)
-			; continue
+			; MsgBox(error_map[A_LastError])
+			; throw e
+			Sleep(1000)
+			continue
 		}
 		Sleep(100)
 	}
@@ -51,6 +52,8 @@ mainFunc(folderToCopyTo) {
 
 copyContent(driveLetter, folderToCopyTo) {
 	path := folderToCopyTo '\' driveLetter '_backup\'
+	if !DirExist(path)
+		DirCreate(path)
 	try {
 		loop files driveLetter ':\*', 'FD' {
 			if InStr(A_LoopFileAttrib, 'S') ; skip system files
@@ -58,9 +61,10 @@ copyContent(driveLetter, folderToCopyTo) {
 			if InStr(A_LoopFileAttrib, 'D')
 				DirCopy(A_LoopFileFullPath, path . A_LoopFileName, 1)
 			else
-				FileCopy(A_LoopFileFullPath, path '*.*', 1)
+				FileCopy(A_LoopFileFullPath, path A_LoopFileName, 1)
 		}
 	} catch as e {
-		throw e
+		; throw e
+		return
 	}
 }
