@@ -2,8 +2,8 @@
  * @description A class to handle arbitrary precision Integers
  * @author cobracrystal
  * @date 2025/10/02
- * @version 0.8.2
-***********************************************************************/
+ * @version 0.8.5
+ ***********************************************************************/
 
 ; static alias for these?
 ; FINAL DOESN'T MEAN THAT DOCS ARE ADDED!!!!
@@ -35,7 +35,9 @@
  * BigInteger.Prototype.divide(anyInt, &remainder) 				; IMPLEMENTED, FINAL
  * BigInteger.Prototype.divideByIntPower(int, int, &remainder)	; IMPLEMENTED, FINAL
  * BigInteger.Prototype.mod(anyInt) 							; IMPLEMENTED, FINAL
+ * BigInteger.mod(numerator, divisor) 							; IMPLEMENTED, FINAL
  * BigInteger.Prototype.gcd(anyInt) 							; IMPLEMENTED, FINAL
+ * BigInteger.gcd(anyInt, anyInts*)								; IMPLEMENTED, FINAL
  * BigInteger.Prototype.sqrt()							 		; IMPLEMENTED, FINAL
  * BigInteger.Prototype.nthRoot()						 		; IMPLEMENTED, FINAL
  * ; Comparison
@@ -72,9 +74,9 @@
  * BigInteger.Prototype.getMagnitude()							; IMPLEMENTED, FINAL
  * ; Other
  * BigInteger.Prototype.Clone()									; IMPLEMENTED, FINAL (Overriding default .Clone())
- *
- *
- * ; Helper functions
+ * 
+ * 
+ * ; Helper functions. These trust the input and will throw unexpected errors if input is not validated correctly.
  * ; Magnitude arithmetic
  * BigInteger.addMagnitudes()
  * BigInteger.subtractMagnitudes()
@@ -107,8 +109,12 @@
 class BigInteger {
 	/**
 	 * Constructs a BigInteger given any integer-like input
-	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
+	 * @param {Integer | String} anyInt An Integer or a string representing an integer
 	 * @returns {BigInteger} The constructed BigInteger
+	 * @example 
+	 * BigInteger(2394)
+	 * BigInteger(-923849234922394)
+	 * BigInteger('-11111112334902834928304820934820938429304820348234')
 	 */
 	__New(anyInt, radix := 10) {
 		if (Type(anyInt) != "String")
@@ -121,7 +127,7 @@ class BigInteger {
 			case '+':
 				this.signum := 1
 				anyInt := SubStr(anyInt, 2)
-			default: 
+			default:
 				this.signum := 1
 		}
 		if (anyInt == "0") {
@@ -139,7 +145,7 @@ class BigInteger {
 	 * Returns a new BigInteger. Synonymous with creating a BigInteger instance
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
 	 * @param {Integer} radix The radix or base of the given number.
-	 * @returns {BigInteger}
+	 * @returns {BigInteger} The constructed BigInteger
 	 */
 	static valueOf(anyInt, radix := 10) => BigInteger(anyInt, radix)
 
@@ -151,6 +157,7 @@ class BigInteger {
 	 * @returns {BigInteger} The Constructed Value
 	 * @example
 	 * BigInteger.fromMagnitude([1,2], -1) => - (1 * 2**32 + 2) = -4294967298
+	 * BigInteger.fromMagnitude([0], -1) => 0 ; signum gets ignored
 	 */
 	static fromMagnitude(mag, signum := 1) {
 		obj := BigInteger(0) ; Do not call BigInteger.ZERO, that's recursive
@@ -165,6 +172,9 @@ class BigInteger {
 	 * @param {Integer} radix The base of the given magnitude. Defaults to 10
 	 * @param {Integer} signum The signum of the number. 1 for positive, -1 for negative, 0 for 0. If magnitude is an array containing only 0, signum will be automatically set to 0.
 	 * @returns {BigInteger} The Constructed Value
+	 * @example
+	 * BigInteger.fromAnyMagnitude([3,2,3,0,1,2,3], 4) ; Represents 3230123 in base 4
+	 * BigInteger.fromAnyMagnitude(['AE','BF','10','0', '5', '1F'], 256) ; Equivalent to 0xAEBF1000551F in base 16
 	 */
 	static fromAnyMagnitude(mag, radix := 10, signum := 1) {
 		signum := (mag.Length = 1 && mag[1] = 0) ? 0 : signum
@@ -178,20 +188,32 @@ class BigInteger {
 	 * Constructs a BigInteger from a magnitude in twos complement, interpreting it from the leading sign word.
 	 * @param {Array} mag A Magnitude of the form [(0 | 0xFFFFFFFF), ...]. Must include the leading sign word (Otherwise all values are ambiguous)
 	 * @returns {BigInteger} The created BigInteger
+	 * @example
+	 * BigInteger.fromTwosComplement([0, 0xFFFFFFFF]).toString() => 4294967295
+	 * BigInteger.fromTwosComplement([0xFFFFFFFF, 0xFFFFFFFF]).toString() => -1
+	 * BigInteger.fromTwosComplement([0]).toString() => 0
+	 * BigInteger.fromTwosComplement([5]) => Error
 	 */
 	static fromTwosComplement(mag) {
 		if mag.Length == 1 && mag[1] == 0
 			return BigInteger.ZERO
+		if mag.Length <= 1
+			throw BigInteger.Error.BAD_TWO_COMPLEMENT[1, mag.Length]
 		mag := mag.Clone()
-		if (mag.RemoveAt(1) == 0)
+		leadingSign := mag.RemoveAt(1)
+		if (leadingSign == 0)
 			return BigInteger.fromMagnitude(BigInteger.stripLeadingZeros(mag), 1)
+		if leadingSign != BigInteger.INT_MASK
+			throw BigInteger.Error.BAD_TWO_COMPLEMENT[2, leadingSign]
 		newMag := []
 		newMag.Length := len := mag.Length
+		if len == 0
+			throw BigInteger.Error.BAD_TWO_COMPLEMENT[]
 		unchangedWords := BigInteger.fromMagnitude(mag).getLowestSetBit() >>> 5
-		Loop(unchangedWords) ; copy rightmost words that are 0
+		Loop (unchangedWords) ; copy rightmost words that are 0
 			newMag[-A_index] := 0
-		newMag[-unchangedWords-1] := (~mag[-unchangedWords-1] + 1) & BigInteger.INT_MASK
-		Loop(len - unchangedWords - 1)
+		newMag[-unchangedWords - 1] := (~mag[-unchangedWords - 1] + 1) & BigInteger.INT_MASK
+		Loop (len - unchangedWords - 1)
 			newMag[A_Index] := ~mag[A_Index] & BigInteger.INT_MASK
 		return BigInteger.fromMagnitude(BigInteger.stripLeadingZeros(newMag), -1)
 	}
@@ -200,25 +222,29 @@ class BigInteger {
 	 * Returns a String representing (this).
 	 * @param {Integer} radix. Must be 2 <= radix <= 36
 	 * @returns {String} The number this BigInteger represents. May start with -. Never starts with +.
+	 * @example
+	 * b := BigInteger.fromAnyMagnitude([54,123], 150, -1) ; base 150
+	 * b.toString(17) => "-1B7C" ; base 17
+	 * b.toString(2) => "-10000000011111" ; base 2
 	 */
 	toString(radix := 10) {
 		if (this.signum == 0)
 			return '0'
 		if radix < 2 || radix > 36
 			throw BigInteger.Error.INVALID_RADIX[radix]
-			
+
 		str := this.signum < 0 ? '-' : ''
 		ex := BigInteger.getMaxComputableRadixPower(radix)
 		powRadix := radix**ex
 		newMag := BigInteger.convertMagnitudeBase(this.mag, powRadix)
 		if (radix == 10) {
 			str .= newMag[1]
-			Loop(newMag.Length - 1)
+			Loop (newMag.Length - 1)
 				str .= Format("{:09}", newMag[A_Index + 1])
 		} else { ; this is *significantly* faster than directly converting to radix
 			newMag := BigInteger.expandMagnitudeToRadix(newMag, powRadix, radix)
 			for d in newMag
-				str .= d > 9 ? Chr(d+55) : d
+				str .= d > 9 ? Chr(d + 55) : d
 		}
 		return str
 	}
@@ -235,7 +261,7 @@ class BigInteger {
 			return '0'
 		if radix < 2 || radix > 36
 			throw BigInteger.Error.INVALID_RADIX[radix]
-			
+
 		str := this.signum < 0 ? '-' : ''
 		exponent := this.Length(radix) - 1
 		ndigits := this.getFirstNDigits(radix, 10)
@@ -247,6 +273,8 @@ class BigInteger {
 	 * @param {Integer} radix The radix that the digits should be returned in. Should be between 2 and 36
 	 * @param {Integer} digits The amount of digits to return. Numbers larger than the length of the biginteger will simply return toString()
 	 * @returns {String} The first N digits of the BigInteger
+	 * @example
+	 * BigInteger('-82389429834').getFirstNDigits(10, 5) => '-82389'
 	 */
 	getFirstNDigits(radix := 10, digits := 10) {
 		if (this.signum == 0)
@@ -259,11 +287,11 @@ class BigInteger {
 		if digits < 1
 			return ''
 		; wordsNeeded := this.mag.Length - (len - digits) * Log(radix) / (32 * Log(2))
-		wordsNeeded := Min(Ceil(digits * Log(radix)/(32 * Log(2))) + 1, this.mag.Length)
+		wordsNeeded := Min(Ceil(digits * Log(radix) / (32 * Log(2))) + 1, this.mag.Length)
 		newMag := []
-		Loop(wordsNeeded)
+		Loop (wordsNeeded)
 			newMag.push(this.mag[A_Index])
-		loop(this.mag.Length - wordsNeeded)
+		loop (this.mag.Length - wordsNeeded)
 			newMag.push(0)
 		ndigits := BigInteger.fromMagnitude(newMag, this.signum).divideByIntPower(radix, len - digits)
 		return ndigits.toString(radix)
@@ -273,13 +301,16 @@ class BigInteger {
 	 * Returns the Length of the number in the specified base (default 10). An alias for base 2 is given through getBitLength()
 	 * For Zero, this always returns 0.
 	 * @param {Integer} radix The base in which to compute the Length of. Must be between 2 and 2**32 (base 1 is this BigInteger).
-	 * @returns {Integer} The Length of this BigInteger in base 10
+	 * @returns {Integer} The Length of this BigInteger in the given base
+	 * @example
+	 * BigInteger(-923489234).Length() => 9 ; sign is not counted
+	 * BigInteger(0).Length() => 0
 	 */
 	Length(radix := 10) {
 		static log10ofBase := Log(BigInteger.INT32)
 		top := this.mag[1]
 		n := this.mag.Length
-		if n == 0 && top == 0
+		if n == 1 && top == 0
 			return 0
 		if radix == 2
 			return this.getBitLength()
@@ -301,7 +332,7 @@ class BigInteger {
 		 * so log(N) = topHatL + delta.
 		 * Since lower/B^n-1 < 1, delta < log(1+1/top) so use this as upper bound to check if delta should be computed (as it usually is < 10^-6)
 		 */
-		upper_bound := Log(1 + 1/top) / Log(radix)
+		upper_bound := Log(1 + 1 / top) / Log(radix)
 		fracpart := hatL - Floor(hatL)
 		dist := Min(fracpart, 1 - fracpart)
 		if dist > upper_bound
@@ -309,14 +340,14 @@ class BigInteger {
 		frac := 0
 		scale := 1 / BigInteger.INT32
 		epsilon := 2**-52
-		Loop(n - 1) { ; lower / B^n-1
+		Loop (n - 1) { ; lower / B^n-1
 			cur := this.mag[A_Index + 1] * scale
 			if cur < epsilon ; 2**(32*33) > 0, but 2**(32*34) == 0. Thus this will always have 34 iterations at most.
 				break
 			scale /= BigInteger.INT32
 			frac += cur
 		}
-		delta := Log(1 + frac/top) / Log(radix)
+		delta := Log(1 + frac / top) / Log(radix)
 		hatL += delta
 		digitCandidate := Floor(hatL + 1e-18) + 1 ; minimal correction if we are 1 epsilon off
 		return digitCandidate
@@ -337,7 +368,7 @@ class BigInteger {
 	 * @returns {BigInteger} A BigInteger with a signum inverted from (this).
 	 */
 	negate() => BigInteger.fromMagnitude(this.mag, -this.signum)
-	
+
 	/**
 	 * Adds the given Integer Representation to (this) and returns a new BigInteger representing the result.
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
@@ -492,9 +523,9 @@ class BigInteger {
 				words := shiftBits >>> 5
 				bits := shiftBits & 0x1F
 				rem.Length := words
-				Loop(words)
+				Loop (words)
 					rem[-A_Index] := this.mag[-A_Index]
-				rem.InsertAt(1, this.mag[-words-1] & ((1 << bits) - 1))
+				rem.InsertAt(1, this.mag[-words - 1] & ((1 << bits) - 1))
 			}
 			remainder := BigInteger.fromMagnitude(BigInteger.stripLeadingZeros(rem), this.signum)
 			res := this.shiftRight(shiftBits)
@@ -508,7 +539,7 @@ class BigInteger {
 		}
 		divAsBigInt := BigInteger.validateBigInteger(divisor)
 		remainder := BigInteger.ZERO
-		Loop(pow) {
+		Loop (pow) {
 			if (overflow)
 				arr := BigInteger.magDivHelperOverflowDivide(mag, divisor, baseDivPrecompute, baseRemPrecompute)
 			else
@@ -520,26 +551,38 @@ class BigInteger {
 			remainder.signum := this.signum
 		return BigInteger.fromMagnitude(mag, signum)
 	}
-	
+
 	/**
-	 * Modulo. Returns the remainder of (this) divided by anyInt. This is an alias for .divide(anyInt, &remainder).
+	 * Modulo. Returns the remainder of (this) divided by anyInt. This is an alias for .divide(anyInt, &remainder) with its parameters swapped.
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
+	 * @param {&BigInteger?} quotient This will be set to the result of the division, if given.
 	 * @returns {BigInteger} The result of the modulo operation.
 	 */
-	mod(anyInt) {
-		this.divide(anyInt, &rem)
+	mod(anyInt, &quotient?) {
+		quotient := this.divide(anyInt, &rem)
 		return rem
 	}
+
+	/**
+	 * Modulo. Returns the remainder of anyIntNum divided by anyIntDiv. This is an alias for BigInteger.Prototype.divide(anyInt, &remainder) with its parameters swapped.
+	 * @param {Integer | String | BigInteger} anyIntNum An Integer, a string representing an integer or a BigInteger
+	 * @param {Integer | String | BigInteger} anyIntDiv An Integer, a string representing an integer or a BigInteger
+	 * @param {&BigInteger?} quotient This will be set to the result of the division, if given.
+	 * @returns {BigInteger} The result of the modulo operation.
+	 */
+	static Mod(anyIntNum, anyIntDiv) => this.validateBigInteger(anyIntNum).mod(anyIntDiv)
 	
 	/**
-	 * Calculates the greatest common divisor amongst the given Integer-likes and (this), using Euclids algorithm.
+	 * Calculates the greatest common divisor amongst the given Integer-likes and (this), using Euclids algorithm. This will always be positive.
 	 * @param {Integer | String | BigInteger} anyInts Any number of Integers, strings representing an integer or BigIntegers
 	 * @returns {BigInteger} A new BigInteger representing the greatest common divisor of (this) and anyInt
+	 * @example
+	 * BigInteger(3033956).gcd('824387595128', '-178468', BigInteger(892340)).toString() => 178468
 	 */
 	gcd(anyintValues*) {
-		anyintValues.push(this)
+		anyintValues.push(this.abs())
 		for i, e in anyintValues
-			anyintValues[i] := BigInteger.validateBigInteger(e)
+			anyintValues[i] := BigInteger.validateBigInteger(e).abs()
 		copyNums := anyintValues
 		firstMin := curMin := BigInteger.Min(copyNums*)
 		while (copyNums.Length > 1) {
@@ -549,7 +592,7 @@ class BigInteger {
 					tNums.Push(e)
 					continue
 				}
-				m := e.Mod(e, curMin)
+				m := e.Mod(curMin)
 				if !m.equals(BigInteger.ZERO)
 					tNums.push(m)
 			}
@@ -562,9 +605,22 @@ class BigInteger {
 	}
 	
 	/**
+	 * Calculates the greatest common divisor amongst the given Integer-likes, using Euclids algorithm. This will always be positive.
+	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
+	 * @param {Integer | String | BigInteger} anyInts Any number of Integers, strings representing an integer or BigIntegers
+	 * @returns {BigInteger} A new BigInteger representing the greatest common divisor of the given values
+	 * @example
+	 * BigInteger.gcd(3033956, '824387595128', '-178468', BigInteger(892340)).toString() => 178468
+	 */
+	static gcd(anyInt, anyIntValues*) => this.validateBigInteger(anyInt).gcd(anyIntValues*)
+
+	/**
 	 * Calculates the integer square root of (this), ie. the largest integer i such that i*i <= (this)
 	 * @param {&BigInteger?} remainder The remainder of the operation, ie. i*i+remainder == (this)
 	 * @returns {BigInteger} The integer square root of (this).
+	 * @example
+	 * BigInteger(10000000).sqrt(&remainder).toString() => 3162
+	 * remainder.toString() => 1756
 	 */
 	sqrt(&remainder?) {
 		if !this.signum
@@ -595,6 +651,9 @@ class BigInteger {
 	 * @param {Integer} n Positive. Which root to calculate. 2 is equivalent to calling sqrt() (but slower).
 	 * @param {&BigInteger?} remainder The remainder of the operation, ie a number st i^n + remainder == (this)
 	 * @returns {BigInteger} The nth integer root of (this)
+	 * @example
+	 * BigInteger.fromMagnitude([1,0]).nthRoot(10,&rem).toString() => 9 ; 9**10 = 3486784401
+	 * rem.toString() => 808182895 ; 9**10 + 808182895 = 2**32
 	 */
 	nthRoot(n, &remainder?) {
 		if (!this.signum) {
@@ -614,11 +673,11 @@ class BigInteger {
 		guessBits := Ceil(bits / n)
 		shift := bits - 63
 		guessFloat := Float(this.shiftRight(shift).intValue())
-		guess := BigInteger.valueOf(Ceil(guessFloat ** (1.0/n))).shiftLeft(guessBits)
+		guess := BigInteger.valueOf(Ceil(guessFloat**(1.0 / n))).shiftLeft(guessBits)
 		xk := guess
 		while (true) {
 			; xk1 := xk - (xk^n - this)/(n*xk^(n-1)) = ( (n-1)*x + a/(x^(n-1)))/n
-			xk1 := this.divide(xk.pow(n-1)).add(xk.multiply(n-1)).add(n-1).divideByIntPower(n)
+			xk1 := this.divide(xk.pow(n - 1)).add(xk.multiply(n - 1)).add(n - 1).divideByIntPower(n)
 			if (BigInteger.compareMagnitudes(xk1.mag, xk.mag) == 0) {
 				while (xk.pow(n).compareTo(this) > 0)
 					xk := xk.subtract(BigInteger.ONE)
@@ -628,12 +687,16 @@ class BigInteger {
 			xk := xk1
 		}
 	}
-	
+
 	/**
 	 * Returns 1 if (this) is larger than anyInt, -1 if it is smaller.
 	 * Logically equivalent to the comparison (this > anyInt) ? 1 : this == anyInt ? 0 : -1
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
 	 * @returns {Integer} 1, 0, -1.
+	 * @example
+	 * BigInteger.TWO.compareTo(10) => -1
+	 * BigInteger.TWO.compareTo(2) => 0
+	 * BigInteger.TWO.compareTo(-1) => 1
 	 */
 	compareTo(anyInt) {
 		anyInt := BigInteger.validateBigInteger(anyInt)
@@ -644,7 +707,7 @@ class BigInteger {
 		magComp := BigInteger.compareMagnitudes(this.mag, anyInt.mag)
 		return this.signum == 1 ? magComp : -magComp
 	}
-	
+
 	/**
 	 * Returns true if (this) and anyInt represent the same number, 0 otherwise.
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
@@ -680,15 +743,15 @@ class BigInteger {
 		if (len1 > len2) {
 			andMag.Length := len1
 			smallLeadWord := anyIntTwos[1]
-			Loop(len1 - len2)
+			Loop (len1 - len2)
 				andMag[A_Index] := smallLeadWord & thisTwos[A_Index]
 		} else {
 			andMag.Length := len2
 			smallLeadWord := thisTwos[1]
-			Loop(len2 - len1 + 1)
+			Loop (len2 - len1 + 1)
 				andMag[A_Index] := smallLeadWord & anyIntTwos[A_Index]
 		}
-		Loop(Min(len1, len2))
+		Loop (Min(len1, len2))
 			andMag[-A_Index] := thisTwos[-A_Index] & anyIntTwos[-A_Index]
 		return BigInteger.fromTwosComplement(andMag)
 	}
@@ -698,7 +761,7 @@ class BigInteger {
 	 * @returns {BigInteger}
 	 */
 	not() => this.negate().subtract(1)
-	
+
 	/**
 	 * Returns a BigInteger whose values is (this) & ~anyInt bitwise. Treats both this and anyInt as if they were stored in twos complement.
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
@@ -722,15 +785,15 @@ class BigInteger {
 		if (len1 > len2) {
 			andMag.Length := len1
 			smallLeadWord := anyIntTwos[1]
-			Loop(len1 - len2)
+			Loop (len1 - len2)
 				andMag[A_Index] := smallLeadWord | thisTwos[A_Index]
 		} else {
 			andMag.Length := len2
 			smallLeadWord := thisTwos[1]
-			Loop(len2 - len1 + 1)
+			Loop (len2 - len1 + 1)
 				andMag[A_Index] := smallLeadWord | anyIntTwos[A_Index]
 		}
-		Loop(Min(len1, len2))
+		Loop (Min(len1, len2))
 			andMag[-A_Index] := thisTwos[-A_Index] | anyIntTwos[-A_Index]
 		return BigInteger.fromTwosComplement(andMag)
 	}
@@ -751,19 +814,28 @@ class BigInteger {
 		if (len1 > len2) {
 			andMag.Length := len1
 			smallLeadWord := anyIntTwos[1]
-			Loop(len1 - len2)
+			Loop (len1 - len2)
 				andMag[A_Index] := smallLeadWord ^ thisTwos[A_Index]
 		} else {
 			andMag.Length := len2
 			smallLeadWord := thisTwos[1]
-			Loop(len2 - len1 + 1)
+			Loop (len2 - len1 + 1)
 				andMag[A_Index] := smallLeadWord ^ anyIntTwos[A_Index]
 		}
-		Loop(Min(len1, len2))
+		Loop (Min(len1, len2))
 			andMag[-A_Index] := thisTwos[-A_Index] ^ anyIntTwos[-A_Index]
 		return BigInteger.fromTwosComplement(andMag)
 	}
 
+	/**
+	 * Performs a bitwise left shift operation on (this) by n bits, equivalent to (this) << n
+	 * This operation is equivalent to multiplying by 2**n.
+	 * @param {Integer} n The number of bits to shift left. If negative, will shift Right instead.
+	 * @returns {BigInteger} A new BigInteger representing the result of the left shift
+	 * @example
+	 * BigInteger(8).shiftLeft(3).toString() => 64
+	 * BigInteger(-1).shiftLeft(3).toString() => -8
+	 */
 	shiftLeft(n) {
 		shiftBits := n & 0x1F
 		shiftWords := n >>> 5
@@ -774,21 +846,21 @@ class BigInteger {
 		mag := []
 		if (shiftBits == 0) {
 			mag := this.mag.Clone()
-			Loop(shiftWords)
+			Loop (shiftWords)
 				mag.push(0)
 		} else {
 			p := 0
 			mask := (1 << shiftBits) - 1
 			mag := []
 			mag.Length := i := len
-			while(i >= 1) {
+			while (i >= 1) {
 				mag[i] := ((this.mag[i] << shiftBits & BigInteger.INT_MASK) | p)
 				p := this.mag[i] >> (32 - shiftBits)
 				i--
 			}
 			if (p > 0)
 				mag.InsertAt(1, p)
-			Loop(shiftWords)
+			Loop (shiftWords)
 				mag.push(0)
 			p := 0
 		}
@@ -796,9 +868,15 @@ class BigInteger {
 	}
 
 	/**
-	 * Performs this >> n. Preserves sign
-	 * @param {Integer} n Must be smaller than 2**32 (Not that it matters)
-	 * @returns {BigInteger} A new biginteger representing this >> n
+	 * Performs a bitwise right shift operation on (this) by n bits. Equivalent to this >> n, except that negative numbers overshifted turn into 0 and not -1.
+	 * This operation is equivalent to dividing by 2**n.
+	 * @param {Integer} n The number of bits to shift right. If negative, will shift right instead.
+	 * @returns {BigInteger} A new BigInteger representing the result of the right shift
+	 * @example
+	 * BigInteger(8).shiftRight(3).toString() => 1
+	 * BigInteger(8).shiftRight(20).toString() => 0
+	 * BigInteger(-8).shiftRight(1).toString() => -4
+	 * BigInteger(-1).shiftRight(3).toString() => 0
 	 */
 	shiftRight(n) {
 		shiftBits := n & 0x1F
@@ -810,14 +888,14 @@ class BigInteger {
 			return this.signum >= 0 ? BigInteger.ZERO : BigInteger.MINUS_ONE
 		mag := []
 		if (shiftBits == 0) {
-			Loop(len - shiftWords)
+			Loop (len - shiftWords)
 				mag.push(this.mag[A_Index])
 		} else {
 			if (shiftWords == 0)
 				tMag := this.mag
 			else {
 				tMag := []
-				Loop(len - shiftWords)
+				Loop (len - shiftWords)
 					tMag.push(this.mag[A_Index])
 			}
 			p := 0
@@ -833,30 +911,39 @@ class BigInteger {
 	}
 
 	/**
-	 * Gets the last n bits
-	 * @param {Integer} n
+	 * Gets the last n bits. Equivalent to (this) & ((1 << n) - 1) ignoring signum.
+	 * This ignores signum because there would be no way to differentiate whether the number was originally positive or negative since there is no defined range.
+	 * @param {Integer} n The number of bits to mask
 	 * @returns {BigInteger} A BigInteger which represents the n bits.
+	 * @example
+	 * BigInteger(2**32-1).maskBits(10).toString() => 1023
 	 */
 	maskBits(n) {
-		bitMask := (1 << (n & 0x1F)) - 1 ; mask
 		words := n >>> 5
+		bitMask := (1 << (n & 0x1F)) - 1 ; mask bottom 31 bits of n to get mask for 31 bits (32 is a full word)
 		if n == 0
 			return [0]
 		len := this.mag.Length
 		if words >= len
 			return this.Clone()
 		mag := []
-		Loop(words)
+		Loop (words)
 			mag.push(this.mag[len - words + A_Index])
 		if bitMask
-			mag.InsertAt(1, this.mag[len - words - 1] & bitMask)
+			mag.InsertAt(1, this.mag[len - words] & bitMask)
 		return BigInteger.fromMagnitude(mag, this.signum)
 	}
-	
+
 	/**
 	 * Gets the lowest value from (this) and given values.
 	 * @param {Integer | String | BigInteger} anyInt Any number of Integers, strings representing an integer or BigIntegers
 	 * @returns {BigInteger} A BigInteger representing the smallest integer between this and values and anyInt. If this already was a BigInteger, it is returned (not cloned)
+	 * @example
+	 * BigInteger(5).min(-1, 3, 2934) => -1
+	 * a := BigInteger(3)
+	 * b := a.min(5,6,7) ; returns a without cloning it
+	 * b := 5
+	 * a => 5
 	 */
 	min(anyInt*) {
 		curMin := this
@@ -866,10 +953,26 @@ class BigInteger {
 	}
 
 	/**
+	 * Gets the smallest value from the given values.
+	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
+	 * @param {Integer | String | BigInteger*} anyIntValues Any number of Integers, strings representing an integer or BigIntegers
+	 * @returns {BigInteger} A BigInteger representing the smallest integer between the given values. If this already was a BigInteger, it is returned (not cloned)
+	 * @example
+	 * ; See the non-static method for an example
+	 */
+	static Min(anyInt, anyintValues*) => this.validateBigInteger(anyInt).Min(anyintValues*)
+	
+	/**
 	 * Gets the highest value from (this) and given values.
 	 * @param {Integer | String | BigInteger} anyInt Any number of Integers, strings representing an integer or BigIntegers
 	 * @returns {BigInteger} A BigInteger representing the largest integer between this and values and anyInt. If this already was a BigInteger, it is returned (not cloned)
 	 * @returns {BigInteger}
+	 * @example
+	 * BigInteger(5).max(-1, 3, 2934) => 2934
+	 * a := BigInteger(13)
+	 * b := a.max(5,6,7) ; returns a without cloning it
+	 * b := 5
+	 * a => 5
 	 */
 	max(anyInt*) {
 		curMax := this
@@ -877,22 +980,24 @@ class BigInteger {
 			curMax := curMax.compareTo(bigInt) == -1 ? bigInt : curMax
 		return curMax
 	}
-	
-	isProbablePrime() => false
-	nextProbablePrime() => this
-	; static methods that correspond to Prototype methods
-	static Min(anyInt, anyintValues*) 			=> this.validateBigInteger(anyInt).Min(anyintValues*)
-	static Max(anyInt, anyintValues*) 			=> this.validateBigInteger(anyInt).Max(anyintValues*)
-	static Mod(anyIntDivident, anyIntDivisor)	=> this.validateBigInteger(anyIntDivident).mod(anyIntDivisor)
-	static gcd(anyInt, anyIntValues*)			=> this.validateBigInteger(anyInt).gcd(anyIntValues*)
-	static isProbablePrime(anyInt) 				=> this.validateBigInteger(anyInt).isProbablePrime()
-	static nextProbablePrime(anyInt) 			=> this.validateBigInteger(anyInt).nextProbablePrime()
+
+	/**
+	 * Gets the highest value from the given values.
+	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
+	 * @param {Integer | String | BigInteger*} anyIntValues Any number of Integers, strings representing an integer or BigIntegers
+	 * @returns {BigInteger} A BigInteger representing the largest integer between the given values. If this already was a BigInteger, it is returned (not cloned)
+	 * @example
+	 * ; See the non-static method for an example
+	 */
+	static Max(anyInt, anyintValues*) => this.validateBigInteger(anyInt).Max(anyintValues*)
 
 	/**
 	 * Given any number of BigIntegers, sorts them numerically ascending using a custom mergesort.
 	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
 	 * @param {Integer | String | BigInteger} anyIntValues* Any number of Integers, strings representing an integer or BigIntegers
 	 * @returns {Array} A numerically ascending sorted array containing BigIntegers. Note that these BigIntegers are not clones, but the same as the original BigIntegers referenced in the parameters.
+	 * @example
+	 * BigInteger.Sort(-1, '-329428934829349', 5, 3242) => [BigInteger('-329428934829349'), BigInteger(-1), BigInteger(5), BigInteger(3242)]
 	 */
 	static Sort(anyInt, anyIntValues*) {
 		nums := [this.validateBigInteger(anyInt)]
@@ -902,13 +1007,13 @@ class BigInteger {
 		res := []
 		res.Length := len
 		sliceLen := 1
-		while(sliceLen <= len) {
+		while (sliceLen <= len) { ; O(log2(len))
 			c := 1
-			while (c <= len) {
+			while (c <= len) { ; O(len)
 				i := c
 				j := indexB := min(c + sliceLen, len)
 				lastIndex := min(c + 2 * sliceLen - 1, len)
-				Loop(lastIndex - c + 1) {
+				Loop (lastIndex - c + 1) {
 					k := c + A_Index - 1
 					if (i < indexB && (j > lastIndex || (nums[i].compareTo(nums[j]) == -1)))
 						res[k] := nums[i++]
@@ -925,26 +1030,33 @@ class BigInteger {
 
 	/**
 	 * Gets (this) as a short by truncating it, as if it were represented in twos complement.
+	 * Because of twos complement, this is not equivalent to maskBits(16)
 	 * @returns {Integer} The short, ranging from 0 to 0xFFFF, where values above 0x7FFF are considered negative.
 	 */
 	shortValue() => this.toTwosComplement()[-1] & BigInteger.SHORT_MASK
 
 	/**
 	 * Gets (this) as an int by truncating it, as if it were represented in twos complement.
+	 * Because of twos complement, this is not equivalent to maskBits(32)
 	 * @returns {Integer} The int, ranging from 0 to 0xFFFFFFFF, where values above 0x7FFFFFFF are considered negative
 	 */
 	int32Value() => this.toTwosComplement()[-1]
 
 	/**
 	 * Gets (this) as a 64-bit int (long) by truncating it, as if it were represented in twos complement.
+	 * Because of twos complement, this is not equivalent to maskBits(64)
 	 * @returns {Integer} The long, ranging from 0 to 0xFFFFFFFFFFFFFFFF, where values above 0x7FFFFFFFFFFFFFFF are considered negative
 	 */
 	intValue() => ((t := this.toTwosComplement()).Length > 1 ? t[-2] << 32 : 0) | t[-1]
-	
+
 	/**
 	 * Returns the number of bits in the representation of this BigInteger, excluding the sign Bit.
 	 * For Zero, this returns 0.
 	 * @returns {Integer} Number of bits in this BigInteger
+	 * @example
+	 * BigInteger(0).getBitLength() => 0
+	 * BigInteger(-1).getBitLength() => 1
+	 * BigInteger(1).getBitLength() => 1
 	 */
 	getBitLength() {
 		bits := this.bitLength
@@ -959,10 +1071,12 @@ class BigInteger {
 	 * Returns the index of the first one-bit in this BigInteger in little-endian. Sign does not matter for this (as this value is the same regardless of sign in twos complement).
 	 * @returns {Integer} The index of the rightmost one-bit.
 	 * @example
-	 * BigInteger(0xFFFF).getLowestSetBit() ; -> 1
-	 * BigInteger(0x1000).getLowestSetBit() ; -> 13
-	 * BigInteger(0).getLowestSetBit() ; -> 0
-	 * BigInteger(-2).getLowestSetBit() ; -> 2
+	 * BigInteger(2**32).getLowestSetBit() => 33
+	 * BigInteger(-2**31).getLowestSetBit() = 32
+	 * BigInteger(0x1000).getLowestSetBit() => 13
+	 * BigInteger(-2).getLowestSetBit() => 2
+	 * BigInteger(0xFFFF).getLowestSetBit() => 1
+	 * BigInteger(0).getLowestSetBit() => 0
 	 */
 	getLowestSetBit() {
 		lsb := this.lowestSetBit
@@ -983,6 +1097,11 @@ class BigInteger {
 	/**
 	 * Returns the canonical twos complement version of this. For positive values, this will be identical to mag. For negative values, it will not.
 	 * @returns {Array} Magnitude in twos-complement variant of the big Integer. Will always have a leading word which is either 0 or 0xFFFFFFFF, unless the biginteger is 0.
+	 * @example
+	 * BigInteger(27).toTwosComplement() => [0,27]
+	 * BigInteger(-27).toTwosComplement() => [4294967295,4294967269]
+	 * BigInteger(-2**32).toTwosComplement() => [4294967295,4294967295,0]
+	 * BigInteger(-2**32+1).toTwosComplement() => [4294967295,1]
 	 */
 	toTwosComplement() {
 		if this.signum == 0
@@ -994,11 +1113,11 @@ class BigInteger {
 		}
 		mag := []
 		mag.Length := this.mag.Length
-		unchangedWords := this.getLowestSetBit() >>> 5
-		Loop(unchangedWords) ; copy rightmost words that are 0
+		unchangedWords := (this.getLowestSetBit() - 1) >>> 5
+		Loop (unchangedWords) ; copy rightmost words that are 0
 			mag[-A_index] := 0
-		mag[-unchangedWords-1] := (~this.mag[-unchangedWords-1] + 1) & BigInteger.INT_MASK
-		Loop(mag.Length - unchangedWords - 1) ; this is suddenly left-to-right but it doesn't matter, this is symmetric
+		mag[-unchangedWords - 1] := (~this.mag[-unchangedWords - 1] + 1) & BigInteger.INT_MASK
+		Loop (mag.Length - unchangedWords - 1) ; this is suddenly left-to-right but it doesn't matter, this is symmetric
 			mag[A_Index] := ~this.mag[A_Index] & BigInteger.INT_MASK
 		mag.InsertAt(1, BigInteger.INT_MASK)
 		return mag
@@ -1009,18 +1128,23 @@ class BigInteger {
 	 * @returns {BigInteger} Will be -1, 0, 1, corresponding to this < 0, this = 0, this > 0
 	 */
 	getSignum() => this.signum
-	
+
 	/**
 	 * Returns a clone of the magnitude of the number.
 	 * @returns {Array} Array of Integers that are base-2^32 digits representing the number
 	 */
 	getMagnitude() => this.mag.Clone()
 
+	/**
+	 * Returns a full copy of (this) without references to (this)
+	 * @returns {BigInteger} The copy of (this)
+	 */
 	Clone() => BigInteger.fromMagnitude(this.mag, this.signum)
-	
+
 	/**
 	 * Given a string of arbitrary length in base 10, returns an array of its digits in base 2**32
 	 * @param {String} str A positive Integer String of arbitrary length. Must not contain -/+ at the beginning.
+	 * @param {Integer} radix 2<0radix<=36
 	 * @returns {Array} The strings base-n digit representation as an Array
 	 */
 	static magnitudeFromString(str, radix := 10) {
@@ -1032,7 +1156,7 @@ class BigInteger {
 			if (offset := Mod(len, chunkLen))
 				magBaseB.push(Integer(SubStr(str, 1, offset)))
 			chunkIndex := offset + 1
-			Loop(len // chunkLen) { ; interpret as base 10**9
+			Loop (len // chunkLen) { ; interpret as base 10**9
 				magBaseB.push(Integer(SubStr(str, chunkIndex, chunkLen)))
 				chunkIndex += chunkLen
 			}
@@ -1041,7 +1165,7 @@ class BigInteger {
 			if (offset := Mod(len, chunkLen))
 				magBaseB.push(Integer('0x' SubStr(str, 1, offset)))
 			chunkIndex := offset + 1
-			Loop(len // chunkLen) {
+			Loop (len // chunkLen) {
 				magBaseB.push(Integer('0x' SubStr(str, chunkIndex, chunkLen)))
 				chunkIndex += chunkLen
 			}
@@ -1057,6 +1181,12 @@ class BigInteger {
 		}
 	}
 
+	/**
+	 * Transforms alphanumeric digits into numerical ones and checks if all digits are within the range of the specified radix
+	 * @param {Array} mag The magnitude to check 
+	 * @param {Integer} radix The suspected base
+	 * @returns {Array} The validated magnitude
+	 */
 	static validateMagnitudeRadix(mag, radix) {
 		if radix > BigInteger.INT32
 			throw BigInteger.Error.INVALID_RADIX[radix '(Must be < 2^32)']
@@ -1091,14 +1221,14 @@ class BigInteger {
 			return mag.Clone()
 		n := mag.Length
 		newMag := []
-		m := Mod(n-1, exponent)
+		m := Mod(n - 1, exponent)
 		v := 0
 		for i, e in mag {
 			if e >= baseRadix
 				throw BigInteger.Error.INVALID_RADIX[baseRadix " (Found " e " in magnitude)"]
 			v += e * baseRadix**m
 			m--
-			if Mod(n-i, exponent) == 0 {
+			if Mod(n - i, exponent) == 0 {
 				m := exponent - 1
 				newMag.push(v)
 				v := 0
@@ -1126,7 +1256,7 @@ class BigInteger {
 		newMag := []
 		for i, digit in mag {
 			miniMag := []
-			Loop(ex) { ; remainder and thus overflow is irrelevant here
+			Loop (ex) { ; remainder and thus overflow is irrelevant here
 				miniMag.InsertAt(1, isPowerOfTwo ? digit & mask : Mod(digit, baseRadix))
 				digit := isPowerOfTwo ? digit >> z : digit // baseRadix
 			}
@@ -1142,13 +1272,13 @@ class BigInteger {
 	 * @param radix Any value < 2**32 and
 	 * @returns {Number} The calculated exponent
 	 */
-	static getMaxComputableRadixPower(radix) => Floor(log(1 << 32)/log(radix))
+	static getMaxComputableRadixPower(radix) => Floor(log(1 << 32) / log(radix))
 
 	/**
-	 * Convert a magnitude in base to base 2^32.
-	 * @param mag
-	 * @param base
-	 * @returns {Array}
+	 * Convert a magnitude in base to base 2^32 by repeated efficient single-integer division.
+	 * @param {Array} mag The magnitude
+	 * @param {Integer} base the radix of the magnitude
+	 * @returns {Array} The normalized magnitude
 	 */
 	static normalizeMagnitudeBase(mag, base) {
 		result := []
@@ -1170,9 +1300,9 @@ class BigInteger {
 
 	/**
 	 * Convert a magnitude in base 2^32 to base. Note that if base >= 2^31, this will cause overflows and not work.
-	 * @param mag
-	 * @param base
-	 * @returns {Array}
+	 * @param {Array} mag The specified magnitude
+	 * @param {Integer} base The radix in which to convert mag into
+	 * @returns {Array} The converted magnitude
 	 */
 	static convertMagnitudeBase(mag, base) {
 		if base == BigInteger.INT32
@@ -1284,17 +1414,23 @@ class BigInteger {
 		return magDiff
 	}
 
+	/**
+	 * Multiplies mag1 with mag2 and returns the product
+	 * @param mag1 
+	 * @param mag2 
+	 * @returns {BigInteger}
+	 */
 	static multiplyMagnitudes(mag1, mag2) {
 		len1 := mag1.Length
 		len2 := mag2.Length
 		result := []
 		Loop len1 + len2 ; minimum is max(len1, len2), maximum is len1+len2 (eg 0xFF * 0xFF = 0xFE01)
 			result.Push(0)
-		Loop(len1) {
+		Loop (len1) {
 			i := A_Index
 			carry := 0
 			a := mag1[-i]
-			Loop(len2) {
+			Loop (len2) {
 				j := A_Index
 				b := mag2[-j]
 				pos := i + j - 1
@@ -1307,6 +1443,11 @@ class BigInteger {
 		return this.stripLeadingZeros(result)
 	}
 
+	/**
+	 * Efficiently squares a magnitude
+	 * @param mag 
+	 * @returns {BigInteger} 
+	 */
 	static squareMagnitude(mag) {
 		static KARATSUBA_SQUARE_THRESHOLD := 128
 		len := mag.Length
@@ -1334,18 +1475,18 @@ class BigInteger {
 	 * @returns {Array} Quotient magnitude and remainder magnitude
 	 */
 	static divideMagnitudes(dividend, divisor, &remainder?) {
-        ; assert div.intLen > 1
-		; factor out power of two. a / divisor = a / (q * 2^n) = 
-        shift := BigInteger.numberOfLeadingZeros(divisor[1]) - 32
+		; assert div.intLen > 1
+		; factor out power of two. a / divisor = a / (q * 2^n) =
+		shift := BigInteger.numberOfLeadingZeros(divisor[1]) - 32
 		divAsBigInt := BigInteger.fromMagnitude(divisor)
 		numAsBigInt := BigInteger.fromMagnitude(dividend)
-        ; U, the dividend of m+n digits
+		; U, the dividend of m+n digits
 		numLen := dividend.Length
 		; V, the divisor of n digits
 		divLen := divisor.Length
 		; Q, the quotient of m+1 digits, and R, the remainder of n digits
 		resLen := dividend.Length - divLen + 1
-        ; normalize the divisor so that its >= 2**31 (>= Base / 2)
+		; normalize the divisor so that its >= 2**31 (>= Base / 2)
 		div := divAsBigInt.shiftLeft(shift).mag
 		num := numAsBigInt.shiftLeft(shift).mag
 		if (div.Length == num.Length) { ; we assume mag2 > mag1, so if after normalization we get this, its one. This check isn't necessary, but helps
@@ -1360,15 +1501,15 @@ class BigInteger {
 		; U is m+n digits stored in m+n+1 digit array. The shiftLeft may have caused this to already exist, otherwise fill it in.
 		if num.Length == numLen ; shifting did not cause a spillover, so pad with 0
 			num.InsertAt(1, 0)
-		Loop(resLen) { ; big endian notation
+		Loop (resLen) { ; big endian notation
 			i := A_Index
-			; Set Q̂ to (U[i] × B + U[i+1]) ÷ V[1]; 
-			; Set R̂ to (U[i] × B + U[i+1]) % V[1]; 
+			; Set Q̂ to (U[i] × B + U[i+1]) ÷ V[1];
+			; Set R̂ to (U[i] × B + U[i+1]) % V[1];
 			; below are the "normal" calculations which overflow. We apply the precomputation trick twice
 			; qhat := ( num[i] << 32 | uHigh ) // divHigh
 			; rhat := Mod(num[i] << 32 | uHigh, divHigh)
-			uHigh := num.Has(i+1) ? num[i+1] : 0
-			uLow := num.Has(i+2) ? num[i+2] : 0
+			uHigh := num.Has(i + 1) ? num[i + 1] : 0
+			uLow := num.Has(i + 2) ? num[i + 2] : 0
 			qtmp := baseDivPrecompute * num[i]
 			rtmp := baseRemPrecompute * num[i] + uHigh
 			qhat := (qtmp + rtmp // divHigh) & BigInteger.INT_MASK
@@ -1377,19 +1518,19 @@ class BigInteger {
 				cDivPrec := BigInteger.INT32 // divLow
 				cRemPrec := Mod(BigInteger.INT32, divLow)
 			}
-			; Test if Q̂ equals B or Q̂ × V[2] is greater than R̂ × B + U[i+2]; 
+			; Test if Q̂ equals B or Q̂ × V[2] is greater than R̂ × B + U[i+2];
 			; qhat * divLow > rhat * base + uLow => qhat > (rhat * base + uLow) // divLow
 			while (qhat == BigInteger.INT32 || (divLow > 0 && (qhat > (cDivPrec * rhat + (cRemPrec * rhat + uLow) // divLow)))) {
-				; If yes, then decrease Q̂ by 1, increase R̂ by V[1], and repeat this test while R is less than B. 
+				; If yes, then decrease Q̂ by 1, increase R̂ by V[1], and repeat this test while R is less than B.
 				qhat--
 				rhat += divHigh
 				if rhat >= BigInteger.INT32 ; loop happens at most 2 times
 					break
 			}
-			; Replace (U[i]U[i+1]…U[i+n]) by (U[i]U[i+1]…U[i+n]) − Q̂ × (V[1]…V[n-1]V[n]). 
+			; Replace (U[i]U[i+1]…U[i+n]) by (U[i]U[i+1]…U[i+n]) − Q̂ × (V[1]…V[n-1]V[n]).
 			tDiv := BigInteger.sliceMagnitude(num, i, divLen + 1)
 			tProd := BigInteger.multiplyMagnitudes(div, [qhat])
-			; Decrease Q[j] by 1 and add (0V[1]…V[n-1]V[n]) to (U[i]U[i+1]…U[i+n-1]U[i+n]). 
+			; Decrease Q[j] by 1 and add (0V[1]…V[n-1]V[n]) to (U[i]U[i+1]…U[i+n-1]U[i+n]).
 			if (BigInteger.compareMagnitudes(tDiv, tProd) == -1) {
 				tProd := BigInteger.subtractMagnitudes(tProd, div)
 				qhat--
@@ -1401,15 +1542,15 @@ class BigInteger {
 		}
 		remainder := BigInteger.fromMagnitude(BigInteger.stripLeadingZeros(num)).shiftRight(shift).mag ; a bit cursed, but fine
 		return BigInteger.stripLeadingZeros(mag)
-    }
+	}
 
 	/**
 	 * Subtracts mag2 from mag1 as if mag2 was extended to the right with zeros, and then trimming the result to the length of mag2.
 	 * Eg [12,4,5,6,....,5,1], [3,2,4,1] -> [9,2,1,5,....,5,1]
-	 * @param mag1 
-	 * @param mag2 
+	 * @param mag1
+	 * @param mag2
 	 * @param index Index of window
-	 * @returns {Array} 
+	 * @returns {Array}
 	 */
 	static magSubHelperCutFromLeft(mag1, mag2, index) {
 		magDiff := []
@@ -1418,7 +1559,7 @@ class BigInteger {
 		l2 := mag2.Length
 		i := l2
 		while (i > 0) {
-			a := mag1[index+i-1]
+			a := mag1[index + i - 1]
 			b := mag2[i]
 			diff := a - b - carry
 			carry := 0
@@ -1431,13 +1572,20 @@ class BigInteger {
 		}
 		if carry
 			throw Error("mag2 was larger than mag1 in magSubHelperCutFromLeft")
-		Loop(index - 1) ; add nums back in front
+		Loop (index - 1) ; add nums back in front
 			magDiff.InsertAt(1, mag1[A_Index])
-		Loop(l1 - l2 - index + 1) ; add nums back in back
-			magDiff.push(mag1[l2+A_Index])
+		Loop (l1 - l2 - index + 1) ; add nums back in back
+			magDiff.push(mag1[l2 + A_Index])
 		return magDiff
 	}
 
+	/**
+	 * Efficiently shifts a magnitude shift digits to the right and returns an array of the shift result and remainder.
+	 * This is a helper function for division by powers of two.
+	 * @param mag 
+	 * @param shift 
+	 * @returns {Array} 
+	 */
 	static magDivHelperShiftRight(mag, shift) {
 		quotient := []
 		remainder := 0
@@ -1451,6 +1599,12 @@ class BigInteger {
 		return [quotient, remainder]
 	}
 
+	/**
+	 * Divides a magnitude in base 2**32 by divisor, trusting that the divisor is < 2**31 to avoid overflow calculation
+	 * @param mag 
+	 * @param divisor 
+	 * @returns {Array} 
+	 */
 	static magDivHelperDivide(mag, divisor) {
 		quotient := []
 		remainder := 0
@@ -1464,6 +1618,12 @@ class BigInteger {
 		return [quotient, remainder]
 	}
 
+	/**
+	 * Divides a magnitude in base base by 2**32 to normalize it
+	 * @param mag 
+	 * @param base 
+	 * @returns {Array} 
+	 */
 	static magDivHelperNormalize(mag, base) {
 		quotient := []
 		remainder := 0
@@ -1477,6 +1637,14 @@ class BigInteger {
 		return [quotient, remainder]
 	}
 
+	/**
+	 * Divides a magnitude in base 2**32 by divisor, while accounting for overflow
+	 * @param mag 
+	 * @param divisor 
+	 * @param baseDivPrecompute 
+	 * @param baseRemPrecompute 
+	 * @returns {Array} 
+	 */
 	static magDivHelperOverflowDivide(mag, divisor, baseDivPrecompute, baseRemPrecompute) {
 		/**
 		 * Long Division:
@@ -1526,6 +1694,12 @@ class BigInteger {
 		return [quotient, remainder]
 	}
 
+	/**
+	 * Divides a magnitude in base base by 2**32 to normalize it, accounting for overflow
+	 * @param mag 
+	 * @param base 
+	 * @returns {Array} 
+	 */
 	static magDivHelperOverflowNormalize(mag, base) {
 		; baseDivPrecompute := base >> 32 ; this is always zero, so forget the term
 		; baseRemPrecompute := base & 0xFFFFFFFF ; this is always just base
@@ -1542,15 +1716,24 @@ class BigInteger {
 	}
 
 	; start is inclusive. array of 10, start of 4, len of 3 will get index 4,5,6
+	/**
+	 * Slices a magnitude (or any other array) starting at index start and ending at index start+len-1
+	 * @param mag 
+	 * @param start 
+	 * @param len 
+	 * @returns {Array} 
+	 * @example
+	 * BigInteger.sliceMagnitude([1,2,3,4,5,6,7], 3, 3) => [3,4,5]
+	 */
 	static sliceMagnitude(mag, start, len) {
 		newMag := []
-		Loop(len)
+		Loop (len)
 			newMag.push(mag[start + A_Index - 1])
 		return newMag
 	}
 
 	/**
-	 * Computes the greatest common divisor between regular Integers
+	 * Computes the greatest common divisor between regular Integers.
 	 * @param {Integer} num
 	 * @param {Integer} nums*
 	 * @returns {Integer} The greatest common divisor
@@ -1579,7 +1762,7 @@ class BigInteger {
 
 	static stripLeadingZeros(mag) {
 		while (mag.Length > 1 && mag[1] == 0)
- 			mag.RemoveAt(1)
+			mag.RemoveAt(1)
 		return mag
 	}
 
@@ -1593,7 +1776,7 @@ class BigInteger {
 			return n == 0 ? 64 : 0
 		return 63 - Floor(Log(n) / Log(2))
 	}
-	
+
 	/**
 	 * Returns the number of zero bits succeeding the lowest set one-bit in n
 	 * @param n An ahk-based Integer (long long int)
@@ -1636,7 +1819,7 @@ class BigInteger {
 			mid := high // 2 + low // 2
 			result := powP * n**mid
 			if (result == m)
-				return i//2 + mid
+				return i // 2 + mid
 			if (result < m)
 				low := mid
 			else
@@ -1665,7 +1848,7 @@ class BigInteger {
 	; BigInteger constant 1000
 	static THOUSAND => BigInteger.fromMagnitude([1000], 1)
 	; BigInteger constant 2^32
-	static TWO_POW_32 => BigInteger.fromMagnitude([1,0], 1)
+	static TWO_POW_32 => BigInteger.fromMagnitude([1, 0], 1)
 
 	/**
 	 * BigInteger Properties. THESE VALUES ARE LISTED HERE FOR COMPLETENESS SAKE. USE THEIR GETTER FUNCTIONS TO GET THEM.
@@ -1701,5 +1884,6 @@ class BigInteger {
 		static EXPONENT_OUT_OF_RANGE[n] => ValueError("Exponent out of range for supported values (>= 2**32): " (n is BigInteger ? n.toStringApprox() : n))
 		static INCOMPATIBLE_RADIX[n, m] => ValueError("Cannot convert digits of Radix " n " to digits of radix " m "")
 		static NEGATIVE_ROOT[n] => ValueError("Attempting to take square root of " (n is BigInteger ? n.toStringApprox() : n))
+		static BAD_TWO_COMPLEMENT[type, n] => ValueError("Invalid twos complement representation:`nMust include leading word or be zero, received " (type == 1 ? "mag of Length " : "Leading word of value ") n)
 	}
 }
