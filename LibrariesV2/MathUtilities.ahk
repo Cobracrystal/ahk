@@ -1,6 +1,7 @@
 ﻿; https://github.com/cobracrystal/ahk
 
 #Include %A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk
+#Include %A_LineFile%\..\..\LibrariesV2\BigInteger.ahk
 
 class expressionCalculator {
 
