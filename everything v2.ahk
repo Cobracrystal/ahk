@@ -178,8 +178,14 @@ if (!GLOBALVAR_WASRELOADED)
 		KeyWait(key)
 	BlockInput(1)
 	hook := InputHook("C*", , password)
+    hook.KeyOpt("{All}", "S")
+	g := Gui('AlwaysOnTop -SysMenu', 'Keyboard Input Blocked')
+	g.AddText('w250','Keyboard Input is currently blocked.`nClick <Unblock> to resume')
+	g.AddButton('Default x60 h50 w150', 'Unblock').OnEvent('Click', (*) => (g.Destroy(), BlockInput(0), hook.stop()))
+	g.Show('Center AutoSize')
 	hook.Start()
 	hook.Wait()
+	g.Destroy()
 	BlockInput(0)
 }
 
@@ -750,7 +756,7 @@ customExit(ExitReason, ExitCode) {
 	static timer := Click.Bind("L")
 	static toggle := 0
 	if (toggle := !toggle)
-		SetTimer(timer, 20)
+		SetTimer(timer, 200)
 	else
 		SetTimer(timer, 0)
 }
@@ -1130,7 +1136,7 @@ WinSetVolume(level, target?) {
 class RevoIdle {
 	static instantExit := false
 	static bigLoop() {
-		static num := String(192)
+		static num := String(199)
 		if this.instantExit
 			SetTimer(,0)
 		Critical(0)
