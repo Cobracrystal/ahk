@@ -231,12 +231,14 @@ permutations(variables) {
 
 /**
  * Gives the greatest Common Divisor of specified Numbers using the Euclidean algorithm
- * @param nums 
+ * @param additionalNums 
  * @returns {Integer} 
  */
-gcd(num, nums*) {
-	nums.push(num)
-	copyNums := nums
+gcd(num, additionalNums*) {
+	additionalNums.push(num)
+	copyNums := []
+	for e in additionalNums
+		copyNums.push(abs(e))
 	while (copyNums.Length > 1) {
 		tNums := []
 		curMin := Min(copyNums*)
