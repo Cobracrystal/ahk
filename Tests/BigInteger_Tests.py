@@ -7,7 +7,7 @@ NUM2_MIN = 1
 NUM2_MAX = 2**32 - 1
 OUTPUT_FILE_FULL = "Tests\\tests_arithmetic.txt"
 OUTPUT_FILE_POW = "Tests\\tests_powAndBit.txt"
-OUTPUT_FILE_ROOT = "Tests\\tests_iroot.txt"
+OUTPUT_FILE_ROOT = "Tests\\tests_roots.txt"
 resultsFull = []
 resultsPow = []
 resultsRoot = []
@@ -38,9 +38,9 @@ def appendBasicOperations(num1, num2):
 	or_ = num1 | num2
 	xor = num1 ^ num2
 	equal = int(num1 == num2)
-	compare = 0 if num1 == num2 else (1 if num1 > num2 else -1)
+	compareTo = 0 if num1 == num2 else (1 if num1 > num2 else -1)
 	resultsFull.append(
-		f"a:{num1}, p1:{num2}, add:{add}, subtract:{sub}, multiply:{mul}, divide:{div}, mod:{mod}, gcd:{gcd}, abs:{abs_}, negate:{negate_}, and:{and_}, not:{not_}, andNot:{andNot}, or:{or_}, xor:{xor}, equals:{equal}, compare:{compare}"
+		f"a:{num1}, p1:{num2}, add:{add}, subtract:{sub}, multiply:{mul}, divide:{div}, mod:{mod}, gcd:{gcd}, abs:{abs_}, negate:{negate_}, and:{and_}, not:{not_}, andNot:{andNot}, or:{or_}, xor:{xor}, equals:{equal}, compareTo:{compareTo}"
 	)
 
 def appendBigSmallOperations(num1, num2):
@@ -93,9 +93,14 @@ for _ in range(NUM_ITERATIONS // 2):
 	num1 = random.randint(-2**len2, 2**len2)
 	num2 = random.randint(0, 32)
 	appendBigSmallOperations(num1, num2)
-# roots posit
+# roots single digit
 for _ in range(NUM_ITERATIONS // 2):
-	len2 = random.randint(0, 100)
+	num1 = random.randint(1, 2**32-1)
+	num2 = random.randint(2, 32)
+	appendBigSmallPosOperations(num1, num2)
+# roots
+for _ in range(NUM_ITERATIONS // 2):
+	len2 = random.randint(0, 200)
 	num1 = random.randint(1, 2**len2)
 	num2 = random.randint(2, 32)
 	appendBigSmallPosOperations(num1, num2)

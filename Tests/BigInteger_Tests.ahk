@@ -5,14 +5,76 @@
 #Include MathUtilities.ahk
 #Include BigInteger.ahk
 #SingleInstance Force
+
+/* ❌✅
+ * ; Construction from and output to native value
+ * BigInteger.Prototype.__New(intOrString)
+ * BigInteger.valueOf(intOrString)
+ * ⭕ BigInteger.fromMagnitude([digits*], 1)
+ * BigInteger.fromAnyMagnitude([digits*], radix, signum)
+ * BigInteger.fromTwosComplement([signWord, digits*])
+ * BigInteger.Prototype.toString(radix)
+ * BigInteger.Prototype.toStringApprox(radix)
+ * BigInteger.Prototype.getFirstNDigits(radix, digits)
+ * BigInteger.Prototype.Length(radix)
+ * ; Arithmet
+ * BigInteger.Prototype.abs()
+ * BigInteger.Prototype.negate()
+ * BigInteger.Prototype.add(anyInt)
+ * BigInteger.Prototype.subtract(anyInt)
+ * BigInteger.Prototype.multiply(anyInt)
+ * BigInteger.Prototype.pow(anyInt)
+ * BigInteger.Prototype.divide(anyInt, &remainder)
+ * BigInteger.Prototype.divideByIntPower(int, int, &remainder)
+ * BigInteger.Prototype.mod(anyInt)
+ * BigInteger.mod(numerator, divisor)
+ * BigInteger.Prototype.gcd(anyInt)
+ * BigInteger.gcd(anyInt, anyInts*)
+ * BigInteger.Prototype.sqrt()
+ * BigInteger.Prototype.nthRoot()
+ * ; Comparis
+ * BigInteger.Prototype.equals(anyInt)
+ * BigInteger.Prototype.compareTo(anyInt)
+ * BigInteger.Prototype.min(anyInt*)
+ * BigInteger.Prototype.max(anyInt*)
+ * BigInteger.min(anyInt*)
+ * BigInteger.max(anyInt*)
+ * BigInteger.Sort(anyInt, anyInts*)
+ * ; bitwise arithmet
+ * BigInteger.Prototype.and(anyInt)
+ * BigInteger.Prototype.not()
+ * BigInteger.Prototype.andNot(anyInt)
+ * BigInteger.Prototype.or(anyInt)
+ * BigInteger.Prototype.xor(anyInt)
+ * BigInteger.Prototype.shiftLeft(int)
+ * BigInteger.Prototype.shiftRight(int)
+ * BigInteger.Prototype.maskBits(int)
+ * ; Type conversi
+ * BigInteger.Prototype.shortValue()
+ * BigInteger.Prototype.int32Value()
+ * BigInteger.Prototype.intValue()
+ * BigInteger.Prototype.getBitLength()
+ * BigInteger.Prototype.getLowestSetBit()
+ * BigInteger.Prototype.toTwosComplement()
+ * ; Prim
+ * ⭕ BigInteger.Prototype.isProbablePrime()
+ * ⭕ BigInteger.Prototype.nextProbablePrime()
+ * ; Properti
+ * ⭕ BigInteger.Prototype.getSignum()
+ * ⭕ BigInteger.Prototype.getMagnitude()
+ * ; Other
+ * ⭕ BigInteger.Prototype.Clone()		
+ */
+
+; Todo: Make test with 0, 1, -1, pos digit, neg digit, pos pow2 digit, neg pow2 digit, pos multi-digit, neg multi-digit and all combinations of the two
 RunTests(0)
+
 
 RunTests(detailedOutput := false) {
 	; live-generate tests
 	; testGcd(3000, detailedOutput)
 	; testArithmeticMethodsSmall(3000,detailedOutput)
 	; testBitWiseMethodsSmall(3000,detailedOutput)
-
 	testCacheMethods(detailedOutput)
 }
 
@@ -30,37 +92,43 @@ testGcd(loops := 1000, detailedOutput := false) {
 	}
 	print('Created tests for gcd in ' qpc() - snap 's')
 	res := performanceTestParse(res)
-	for e in methods
-		performanceTestMethod(res, e, ,,1)
-
+	intCopy := []
+	performanceTestMethod(res, 'gcd', ,detailedOutput, 1)
+	stats := performanceTestMethod(res, 'gcdInt',,detailedOutput, 1, 1)
+	print(stats)
 }
 
 testCacheMethods(detailedOutput) {
-	static cache1Methods := ["add", "subtract", "multiply", "divide", "gcd", "and", "andNot", "or", "xor", "equals", "compare"]
-	static cache1Methods2 := ["negate", "abs", "not"]
-	static cache2Methods := ["pow", "shiftLeft", "shiftRight", "maskBits"]
-	static cache3Methods := ["sqrt", "nthroot"]
+	static cacheMethods := Map(
+		"tests_arithmetic", Map(
+			0, ["negate", "abs", "not"],
+			1, ["add", "subtract", "multiply", "divide", "gcd", "and", "andNot", "or", "xor", "equals", "compareTo"]
+		), 
+		"tests_powAndBit", Map(
+			1, ["pow", "shiftLeft", "shiftRight", "maskBits"]
+		),
+		"tests_roots", Map(
+			0, ["sqrt"],
+			1, ["nthroot"]
+		)
+	)
 	print("Beginning to read tests")
-	t := cache1Methods.Clone()
-	for e in cache1Methods2
-		t.push(e)
-	arFull := parseTestFile("tests_arithmetic.txt", t)
-	arPow := parseTestFile("tests_powAndBit.txt", cache2Methods)
-	arRoot := parseTestFile("tests_iroot.txt", cache3Methods)
+	cacheTests := Map()
+	for testFile, methodMap in cacheMethods {
+		methodList := []
+		for paramCount, methods in methodMap
+			methodList.push(methods*)
+		cacheTests[testFile] := parseTestFile(testFile, methodList)
+	}
 	print('Parsed text files.')
-	cacheFull := performanceTestParse(arFull)
-	cachePow := performanceTestParse(arPow)
-	cacheRoot := performanceTestParse(arPow)
+	for testFile, tests in cacheTests
+		cacheTests[testFile] := performanceTestParse(tests)
 	print('Parsed Tests to BigIntegers.')
-	; test arithmetic
-	for e in cache1Methods
-		performanceTestMethod(cacheFull, e, 1, detailedOutput)
-	for e in cache1Methods2
-		performanceTestMethod(cacheFull, e, 0, detailedOutput)
-	for e in cache2Methods
-		performanceTestMethod(cachePow, e, 1, detailedOutput)
-	for e in cache3Methods
-		performanceTestMethod(cacheRoot, e, 1, detailedOutput)
+	for testFile, methodMap in cacheMethods
+		for paramCount, methods in methodMap
+			for method in methods
+				stats := performanceTestMethod(cacheTests[testFile], method, paramCount, detailedOutput)
+	print(stats)
 }
 
 testArithmeticMethodsSmall(loops := 1000, detailedOutput := false) {
@@ -129,7 +197,7 @@ randomNBitUInt(n) {
 
 parseTestFile(filePath, lineKeys) {
 	tests := []
-	testfile := FileRead(filePath, 'UTF-8')
+	testfile := FileRead(filePath '.txt', 'UTF-8')
 	arr := []
 	loop parse testfile, '`n', '`r' {
 		cur := A_LoopField
@@ -153,20 +221,14 @@ performanceTestParse(rawCache) {
 	snap := qpc()
 	for i, e in rawCache {
 		for key, val in e.OwnProps() {
-			try {
-				if InStr(key, 'raw') {
-					if val is Array {
-						v := []
-						for t in val
-							v.push(BigInteger(t))
-						
-					} else {
-						v := BigInteger(val)
-					}
-					e.%StrReplace(key, 'raw')% := v
-				}
-			} catch as q {
-				throw q
+			if InStr(key, 'raw') {
+				if val is Array {
+					v := []
+					for t in val
+						v.push(BigInteger(t))
+				} else
+					v := BigInteger(val)
+				e.%StrReplace(key, 'raw')% := v
 			}
 		}		
 	}
@@ -180,45 +242,60 @@ performanceTestParse(rawCache) {
  * @param method Method name. Assumed to be in BigInteger and not static
  * @param params How many params to give to the method
  */
-performanceTestMethod(cache, method, paramCount?, detailed := false, staticMethod := false) {
+performanceTestMethod(cache, method, paramCount?, detailed := false, staticMethod := false, useRawParams := false) {
 	static str := "
 	( LTrim
-		Test Method [{}]
-		Runtime {}s
-		Average Time per method execution: {}ms
-		Errors: {}; Failures: {}; Successes: {}
-		Total Runs: {}
+		Test Method [{1}]
+		Runtime {2}s (avg time per method execution: {3}ms)
+		Errors: {4}/{7}; Failures: {5}/{7}; Successes: {6}/{7} - {8}
 		=========================
 	)"
+	static totalStats := { runs: 0, errors: 0, failures: 0, successes: 0, runtime: 0, methodsTested: [] }
 	errors := successes := failures := 0
+	methodRes := method . '_result'
 	snap := qpc()
 	for row in cache {
 		if IsSet(paramCount) {
-			pars := []
+			params := []
 			loop(paramCount)
-				pars.push(row.params[A_Index])
+				params.push(useRawParams ? row.rawParams[A_Index] : row.params[A_Index])
 		} else
-			pars := row.params
-		try row.%method '_res'% := staticMethod ? BigInteger.%method%(row.a, pars*) : row.a.%method%(pars*)
-		catch as e
-			errors++
+			params := useRawParams ? row.rawParams : row.params
+		a := useRawParams ? row.rawA : row.a
+		row.%methodRes% := staticMethod ? BigInteger.%method%(a, params*) : a.%method%(params*)
+		; try row.%methodRes% := staticMethod ? BigInteger.%method%(a, params*) : a.%method%(params*)
+		; catch as e
+		; 	errors++
 	}
 	runTime := qpc() - snap
 	for row in cache {
-		if !row.HasOwnProp(method '_res')
+		if !row.HasOwnProp(methodRes)
 			continue
-		if (row.%method%.equals(row.%method '_res'%))
-			successes++
-		else {
-			if detailed {
-				print("Test failed for " method ":`nExpected: " row.%method%.toString() "`nGot:      " row.%method '_res'%.toString())
-				print("Params: ")
-				print(row.rawA '(' (row.a.signum ? '':'-') toString(row.a.mag) ')')
-				loop(paramCount)
-					print(row.rawParams[A_Index] '(' (row.params[A_Index].signum ? '':'-') toString(row.params[A_Index].mag) ')')
+		try {
+			if (row.%method% is BigInteger ? row.%method%.equals(row.%methodRes%) : objCompare(row.%method%, row.%methodRes%))
+				successes++
+			else {
+				if detailed {
+					print("Test failed for " method ":`nExpected: " row.%method%.toString() "`nGot:      " row.%methodRes%.toString())
+					print("Params: ")
+					print(row.rawA '(' (row.a.signum ? '':'-') toString(row.a.mag) ')')
+					loop(paramCount)
+						print(row.rawParams[A_Index] '(' (row.params[A_Index].signum ? '':'-') toString(row.params[A_Index].mag) ')')
+					print("================")
+				}
+				failures++
 			}
-			failures++
+		} catch as e {
+			print(row)
+			throw e
 		}
 	}
-	print(Format(str, method, runTime, 1000 * runTime / cache.Length, errors, failures, successes, cache.Length))
+	totalStats.errors += errors
+	totalStats.failures += failures
+	totalStats.successes += successes
+	totalStats.runs += cache.Length
+	totalStats.runtime += runTime
+	totalStats.methodsTested.push(method)
+	print(Format(str, method, runTime, 1000 * runTime / cache.Length, errors, failures, successes, cache.Length, (successes == cache.Length ? '✅' : '❌')))
+	return totalStats
 }
