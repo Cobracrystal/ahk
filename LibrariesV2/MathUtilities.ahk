@@ -238,7 +238,8 @@ gcd(num, additionalNums*) {
 	additionalNums.push(num)
 	copyNums := []
 	for e in additionalNums
-		copyNums.push(abs(e))
+		if e != 0
+			copyNums.push(abs(e))
 	while (copyNums.Length > 1) {
 		tNums := []
 		curMin := Min(copyNums*)
