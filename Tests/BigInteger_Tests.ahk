@@ -2,38 +2,65 @@
 
 #Include "%A_LineFile%\..\..\LibrariesV2"
 #Include BasicUtilities.ahk
+#Include MathUtilities.ahk
 #Include BigInteger.ahk
 #SingleInstance Force
-RunTests(true)
+RunTests(0)
 
 RunTests(detailedOutput := false) {
-	testArithmeticMethods(detailedOutput)
-	testArithmeticMethodsSmall(3000,detailedOutput)
-	; test conversion
+	; live-generate tests
+	; testGcd(3000, detailedOutput)
+	; testArithmeticMethodsSmall(3000,detailedOutput)
+	; testBitWiseMethodsSmall(3000,detailedOutput)
 
-	; test bitwise arithmetic
-	testBitWiseMethodsSmall(3000,detailedOutput)
-	; test comparison
+	testCacheMethods(detailedOutput)
 }
 
-testArithmeticMethods(detailedOutput) {
-	static arithmeticMethods := ["add", "subtract", "multiply", "divide", "mod"]
-	static powMethod := ["pow"]
-	arFull := parseTestFile("tests_full.txt", arithmeticMethods)
-	arDigit := parseTestFile("tests_digit.txt", arithmeticMethods)
-	arPow := parseTestFile("tests_pow.txt", powMethod)
+testGcd(loops := 1000, detailedOutput := false) {
+	static methods := ['gcd', 'gcdInt']
+	res := []
+	snap := qpc()
+	Loop(loops) {
+		; random 64-bit nums
+		p := []
+		Loop(Random(0,7))
+			p.push(randomNonZeroNBitInt(63))
+		a := randomNonZeroNBitInt(63)
+		res.push({rawA: a, rawParams:p, rawGcd: gcd(a,p*), rawGcdInt: gcd(a,p*)})
+	}
+	print('Created tests for gcd in ' qpc() - snap 's')
+	res := performanceTestParse(res)
+	for e in methods
+		performanceTestMethod(res, e, ,,1)
+
+}
+
+testCacheMethods(detailedOutput) {
+	static cache1Methods := ["add", "subtract", "multiply", "divide", "gcd", "and", "andNot", "or", "xor", "equals", "compare"]
+	static cache1Methods2 := ["negate", "abs", "not"]
+	static cache2Methods := ["pow", "shiftLeft", "shiftRight", "maskBits"]
+	static cache3Methods := ["sqrt", "nthroot"]
+	print("Beginning to read tests")
+	t := cache1Methods.Clone()
+	for e in cache1Methods2
+		t.push(e)
+	arFull := parseTestFile("tests_arithmetic.txt", t)
+	arPow := parseTestFile("tests_powAndBit.txt", cache2Methods)
+	arRoot := parseTestFile("tests_iroot.txt", cache3Methods)
 	print('Parsed text files.')
 	cacheFull := performanceTestParse(arFull)
-	cacheDigit := performanceTestParse(arFull)
 	cachePow := performanceTestParse(arPow)
+	cacheRoot := performanceTestParse(arPow)
 	print('Parsed Tests to BigIntegers.')
 	; test arithmetic
-	for e in arithmeticMethods
-		performanceTestMethod(arFull, e, 1, detailedOutput)
-	for e in arithmeticMethods
-		performanceTestMethod(arDigit, e, 1, detailedOutput)
-	for e in powMethod
-		performanceTestMethod(arPow, e, 1, detailedOutput)
+	for e in cache1Methods
+		performanceTestMethod(cacheFull, e, 1, detailedOutput)
+	for e in cache1Methods2
+		performanceTestMethod(cacheFull, e, 0, detailedOutput)
+	for e in cache2Methods
+		performanceTestMethod(cachePow, e, 1, detailedOutput)
+	for e in cache3Methods
+		performanceTestMethod(cacheRoot, e, 1, detailedOutput)
 }
 
 testArithmeticMethodsSmall(loops := 1000, detailedOutput := false) {
@@ -107,13 +134,13 @@ parseTestFile(filePath, lineKeys) {
 	loop parse testfile, '`n', '`r' {
 		cur := A_LoopField
 		linePars := StrSplit(cur, [',', ' '])
-		obj := { params: [] }
+		obj := { rawParams: [] }
 		for e in linePars {
 			if e == ''
 				continue
 			id := StrSplit(e, ':')
 			if SubStr(id[1], 1, 1) == 'p' && IsInteger(SubStr(id[1], 2))
-				obj.params.push(id[2])
+				obj.rawParams.push(id[2])
 			else
 				obj.%'raw' id[1]% := id[2]
 		}
@@ -139,7 +166,7 @@ performanceTestParse(rawCache) {
 					e.%StrReplace(key, 'raw')% := v
 				}
 			} catch as q {
-				throw Error("???")
+				throw q
 			}
 		}		
 	}
@@ -153,7 +180,7 @@ performanceTestParse(rawCache) {
  * @param method Method name. Assumed to be in BigInteger and not static
  * @param params How many params to give to the method
  */
-performanceTestMethod(cache, method, paramCount, detailed := false) {
+performanceTestMethod(cache, method, paramCount?, detailed := false, staticMethod := false) {
 	static str := "
 	( LTrim
 		Test Method [{}]
@@ -166,10 +193,13 @@ performanceTestMethod(cache, method, paramCount, detailed := false) {
 	errors := successes := failures := 0
 	snap := qpc()
 	for row in cache {
-		pars := []
-		loop(paramCount)
-			pars.push(row.params[A_Index])
-		try row.%method '_res'% := row.a.%method%(pars*)
+		if IsSet(paramCount) {
+			pars := []
+			loop(paramCount)
+				pars.push(row.params[A_Index])
+		} else
+			pars := row.params
+		try row.%method '_res'% := staticMethod ? BigInteger.%method%(row.a, pars*) : row.a.%method%(pars*)
 		catch as e
 			errors++
 	}
@@ -180,8 +210,8 @@ performanceTestMethod(cache, method, paramCount, detailed := false) {
 		if (row.%method%.equals(row.%method '_res'%))
 			successes++
 		else {
-			print("Test failed for " method ":`nExpected: " row.%method%.toString() "`nGot:      " row.%method '_res'%.toString())
 			if detailed {
+				print("Test failed for " method ":`nExpected: " row.%method%.toString() "`nGot:      " row.%method '_res'%.toString())
 				print("Params: ")
 				print(row.rawA '(' (row.a.signum ? '':'-') toString(row.a.mag) ')')
 				loop(paramCount)
