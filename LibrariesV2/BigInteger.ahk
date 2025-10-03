@@ -638,13 +638,13 @@ class BigInteger {
 		if this.signum == -1
 			throw BigInteger.Error.NEGATIVE_ROOT[this]
 		wantRemainder := !IsSet(remainder)
-		shift := this.getBitLength() - 63
-		if (shift & 0x1)
+		shift := Max(this.getBitLength() - 63, 0)
+		if shift & 0x1 ; equivalent to Ceil(shift/2) * 2, force it to be even.
 			shift++
-		guess := Float(this.shiftRight(shift).intValue())
+		guess := Float(this.shiftRight(Max(0,shift)).intValue())
 		; this is ~2**(log2(n)//2 + 1)
 		; if x = a^b, then sqrt(x) = a^(b/2). Halve shift and get approximate root of rest is better though, then shift back.
-		guess := BigInteger.valueOf(Ceil(sqrt(guess))).shiftLeft(shift // 2)
+		guess := BigInteger.valueOf(Ceil(sqrt(guess))).shiftLeft(Max(0,shift//2))
 		xk := guess
 		while (true) {
 			xk1 := this.divide(xk).add(xk).shiftRight(1) ; equivalent to (xk + this // xk) // 2
