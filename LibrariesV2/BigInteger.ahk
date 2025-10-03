@@ -11,7 +11,8 @@
 ; Todo getFirstNDigits and divideByIntPower should utilize radix expansion to be more efficient.
 ; TOdo squareMag linear (karatsuba)
 ; TOdo multiply via karatsuba
-; todo nthroot slow?
+; todo divide
+; todo gcd failure
 /**
  * METHODS
  * @example														; NOTES:
@@ -67,8 +68,6 @@
  * ; Primes
  * BigInteger.Prototype.isProbablePrime()						; TODO
  * BigInteger.Prototype.nextProbablePrime()						; TODO
- * BigInteger.nextProbablePrime()								; IMPLEMENTED, FINAL
- * BigInteger.isProbablePrime()									; IMPLEMENTED, FINAL
  * ; Properties
  * BigInteger.Prototype.getSignum()								; IMPLEMENTED, FINAL
  * BigInteger.Prototype.getMagnitude()							; IMPLEMENTED, FINAL
@@ -573,7 +572,7 @@ class BigInteger {
 	static Mod(anyIntNum, anyIntDiv) => this.validateBigInteger(anyIntNum).mod(anyIntDiv)
 	
 	/**
-	 * Calculates the greatest common divisor amongst the given Integer-likes and (this), using Euclids algorithm. This will always be positive.
+	 * Calculates the greatest common divisor amongst the given Integer-likes and (this), using Euclids algorithm. This will always be positive. Use gcdInt if values are small as this is expensive due to division.
 	 * @param {Integer | String | BigInteger} anyInts Any number of Integers, strings representing an integer or BigIntegers
 	 * @returns {BigInteger} A new BigInteger representing the greatest common divisor of (this) and anyInt
 	 * @example
@@ -1740,7 +1739,9 @@ class BigInteger {
 	 */
 	static gcdInt(num, additionalNums*) {
 		additionalNums.push(num)
-		copyNums := additionalNums
+		copyNums := []
+		for e in additionalNums
+			copyNums.push(abs(e))
 		while (copyNums.Length > 1) {
 			tNums := []
 			curMin := Min(copyNums*)
