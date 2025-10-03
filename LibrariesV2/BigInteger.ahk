@@ -668,11 +668,10 @@ class BigInteger {
 			return this.Clone()
 		}
 		; guess
-		bits := this.getBitLength()
-		guessBits := Ceil(bits / n)
-		shift := bits - 63
-		guessFloat := Float(this.shiftRight(shift).intValue())
-		guess := BigInteger.valueOf(Ceil(guessFloat**(1.0 / n))).shiftLeft(guessBits)
+		shift := Max(this.getBitLength() - 63, 0)
+		shift := Ceil(shift / n) * n
+		guessFloat := Max(1, Float(this.shiftRight(shift).intValue())) ; guess should be at least 1
+		guess := BigInteger.valueOf(Ceil(guessFloat**(1.0 / n))).shiftLeft(shift // n)
 		xk := guess
 		while (true) {
 			; xk1 := xk - (xk^n - this)/(n*xk^(n-1)) = ( (n-1)*x + a/(x^(n-1)))/n
