@@ -437,11 +437,13 @@ class BigInteger {
 	pow(exponent) {
 		if exponent is BigInteger {
 			if exponent.mag.Length > 1
-				throw BigInteger.Error.EXPONENT_OUT_OF_RANGE[exponent]
-			exponent := exponent.mag[1]
+				throw BigInteger.Error.GIGABYTE_OPERATION['pow', exponent]
+			exponent := exponent.signum * exponent.mag[1]
 		}
-		if exponent >= BigInteger.INT32 || exponent < 0
-			throw BigInteger.Error.EXPONENT_OUT_OF_RANGE[exponent]
+		if exponent < 0
+			throw BigInteger.Error.ILLEGAL_NEGATIVE['pow', exponent]
+		if exponent >= BigInteger.INT32
+			throw BigInteger.Error.GIGABYTE_OPERATION['pow', exponent]
 		if !this.signum
 			return exponent == 0 ? BigInteger.ONE : BigInteger.ZERO
 		if !exponent
@@ -513,11 +515,11 @@ class BigInteger {
 			throw ZeroDivisionError()
 		signum := this.signum * (divisor > 0 || pow & 0x1 == 0 ? 1 : -1)
 		divisor := abs(divisor)
-		if (isPowerOfTwo := (divisor & (divisor - 1) == 0)) { ; divisor is power of two
+		if (isPowerOfTwo := (divisor & (divisor - 1) == 0)) { ; divisor is power of two. 
 			shiftBits := BigInteger.numberOfTrailingZeros(divisor) * pow
 			if shiftBits > this.getBitLength()
 				rem := this.mag
-			else {
+			else { ; do not use maskBits as that uses twos complement
 				rem := []
 				words := shiftBits >>> 5
 				bits := shiftBits & 0x1F
@@ -636,7 +638,7 @@ class BigInteger {
 		if !this.signum
 			return BigInteger.ZERO
 		if this.signum == -1
-			throw BigInteger.Error.NEGATIVE_ROOT[this]
+			throw BigInteger.Error.ILLEGAL_NEGATIVE['sqrt', this]
 		wantRemainder := !IsSet(remainder)
 		shift := Max(this.getBitLength() - 63, 0)
 		if shift & 0x1 ; equivalent to Ceil(shift/2) * 2, force it to be even.
@@ -671,9 +673,18 @@ class BigInteger {
 			return BigInteger.ZERO
 		}
 		if (this.signum == -1)
-			throw BigInteger.Error.NEGATIVE_ROOT[this]
+			throw BigInteger.Error.ILLEGAL_NEGATIVE['nthroot', this]
+		if (n is BigInteger) {
+			if (n.signum <= 0)
+				throw BigInteger.Error.ILLEGAL_NEGATIVE['nthroot', n]
+			if (n.mag.length > 1) {
+				remainder := this.Clone()
+				return BigInteger.ONE
+			}
+			n := n.mag[1]
+		}
 		if n <= 0
-			throw ZeroDivisionError('Negative or 0th root: ' n)
+			throw BigInteger.Error.ILLEGAL_NEGATIVE['nthroot', n]
 		if (n == 1) {
 			remainder := BigInteger.ZERO
 			return this.Clone()
@@ -846,10 +857,19 @@ class BigInteger {
 	 * BigInteger(-1).shiftLeft(3).toString() => -8
 	 */
 	shiftLeft(n) {
+		if n is BigInteger {
+			if n.signum == -1
+				throw BigInteger.Error.ILLEGAL_NEGATIVE['shiftRight', n]
+			if n.mag.Length > 1
+				throw BigInteger.Error.GIGABYTE_OPERATION['shiftLeft', n]
+			n := n.mag[1]
+		}
 		shiftBits := n & 0x1F
 		shiftWords := n >>> 5
-		if n <= 0
-			return n == 0 ? this.Clone() : this.shiftRight(-n)
+		if n == 0
+			return this.Clone()
+		if n < 0
+			throw BigInteger.Error.ILLEGAL_NEGATIVE['shiftLeft', n]
 		newMag := []
 		len := this.mag.Length
 		mag := []
@@ -877,8 +897,9 @@ class BigInteger {
 	}
 
 	/**
-	 * Performs a bitwise right shift operation on (this) by n bits. Equivalent to this >> n, except that negative numbers overshifted turn into 0 and not -1.
-	 * This operation is equivalent to dividing by 2**n.
+	 * Performs a bitwise right shift operation on (this) by n bits. 
+	 * Equivalent to this >> n.
+	 * This operation is equivalent to dividing by 2**n only if (this) is positive (as -3 >> 2 = -2, 3 >> 2 = 1, -3 // 2 == -1)
 	 * @param {Integer} n The number of bits to shift right. If negative, will shift right instead.
 	 * @returns {BigInteger} A new BigInteger representing the result of the right shift
 	 * @example
@@ -886,14 +907,25 @@ class BigInteger {
 	 * BigInteger(8).shiftRight(20).toString() => 0
 	 * BigInteger(-8).shiftRight(1).toString() => -4
 	 * BigInteger(-1).shiftRight(3).toString() => 0
+	 * BigInteger(3).shiftRight(1).toString() => 1
+	 * BigInteger(3).shiftRight(1).shiftLeft(1).toString() => 2
+	 * BigInteger(-3).shiftRight(1).toString() => -2
+	 * BigInteger(-3).shiftRight(1).shiftLeft(1) => -4
 	 */
 	shiftRight(n) {
+		if n is BigInteger {
+			if n.signum == -1
+				throw BigInteger.Error.ILLEGAL_NEGATIVE['shiftRight', n]
+			n := n.mag.Length > 1 ? BigInteger.INT32 : n.mag[1]
+		}
 		shiftBits := n & 0x1F
 		shiftWords := n >>> 5
-		if n <= 0
-			return n == 0 ? this.Clone() : this.shiftLeft(-n)
+		if n == 0
+			return this.Clone()
+		if n < 0
+			throw BigInteger.Error.ILLEGAL_NEGATIVE['shiftRight', n]
 		len := this.mag.Length
-		if shiftWords > len
+		if shiftWords >= len
 			return this.signum >= 0 ? BigInteger.ZERO : BigInteger.MINUS_ONE
 		mag := []
 		if (shiftBits == 0) {
@@ -921,17 +953,24 @@ class BigInteger {
 
 	/**
 	 * Gets the last n bits. Equivalent to (this) & ((1 << n) - 1) ignoring signum.
-	 * This ignores signum because there would be no way to differentiate whether the number was originally positive or negative since there is no defined range.
+	 * 
+	 * As there is no fixed sign bit, masking will always cause the leading bits to be 0 and the number thus positive.
+	 * 
+	 * Thus while -342 & ((1 << 64) - 1) = -342 & 0xFFFFFFFFFFFFFFFF == -342 natively, here the leading bit is not interpreted as a sign, but literally.
+	 * 
+	 * Thus BigInteger(-342).maskBits(64).toString() = 18446744073709551274. This is useful since this is 0b1111111111111111111111111111111111111111111111111111111010101010 which ahk interprets as -342 again.
 	 * @param {Integer} n The number of bits to mask
 	 * @returns {BigInteger} A BigInteger which represents the n bits.
 	 * @example
 	 * BigInteger(2**32-1).maskBits(10).toString() => 1023
 	 */
 	maskBits(n) {
+		if n is BigInteger
+			n := n.mag.Length > 1 ? BigInteger.INT32 : n.mag[1]
 		words := n >>> 5
 		bitMask := (1 << (n & 0x1F)) - 1 ; mask bottom 31 bits of n to get mask for 31 bits (32 is a full word)
-		if n == 0
-			return [0]
+		if n == 0 || (this.mag.Length == 1 && this.mag[1] == 0)
+			return BigInteger.ZERO
 		len := this.mag.Length
 		if words >= len
 			return this.Clone()
@@ -1476,7 +1515,8 @@ class BigInteger {
 
 	/**
 	 * Divides one magnitude by another magnitude using Knuth's Algorithm D (long division).
-	 * Trusts that mag1 > mag2.
+	 * Trusts that dividend > divisor.
+	 * Trusts that divisor.Length > 1 (Use divideByInt otherwise)
 	 * See https://skanthak.hier-im-netz.de/division.html for information
 	 * @param {Array} mag1 Dividend magnitude
 	 * @param {Array} mag2 Divisor magnitude
@@ -1517,8 +1557,8 @@ class BigInteger {
 			; below are the "normal" calculations which overflow. We apply the precomputation trick twice
 			; qhat := ( num[i] << 32 | uHigh ) // divHigh
 			; rhat := Mod(num[i] << 32 | uHigh, divHigh)
-			uHigh := num.Has(i + 1) ? num[i + 1] : 0
-			uLow := num.Has(i + 2) ? num[i + 2] : 0
+			uHigh := num[i + 1]
+			uLow := num[i + 2]
 			qtmp := baseDivPrecompute * num[i]
 			rtmp := baseRemPrecompute * num[i] + uHigh
 			qhat := (qtmp + rtmp // divHigh) & BigInteger.INT_MASK
@@ -1589,7 +1629,7 @@ class BigInteger {
 	}
 
 	/**
-	 * Efficiently shifts a magnitude shift digits to the right and returns an array of the shift result and remainder.
+	 * Efficiently shifts a magnitude <= 32 digits to the right and returns an array of the shift result and remainder.
 	 * This is a helper function for division by powers of two.
 	 * @param mag 
 	 * @param shift 
@@ -1748,7 +1788,6 @@ class BigInteger {
 	 * @returns {Integer} The greatest common divisor
 	 */
 	static gcdInt(num, additionalNums*) {
-		additionalNums.push(num)
 		copyNums := []
 		additionalNums.push(num)
 		for i, e in additionalNums
@@ -1894,9 +1933,9 @@ class BigInteger {
 	class Error {
 		static NOT_INTEGER[n] => ValueError("Received non-integer input: " (IsObject(n) ? Type(n) : n))
 		static INVALID_RADIX[n] => ValueError("Invalid Radix: " (IsObject(n) ? Type(n) : n))
-		static EXPONENT_OUT_OF_RANGE[n] => ValueError("Exponent out of range for supported values (>= 2**32): " (n is BigInteger ? n.toStringApprox() : n))
-		static INCOMPATIBLE_RADIX[n, m] => ValueError("Cannot convert digits of Radix " n " to digits of radix " m "")
-		static NEGATIVE_ROOT[n] => ValueError("Attempting to take square root of " (n is BigInteger ? n.toStringApprox() : n))
+		static INCOMPATIBLE_RADIX[n, m] => ValueError("Cannot convert digits of Radix " n " to digits of radix " m " with function expandMagnitudeToRadix. Use convertMagnitudeBase for that")
+		static ILLEGAL_NEGATIVE[method, n] => ValueError("Specified parameter cannot be negative: " method " can only use positive values, but received " (n is BigInteger ? n.toStringApprox() : n))
+		static GIGABYTE_OPERATION[method, n] => ValueError("Specified parameter outside of supported range: If method " method " were to use given value " (n is BigInteger ? n.toStringApprox() : n) ", the calculation would create a variable of size >4GB in memory.")
 		static BAD_TWO_COMPLEMENT[type, n] => ValueError("Invalid twos complement representation:`nMust include leading word or be zero, received " (type == 1 ? "mag of Length " : "Leading word of value ") n)
 	}
 }
