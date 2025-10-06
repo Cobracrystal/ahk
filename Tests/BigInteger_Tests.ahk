@@ -39,6 +39,27 @@ testGcd(loops := 1000, detailedOutput := false) {
 	print(stats)
 }
 
+testSquareThresholds() {
+	arr := []
+	old := 0
+	Loop(300) {
+		arr.push(Random(1, 2**32-1))
+		snap := qpc()
+		loop(5)
+			BigInteger.squareMagnitude(arr)
+		print(arr.Length)
+		t := Round((qpc() - snap) * 200,5)
+		print('square: ' t 'ms')
+		snap := qpc()
+		loop(5)
+			BigInteger.multiplyMagnitudes(arr, arr)
+		t2 := Round((qpc() - snap) * 200,5)
+		print('mult:   ' t2 'ms')
+		print('square more efficient?: ' (t2 > t))
+		print('-----------------')
+	}
+}
+
 testCacheMethods(detailedOutput) {
 	static cacheMethods := Map(
 		"tests_arithmetic", Map(
