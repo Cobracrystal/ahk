@@ -1222,7 +1222,7 @@ class BigInteger {
 			; parse string into base-10**9 magnitude
 			magBaseB := []
 			len := StrLen(str)
-			chunkLen := BigInteger.Helpers.getMaxComputableRadixPower(radix)
+			chunkLen := this.getMaxComputableRadixPower(radix)
 			if (radix == 10) { ; parse string in chunks and interpret as base 10^9
 				if (offset := Mod(len, chunkLen))
 					magBaseB.push(Integer(SubStr(str, 1, offset)))
@@ -1231,7 +1231,7 @@ class BigInteger {
 					magBaseB.push(Integer(SubStr(str, chunkIndex, chunkLen)))
 					chunkIndex += chunkLen
 				}
-				return BigInteger.Helpers.normalizeMagnitudeBase(magBaseB, radix**chunkLen)
+				return this.normalizeMagnitudeBase(magBaseB, radix**chunkLen)
 			} else if (radix == 16) { ; parse in chunks and directly cast to base 2^32
 				if (offset := Mod(len, chunkLen))
 					magBaseB.push(Integer('0x' SubStr(str, 1, offset)))
@@ -1242,9 +1242,9 @@ class BigInteger {
 				}
 				return magBaseB
 			} else {
-				mag := BigInteger.Helpers.validateMagnitudeRadix(StrSplit(str), radix)
-				maxRadixMag := BigInteger.Helpers.shrinkMagnitudeToPowRadix(mag, radix, chunkLen)
-				return BigInteger.Helpers.normalizeMagnitudeBase(maxRadixMag, radix**chunkLen)
+				mag := this.validateMagnitudeRadix(StrSplit(str), radix)
+				maxRadixMag := this.shrinkMagnitudeToPowRadix(mag, radix, chunkLen)
+				return this.normalizeMagnitudeBase(maxRadixMag, radix**chunkLen)
 			}
 		}
 
@@ -1310,14 +1310,14 @@ class BigInteger {
 		 * @returns {Array} The new magnitude
 		 */
 		static expandMagnitudeToRadix(mag, powRadix, baseRadix) {
-			ex := BigInteger.Helpers.isPowerOf(baseRadix, powRadix)
+			ex := this.isPowerOf(baseRadix, powRadix)
 			if !ex
 				throw BigInteger.Error.INCOMPATIBLE_RADIX[powRadix, baseRadix]
 			if ex == 1
 				return mag.clone()
 			isPowerOfTwo := (baseRadix & (baseRadix - 1) == 0)
 			mask := baseRadix - 1
-			z := BigInteger.Helpers.numberOfTrailingZeros(baseRadix)
+			z := this.numberOfTrailingZeros(baseRadix)
 			newMag := []
 			for i, digit in mag {
 				miniMag := []
@@ -1326,7 +1326,7 @@ class BigInteger {
 					digit := isPowerOfTwo ? digit >> z : digit // baseRadix
 				}
 				if (i == 1)
-					BigInteger.Helpers.stripLeadingZeros(miniMag)
+					this.stripLeadingZeros(miniMag)
 				newMag.push(miniMag*)
 			}
 			return newMag
@@ -1370,7 +1370,7 @@ class BigInteger {
 					remainder := dividend & 0xFFFFFFFF
 					quotient.push(q)
 				}
-				mag := BigInteger.Helpers.stripLeadingZeros(quotient)
+				mag := this.stripLeadingZeros(quotient)
 				result.InsertAt(1, remainder)
 			}
 
@@ -1384,7 +1384,7 @@ class BigInteger {
 					remainder := qtmp & 0xFFFFFFFF
 					quotient.push(quotDigit)
 				}
-				mag := BigInteger.Helpers.stripLeadingZeros(quotient)
+				mag := this.stripLeadingZeros(quotient)
 				result.InsertAt(1, remainder)
 			}
 		}
@@ -1401,10 +1401,10 @@ class BigInteger {
 			if base == 0
 				throw ValueError("You entered base 0, which doesn't exist. If you do think that it exists, please write me an email.")
 			if (isPowerOfTwo := (base & (base - 1) == 0)) { ; base is 2^n
-				if BigInteger.Helpers.isPowerOf(base, BigInteger.INT32) ; 2**32 is (base^n), so digits can be read per word
-					return BigInteger.Helpers.expandMagnitudeToRadix(mag, BigInteger.INT32, base)
+				if this.isPowerOf(base, BigInteger.INT32) ; 2**32 is (base^n), so digits can be read per word
+					return this.expandMagnitudeToRadix(mag, BigInteger.INT32, base)
 				mask := base - 1
-				z := BigInteger.Helpers.numberOfTrailingZeros(base)
+				z := this.numberOfTrailingZeros(base)
 			}
 			result := []
 			if (overflow := base >= 2**31) {
@@ -1413,11 +1413,11 @@ class BigInteger {
 			}
 			while (mag[1] != 0) {
 				if isPowerOfTwo
-					arr := BigInteger.Helpers.magDivHelperShiftRight(mag, z)
+					arr := this.magDivHelperShiftRight(mag, z)
 				else if overflow
-					arr := BigInteger.Helpers.magDivHelperOverflowDivide(mag, base, baseDivPrecompute, baseRemPrecompute)
+					arr := this.magDivHelperOverflowDivide(mag, base, baseDivPrecompute, baseRemPrecompute)
 				else
-					arr := BigInteger.Helpers.magDivHelperDivide(mag, base)
+					arr := this.magDivHelperDivide(mag, base)
 				mag := arr[1]
 				result.InsertAt(1, arr[2])
 			}
@@ -1549,12 +1549,12 @@ class BigInteger {
 		 * @param mag 
 		 * @returns {BigInteger} 
 		 */
-		static squareMagnitude(mag) {
-			static HALF_CALC_THRESHOLD := 12
-			static KARATSUBA_SQUARE_THRESHOLD := 12800000
+		static squareMagnitude(mag, overrideToMethod?) {
+			static HALF_CALC_THRESHOLD := 13
+			static KARATSUBA_SQUARE_THRESHOLD := 120
 			len := mag.length
 			if len < HALF_CALC_THRESHOLD ; simpleSquare is better in theory, but in practice its implementation is slightly slower here
-				return BigInteger.Helpers.multiplyMagnitudes(mag, mag)
+				return this.multiplyMagnitudes(mag, mag)
 			if mag.Length < KARATSUBA_SQUARE_THRESHOLD
 				return simpleSquare(mag)
 			else
@@ -1609,22 +1609,46 @@ class BigInteger {
 					}
 					aboveDiagonal[-(pos+1)] += carry ; write carry to the position left to the last written value
 				}
-				aboveDiagonal := BigInteger.Helpers.stripLeadingZeros(aboveDiagonal)
-				diagonal := BigInteger.Helpers.stripLeadingZeros(diagonal)
-				aboveDiagonal := BigInteger.Helpers.shiftMagnitudeLeft(aboveDiagonal, 1)
-				return BigInteger.Helpers.addMagnitudes(aboveDiagonal, diagonal)
+				aboveDiagonal := this.stripLeadingZeros(aboveDiagonal)
+				diagonal := this.stripLeadingZeros(diagonal)
+				aboveDiagonal := this.shiftMagnitudeLeft(aboveDiagonal, 1)
+				return this.addMagnitudes(aboveDiagonal, diagonal)
 			}
 
 			karatsubaSquare(mag) {
-				half := (len + 1) // 2
-				return this.multiplyMagnitudes(mag, mag)
+				half := len // 2
+				xl := getLower(half)
+				xh := getUpper(half)
+				xls := this.squareMagnitude(xl)
+				xhs := this.squareMagnitude(xh)
+				
+				s1 := this.shiftMagnitudeLeft(xhs, half*32) ; xh^2 << 64 (we shift again at r2)
+				t1 := this.squareMagnitude(this.addMagnitudes(xl, xh)) ; (xl+xh)^2
+				t2 := this.addMagnitudes(xhs, xls) ; (xh^2 + xl^2)
+				r1 := this.subtractMagnitudes(t1, t2) ; ((xl+xh)^2 - (xh^2 + xl^2)) (= 2 * xl * xh)
+				r2 := this.shiftMagnitudeLeft(this.addMagnitudes(s1, r1), half*32) ; xh^2 << 64  +  (((xl+xh)^2 - (xh^2 + xl^2)) << 32)
+        		; xh^2 << 64  +  (((xl+xh)^2 - (xh^2 + xl^2)) << 32) + xl^2
+				return this.addMagnitudes(r2, xls)
+				; return xhs.shiftLeft(half*32).add(xl.add(xh).pow(2).subtract(xhs.add(xls))).shiftLeft(half*32).add(xls)
 
 				getLower(n) {
-
+					if n <= 0
+						return [0]
+					loMag := []
+					loMag.Length := n
+					Loop(n)
+						loMag[-A_Index] := mag[-A_Index]
+					return this.stripLeadingZeros(loMag)
 				}
 
 				getUpper(n) {
-
+					if n >= len
+						return [0]
+					hiMag := []
+					hiMag.Length := len - n
+					Loop(len - n)
+						hiMag[A_Index] := mag[A_Index]
+					return this.stripLeadingZeros(hiMag)
 				}
 			}
 		}
@@ -1696,7 +1720,7 @@ class BigInteger {
 					result.push((digit >> shiftBits) | (remainder << shiftBitsLeft))
 					remainder := digit & mask
 				}
-				BigInteger.Helpers.stripLeadingZeros(result)
+				this.stripLeadingZeros(result)
 			}
 			return result
 		}
@@ -1714,7 +1738,7 @@ class BigInteger {
 		static divideMagnitudes(dividend, divisor, &remainder?) {
 			; assert div.intLen > 1
 			; factor out power of two. a / divisor = a / (q * 2^n) =
-			shift := BigInteger.Helpers.numberOfLeadingZeros(divisor[1]) - 32
+			shift := this.numberOfLeadingZeros(divisor[1]) - 32
 			; U, the dividend of m+n digits
 			numLen := dividend.Length + 1
 			; V, the divisor of n digits
@@ -1722,10 +1746,10 @@ class BigInteger {
 			; Q, the quotient of m+1 digits, and R, the remainder of n digits
 			resLen := numLen - divLen + 1
 			; normalize the divisor so that its >= 2**31 (>= Base / 2)
-			num := BigInteger.Helpers.shiftMagnitudeLeft(dividend, shift)
-			div := BigInteger.Helpers.shiftMagnitudeLeft(divisor, shift)
+			num := this.shiftMagnitudeLeft(dividend, shift)
+			div := this.shiftMagnitudeLeft(divisor, shift)
 			if (div.Length == num.Length) { ; we assume mag2 > mag1, so if after normalization we get this, its one. This check isn't necessary, but helps
-				remainder := BigInteger.Helpers.subtractMagnitudes(dividend, divisor)
+				remainder := this.subtractMagnitudes(dividend, divisor)
 				return [1]
 			}
 			divHigh := div[1]
@@ -1759,11 +1783,11 @@ class BigInteger {
 						break
 				}
 				; Replace (U[i]U[i+1]…U[i+n]) by (U[i]U[i+1]…U[i+n]) − Q̂ × (V[1]…V[n-1]V[n]).
-				tDiv := BigInteger.Helpers.sliceMagnitude(num, i, divLen)
-				tProd := BigInteger.Helpers.multiplyMagnitudes(div, [qhat])
+				tDiv := this.sliceMagnitude(num, i, divLen)
+				tProd := this.multiplyMagnitudes(div, [qhat])
 				; Decrease Q[j] by 1 and add (0V[1]…V[n-1]V[n]) to (U[i]U[i+1]…U[i+n-1]U[i+n]).
-				if (BigInteger.Helpers.compareMagnitudes(tDiv, tProd) == -1) {
-					tProd := BigInteger.Helpers.subtractMagnitudes(tProd, div)
+				if (this.compareMagnitudes(tDiv, tProd) == -1) {
+					tProd := this.subtractMagnitudes(tProd, div)
 					qhat--
 				}
 				Loop(divLen - tProd.Length)
@@ -1771,8 +1795,8 @@ class BigInteger {
 				magSubSliceHelper(i) ; performs [3,1,2,9,....,5,6] - [1,1,0] = [2,0,2,9,....,5,6] (with the window shifting by i)
 				mag.push(qhat)
 			}
-			remainder := BigInteger.Helpers.shiftMagnitudeRight(BigInteger.Helpers.stripLeadingZeros(num), shift)
-			return BigInteger.Helpers.stripLeadingZeros(mag)
+			remainder := this.shiftMagnitudeRight(this.stripLeadingZeros(num), shift)
+			return this.stripLeadingZeros(mag)
 
 			; mag1 = [A,B,C,D,E,...,K,L]
 			; mag2 =     [M,N,O,P,R,S] 
@@ -1810,7 +1834,7 @@ class BigInteger {
 				quotient.push((digit >> shift) | (remainder << shiftLeft))
 				remainder := digit & mask
 			}
-			BigInteger.Helpers.stripLeadingZeros(quotient)
+			this.stripLeadingZeros(quotient)
 			return [quotient, remainder]
 		}
 
@@ -1829,7 +1853,7 @@ class BigInteger {
 				remainder := Mod(dividend, divisor)
 				quotient.push(q)
 			}
-			BigInteger.Helpers.stripLeadingZeros(quotient)
+			this.stripLeadingZeros(quotient)
 			return [quotient, remainder]
 		}
 
@@ -1886,7 +1910,7 @@ class BigInteger {
 				remainder := Mod(qtmp2, divisor) ; no mask, divisor <= MASK
 				quotient.push(quotDigit)
 			}
-			BigInteger.Helpers.stripLeadingZeros(quotient)
+			this.stripLeadingZeros(quotient)
 			return [quotient, remainder]
 		}
 

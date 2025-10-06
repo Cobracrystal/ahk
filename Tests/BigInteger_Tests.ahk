@@ -17,6 +17,7 @@ RunTests(detailedOutput := false) {
 	; testArithmeticMethodsSmall(3000,detailedOutput)
 	; testBitWiseMethodsSmall(3000,detailedOutput)
 	testCacheMethods(detailedOutput)
+	; testSquareThresholds()
 }
 
 testGcd(loops := 1000, detailedOutput := false) {
@@ -40,23 +41,28 @@ testGcd(loops := 1000, detailedOutput := false) {
 }
 
 testSquareThresholds() {
-	arr := []
+	static methodMap := Map(1, 'mult', 2, 'half', 3, 'karatsuba', 4, 'toomCook3')
+	arr := [[],[],[],[],[],[],[],[],[],[]]
 	old := 0
 	Loop(300) {
-		arr.push(Random(1, 2**32-1))
-		snap := qpc()
-		loop(5)
-			BigInteger.Helpers.squareMagnitude(arr)
-		print(arr.Length)
-		t := Round((qpc() - snap) * 200,5)
-		print('square: ' t 'ms')
-		snap := qpc()
-		loop(5)
-			BigInteger.Helpers.multiplyMagnitudes(arr, arr)
-		t2 := Round((qpc() - snap) * 200,5)
-		print('mult:   ' t2 'ms')
-		print('square more efficient?: ' (t2 > t))
+		Loop(5)
+			arr[A_Index].push(Random(1, 2**32-1))
+		res := []
+		Loop(3) {
+			t := testT(A_Index)
+			res.push(t)
+			print(strFill(methodMap[A_Index],20,0) t 'ms')
+		}
+		mInd := MinIndex(res*)
+		print(format('Most efficient @ {:03}: {}', arr[1].Length, methodMap[mInd]))
 		print('-----------------')
+	}
+
+	testT(n) {
+		snap := qpc()
+		loop(10)
+			BigInteger.Helpers.squareMagnitude(arr[Ceil(A_Index / 3)], n)
+		return Round((qpc() - snap) * 200,5)
 	}
 }
 
@@ -93,6 +99,7 @@ testCacheMethods(detailedOutput) {
 				resps.push(performanceTestMethod(cacheTests[testFile], method, paramCount, detailedOutput))
 	str := strMultiply('=', 50) '`n' FormatTime(,'yyyy-MM-dd-HH.mm.ss') '`n' objCollect(resps, (b,e) => b '`n' e[2], '') '`n'
 	FileAppend(str, 'test_results.txt', 'UTF-8')
+	FileAppend('Total stats: ' toString(resps[-1][1]), 'test_results.txt', 'UTF-8')
 	print(resps[-1][1])
 }
 
