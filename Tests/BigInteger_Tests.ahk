@@ -16,8 +16,8 @@ RunTests(detailedOutput := false) {
 	; testGcd(3000, detailedOutput)
 	; testArithmeticMethodsSmall(3000,detailedOutput)
 	; testBitWiseMethodsSmall(3000,detailedOutput)
-	testCacheMethods(detailedOutput)
-	; testSquareThresholds()
+	; testCacheMethods(detailedOutput)
+	testSquareThresholds()
 }
 
 testGcd(loops := 1000, detailedOutput := false) {
@@ -41,22 +41,27 @@ testGcd(loops := 1000, detailedOutput := false) {
 }
 
 testSquareThresholds() {
-	static methodMap := Map(1, 'mult', 2, 'half', 3, 'karatsuba', 4, 'toomCook3')
 	arr := [[],[],[],[],[],[],[],[],[],[]]
 	old := 0
-	Loop(300) {
-		Loop(5)
-			arr[A_Index].push(Random(1, 2**32-1))
-		res := []
-		Loop(3) {
-			t := testT(A_Index)
-			res.push(t)
-			print(strFill(methodMap[A_Index],20,0) t 'ms')
-		}
-		mInd := MinIndex(res*)
-		print(format('Most efficient @ {:03}: {}', arr[1].Length, methodMap[mInd]))
-		print('-----------------')
+	res := []
+	Loop(300) ; create 10 big nums to square
+		Loop(10)
+		arr[A_Index].push(Random(1, 2**32-1))
+	Loop(300) { ; test thresholds
+		i := A_Index+3
+		t := testT(i)
+		res.push(t)
+		print(format('Time @ {:03}: {}', i, t))
+
 	}
+	Loop(291) {
+		i := A_Index
+		s := 0
+		Loop(10)
+			s += res[i+A_Index-1]
+		print('mv avg: ' format("{:03}", round(s/10,4)))
+	}
+	
 
 	testT(n) {
 		snap := qpc()
@@ -70,7 +75,7 @@ testCacheMethods(detailedOutput) {
 	static cacheMethods := Map(
 		"tests_arithmetic", Map(
 			0, ["negate", "abs", "not"],
-			1, ["add", "subtract", "multiply", "divide", "mod", "gcd", "and", "andNot", "or", "xor", "equals", "compareTo"]
+			1, ["add", "subtract", "multiply", "divide", "mod", "and", "andNot", "or", "xor", "equals", "compareTo"] ; not gcd because it takes forever
 		),
 		"tests_powAndBit", Map(
 			1, ["pow", "shiftLeft", "shiftRight", "maskBits"]

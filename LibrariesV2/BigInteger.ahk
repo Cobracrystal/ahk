@@ -9,9 +9,6 @@
 ; FINAL DOESN'T MEAN THAT DOCS ARE ADDED!!!!
 ; Todo getFirstNDigits and divideByIntPower should utilize radix expansion to be more efficient.
 ; todo shrinkMagnitudeToPowRadix should use bitshifting if converting to power of two (expandMagnitude too)
-; todo karatsuba squaring
-; todo karatsuba multiplication
-; todo remove cloning in magnitude helper funcs
 
 /**
  * METHODS
@@ -1518,30 +1515,87 @@ class BigInteger {
 		 * @returns {BigInteger}
 		 */
 		static multiplyMagnitudes(mag1, mag2) {
+			static KARATSUBA_MULTIPLY_TRESHOLD := 56 ; approx good
 			len1 := mag1.Length
 			len2 := mag2.Length
-			if len1 == 1 && mag1[1] == 1
-				return mag2.Clone()
-			if len2 == 1 && mag2[1] == 1
-				return mag1.Clone()
-			result := []
-			Loop len1 + len2 ; minimum is max(len1, len2), maximum is len1+len2 (eg 0xFF * 0xFF = 0xFE01)
-				result.Push(0)
-			Loop (len1) {
-				i := A_Index
-				carry := 0
-				a := mag1[-i]
-				Loop (len2) {
-					j := A_Index
-					b := mag2[-j]
-					pos := i + j - 1
-					s := result[-pos] + (a * b) + carry
-					result[-pos] := s & BigInteger.INT_MASK
-					carry := (s >>> 32) ; since s might be >2**63-1, when shifting right the high bit is still interpreted as negative value. thus, we cut it off
+			if (len1 < KARATSUBA_MULTIPLY_TRESHOLD || len2 < KARATSUBA_MULTIPLY_TRESHOLD) {
+				if (len1 == 1) {
+					if mag1[1] == 1
+						return mag2.Clone()
+					return multiplyByInt(mag2, mag1[1])
 				}
-				result[-(i + j)] += carry ; write carry to the position left to the last written value
+				if (len2 == 1) {
+					if mag2[1] == 1
+						return mag1.Clone()
+					return multiplyByInt(mag1, mag2[1])
+				}
+				return simpleMult(mag1, mag2)
+			} else {
+				return karatsubaMult(mag1, mag2)
 			}
-			return this.stripLeadingZeros(result)
+
+			multiplyByInt(mag, int) {
+				result := []
+				result.Length := len := mag.Length
+				result[-1] := 0
+				carry := 0
+				Loop (len) {
+					s := mag[-A_Index] * int + carry
+					result[-A_Index] := s & BigInteger.INT_MASK
+					carry := (s >>> 32)
+				}
+				if carry
+					result.InsertAt(1, carry)
+				return this.stripLeadingZeros(result)
+			}
+
+			simpleMult(mag1, mag2) {
+				result := []
+				Loop len1 + len2 ; minimum is max(len1, len2), maximum is len1+len2 (eg 0xFF * 0xFF = 0xFE01)
+					result.Push(0)
+				Loop (len1) {
+					i := A_Index
+					carry := 0
+					a := mag1[-i]
+					Loop (len2) {
+						j := A_Index
+						b := mag2[-j]
+						pos := i + j - 1
+						s := result[-pos] + (a * b) + carry
+						result[-pos] := s & BigInteger.INT_MASK
+						carry := (s >>> 32) ; since s might be >2**63-1, when shifting right the high bit is still interpreted as negative value. thus, we cut it off
+					}
+					result[-(i + j)] += carry ; write carry to the position left to the last written value
+				}
+				return this.stripLeadingZeros(result)
+			}
+
+			karatsubaMult(mag1, mag2) {
+				half := Max(len1, len2) // 2
+				xl := getLower(mag1, half)
+				xh := getUpper(mag1, half)
+				yl := getLower(mag2, half)
+				yh := getUpper(mag2, half)
+				p1 := this.multiplyMagnitudes(xh, yh)
+				p2 := this.multiplyMagnitudes(xl, yl)
+				s1 := this.addMagnitudes(xh, xl)
+				s2 := this.addMagnitudes(yh, yl)
+				p3 := this.multiplyMagnitudes(s1, s2) ; (xh+xl) * (yh*yl)
+				r1 := this.shiftMagnitudeLeft(p1, 32*half)
+				s3 := this.subtractMagnitudes(this.subtractMagnitudes(p3, p1), p2) ; p3-p1-p2
+				r2 := this.addMagnitudes(r1, s3)
+				r3 := this.shiftMagnitudeLeft(r2, 32*half)
+				r4 := this.addMagnitudes(r3, p2)
+				return r4
+				; p1 := xh.multiply(yh) 
+				; p2 := xl.multiply(yl)
+				; p3 := xh.add(xl).multiply(yh.add(yl))
+				; return p1.shiftLeft(32*half).add(p3.subtract(p1).subtract(p2)).shiftLeft(32*half).add(p2)
+
+				getUpper(mag, n) => n >= mag.length ? [0] : this.sliceMagnitude(mag, 1, mag.length-n)
+				getLower(mag, n) => n >= mag.length ? mag : this.sliceMagnitude(mag, mag.length-n+1, n)
+			}
+
 		}
 
 		/**
@@ -1549,7 +1603,7 @@ class BigInteger {
 		 * @param mag 
 		 * @returns {BigInteger} 
 		 */
-		static squareMagnitude(mag, overrideToMethod?) {
+		static squareMagnitude(mag) {
 			static HALF_CALC_THRESHOLD := 13
 			static KARATSUBA_SQUARE_THRESHOLD := 120
 			len := mag.length
@@ -1630,26 +1684,8 @@ class BigInteger {
         		; xh^2 << 64  +  (((xl+xh)^2 - (xh^2 + xl^2)) << 32) + xl^2
 				return this.addMagnitudes(r2, xls)
 				; return xhs.shiftLeft(half*32).add(xl.add(xh).pow(2).subtract(xhs.add(xls))).shiftLeft(half*32).add(xls)
-
-				getLower(n) {
-					if n <= 0
-						return [0]
-					loMag := []
-					loMag.Length := n
-					Loop(n)
-						loMag[-A_Index] := mag[-A_Index]
-					return this.stripLeadingZeros(loMag)
-				}
-
-				getUpper(n) {
-					if n >= len
-						return [0]
-					hiMag := []
-					hiMag.Length := len - n
-					Loop(len - n)
-						hiMag[A_Index] := mag[A_Index]
-					return this.stripLeadingZeros(hiMag)
-				}
+				getUpper(n) => n >= len ? [0] : this.sliceMagnitude(mag, 1, len-n)
+				getLower(n) => n >= len ? mag : this.sliceMagnitude(mag, len-n+1, n)
 			}
 		}
 
@@ -1916,7 +1952,7 @@ class BigInteger {
 
 		; start is inclusive. array of 10, start of 4, len of 3 will get index 4,5,6
 		/**
-		 * Slices a magnitude (or any other array) starting at index start and ending at index start+len-1
+		 * Slices a magnitude (or any other array) starting at index start and ending at (inclusive) index start+len-1
 		 * @param mag 
 		 * @param start 
 		 * @param len 
@@ -1926,8 +1962,9 @@ class BigInteger {
 		 */
 		static sliceMagnitude(mag, start, len) {
 			newMag := []
+			newMag.Length := len
 			Loop (len)
-				newMag.push(mag[start + A_Index - 1])
+				newMag[A_Index] := mag[start + A_Index - 1]
 			return newMag
 		}
 
