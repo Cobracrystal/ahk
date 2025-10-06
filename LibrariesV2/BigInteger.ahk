@@ -2,7 +2,7 @@
  * @description A class to handle arbitrary precision Integers
  * @author cobracrystal
  * @date 2025/10/02
- * @version 0.8.5
+ * @version 0.9.3
  ***********************************************************************/
 
 ; static alias for these?
@@ -40,7 +40,7 @@
  * BigInteger.Prototype.gcd(anyInt) 							; IMPLEMENTED, FINAL
  * BigInteger.gcd(anyInt, anyInts*)								; IMPLEMENTED, FINAL
  * BigInteger.Prototype.sqrt()							 		; IMPLEMENTED, FINAL
- * BigInteger.Prototype.nthRoot()						 		; IMPLEMENTED, FINAL
+ * BigInteger.Prototype.nthRoot(k)						 		; IMPLEMENTED, FINAL
  * ; Comparison
  * BigInteger.Prototype.equals(anyInt) 							; IMPLEMENTED, FINAL
  * BigInteger.Prototype.compareTo(anyInt) 						; IMPLEMENTED, FINAL
@@ -73,37 +73,16 @@
  * BigInteger.Prototype.getMagnitude()							; IMPLEMENTED, FINAL
  * ; Other
  * BigInteger.Prototype.Clone()									; IMPLEMENTED, FINAL (Overriding default .Clone())
- * 
- * 
- * ; Helper functions. These do the actual arithmetic, but trust the input is correct and will throw unexpected errors if not previously validated.
- * ; Magnitude arithmetic
- * BigInteger.addMagnitudes()
- * BigInteger.subtractMagnitudes()
- * BigInteger.multiplyMagnitudes()
- * BigInteger.squareMagnitude()
- * BigInteger.shiftMagnitudeLeft()
- * BigInteger.shiftMagnitudeRight()
- * BigInteger.divideMagnitudes()
- * ; magnitude manipulation
- * BigInteger.convertMagnitudeBase()
- * BigInteger.normalizeMagnitudeBase()
- * BigInteger.expandMagnitudeToRadix()
- * BigInteger.shrinkMagnitudeToPowRadix()
- * BigInteger.stripLeadingZeros()
- * BigInteger.magnitudeFromString()
- * BigInteger.compareMagnitudes()
- * BigInteger.magDivHelperDivide()
- * BigInteger.magDivHelperOverflowDivide()
- * BigInteger.magDivHelperShiftRight()
- * ; int32 functions
- * BigInteger.gcdInt()
- * BigInteger.isPowerOf()
- * BigInteger.getMaxComputableRadixPower()
- * BigInteger.numberOfLeadingZeros()
- * BigInteger.numberOfTrailingZeros()
- * ; validation
  * BigInteger.validateBigInteger()
- * BigInteger.validateMagnitudeRadix()
+ * BigInteger.gcdInt()
+ * ; Constants
+ * BigInteger.MINUS_ONE ; -1
+ * BigInteger.ZERO ; 0
+ * BigInteger.ONE ; 1
+ * BigInteger.TWO ; 2
+ * BigInteger.TEN ; 10
+ * BigInteger.THOUSAND ; 1000
+ * BigInteger.TWO_POW32 ; 2^32
  */
 class BigInteger {
 	/**
@@ -785,6 +764,100 @@ class BigInteger {
 	}
 
 	/**
+	 * Gets the lowest value from (this) and given values.
+	 * @param {Integer | String | BigInteger} anyInt Any number of Integers, strings representing an integer or BigIntegers
+	 * @returns {BigInteger} A BigInteger representing the smallest integer between this and values and anyInt. If this already was a BigInteger, it is returned (not cloned)
+	 * @example
+	 * BigInteger(5).min(-1, 3, 2934) => -1
+	 * a := BigInteger(3)
+	 * b := a.min(5,6,7) ; returns a without cloning it
+	 * b := 5
+	 * a => 5
+	 */
+	min(anyInt*) {
+		curMin := this
+		for bigInt in anyInt
+			curMin := curMin.compareTo(bigInt) == 1 ? bigInt : curMin
+		return curMin
+	}
+
+	/**
+	 * Gets the smallest value from the given values.
+	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
+	 * @param {Integer | String | BigInteger*} anyIntValues Any number of Integers, strings representing an integer or BigIntegers
+	 * @returns {BigInteger} A BigInteger representing the smallest integer between the given values. If this already was a BigInteger, it is returned (not cloned)
+	 * @example
+	 * ; See the non-static method for an example
+	 */
+	static Min(anyInt, anyintValues*) => BigInteger.validateBigInteger(anyInt).Min(anyintValues*)
+	
+	/**
+	 * Gets the highest value from (this) and given values.
+	 * @param {Integer | String | BigInteger} anyInt Any number of Integers, strings representing an integer or BigIntegers
+	 * @returns {BigInteger} A BigInteger representing the largest integer between this and values and anyInt. If this already was a BigInteger, it is returned (not cloned)
+	 * @returns {BigInteger}
+	 * @example
+	 * BigInteger(5).max(-1, 3, 2934) => 2934
+	 * a := BigInteger(13)
+	 * b := a.max(5,6,7) ; returns a without cloning it
+	 * b := 5
+	 * a => 5
+	 */
+	max(anyInt*) {
+		curMax := this
+		for bigInt in anyInt
+			curMax := curMax.compareTo(bigInt) == -1 ? bigInt : curMax
+		return curMax
+	}
+
+	/**
+	 * Gets the highest value from the given values.
+	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
+	 * @param {Integer | String | BigInteger*} anyIntValues Any number of Integers, strings representing an integer or BigIntegers
+	 * @returns {BigInteger} A BigInteger representing the largest integer between the given values. If this already was a BigInteger, it is returned (not cloned)
+	 * @example
+	 * ; See the non-static method for an example
+	 */
+	static Max(anyInt, anyintValues*) => BigInteger.validateBigInteger(anyInt).Max(anyintValues*)
+
+	/**
+	 * Given any number of BigIntegers, sorts them numerically ascending using a custom mergesort.
+	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
+	 * @param {Integer | String | BigInteger} anyIntValues* Any number of Integers, strings representing an integer or BigIntegers
+	 * @returns {Array} A numerically ascending sorted array containing BigIntegers. Note that these BigIntegers are not clones, but the same as the original BigIntegers referenced in the parameters.
+	 * @example
+	 * BigInteger.Sort(-1, '-329428934829349', 5, 3242) => [BigInteger('-329428934829349'), BigInteger(-1), BigInteger(5), BigInteger(3242)]
+	 */
+	static Sort(anyInt, anyIntValues*) {
+		nums := [BigInteger.validateBigInteger(anyInt)]
+		for i, e in anyIntValues
+			nums.push(BigInteger.validateBigInteger(e)) ; while compareTo validates too, it is called O(nlogn) times, so this is better
+		len := anyIntValues.length + 1
+		res := []
+		res.Length := len
+		sliceLen := 1
+		while (sliceLen <= len) { ; O(log2(len))
+			c := 1
+			while (c <= len) { ; O(len)
+				i := c
+				j := indexB := min(c + sliceLen, len)
+				lastIndex := min(c + 2 * sliceLen - 1, len)
+				Loop (lastIndex - c + 1) {
+					k := c + A_Index - 1
+					if (i < indexB && (j > lastIndex || (nums[i].compareTo(nums[j]) == -1)))
+						res[k] := nums[i++]
+					else
+						res[k] := nums[j++]
+				}
+				c += 2 * sliceLen
+			}
+			sliceLen *= 2
+			nums := res.clone()
+		}
+		return res
+	}
+
+	/**
 	 * Returns a BigInteger whose values is (this) & anyInt bitwise. Treats both this and anyInt as if they were stored in twos complement.
 	 * @param {Integer | String | BigInteger} anyInt An Integer, a string representing an integer or a BigInteger
 	 * @returns {BigInteger} the ANDed BigInteger
@@ -989,100 +1062,6 @@ class BigInteger {
 				mag.push(compl[len - words + A_Index])
 			return BigInteger.Helpers.fromTrustedMagnitude(mag, 1)
 		}
-	}
-
-	/**
-	 * Gets the lowest value from (this) and given values.
-	 * @param {Integer | String | BigInteger} anyInt Any number of Integers, strings representing an integer or BigIntegers
-	 * @returns {BigInteger} A BigInteger representing the smallest integer between this and values and anyInt. If this already was a BigInteger, it is returned (not cloned)
-	 * @example
-	 * BigInteger(5).min(-1, 3, 2934) => -1
-	 * a := BigInteger(3)
-	 * b := a.min(5,6,7) ; returns a without cloning it
-	 * b := 5
-	 * a => 5
-	 */
-	min(anyInt*) {
-		curMin := this
-		for bigInt in anyInt
-			curMin := curMin.compareTo(bigInt) == 1 ? bigInt : curMin
-		return curMin
-	}
-
-	/**
-	 * Gets the smallest value from the given values.
-	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
-	 * @param {Integer | String | BigInteger*} anyIntValues Any number of Integers, strings representing an integer or BigIntegers
-	 * @returns {BigInteger} A BigInteger representing the smallest integer between the given values. If this already was a BigInteger, it is returned (not cloned)
-	 * @example
-	 * ; See the non-static method for an example
-	 */
-	static Min(anyInt, anyintValues*) => BigInteger.validateBigInteger(anyInt).Min(anyintValues*)
-	
-	/**
-	 * Gets the highest value from (this) and given values.
-	 * @param {Integer | String | BigInteger} anyInt Any number of Integers, strings representing an integer or BigIntegers
-	 * @returns {BigInteger} A BigInteger representing the largest integer between this and values and anyInt. If this already was a BigInteger, it is returned (not cloned)
-	 * @returns {BigInteger}
-	 * @example
-	 * BigInteger(5).max(-1, 3, 2934) => 2934
-	 * a := BigInteger(13)
-	 * b := a.max(5,6,7) ; returns a without cloning it
-	 * b := 5
-	 * a => 5
-	 */
-	max(anyInt*) {
-		curMax := this
-		for bigInt in anyInt
-			curMax := curMax.compareTo(bigInt) == -1 ? bigInt : curMax
-		return curMax
-	}
-
-	/**
-	 * Gets the highest value from the given values.
-	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
-	 * @param {Integer | String | BigInteger*} anyIntValues Any number of Integers, strings representing an integer or BigIntegers
-	 * @returns {BigInteger} A BigInteger representing the largest integer between the given values. If this already was a BigInteger, it is returned (not cloned)
-	 * @example
-	 * ; See the non-static method for an example
-	 */
-	static Max(anyInt, anyintValues*) => BigInteger.validateBigInteger(anyInt).Max(anyintValues*)
-
-	/**
-	 * Given any number of BigIntegers, sorts them numerically ascending using a custom mergesort.
-	 * @param {Integer | String | BigInteger} anyInt An Integer, string representing an integer or BigInteger
-	 * @param {Integer | String | BigInteger} anyIntValues* Any number of Integers, strings representing an integer or BigIntegers
-	 * @returns {Array} A numerically ascending sorted array containing BigIntegers. Note that these BigIntegers are not clones, but the same as the original BigIntegers referenced in the parameters.
-	 * @example
-	 * BigInteger.Sort(-1, '-329428934829349', 5, 3242) => [BigInteger('-329428934829349'), BigInteger(-1), BigInteger(5), BigInteger(3242)]
-	 */
-	static Sort(anyInt, anyIntValues*) {
-		nums := [BigInteger.validateBigInteger(anyInt)]
-		for i, e in anyIntValues
-			nums.push(BigInteger.validateBigInteger(e)) ; while compareTo validates too, it is called O(nlogn) times, so this is better
-		len := anyIntValues.length + 1
-		res := []
-		res.Length := len
-		sliceLen := 1
-		while (sliceLen <= len) { ; O(log2(len))
-			c := 1
-			while (c <= len) { ; O(len)
-				i := c
-				j := indexB := min(c + sliceLen, len)
-				lastIndex := min(c + 2 * sliceLen - 1, len)
-				Loop (lastIndex - c + 1) {
-					k := c + A_Index - 1
-					if (i < indexB && (j > lastIndex || (nums[i].compareTo(nums[j]) == -1)))
-						res[k] := nums[i++]
-					else
-						res[k] := nums[j++]
-				}
-				c += 2 * sliceLen
-			}
-			sliceLen *= 2
-			nums := res.clone()
-		}
-		return res
 	}
 
 	/**
@@ -1957,7 +1936,7 @@ class BigInteger {
 		}
 
 		/**
-		 * Checks if m is a power of n. Returns the exponent k st n^k == m if true, or 0 otherwise. If both 1 and 0 would be valid exponents, returns 1.
+		 * Checks if m is a power of n. Returns the exponent k such that n^k == m if true, or 0 otherwise. If both 1 and 0 would be valid exponents, returns 1.
 		 * Note that this implies 1 is a power of any number, since x^0 == 1
 		 * This has O(log log m) complexity
 		 * @param {Integer} n The base to check
