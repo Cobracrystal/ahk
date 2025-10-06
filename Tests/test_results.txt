@@ -1,0 +1,330 @@
+﻿2025-10-04-21.32.53
+
+Test Method [negate]
+Runtime 0.02148s (avg time per method execution: 0.01074ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [abs]
+Runtime 0.01982s (avg time per method execution: 0.00991ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [not]
+Runtime 0.17240s (avg time per method execution: 0.08620ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [add]
+Runtime 0.08066s (avg time per method execution: 0.04033ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [subtract]
+Runtime 0.09679s (avg time per method execution: 0.04840ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [multiply]
+Runtime 0.42693s (avg time per method execution: 0.21346ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [divide]
+Runtime 0.55136s (avg time per method execution: 0.27568ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [mod]
+Runtime 0.56643s (avg time per method execution: 0.28322ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+==================================================
+2025-10-04-21.55.24
+
+Test Method [negate]
+Runtime 0.01924s (avg time per method execution: 0.00962ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [abs]
+Runtime 0.02000s (avg time per method execution: 0.01000ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [not]
+Runtime 0.16628s (avg time per method execution: 0.08314ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [add]
+Runtime 0.08238s (avg time per method execution: 0.04119ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [subtract]
+Runtime 0.09415s (avg time per method execution: 0.04708ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [multiply]
+Runtime 0.43053s (avg time per method execution: 0.21526ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [divide]
+Runtime 0.50402s (avg time per method execution: 0.25201ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [mod]
+Runtime 0.54331s (avg time per method execution: 0.27165ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+==================================================
+2025-10-04-22.05.09
+
+Test Method [negate]
+Runtime 0.01987s (avg time per method execution: 0.00994ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [abs]
+Runtime 0.02137s (avg time per method execution: 0.01068ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [not]
+Runtime 0.16827s (avg time per method execution: 0.08413ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [add]
+Runtime 0.08105s (avg time per method execution: 0.04053ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [subtract]
+Runtime 0.09473s (avg time per method execution: 0.04737ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [multiply]
+Runtime 0.42609s (avg time per method execution: 0.21305ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [divide]
+Runtime 0.49540s (avg time per method execution: 0.24770ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [mod]
+Runtime 0.50356s (avg time per method execution: 0.25178ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [gcd]
+Runtime 38.69164s (avg time per method execution: 19.34582ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [and]
+Runtime 0.08595s (avg time per method execution: 0.04297ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [andNot]
+Runtime 0.23081s (avg time per method execution: 0.11541ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [or]
+Runtime 0.11299s (avg time per method execution: 0.05650ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [xor]
+Runtime 0.08077s (avg time per method execution: 0.04039ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [equals]
+Runtime 0.01108s (avg time per method execution: 0.00554ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [compareTo]
+Runtime 0.01266s (avg time per method execution: 0.00633ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [pow]
+Runtime 0.44203s (avg time per method execution: 0.44203ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [shiftLeft]
+Runtime 0.01683s (avg time per method execution: 0.01683ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [shiftRight]
+Runtime 0.02061s (avg time per method execution: 0.02061ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [maskBits]
+Runtime 0.01674s (avg time per method execution: 0.01674ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [sqrt]
+Runtime 0.53799s (avg time per method execution: 0.53799ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [nthroot]
+Runtime 0.96075s (avg time per method execution: 0.96075ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+==================================================
+2025-10-06-15.32.39
+
+Test Method [negate]
+Runtime 0.02120s (avg time per method execution: 0.01060ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [abs]
+Runtime 0.02122s (avg time per method execution: 0.01061ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [not]
+Runtime 0.17498s (avg time per method execution: 0.08749ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [add]
+Runtime 0.08250s (avg time per method execution: 0.04125ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [subtract]
+Runtime 0.09684s (avg time per method execution: 0.04842ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [multiply]
+Runtime 0.45194s (avg time per method execution: 0.22597ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [divide]
+Runtime 0.49799s (avg time per method execution: 0.24899ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [mod]
+Runtime 0.48670s (avg time per method execution: 0.24335ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [gcd]
+Runtime 41.74179s (avg time per method execution: 20.87089ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [and]
+Runtime 0.09262s (avg time per method execution: 0.04631ms)
+Errors: 0/2000; Failures: 130/2000; Successes: 1870/2000 - ❌
+=========================
+Test Method [andNot]
+Runtime 0.23386s (avg time per method execution: 0.11693ms)
+Errors: 0/2000; Failures: 122/2000; Successes: 1878/2000 - ❌
+=========================
+Test Method [or]
+Runtime 0.10591s (avg time per method execution: 0.05295ms)
+Errors: 0/2000; Failures: 645/2000; Successes: 1355/2000 - ❌
+=========================
+Test Method [xor]
+Runtime 0.11893s (avg time per method execution: 0.05946ms)
+Errors: 0/2000; Failures: 516/2000; Successes: 1484/2000 - ❌
+=========================
+Test Method [equals]
+Runtime 0.01752s (avg time per method execution: 0.00876ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [compareTo]
+Runtime 0.01432s (avg time per method execution: 0.00716ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [pow]
+Runtime 0.47353s (avg time per method execution: 0.47353ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [shiftLeft]
+Runtime 0.01729s (avg time per method execution: 0.01729ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [shiftRight]
+Runtime 0.02293s (avg time per method execution: 0.02293ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [maskBits]
+Runtime 0.01818s (avg time per method execution: 0.01818ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [sqrt]
+Runtime 0.51940s (avg time per method execution: 0.51940ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [nthroot]
+Runtime 1.03855s (avg time per method execution: 1.03855ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+==================================================
+2025-10-06-15.47.23
+
+Test Method [negate]
+Runtime 0.01993s (avg time per method execution: 0.00996ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [abs]
+Runtime 0.01966s (avg time per method execution: 0.00983ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [not]
+Runtime 0.17419s (avg time per method execution: 0.08710ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [add]
+Runtime 0.08060s (avg time per method execution: 0.04030ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [subtract]
+Runtime 0.09610s (avg time per method execution: 0.04805ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [multiply]
+Runtime 0.41703s (avg time per method execution: 0.20852ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [divide]
+Runtime 0.47317s (avg time per method execution: 0.23659ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [mod]
+Runtime 0.47120s (avg time per method execution: 0.23560ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [gcd]
+Runtime 38.50291s (avg time per method execution: 19.25145ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [and]
+Runtime 0.08543s (avg time per method execution: 0.04272ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [andNot]
+Runtime 0.22895s (avg time per method execution: 0.11448ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [or]
+Runtime 0.08471s (avg time per method execution: 0.04235ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [xor]
+Runtime 0.08188s (avg time per method execution: 0.04094ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [equals]
+Runtime 0.01066s (avg time per method execution: 0.00533ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [compareTo]
+Runtime 0.01340s (avg time per method execution: 0.00670ms)
+Errors: 0/2000; Failures: 0/2000; Successes: 2000/2000 - ✅
+=========================
+Test Method [pow]
+Runtime 0.50743s (avg time per method execution: 0.50743ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [shiftLeft]
+Runtime 0.01721s (avg time per method execution: 0.01721ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [shiftRight]
+Runtime 0.02373s (avg time per method execution: 0.02373ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [maskBits]
+Runtime 0.01807s (avg time per method execution: 0.01807ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [sqrt]
+Runtime 0.49127s (avg time per method execution: 0.49127ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================
+Test Method [nthroot]
+Runtime 1.04308s (avg time per method execution: 1.04308ms)
+Errors: 0/1000; Failures: 0/1000; Successes: 1000/1000 - ✅
+=========================

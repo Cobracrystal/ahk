@@ -6,68 +6,9 @@
 #Include BigInteger.ahk
 #SingleInstance Force
 
-/* ❌✅
- * ; Construction from and output to native value
- * BigInteger.Prototype.__New(intOrString)
- * BigInteger.valueOf(intOrString)
- * ⭕ BigInteger.fromMagnitude([digits*], 1)
- * BigInteger.fromAnyMagnitude([digits*], radix, signum)
- * BigInteger.fromTwosComplement([signWord, digits*])
- * BigInteger.Prototype.toString(radix)
- * BigInteger.Prototype.toStringApprox(radix)
- * BigInteger.Prototype.getFirstNDigits(radix, digits)
- * BigInteger.Prototype.Length(radix)
- * ; Arithmet
- * BigInteger.Prototype.abs()
- * BigInteger.Prototype.negate()
- * BigInteger.Prototype.add(anyInt)
- * BigInteger.Prototype.subtract(anyInt)
- * BigInteger.Prototype.multiply(anyInt)
- * BigInteger.Prototype.pow(anyInt)
- * BigInteger.Prototype.divide(anyInt, &remainder)
- * BigInteger.Prototype.divideByIntPower(int, int, &remainder)
- * BigInteger.Prototype.mod(anyInt)
- * BigInteger.mod(numerator, divisor)
- * BigInteger.Prototype.gcd(anyInt)
- * BigInteger.gcd(anyInt, anyInts*)
- * BigInteger.Prototype.sqrt()
- * BigInteger.Prototype.nthRoot()
- * ; Comparis
- * BigInteger.Prototype.equals(anyInt)
- * BigInteger.Prototype.compareTo(anyInt)
- * BigInteger.Prototype.min(anyInt*)
- * BigInteger.Prototype.max(anyInt*)
- * BigInteger.min(anyInt*)
- * BigInteger.max(anyInt*)
- * BigInteger.Sort(anyInt, anyInts*)
- * ; bitwise arithmet
- * BigInteger.Prototype.and(anyInt)
- * BigInteger.Prototype.not()
- * BigInteger.Prototype.andNot(anyInt)
- * BigInteger.Prototype.or(anyInt)
- * BigInteger.Prototype.xor(anyInt)
- * BigInteger.Prototype.shiftLeft(int)
- * BigInteger.Prototype.shiftRight(int)
- * BigInteger.Prototype.maskBits(int)
- * ; Type conversi
- * BigInteger.Prototype.shortValue()
- * BigInteger.Prototype.int32Value()
- * BigInteger.Prototype.intValue()
- * BigInteger.Prototype.getBitLength()
- * BigInteger.Prototype.getLowestSetBit()
- * BigInteger.Prototype.toTwosComplement()
- * ; Prim
- * ⭕ BigInteger.Prototype.isProbablePrime()
- * ⭕ BigInteger.Prototype.nextProbablePrime()
- * ; Properti
- * ⭕ BigInteger.Prototype.getSignum()
- * ⭕ BigInteger.Prototype.getMagnitude()
- * ; Other
- * ⭕ BigInteger.Prototype.Clone()		
- */
 
 ; Todo: Make test with 0, 1, -1, pos digit, neg digit, pos pow2 digit, neg pow2 digit, pos multi-digit, neg multi-digit and all combinations of the two
-RunTests(0)
+RunTests(1)
 
 
 RunTests(detailedOutput := false) {
@@ -94,7 +35,7 @@ testGcd(loops := 1000, detailedOutput := false) {
 	res := performanceTestParse(res)
 	intCopy := []
 	performanceTestMethod(res, 'gcd', ,detailedOutput, 1)
-	stats := performanceTestMethod(res, 'gcdInt',,detailedOutput, 1, 1)
+	stats := performanceTestMethod(res, 'gcdInt',,detailedOutput, 1, 1)[1]
 	print(stats)
 }
 
@@ -102,8 +43,8 @@ testCacheMethods(detailedOutput) {
 	static cacheMethods := Map(
 		"tests_arithmetic", Map(
 			0, ["negate", "abs", "not"],
-			1, ["add", "subtract", "multiply", "divide", "gcd", "and", "andNot", "or", "xor", "equals", "compareTo"]
-		), 
+			1, ["add", "subtract", "multiply", "divide", "mod", "gcd", "and", "andNot", "or", "xor", "equals", "compareTo"]
+		),
 		"tests_powAndBit", Map(
 			1, ["pow", "shiftLeft", "shiftRight", "maskBits"]
 		),
@@ -124,11 +65,14 @@ testCacheMethods(detailedOutput) {
 	for testFile, tests in cacheTests
 		cacheTests[testFile] := performanceTestParse(tests)
 	print('Parsed Tests to BigIntegers.')
+	resps := []
 	for testFile, methodMap in cacheMethods
 		for paramCount, methods in methodMap
 			for method in methods
-				stats := performanceTestMethod(cacheTests[testFile], method, paramCount, detailedOutput)
-	print(stats)
+				resps.push(performanceTestMethod(cacheTests[testFile], method, paramCount, detailedOutput))
+	str := strMultiply('=', 50) '`n' FormatTime(,'yyyy-MM-dd-HH.mm.ss') '`n' objCollect(resps, (b,e) => b '`n' e[2], '') '`n'
+	FileAppend(str, 'test_results.txt', 'UTF-8')
+	print(resps[-1][1])
 }
 
 testArithmeticMethodsSmall(loops := 1000, detailedOutput := false) {
@@ -276,7 +220,9 @@ performanceTestMethod(cache, method, paramCount?, detailed := false, staticMetho
 				successes++
 			else {
 				if detailed {
-					print("Test failed for " method ":`nExpected: " row.%method%.toString() "`nGot:      " row.%methodRes%.toString())
+					print("Test failed for " method ":")
+					print("Expected: " row.%method%.toString() "( " (row.%method%.signum ? '':'-') toString(row.%method%.mag) " )")
+					print("Got:      " row.%methodRes%.toString() "( " (row.%methodRes%.signum ? '':'-') toString(row.%methodRes%.mag) " )")
 					print("Params: ")
 					print(row.rawA '(' (row.a.signum ? '':'-') toString(row.a.mag) ')')
 					loop(paramCount)
@@ -296,6 +242,6 @@ performanceTestMethod(cache, method, paramCount?, detailed := false, staticMetho
 	totalStats.runs += cache.Length
 	totalStats.runtime += runTime
 	totalStats.methodsTested.push(method)
-	print(Format(str, method, runTime, 1000 * runTime / cache.Length, errors, failures, successes, cache.Length, (successes == cache.Length ? '✅' : '❌')))
-	return totalStats
+	retStr := print(Format(str, method, Round(runTime,5), Round(1000 * runTime / cache.Length,5), errors, failures, successes, cache.Length, (successes == cache.Length ? '✅' : '❌')))
+	return [totalStats, retStr]
 }
