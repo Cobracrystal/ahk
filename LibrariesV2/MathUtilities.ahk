@@ -302,6 +302,29 @@ gcm(nums*) {
 	return n
 }
 
+; returns the index of the smallest value
+MinIndex(value1, valueN*) {
+	curMin := value1
+	curI := 1
+	for i, e in valueN
+		if e < curMin {
+			curMin := e
+			curI := i+1
+		}
+	return curI
+}
+
+; returns the index of the largest value
+MaxIndex(value1, valueN*) {
+	curMin := value1
+	curI := 1
+	for i, e in valueN
+		if e > curMin {
+			curMin := e
+			curI := i+1
+		}
+	return curI
+}
 
 /**
  * Given an Integer, returns whether it is prime.
