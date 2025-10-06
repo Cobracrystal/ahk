@@ -7,12 +7,12 @@
 
 ; static alias for these?
 ; FINAL DOESN'T MEAN THAT DOCS ARE ADDED!!!!
-; merge the two respective division functions (the two non-overflow and the two overflow versions)
 ; Todo getFirstNDigits and divideByIntPower should utilize radix expansion to be more efficient.
-; TOdo squareMag linear (karatsuba)
-; TOdo multiply via karatsuba
-; todo divide
-; todo gcd failure
+; todo shrinkMagnitudeToPowRadix should use bitshifting if converting to power of two (expandMagnitude too)
+; todo karatsuba squaring
+; todo karatsuba multiplication
+; todo remove cloning in magnitude helper funcs
+
 /**
  * METHODS
  * @example														; NOTES:
@@ -132,11 +132,11 @@ class BigInteger {
 		if (anyInt == "0") {
 			this.signum := 0
 			this.mag := [0]
-			return
+			return this
 		}
 		if !IsAlnum(anyInt) || anyInt == ""
 			throw BigInteger.Error.NOT_INTEGER[anyInt]
-		this.mag := BigInteger.magnitudeFromString(anyInt, radix)
+		this.mag := BigInteger.Helpers.magnitudeFromString(anyInt, radix)
 		return this
 	}
 
@@ -159,7 +159,8 @@ class BigInteger {
 	 * BigInteger.fromMagnitude([0], -1) => 0 ; signum gets ignored
 	 */
 	static fromMagnitude(mag, signum := 1) {
-		obj := BigInteger(0) ; Do not call BigInteger.ZERO, that's recursive
+		static template := BigInteger(0)
+		obj := (Object.Clone)(template)
 		obj.signum := (mag.Length = 1 && mag[1] = 0) ? 0 : signum
 		obj.mag := mag.Clone()
 		return obj
@@ -177,10 +178,10 @@ class BigInteger {
 	 */
 	static fromAnyMagnitude(mag, radix := 10, signum := 1) {
 		signum := (mag.Length = 1 && mag[1] = 0) ? 0 : signum
-		mag := this.validateMagnitudeRadix(mag, radix)
-		exponent := BigInteger.getMaxComputableRadixPower(radix)
-		maxRadixMag := BigInteger.shrinkMagnitudeToPowRadix(mag, radix, exponent)
-		return BigInteger.fromMagnitude(BigInteger.normalizeMagnitudeBase(maxRadixMag, radix**exponent), signum)
+		mag := BigInteger.Helpers.validateMagnitudeRadix(mag, radix)
+		exponent := BigInteger.Helpers.getMaxComputableRadixPower(radix)
+		maxRadixMag := BigInteger.Helpers.shrinkMagnitudeToPowRadix(mag, radix, exponent)
+		return BigInteger.Helpers.fromTrustedMagnitude(BigInteger.Helpers.normalizeMagnitudeBase(maxRadixMag, radix**exponent), signum)
 	}
 
 	/**
@@ -202,18 +203,18 @@ class BigInteger {
 		mag := mag.Clone()
 		leadingSign := mag.RemoveAt(1)
 		if (leadingSign == 0)
-			return BigInteger.fromMagnitude(BigInteger.stripLeadingZeros(mag), 1)
+			return BigInteger.Helpers.fromTrustedMagnitude(BigInteger.Helpers.stripLeadingZeros(mag), 1)
 		if leadingSign != BigInteger.INT_MASK
 			throw BigInteger.Error.BAD_TWO_COMPLEMENT[2, leadingSign]
 		newMag := []
 		newMag.Length := len
-		unchangedWords := BigInteger.fromMagnitude(mag).getLowestSetBit() >>> 5
+		unchangedWords := BigInteger.Helpers.fromTrustedMagnitude(mag).getLowestSetBit() >>> 5 ; a bit ugly
 		Loop (unchangedWords) ; copy rightmost words that are 0
 			newMag[-A_index] := 0
 		newMag[-unchangedWords - 1] := (~mag[-unchangedWords - 1] + 1) & BigInteger.INT_MASK
 		Loop (len - unchangedWords - 1)
 			newMag[A_Index] := ~mag[A_Index] & BigInteger.INT_MASK
-		return BigInteger.fromMagnitude(BigInteger.stripLeadingZeros(newMag), -1)
+		return BigInteger.Helpers.fromTrustedMagnitude(BigInteger.Helpers.stripLeadingZeros(newMag), -1)
 	}
 
 	/**
@@ -232,15 +233,15 @@ class BigInteger {
 			throw BigInteger.Error.INVALID_RADIX[radix]
 
 		str := this.signum < 0 ? '-' : ''
-		ex := BigInteger.getMaxComputableRadixPower(radix)
+		ex := BigInteger.Helpers.getMaxComputableRadixPower(radix)
 		powRadix := radix**ex
-		newMag := BigInteger.convertMagnitudeBase(this.mag, powRadix)
+		newMag := BigInteger.Helpers.convertMagnitudeBase(this.mag, powRadix)
 		if (radix == 10) {
 			str .= newMag[1]
 			Loop (newMag.Length - 1)
 				str .= Format("{:09}", newMag[A_Index + 1])
 		} else { ; this is *significantly* faster than directly converting to radix
-			newMag := BigInteger.expandMagnitudeToRadix(newMag, powRadix, radix)
+			newMag := BigInteger.Helpers.expandMagnitudeToRadix(newMag, powRadix, radix)
 			for d in newMag
 				str .= d > 9 ? Chr(d + 55) : d
 		}
@@ -291,7 +292,7 @@ class BigInteger {
 			newMag.push(this.mag[A_Index])
 		loop (this.mag.Length - wordsNeeded)
 			newMag.push(0)
-		ndigits := BigInteger.fromMagnitude(newMag, this.signum).divideByIntPower(radix, len - digits)
+		ndigits := BigInteger.Helpers.fromTrustedMagnitude(newMag, this.signum).divideByIntPower(radix, len - digits)
 		return ndigits.toString(radix)
 	}
 
@@ -375,15 +376,15 @@ class BigInteger {
 	add(anyInt) {
 		anyInt := BigInteger.validateBigInteger(anyInt)
 		if (this.signum == anyInt.signum) {
-			magSum := BigInteger.addMagnitudes(this.mag, anyInt.mag)
-			return BigInteger.fromMagnitude(magSum, this.signum)
+			magSum := BigInteger.Helpers.addMagnitudes(this.mag, anyInt.mag)
+			return BigInteger.Helpers.fromTrustedMagnitude(magSum, this.signum)
 		} else {
-			comparison := BigInteger.compareMagnitudes(this.mag, anyInt.mag)
+			comparison := BigInteger.Helpers.compareMagnitudes(this.mag, anyInt.mag)
 			if !comparison
 				return BigInteger.ZERO
 			minuend := comparison == 1 ? this : anyInt
 			subtrahend := comparison == 1 ? anyInt : this
-			return BigInteger.fromMagnitude(BigInteger.subtractMagnitudes(minuend.mag, subtrahend.mag), minuend.signum)
+			return BigInteger.Helpers.fromTrustedMagnitude(BigInteger.Helpers.subtractMagnitudes(minuend.mag, subtrahend.mag), minuend.signum)
 		}
 	}
 
@@ -399,15 +400,15 @@ class BigInteger {
 				return anyInt.negate()
 			if !anyInt.signum
 				return this.Clone()
-			return BigInteger.fromMagnitude(this.abs().add(anyInt.abs()).mag, this.signum)
+			return BigInteger.Helpers.fromTrustedMagnitude(this.abs().add(anyInt.abs()).mag, this.signum)
 		} else {
-			comparison := BigInteger.compareMagnitudes(this.mag, anyInt.mag)
+			comparison := BigInteger.Helpers.compareMagnitudes(this.mag, anyInt.mag)
 			if comparison == 0
 				return BigInteger.ZERO
 			minuend := comparison == 1 ? this : anyInt
 			subtrahend := comparison == 1 ? anyInt : this
-			magDiff := BigInteger.subtractMagnitudes(minuend.mag, subtrahend.mag)
-			return BigInteger.fromMagnitude(magDiff, comparison == 1 ? this.signum : -this.signum)
+			magDiff := BigInteger.Helpers.subtractMagnitudes(minuend.mag, subtrahend.mag)
+			return BigInteger.Helpers.fromTrustedMagnitude(magDiff, comparison == 1 ? this.signum : -this.signum)
 		}
 	}
 
@@ -420,8 +421,8 @@ class BigInteger {
 		anyInt := BigInteger.validateBigInteger(anyInt)
 		if this.signum == 0 || anyInt.signum == 0
 			return BigInteger.ZERO
-		magProduct := BigInteger.multiplyMagnitudes(this.mag, anyInt.mag)
-		return BigInteger.fromMagnitude(magProduct, this.signum * anyInt.signum)
+		magProduct := BigInteger.Helpers.multiplyMagnitudes(this.mag, anyInt.mag)
+		return BigInteger.Helpers.fromTrustedMagnitude(magProduct, this.signum * anyInt.signum)
 	}
 
 	/**
@@ -447,8 +448,8 @@ class BigInteger {
 		if (powerofTwo > 0) {
 			partToSquare := this.shiftRight(powerofTwo)
 			if (partToSquare.getBitLength() == 1) {
-				mag := BigInteger.shiftMagnitudeLeft([1], powerofTwo * exponent)
-				return BigInteger.fromMagnitude(mag, exponent & 0x1 && this.signum < 0 ? -1 : 1)
+				mag := BigInteger.Helpers.shiftMagnitudeLeft([1], powerofTwo * exponent)
+				return BigInteger.Helpers.fromTrustedMagnitude(mag, exponent & 0x1 && this.signum < 0 ? -1 : 1)
 			}
 		} else if this.getBitLength() == 1 {
 			return (this.signum < 0 && exponent & 0x1) ? BigInteger.MINUS_ONE : BigInteger.ONE
@@ -460,13 +461,13 @@ class BigInteger {
 		result := [1]
 		while (workingExponent != 0) { ; this is not incredibly faster than regular repeated multiplication, but becomes much faster because squareMagnitude can be implemented in O(n)
 			if (workingExponent & 1)
-				result := BigInteger.multiplyMagnitudes(result, magSquare)
+				result := BigInteger.Helpers.multiplyMagnitudes(result, magSquare)
 			if ((workingExponent >>>= 1) != 0) ; cuts off right-most bit if it is 1
-				magSquare := BigInteger.squareMagnitude(magSquare)
+				magSquare := BigInteger.Helpers.squareMagnitude(magSquare)
 		}
 		if (powerofTwo)
-			result := BigInteger.shiftMagnitudeLeft(result, powerofTwo * exponent)
-		res := BigInteger.fromMagnitude(result, exponent & 0x1 ? this.signum : 1)
+			result := BigInteger.Helpers.shiftMagnitudeLeft(result, powerofTwo * exponent)
+		res := BigInteger.Helpers.fromTrustedMagnitude(result, exponent & 0x1 ? this.signum : 1)
 		return res
 	}
 
@@ -480,7 +481,7 @@ class BigInteger {
 		anyInt := BigInteger.validateBigInteger(anyInt)
 		if anyInt.signum == 0
 			throw ZeroDivisionError()
-		cmp := BigInteger.compareMagnitudes(this.mag, anyInt.mag)
+		cmp := BigInteger.Helpers.compareMagnitudes(this.mag, anyInt.mag)
 		if (cmp == 0) {
 			remainder := BigInteger.ZERO
 			return this.signum * anyInt.signum > 0 ? BigInteger.ONE : BigInteger.MINUS_ONE
@@ -491,9 +492,9 @@ class BigInteger {
 		}
 		if (anyInt.mag.Length == 1)
 			return this.divideByIntPower(anyInt.signum * anyInt.mag[1], 1, &remainder?)
-		magQuotient := BigInteger.divideMagnitudes(this.mag, anyInt.mag, &rem)
-		remainder := BigInteger.fromMagnitude(rem, this.signum)
-		return BigInteger.fromMagnitude(magQuotient, this.signum * anyInt.signum)
+		magQuotient := BigInteger.Helpers.divideMagnitudes(this.mag, anyInt.mag, &rem)
+		remainder := BigInteger.Helpers.fromTrustedMagnitude(rem, this.signum)
+		return BigInteger.Helpers.fromTrustedMagnitude(magQuotient, this.signum * anyInt.signum)
 	}
 
 	/**
@@ -509,9 +510,9 @@ class BigInteger {
 		signum := this.signum * (divisor > 0 || pow & 0x1 == 0 ? 1 : -1)
 		divisor := abs(divisor)
 		if (isPowerOfTwo := (divisor & (divisor - 1) == 0)) { ; divisor is power of two. 
-			shiftBits := BigInteger.numberOfTrailingZeros(divisor) * pow
+			shiftBits := BigInteger.Helpers.numberOfTrailingZeros(divisor) * pow
 			if shiftBits > this.getBitLength()
-				rem := this.mag
+				rem := this.mag.Clone()
 			else { ; do not use maskBits as that uses twos complement
 				rem := []
 				words := shiftBits >>> 5
@@ -520,12 +521,13 @@ class BigInteger {
 				Loop (words)
 					rem[-A_Index] := this.mag[-A_Index]
 				rem.InsertAt(1, this.mag[-words - 1] & ((1 << bits) - 1))
+				BigInteger.Helpers.stripLeadingZeros(rem)
 			}
-			remainder := BigInteger.fromMagnitude(BigInteger.stripLeadingZeros(rem), this.signum)
-			res := BigInteger.shiftMagnitudeRight(this.mag, shiftBits)
-			return BigInteger.fromMagnitude(res, signum)
+			remainder := BigInteger.Helpers.fromTrustedMagnitude(rem, this.signum)
+			res := BigInteger.Helpers.shiftMagnitudeRight(this.mag, shiftBits)
+			return BigInteger.Helpers.fromTrustedMagnitude(res, signum)
 		}
-		mag := this.mag
+		mag := this.mag.Clone()
 		if (overflow := divisor >= 2**31) { ; overflow
 			baseDivPrecompute := BigInteger.INT32 // divisor
 			baseRemPrecompute := Mod(BigInteger.INT32, divisor)
@@ -534,15 +536,15 @@ class BigInteger {
 		remainder := BigInteger.ZERO
 		Loop (pow) {
 			if (overflow)
-				arr := BigInteger.magDivHelperOverflowDivide(mag, divisor, baseDivPrecompute, baseRemPrecompute)
+				arr := BigInteger.Helpers.magDivHelperOverflowDivide(mag, divisor, baseDivPrecompute, baseRemPrecompute)
 			else
-				arr := BigInteger.magDivHelperDivide(mag, divisor)
+				arr := BigInteger.Helpers.magDivHelperDivide(mag, divisor)
 			mag := arr[1]
 			remainder := remainder.add(divAsBigInt.pow(pow - A_Index).multiply(arr[2]))
 		}
-		if !remainder.equals(BigInteger.ZERO)
+		if remainder.signum != 0
 			remainder.signum := this.signum
-		return BigInteger.fromMagnitude(mag, signum)
+		return BigInteger.Helpers.fromTrustedMagnitude(mag, signum)
 	}
 
 	/**
@@ -563,7 +565,7 @@ class BigInteger {
 	 * @param {&BigInteger?} quotient This will be set to the result of the division, if given.
 	 * @returns {BigInteger} The result of the modulo operation.
 	 */
-	static Mod(anyIntNum, anyIntDiv) => this.validateBigInteger(anyIntNum).mod(anyIntDiv)
+	static Mod(anyIntNum, anyIntDiv) => BigInteger.validateBigInteger(anyIntNum).mod(anyIntDiv)
 	
 	/**
 	 * Calculates the greatest common divisor amongst the given Integer-likes and (this), using binary GCD on the two smallest values, dividing the others by that gcd and running modified binary GCD on those again.
@@ -584,7 +586,7 @@ class BigInteger {
 		curMin2 := anyIntValues[1] := BigInteger.validateBigInteger(anyIntValues[1]).abs()
 		for i, e in anyIntValues {
 			bigInt := BigInteger.validateBigInteger(e).abs()
-			if i == 1 || bigInt.equals(BigInteger.ZERO)
+			if i == 1 || bigInt.signum == 0
 				continue
 			if (curMin.compareTo(bigInt) == 1) {
 				tNums.push(curMin2)
@@ -605,7 +607,7 @@ class BigInteger {
 		copyNums := [curGcd]
 		for e in tNums {
 			m := e.mod(curGcd)
-			if !m.equals(BigInteger.ZERO)
+			if m.signum != 0
 				copyNums.push(m)
 		}
 		copyNums := tNums
@@ -623,7 +625,7 @@ class BigInteger {
 			for i, e in copyNums {
 				if (e != curMin) { ; see gcdTwoVar for an explanation
 					e := e.subtract(curMin)
-					if e.equals(BigInteger.ZERO)
+					if e.signum == 0
 						continue
 					e := e.shiftRight(e.getLowestSetBit() - 1)
 				}
@@ -645,7 +647,7 @@ class BigInteger {
 				}
 				; both are odd -> gcd(u, v) = gcd(u, u-v)
 				n := n.subtract(m)
-				if n.equals(BigInteger.ZERO) {
+				if n.signum == 0 {
 					return m.shiftLeft(k)
 				}
 				; gcd(2^k u, v) = gcd(u, v) if v odd, which is ensured through pre-loop prep and subtract
@@ -662,7 +664,7 @@ class BigInteger {
 	 * @example
 	 * BigInteger.gcd(3033956, '824387595128', '-178468', BigInteger(892340)).toString() => 178468
 	 */
-	static gcd(anyInt, anyIntValues*) => this.validateBigInteger(anyInt).gcd(anyIntValues*)
+	static gcd(anyInt, anyIntValues*) => BigInteger.validateBigInteger(anyInt).gcd(anyIntValues*)
 
 	/**
 	 * Calculates the integer square root of (this), ie. the largest integer i such that i*i <= (this)
@@ -736,7 +738,7 @@ class BigInteger {
 		while (true) {
 			; xk1 := xk - (xk^n - this)/(n*xk^(n-1)) = ( (n-1)*x + a/(x^(n-1)))/n
 			xk1 := this.divide(xk.pow(n - 1)).add(xk.multiply(n - 1)).add(n - 1).divideByIntPower(n)
-			if (BigInteger.compareMagnitudes(xk1.mag, xk.mag) == 0) {
+			if (BigInteger.Helpers.compareMagnitudes(xk1.mag, xk.mag) == 0) {
 				while (xk.pow(n).compareTo(this) > 0)
 					xk := xk.subtract(BigInteger.ONE)
 				remainder := this.subtract(xk.pow(n))
@@ -762,7 +764,7 @@ class BigInteger {
 			return 1
 		else if this.signum < anyInt.signum
 			return -1
-		magComp := BigInteger.compareMagnitudes(this.mag, anyInt.mag)
+		magComp := BigInteger.Helpers.compareMagnitudes(this.mag, anyInt.mag)
 		return this.signum == 1 ? magComp : -magComp
 	}
 
@@ -906,7 +908,7 @@ class BigInteger {
 			return this.Clone()
 		if n < 0
 			throw BigInteger.Error.ILLEGAL_NEGATIVE['shiftLeft', n]
-		return BigInteger.fromMagnitude(BigInteger.shiftMagnitudeLeft(this.mag, n), this.signum)
+		return BigInteger.Helpers.fromTrustedMagnitude(BigInteger.Helpers.shiftMagnitudeLeft(this.mag, n), this.signum)
 	}
 
 	/**
@@ -935,12 +937,12 @@ class BigInteger {
 			throw BigInteger.Error.ILLEGAL_NEGATIVE['shiftRight', n]
 		len := this.mag.Length
 		hasLeftover := this.getLowestSetBit() <= n
-		mag := BigInteger.shiftMagnitudeRight(this.mag, n)
+		mag := BigInteger.Helpers.shiftMagnitudeRight(this.mag, n)
 		if mag[1] == 0
 			return this.signum >= 0 ? BigInteger.ZERO : BigInteger.MINUS_ONE
 		if (this.signum == -1 && hasLeftover) ; 3 >> 1 = 0b11 >> 1 = 0b1 = 1, while -3 >> 1 = 0b111...1101 >> 1 = 0b11..110 = -2
-			mag := BigInteger.addMagnitudes(mag, [1])
-		return BigInteger.fromMagnitude(mag, this.signum)
+			mag := BigInteger.Helpers.addMagnitudes(mag, [1])
+		return BigInteger.Helpers.fromTrustedMagnitude(mag, this.signum)
 	}
 
 	/**
@@ -972,7 +974,7 @@ class BigInteger {
 				mag.push(this.mag[len - words] & bitMask)
 			Loop (words)
 				mag.push(this.mag[len - words + A_Index])
-			return BigInteger.fromMagnitude(mag, this.signum)
+			return BigInteger.Helpers.fromTrustedMagnitude(mag, this.signum)
 		} else {
 			mag := []
 			compl := this.toTwosComplement()
@@ -985,7 +987,7 @@ class BigInteger {
 				mag.push(compl*)
 			else Loop(words)
 				mag.push(compl[len - words + A_Index])
-			return BigInteger.fromMagnitude(mag, 1)
+			return BigInteger.Helpers.fromTrustedMagnitude(mag, 1)
 		}
 	}
 
@@ -1015,7 +1017,7 @@ class BigInteger {
 	 * @example
 	 * ; See the non-static method for an example
 	 */
-	static Min(anyInt, anyintValues*) => this.validateBigInteger(anyInt).Min(anyintValues*)
+	static Min(anyInt, anyintValues*) => BigInteger.validateBigInteger(anyInt).Min(anyintValues*)
 	
 	/**
 	 * Gets the highest value from (this) and given values.
@@ -1044,7 +1046,7 @@ class BigInteger {
 	 * @example
 	 * ; See the non-static method for an example
 	 */
-	static Max(anyInt, anyintValues*) => this.validateBigInteger(anyInt).Max(anyintValues*)
+	static Max(anyInt, anyintValues*) => BigInteger.validateBigInteger(anyInt).Max(anyintValues*)
 
 	/**
 	 * Given any number of BigIntegers, sorts them numerically ascending using a custom mergesort.
@@ -1055,9 +1057,9 @@ class BigInteger {
 	 * BigInteger.Sort(-1, '-329428934829349', 5, 3242) => [BigInteger('-329428934829349'), BigInteger(-1), BigInteger(5), BigInteger(3242)]
 	 */
 	static Sort(anyInt, anyIntValues*) {
-		nums := [this.validateBigInteger(anyInt)]
+		nums := [BigInteger.validateBigInteger(anyInt)]
 		for i, e in anyIntValues
-			nums.push(this.validateBigInteger(e)) ; while compareTo validates too, it is called O(nlogn) times, so this is better
+			nums.push(BigInteger.validateBigInteger(e)) ; while compareTo validates too, it is called O(nlogn) times, so this is better
 		len := anyIntValues.length + 1
 		res := []
 		res.Length := len
@@ -1116,7 +1118,7 @@ class BigInteger {
 	getBitLength() {
 		bits := this.bitLength
 		if (bits == -1) {
-			bits := ((this.mag.Length - 1) << 5) + (64 - BigInteger.numberOfLeadingZeros(this.mag[1]))
+			bits := ((this.mag.Length - 1) << 5) + (64 - BigInteger.Helpers.numberOfLeadingZeros(this.mag[1]))
 			this.bitLength := bits
 		}
 		return bits
@@ -1142,7 +1144,7 @@ class BigInteger {
 				i := len := this.mag.Length
 				while (this.mag[i] == 0)
 					i--
-				lsb := ((len - i) << 5) + BigInteger.numberOfTrailingZeros(this.mag[i]) + 1
+				lsb := ((len - i) << 5) + BigInteger.Helpers.numberOfTrailingZeros(this.mag[i]) + 1
 			}
 			this.lowestSetBit := lsb
 		}
@@ -1194,689 +1196,805 @@ class BigInteger {
 	 * Returns a full copy of (this) without references to (this)
 	 * @returns {BigInteger} The copy of (this)
 	 */
-	Clone() => BigInteger.fromMagnitude(this.mag, this.signum)
-
-	/**
-	 * Given a string of arbitrary length in base 10, returns an array of its digits in base 2**32
-	 * @param {String} str A positive Integer String of arbitrary length. Must not contain -/+ at the beginning.
-	 * @param {Integer} radix 2<0radix<=36
-	 * @returns {Array} The strings base-n digit representation as an Array
-	 */
-	static magnitudeFromString(str, radix := 10) {
-		; parse string into base-10**9 magnitude
-		magBaseB := []
-		len := StrLen(str)
-		chunkLen := BigInteger.getMaxComputableRadixPower(radix)
-		if (radix == 10) { ; parse string in chunks and interpret as base 10^9
-			if (offset := Mod(len, chunkLen))
-				magBaseB.push(Integer(SubStr(str, 1, offset)))
-			chunkIndex := offset + 1
-			Loop (len // chunkLen) { ; interpret as base 10**9
-				magBaseB.push(Integer(SubStr(str, chunkIndex, chunkLen)))
-				chunkIndex += chunkLen
-			}
-			return BigInteger.normalizeMagnitudeBase(magBaseB, radix**chunkLen)
-		} else if (radix == 16) { ; parse in chunks and directly cast to base 2^32
-			if (offset := Mod(len, chunkLen))
-				magBaseB.push(Integer('0x' SubStr(str, 1, offset)))
-			chunkIndex := offset + 1
-			Loop (len // chunkLen) {
-				magBaseB.push(Integer('0x' SubStr(str, chunkIndex, chunkLen)))
-				chunkIndex += chunkLen
-			}
-			return magBaseB
-		} else if (radix & (radix - 1) == 0) { ; power of two, utilize that
-			mag := BigInteger.validateMagnitudeRadix(StrSplit(str), radix)
-			maxRadixMag := BigInteger.shrinkMagnitudeToPowRadix(mag, radix, chunkLen)
-			return BigInteger.normalizeMagnitudeBase(maxRadixMag, radix**chunkLen)
-		} else {
-			mag := BigInteger.validateMagnitudeRadix(StrSplit(str), radix)
-			maxRadixMag := BigInteger.shrinkMagnitudeToPowRadix(mag, radix, chunkLen)
-			return BigInteger.normalizeMagnitudeBase(maxRadixMag, radix**chunkLen)
-		}
+	Clone() {
+		copy := BigInteger.fromMagnitude(this.mag, this.signum)
+		if this.bitLength != -1
+			copy.bitLength := this.bitLength
+		if this.lowestSetBit != -1
+			copy.lowestSetBit := this.lowestSetBit
+		return copy
 	}
 
-	/**
-	 * Transforms alphanumeric digits into numerical ones and checks if all digits are within the range of the specified radix
-	 * @param {Array} mag The magnitude to check 
-	 * @param {Integer} radix The suspected base
-	 * @returns {Array} The validated magnitude
-	 */
-	static validateMagnitudeRadix(mag, radix) {
-		if radix > BigInteger.INT32
-			throw BigInteger.Error.INVALID_RADIX[radix '(Must be < 2^32)']
-		possibleAlphaDigit := radix > 10 && radix <= 36
-		newMag := []
-		for i, e in mag {
-			if !isAlpha(String(e))
-				n := e
-			else {
-				if !possibleAlphaDigit
-					throw BigInteger.Error.INVALID_RADIX[radix '( Found alphanumerical digit ' e ')']
-				n := Ord(e) - 55
-			}
-			if n >= radix
-				throw BigInteger.Error.INVALID_RADIX[radix . ' (Found ' n ' in magnitude)']
-			newMag.push(Integer(n))
-		}
-		return newMag
-	}
 
 	/**
-	 * Shrinks a given magnitude efficiently by converting its base from baseRadix to radix^exponent.
-	 * @param {Array} mag an array of integers < 2^32 in bigEndian notation
-	 * @param {Integer} baseRadix The radix the magnitude is currently in
-	 * @param {Integer} exponent The exponent defining radix^exponent as the new radix
-	 * @returns {Array} The new magnitude in base baseRadix^exponent
+	 * Various helper functions. All functions in this trust that 
+	 * a) magnitudes are in base 2**32 and contain no digits that are >=2**32 or unset
+	 * b) have no leading zero unless they are 0 themselves
+	 * c) have a length of at least 1
 	 */
-	static shrinkMagnitudeToPowRadix(mag, baseRadix, exponent) {
-		if exponent * Log(baseRadix) / Log(2) > 32
-			throw BigInteger.Error.INVALID_RADIX[baseRadix**exponent]
-		if exponent == 1
-			return mag.Clone()
-		n := mag.Length
-		newMag := []
-		m := Mod(n - 1, exponent)
-		v := 0
-		for i, e in mag {
-			if e >= baseRadix
-				throw BigInteger.Error.INVALID_RADIX[baseRadix " (Found " e " in magnitude)"]
-			v += e * baseRadix**m
-			m--
-			if Mod(n - i, exponent) == 0 {
-				m := exponent - 1
-				newMag.push(v)
-				v := 0
-			}
-		}
-		return newMag
-	}
-
-	/**
-	 * Given a magnitude in base <powRadix>, where powRadix is a power of baseRadix, ie. baseRadix^n == powRadix, converts digits to the new radix
-	 * @param {Array} mag an array of integers < 2^32 in bigEndian notation
-	 * @param {Integer} powRadix The radix the magnitude is currently in
-	 * @param {Integer} baseRadix The radix the magnitude is currently in
-	 * @returns {Array} The new magnitude
-	 */
-	static expandMagnitudeToRadix(mag, powRadix, baseRadix) {
-		ex := BigInteger.isPowerOf(baseRadix, powRadix)
-		if !ex
-			throw BigInteger.Error.INCOMPATIBLE_RADIX[powRadix, baseRadix]
-		if ex == 1
-			return mag.clone()
-		isPowerOfTwo := (baseRadix & (baseRadix - 1) == 0)
-		mask := baseRadix - 1
-		z := BigInteger.numberOfTrailingZeros(baseRadix)
-		newMag := []
-		for i, digit in mag {
-			miniMag := []
-			Loop (ex) { ; remainder and thus overflow is irrelevant here
-				miniMag.InsertAt(1, isPowerOfTwo ? digit & mask : Mod(digit, baseRadix))
-				digit := isPowerOfTwo ? digit >> z : digit // baseRadix
-			}
-			if (i == 1)
-				BigInteger.stripLeadingZeros(miniMag)
-			newMag.push(miniMag*)
-		}
-		return newMag
-	}
-
-	/**
-	 * Calculates the largest integer n such that radix**n < 2**32
-	 * @param radix Any value < 2**32 and
-	 * @returns {Number} The calculated exponent
-	 */
-	static getMaxComputableRadixPower(radix) => Floor(log(1 << 32) / log(radix))
-
-	/**
-	 * Convert a magnitude in base to base 2^32 by repeated efficient single-integer division.
-	 * @param {Array} mag The magnitude
-	 * @param {Integer} base the radix of the magnitude
-	 * @returns {Array} The normalized magnitude
-	 */
-	static normalizeMagnitudeBase(mag, base) {
-		result := []
-		if base == BigInteger.INT32
-			return mag.clone()
-		if base == 0
-			throw ValueError("Base 0 does not exist.")
-		overflow := base >= 2**31 ; overflow
-		if overflow {
-			while (mag[1] != 0)
-				magDivHelperOverflowNormalize()
-		} else {
-			while (mag[1] != 0)
-				magDivHelperNormalize()
-		}
-		return result
-
-		magDivHelperNormalize() {
-			quotient := []
-			remainder := 0
-			for digit in mag {
-				dividend := remainder * base + digit
-				q := dividend >> 32
-				remainder := dividend & 0xFFFFFFFF
-				quotient.push(q)
-			}
-			mag := BigInteger.stripLeadingZeros(quotient)
-			result.InsertAt(1, remainder)
-		}
-
-		magDivHelperOverflowNormalize() {
-			; precompute values are 0 or irrelevant here
-			quotient := []
-			remainder := 0
-			for digit in mag {
-				qtmp := base * remainder + digit
-				quotDigit := (qtmp >>> 32) & BigInteger.INT_MASK
-				remainder := qtmp & 0xFFFFFFFF
-				quotient.push(quotDigit)
-			}
-			mag := BigInteger.stripLeadingZeros(quotient)
-			result.InsertAt(1, remainder)
-		}
-	}
-
-	/**
-	 * Convert a magnitude in base 2^32 to base. Note that if base >= 2^31, this will cause overflows and not work.
-	 * @param {Array} mag The specified magnitude
-	 * @param {Integer} base The radix in which to convert mag into
-	 * @returns {Array} The converted magnitude
-	 */
-	static convertMagnitudeBase(mag, base) {
-		if base == BigInteger.INT32
-			return mag.clone()
-		if base == 0
-			throw ValueError("You entered base 0, which doesn't exist. If you do think that it exists, please write me an email.")
-		if (isPowerOfTwo := (base & (base - 1) == 0)) { ; base is 2^n
-			if BigInteger.isPowerOf(base, BigInteger.INT32) ; 2**32 is (base^n), so digits can be read per word
-				return BigInteger.expandMagnitudeToRadix(mag, BigInteger.INT32, base)
-			mask := base - 1
-			z := BigInteger.numberOfTrailingZeros(base)
-		}
-		result := []
-		if (overflow := base >= 2**31) {
-			baseDivPrecompute := BigInteger.INT32 // base
-			baseRemPrecompute := Mod(BigInteger.INT32, base)
-		}
-		while (mag[1] != 0) {
-			if isPowerOfTwo
-				arr := BigInteger.magDivHelperShiftRight(mag, z)
-			else if overflow
-				arr := BigInteger.magDivHelperOverflowDivide(mag, base, baseDivPrecompute, baseRemPrecompute)
-			else
-				arr := BigInteger.magDivHelperDivide(mag, base)
-			mag := arr[1]
-			result.InsertAt(1, arr[2])
-		}
-		return result
-	}
-
-	/**
-	 * Returns 1 if mag1 is larger than mag2, -1 if it is smaller, 0 otherwise.
-	 * This is functionally equivalent to calling num1.Abs().compareTo(num2.Abs())
-	 * @param {Array} mag1 The first Magnitude array
-	 * @param {Array} mag2 The second Magnitude array
-	 * @returns {Integer} 1, 0, -1.
-	 */
-	static compareMagnitudes(mag1, mag2) {
-		if mag1.Length > mag2.Length
-			return 1
-		else if mag1.Length < mag2.Length
-			return -1
-		for i, thisDigit in mag1 {
-			compDigit := mag2[i]
-			if thisDigit > compDigit
-				return 1
-			else if thisDigit < compDigit
-				return -1
-		}
-		return 0
-	}
-
-	/**
-	 * Adds two magnitudes together and returns a new magnitude expressing their sum
-	 * @param mag1
-	 * @param mag2
-	 * @returns {Array}
-	 */
-	static addMagnitudes(mag1, mag2) {
-		magSum := []
-		carry := 0
-		l1 := mag1.Length
-		l2 := mag2.Length
-		l := Max(l1, l2)
-		i := 0
-		while (i++ < l) {
-			a := i <= l1 ? mag1[-i] : 0
-			b := i <= l2 ? mag2[-i] : 0
-			s := a + b + carry
-			if (s < BigInteger.INT32)
-				carry := 0
-			else {
-				s -= BigInteger.INT32
-				carry := 1
-			}
-			magSum.InsertAt(1, s)
-		}
-		if (carry)
-			magSum.InsertAt(1, 1)
-		return magSum
-	}
-
-	/**
-	 * Subtracts mag2 (the smaller magnitude) from mag1 (the larger magnitude) and returns a new magnitude expressing the difference.
-	 * mag1 MUST be larger than mag2 or this function will fail.
-	 * @param mag1
-	 * @param mag2
-	 * @returns {Array}
-	 */
-	static subtractMagnitudes(mag1, mag2) {
-		magDiff := []
-		carry := 0
-		l1 := mag1.Length
-		l2 := mag2.Length
-		i := 0
-		while (i++ < l1) {
-			a := mag1[-i]
-			b := i <= l2 ? mag2[-i] : 0
-			diff := a - b - carry
-			carry := 0
-			if diff < 0 {
-				diff += BigInteger.INT32
-				carry := 1
-			}
-			magDiff.InsertAt(1, diff)
-		}
-		while magDiff.Length > 1 && magDiff[1] == 0 ; strip leading zeros
-			magDiff.RemoveAt(1)
-		return magDiff
-	}
-
-	/**
-	 * Multiplies mag1 with mag2 and returns the product.
-	 * @param mag1 
-	 * @param mag2 
-	 * @returns {BigInteger}
-	 */
-	static multiplyMagnitudes(mag1, mag2) {
-		len1 := mag1.Length
-		len2 := mag2.Length
-		if len1 == 1 && mag1[1] == 1
-			return mag2.Clone()
-		if len2 == 1 && mag2[1] == 1
-			return mag1.Clone()
-		result := []
-		Loop len1 + len2 ; minimum is max(len1, len2), maximum is len1+len2 (eg 0xFF * 0xFF = 0xFE01)
-			result.Push(0)
-		Loop (len1) {
-			i := A_Index
-			carry := 0
-			a := mag1[-i]
-			Loop (len2) {
-				j := A_Index
-				b := mag2[-j]
-				pos := i + j - 1
-				s := result[-pos] + (a * b) + carry
-				result[-pos] := s & BigInteger.INT_MASK
-				carry := (s >>> 32) ; since s might be >2**63-1, when shifting right the high bit is still interpreted as negative value. thus, we cut it off
-			}
-			result[-(i + j)] += carry ; write carry to the position left to the last written value
-		}
-		return this.stripLeadingZeros(result)
-	}
-
-	/**
-	 * Efficiently squares a magnitude
-	 * @param mag 
-	 * @returns {BigInteger} 
-	 */
-	static squareMagnitude(mag) {
-		static KARATSUBA_SQUARE_THRESHOLD := 128
-		if mag.Length < KARATSUBA_SQUARE_THRESHOLD
-			return simpleSquare(mag)
-		else
-			return karatsubaSquare(mag)
+	class Helpers {
 
 		/**
-		 *   					a	b	c	d	e
-		 * *					a	b	c	d	e
-		 * =======================================
-		 *						ae	be	ce	de	ee
-		 * 					ad	bd	cd	dd	ed
-		 * 				ac	bc	cc	dc	ec
-		 * 			ab	bb	cb	db	eb
-		 * 		aa	ba	ca	da	ea
-		 * =======================================
-		 *										ee
-		 * 								dd
-		 * 						cc
-		 * 				bb
-		 * 		aa
-		 * +++++++++++++++++++++++++++++++++++++++
-		 *	2*					ae	be	ce	de
-		 * 	2*				ad	bd	cd
-		 * 	2*			ac	bc
-		 * 	2*		ab
-		 * 	2*
-		 * =======================================
-		 * 
+		 * Constructs a BigInteger given its base 2^32 digit representation and signum.
+		 * This trusts that the magnitude will not be altered and does not copy it accordingly.
+		 * This does not do any validation checks except for setting the signum if the magnitude is 0.
+		 * @param {Array} mag an array of integers < 2^32 in bigEndian notation
+		 * @param {Integer} signum The signum of the number. 1 for positive, -1 for negative, 0 for 0. If magnitude is an array containing only 0, signum will be automatically set to 0.
+		 * @returns {BigInteger} The Constructed Value
+		 * @example
+		 * BigInteger.fromTrustedMagnitude([1,2], -1) => - (1 * 2**32 + 2) = -4294967298
+		 * BigInteger.fromTrustedMagnitude([0], -1) => 0 ; signum gets ignored
 		 */
-		simpleSquare(mag) {
-			len := mag.Length
-			half := len // 2
-			diagonal := []
-			aboveDiagonal := []
-			Loop (2 * len) {
-				diagonal.Push(0)
-				aboveDiagonal.push(0)
-			}
-			Loop (len) {
-				pos := i := A_Index
-				u := mag[-i]
-				s := u * u ; carry cannot reach two digits (and diagonal jumps two digits everytime)
-				diagonal[-(2*i-1)] := s & BigInteger.INT_MASK
-				diagonal[-(2*i)] := (s >>> 32) ; guaranteed empty
-				carry := 0
-				Loop (len - i) {
-					j := A_Index + i
-					v := mag[-j]
-					pos := i + j - 1
-					s := aboveDiagonal[-pos] + carry + u * v
-					aboveDiagonal[-pos] := s & BigInteger.INT_MASK
-					carry := (s >>> 32)
+		static fromTrustedMagnitude(mag, signum := 1) {
+			static template := BigInteger(0) ; this does not have any properties set to values besides mag and signum.
+			obj := (Object.Clone)(template)
+			obj.signum := (mag.Length = 1 && mag[1] = 0) ? 0 : signum
+			obj.mag := mag
+			return obj
+		}
+
+		/**
+		 * Given a string of arbitrary length in base 10, returns an array of its digits in base 2**32
+		 * @param {String} str A positive Integer String of arbitrary length. Must not contain -/+ at the beginning.
+		 * @param {Integer} radix 2<=radix<=36
+		 * @returns {Array} The strings base-n digit representation as an Array
+		 */
+		static magnitudeFromString(str, radix := 10) {
+			; parse string into base-10**9 magnitude
+			magBaseB := []
+			len := StrLen(str)
+			chunkLen := BigInteger.Helpers.getMaxComputableRadixPower(radix)
+			if (radix == 10) { ; parse string in chunks and interpret as base 10^9
+				if (offset := Mod(len, chunkLen))
+					magBaseB.push(Integer(SubStr(str, 1, offset)))
+				chunkIndex := offset + 1
+				Loop (len // chunkLen) { ; interpret as base 10**9
+					magBaseB.push(Integer(SubStr(str, chunkIndex, chunkLen)))
+					chunkIndex += chunkLen
 				}
-				aboveDiagonal[-(pos+1)] += carry ; write carry to the position left to the last written value
+				return BigInteger.Helpers.normalizeMagnitudeBase(magBaseB, radix**chunkLen)
+			} else if (radix == 16) { ; parse in chunks and directly cast to base 2^32
+				if (offset := Mod(len, chunkLen))
+					magBaseB.push(Integer('0x' SubStr(str, 1, offset)))
+				chunkIndex := offset + 1
+				Loop (len // chunkLen) {
+					magBaseB.push(Integer('0x' SubStr(str, chunkIndex, chunkLen)))
+					chunkIndex += chunkLen
+				}
+				return magBaseB
+			} else {
+				mag := BigInteger.Helpers.validateMagnitudeRadix(StrSplit(str), radix)
+				maxRadixMag := BigInteger.Helpers.shrinkMagnitudeToPowRadix(mag, radix, chunkLen)
+				return BigInteger.Helpers.normalizeMagnitudeBase(maxRadixMag, radix**chunkLen)
 			}
-			aboveDiagonal := BigInteger.stripLeadingZeros(aboveDiagonal)
-			diagonal := BigInteger.stripLeadingZeros(diagonal)
-			aboveDiagonal := BigInteger.shiftMagnitudeLeft(aboveDiagonal, 1)
-			return BigInteger.addMagnitudes(aboveDiagonal, diagonal)
 		}
 
-		karatsubaSquare(mag) {
-			return this.multiplyMagnitudes(mag, mag)
+		/**
+		 * Transforms alphanumeric digits into numerical ones and checks if all digits are within the range of the specified radix
+		 * @param {Array} mag The magnitude to check 
+		 * @param {Integer} radix The suspected base
+		 * @returns {Array} The validated magnitude
+		 */
+		static validateMagnitudeRadix(mag, radix) {
+			if radix > BigInteger.INT32
+				throw BigInteger.Error.INVALID_RADIX[radix '(Must be < 2^32)']
+			possibleAlphaDigit := radix > 10 && radix <= 36
+			newMag := []
+			for i, e in mag {
+				if !isAlpha(String(e))
+					n := e
+				else {
+					if !possibleAlphaDigit
+						throw BigInteger.Error.INVALID_RADIX[radix '( Found alphanumerical digit ' e ')']
+					n := Ord(e) - 55
+				}
+				if n >= radix
+					throw BigInteger.Error.INVALID_RADIX[radix . ' (Found ' n ' in magnitude)']
+				newMag.push(Integer(n))
+			}
+			return newMag
 		}
-	}
 
-	/**
-	 * Shifts a magnitude n bits left
-	 * @param mag 
-	 * @param {Integer} bits 
-	 * @returns {BigInteger} 
-	 */
-	static shiftMagnitudeLeft(mag, bits) {
-		shiftBits := bits & 0x1F
-		shiftWords := bits >>> 5
-		newMag := []
-		len := mag.Length
-		result := []
-		if (shiftBits == 0) {
-			result := mag.Clone()
-			Loop (shiftWords)
-				result.push(0)
-		} else {
-			p := 0
-			mask := (1 << shiftBits) - 1
+		/**
+		 * Shrinks a given magnitude efficiently by converting its base from baseRadix to radix^exponent.
+		 * @param {Array} mag an array of integers < 2^32 in bigEndian notation
+		 * @param {Integer} baseRadix The radix the magnitude is currently in
+		 * @param {Integer} exponent The exponent defining radix^exponent as the new radix
+		 * @returns {Array} The new magnitude in base baseRadix^exponent
+		 */
+		static shrinkMagnitudeToPowRadix(mag, baseRadix, exponent) {
+			if exponent * Log(baseRadix) / Log(2) > 32
+				throw BigInteger.Error.INVALID_RADIX[baseRadix**exponent]
+			if exponent == 1
+				return mag.Clone()
+			n := mag.Length
+			newMag := []
+			m := Mod(n - 1, exponent)
+			v := 0
+			for i, e in mag {
+				v += e * baseRadix**m
+				m--
+				if Mod(n - i, exponent) == 0 {
+					m := exponent - 1
+					newMag.push(v)
+					v := 0
+				}
+			}
+			return newMag
+		}
+
+		/**
+		 * Given a magnitude in base <powRadix>, where powRadix is a power of baseRadix, ie. baseRadix^n == powRadix, converts digits to the new radix
+		 * @param {Array} mag an array of integers < 2^32 in bigEndian notation
+		 * @param {Integer} powRadix The radix the magnitude is currently in
+		 * @param {Integer} baseRadix The radix the magnitude is currently in
+		 * @returns {Array} The new magnitude
+		 */
+		static expandMagnitudeToRadix(mag, powRadix, baseRadix) {
+			ex := BigInteger.Helpers.isPowerOf(baseRadix, powRadix)
+			if !ex
+				throw BigInteger.Error.INCOMPATIBLE_RADIX[powRadix, baseRadix]
+			if ex == 1
+				return mag.clone()
+			isPowerOfTwo := (baseRadix & (baseRadix - 1) == 0)
+			mask := baseRadix - 1
+			z := BigInteger.Helpers.numberOfTrailingZeros(baseRadix)
+			newMag := []
+			for i, digit in mag {
+				miniMag := []
+				Loop (ex) { ; remainder and thus overflow is irrelevant here
+					miniMag.InsertAt(1, isPowerOfTwo ? digit & mask : Mod(digit, baseRadix))
+					digit := isPowerOfTwo ? digit >> z : digit // baseRadix
+				}
+				if (i == 1)
+					BigInteger.Helpers.stripLeadingZeros(miniMag)
+				newMag.push(miniMag*)
+			}
+			return newMag
+		}
+
+		/**
+		 * Calculates the largest integer n such that radix**n < 2**32
+		 * @param radix Any value < 2**32 and
+		 * @returns {Number} The calculated exponent
+		 */
+		static getMaxComputableRadixPower(radix) => Floor(log(1 << 32) / log(radix))
+
+		/**
+		 * Convert a magnitude in base to base 2^32 by repeated efficient single-integer division.
+		 * @param {Array} mag The magnitude
+		 * @param {Integer} base the radix of the magnitude
+		 * @returns {Array} The normalized magnitude
+		 */
+		static normalizeMagnitudeBase(mag, base) {
 			result := []
-			result.Length := i := len
-			while (i >= 1) {
-				result[i] := ((mag[i] << shiftBits & BigInteger.INT_MASK) | p)
-				p := mag[i] >> (32 - shiftBits)
-				i--
+			if base == BigInteger.INT32
+				return mag.clone()
+			if base == 0
+				throw ValueError("Base 0 does not exist.")
+			overflow := base >= 2**31 ; overflow
+			if overflow {
+				while (mag[1] != 0)
+					magDivHelperOverflowNormalize()
+			} else {
+				while (mag[1] != 0)
+					magDivHelperNormalize()
 			}
-			if (p > 0)
-				result.InsertAt(1, p)
-			Loop (shiftWords)
-				result.push(0)
-		}
-		return result
-	}
+			return result
 
-	/**
-	 * Shifts magnitude n bits to the right. Always assumes it is positive.
-	 * @param mag 
-	 * @param bits 
-	 * @returns {Object | BigInteger} 
-	 */
-	static shiftMagnitudeRight(mag, bits) {
-		shiftBits := bits & 0x1F
-		shiftWords := bits >>> 5
-		if bits == 0
-			return mag.Clone()
-		len := mag.Length
-		if shiftWords >= len
-			return [0]
-		result := []
-		if (shiftBits == 0) {
-			Loop (len - shiftWords)
-				result.push(mag[A_Index])
-		} else {
-			if (shiftWords == 0)
-				tMag := mag
-			else {
-				tMag := []
-				Loop (len - shiftWords)
-					tMag.push(mag[A_Index])
+			magDivHelperNormalize() {
+				quotient := []
+				remainder := 0
+				for digit in mag {
+					dividend := remainder * base + digit
+					q := dividend >> 32
+					remainder := dividend & 0xFFFFFFFF
+					quotient.push(q)
+				}
+				mag := BigInteger.Helpers.stripLeadingZeros(quotient)
+				result.InsertAt(1, remainder)
 			}
+
+			magDivHelperOverflowNormalize() {
+				; precompute values are 0 or irrelevant here
+				quotient := []
+				remainder := 0
+				for digit in mag {
+					qtmp := base * remainder + digit
+					quotDigit := (qtmp >>> 32) & BigInteger.INT_MASK
+					remainder := qtmp & 0xFFFFFFFF
+					quotient.push(quotDigit)
+				}
+				mag := BigInteger.Helpers.stripLeadingZeros(quotient)
+				result.InsertAt(1, remainder)
+			}
+		}
+
+		/**
+		 * Convert a magnitude in base 2^32 to base. Note that if base >= 2^31, this will cause overflows and not work.
+		 * @param {Array} mag The specified magnitude
+		 * @param {Integer} base The radix in which to convert mag into
+		 * @returns {Array} The converted magnitude
+		 */
+		static convertMagnitudeBase(mag, base) {
+			if base == BigInteger.INT32
+				return mag.clone()
+			if base == 0
+				throw ValueError("You entered base 0, which doesn't exist. If you do think that it exists, please write me an email.")
+			if (isPowerOfTwo := (base & (base - 1) == 0)) { ; base is 2^n
+				if BigInteger.Helpers.isPowerOf(base, BigInteger.INT32) ; 2**32 is (base^n), so digits can be read per word
+					return BigInteger.Helpers.expandMagnitudeToRadix(mag, BigInteger.INT32, base)
+				mask := base - 1
+				z := BigInteger.Helpers.numberOfTrailingZeros(base)
+			}
+			result := []
+			if (overflow := base >= 2**31) {
+				baseDivPrecompute := BigInteger.INT32 // base
+				baseRemPrecompute := Mod(BigInteger.INT32, base)
+			}
+			while (mag[1] != 0) {
+				if isPowerOfTwo
+					arr := BigInteger.Helpers.magDivHelperShiftRight(mag, z)
+				else if overflow
+					arr := BigInteger.Helpers.magDivHelperOverflowDivide(mag, base, baseDivPrecompute, baseRemPrecompute)
+				else
+					arr := BigInteger.Helpers.magDivHelperDivide(mag, base)
+				mag := arr[1]
+				result.InsertAt(1, arr[2])
+			}
+			return result
+		}
+
+		/**
+		 * Returns 1 if mag1 is larger than mag2, -1 if it is smaller, 0 otherwise.
+		 * This is functionally equivalent to calling num1.Abs().compareTo(num2.Abs())
+		 * @param {Array} mag1 The first Magnitude array
+		 * @param {Array} mag2 The second Magnitude array
+		 * @returns {Integer} 1, 0, -1.
+		 */
+		static compareMagnitudes(mag1, mag2) {
+			if mag1.Length > mag2.Length
+				return 1
+			else if mag1.Length < mag2.Length
+				return -1
+			for i, thisDigit in mag1 {
+				compDigit := mag2[i]
+				if thisDigit > compDigit
+					return 1
+				else if thisDigit < compDigit
+					return -1
+			}
+			return 0
+		}
+
+		/**
+		 * Adds two magnitudes together and returns a new magnitude expressing their sum
+		 * @param mag1
+		 * @param mag2
+		 * @returns {Array}
+		 */
+		static addMagnitudes(mag1, mag2) {
+			if mag1[1] == 0
+				return mag2.Clone()
+			if mag2[1] == 0
+				return mag1.Clone()
+			magSum := []
+			carry := 0
+			l1 := mag1.Length
+			l2 := mag2.Length
+			l := Max(l1, l2)
+			i := 0
+			while (i++ < l) {
+				a := i <= l1 ? mag1[-i] : 0
+				b := i <= l2 ? mag2[-i] : 0
+				s := a + b + carry
+				if (s < BigInteger.INT32)
+					carry := 0
+				else {
+					s -= BigInteger.INT32
+					carry := 1
+				}
+				magSum.InsertAt(1, s)
+			}
+			if (carry)
+				magSum.InsertAt(1, 1)
+			return magSum
+		}
+
+		/**
+		 * Subtracts mag2 (the smaller magnitude) from mag1 (the larger magnitude) and returns a new magnitude expressing the difference.
+		 * mag1 MUST be larger than mag2 or this function will fail.
+		 * @param mag1
+		 * @param mag2
+		 * @returns {Array}
+		 */
+		static subtractMagnitudes(mag1, mag2) {
+			if mag2[1] == 0
+				return mag1.Clone()
+			magDiff := []
+			carry := 0
+			l1 := mag1.Length
+			l2 := mag2.Length
+			i := 0
+			while (i++ < l1) {
+				a := mag1[-i]
+				b := i <= l2 ? mag2[-i] : 0
+				diff := a - b - carry
+				carry := 0
+				if diff < 0 {
+					diff += BigInteger.INT32
+					carry := 1
+				}
+				magDiff.InsertAt(1, diff)
+			}
+			while magDiff.Length > 1 && magDiff[1] == 0 ; strip leading zeros
+				magDiff.RemoveAt(1)
+			return magDiff
+		}
+
+		/**
+		 * Multiplies mag1 with mag2 and returns the product.
+		 * @param mag1 
+		 * @param mag2 
+		 * @returns {BigInteger}
+		 */
+		static multiplyMagnitudes(mag1, mag2) {
+			len1 := mag1.Length
+			len2 := mag2.Length
+			if len1 == 1 && mag1[1] == 1
+				return mag2.Clone()
+			if len2 == 1 && mag2[1] == 1
+				return mag1.Clone()
+			result := []
+			Loop len1 + len2 ; minimum is max(len1, len2), maximum is len1+len2 (eg 0xFF * 0xFF = 0xFE01)
+				result.Push(0)
+			Loop (len1) {
+				i := A_Index
+				carry := 0
+				a := mag1[-i]
+				Loop (len2) {
+					j := A_Index
+					b := mag2[-j]
+					pos := i + j - 1
+					s := result[-pos] + (a * b) + carry
+					result[-pos] := s & BigInteger.INT_MASK
+					carry := (s >>> 32) ; since s might be >2**63-1, when shifting right the high bit is still interpreted as negative value. thus, we cut it off
+				}
+				result[-(i + j)] += carry ; write carry to the position left to the last written value
+			}
+			return this.stripLeadingZeros(result)
+		}
+
+		/**
+		 * Efficiently squares a magnitude
+		 * @param mag 
+		 * @returns {BigInteger} 
+		 */
+		static squareMagnitude(mag) {
+			static HALF_CALC_THRESHOLD := 12
+			static KARATSUBA_SQUARE_THRESHOLD := 12800000
+			len := mag.length
+			if len < HALF_CALC_THRESHOLD ; simpleSquare is better in theory, but in practice its implementation is slightly slower here
+				return BigInteger.Helpers.multiplyMagnitudes(mag, mag)
+			if mag.Length < KARATSUBA_SQUARE_THRESHOLD
+				return simpleSquare(mag)
+			else
+				return karatsubaSquare(mag)
+
+			/**
+			 *   					a	b	c	d	e
+			 * *					a	b	c	d	e
+			 * =======================================
+			 *						ae	be	ce	de	ee
+			* 					ad	bd	cd	dd	ed
+			* 				ac	bc	cc	dc	ec
+			* 			ab	bb	cb	db	eb
+			* 		aa	ba	ca	da	ea
+			* =======================================
+			*										ee
+			* 								dd
+			* 						cc
+			* 				bb
+			* 		aa
+			* +++++++++++++++++++++++++++++++++++++++
+			*	2*					ae	be	ce	de
+			* 	2*				ad	bd	cd
+			* 	2*			ac	bc
+			* 	2*		ab
+			* 	2*
+			* =======================================
+			* 
+			*/
+			simpleSquare(mag) {
+				half := len // 2
+				diagonal := []
+				aboveDiagonal := []
+				Loop (2 * len) {
+					diagonal.Push(0)
+					aboveDiagonal.push(0)
+				}
+				Loop (len) {
+					pos := i := A_Index
+					u := mag[-i]
+					s := u * u ; carry cannot reach two digits (and diagonal jumps two digits everytime)
+					diagonal[-(2*i-1)] := s & BigInteger.INT_MASK
+					diagonal[-(2*i)] := (s >>> 32) ; guaranteed empty
+					carry := 0
+					Loop (len - i) {
+						j := A_Index + i
+						v := mag[-j]
+						pos := i + j - 1
+						s := aboveDiagonal[-pos] + carry + u * v
+						aboveDiagonal[-pos] := s & BigInteger.INT_MASK
+						carry := (s >>> 32)
+					}
+					aboveDiagonal[-(pos+1)] += carry ; write carry to the position left to the last written value
+				}
+				aboveDiagonal := BigInteger.Helpers.stripLeadingZeros(aboveDiagonal)
+				diagonal := BigInteger.Helpers.stripLeadingZeros(diagonal)
+				aboveDiagonal := BigInteger.Helpers.shiftMagnitudeLeft(aboveDiagonal, 1)
+				return BigInteger.Helpers.addMagnitudes(aboveDiagonal, diagonal)
+			}
+
+			karatsubaSquare(mag) {
+				half := (len + 1) // 2
+				return this.multiplyMagnitudes(mag, mag)
+
+				getLower(n) {
+
+				}
+
+				getUpper(n) {
+
+				}
+			}
+		}
+
+		/**
+		 * Shifts a magnitude n bits left
+		 * @param mag 
+		 * @param {Integer} bits 
+		 * @returns {BigInteger} 
+		 */
+		static shiftMagnitudeLeft(mag, bits) {
+			shiftBits := bits & 0x1F
+			shiftWords := bits >>> 5
+			newMag := []
+			len := mag.Length
+			result := []
+			if (shiftBits == 0) {
+				result := mag.Clone()
+				Loop (shiftWords)
+					result.push(0)
+			} else {
+				p := 0
+				mask := (1 << shiftBits) - 1
+				result := []
+				result.Length := i := len
+				while (i >= 1) {
+					result[i] := ((mag[i] << shiftBits & BigInteger.INT_MASK) | p)
+					p := mag[i] >> (32 - shiftBits)
+					i--
+				}
+				if (p > 0)
+					result.InsertAt(1, p)
+				Loop (shiftWords)
+					result.push(0)
+			}
+			return result
+		}
+
+		/**
+		 * Shifts magnitude n bits to the right. Always assumes it is positive.
+		 * @param mag 
+		 * @param bits 
+		 * @returns {Object | BigInteger} 
+		 */
+		static shiftMagnitudeRight(mag, bits) {
+			shiftBits := bits & 0x1F
+			shiftWords := bits >>> 5
+			if bits == 0
+				return mag.Clone()
+			len := mag.Length
+			if shiftWords >= len
+				return [0]
+			result := []
+			if (shiftBits == 0) {
+				Loop (len - shiftWords)
+					result.push(mag[A_Index])
+			} else {
+				if (shiftWords == 0)
+					tMag := mag
+				else {
+					tMag := []
+					Loop (len - shiftWords)
+						tMag.push(mag[A_Index])
+				}
+				remainder := 0
+				mask := (1 << shiftBits) - 1 ; mask to retrieve bottom <shiftBits> bits
+				shiftBitsLeft := 32 - shiftBits
+				for i, digit in tMag {
+					result.push((digit >> shiftBits) | (remainder << shiftBitsLeft))
+					remainder := digit & mask
+				}
+				BigInteger.Helpers.stripLeadingZeros(result)
+			}
+			return result
+		}
+
+		/**
+		 * Divides one magnitude by another magnitude using Knuth's Algorithm D (long division).
+		 * Trusts that dividend > divisor.
+		 * Trusts that divisor.Length > 1 (Use divideByInt otherwise)
+		 * See https://skanthak.hier-im-netz.de/division.html for information
+		 * @param {Array} mag1 Dividend magnitude
+		 * @param {Array} mag2 Divisor magnitude
+		 * @param {&BigInteger} remainder The remainder
+		 * @returns {Array} Quotient magnitude and remainder magnitude
+		 */
+		static divideMagnitudes(dividend, divisor, &remainder?) {
+			; assert div.intLen > 1
+			; factor out power of two. a / divisor = a / (q * 2^n) =
+			shift := BigInteger.Helpers.numberOfLeadingZeros(divisor[1]) - 32
+			; U, the dividend of m+n digits
+			numLen := dividend.Length + 1
+			; V, the divisor of n digits
+			divLen := divisor.Length + 1
+			; Q, the quotient of m+1 digits, and R, the remainder of n digits
+			resLen := numLen - divLen + 1
+			; normalize the divisor so that its >= 2**31 (>= Base / 2)
+			num := BigInteger.Helpers.shiftMagnitudeLeft(dividend, shift)
+			div := BigInteger.Helpers.shiftMagnitudeLeft(divisor, shift)
+			if (div.Length == num.Length) { ; we assume mag2 > mag1, so if after normalization we get this, its one. This check isn't necessary, but helps
+				remainder := BigInteger.Helpers.subtractMagnitudes(dividend, divisor)
+				return [1]
+			}
+			divHigh := div[1]
+			divLow := div[2]
+			mag := []
+			baseDivPrec := BigInteger.INT32 // divHigh
+			baseRemPrec := Mod(BigInteger.INT32, divHigh)
+			cDivPrec := divLow > 0 ? BigInteger.INT32 // divLow : 0
+			cRemPrec := divLow > 0 ? Mod(BigInteger.INT32, divLow) : 0
+			; U is m+n digits stored in m+n+1 digit array. The shiftLeft may have caused this to already exist, otherwise fill it in.
+			if num.Length < numLen ; shifting did not cause a spillover, so pad with 0
+				num.InsertAt(1, 0)
+			Loop (resLen) { ; big endian notation
+				i := A_Index
+				; these calculations overflow so apply precomputation trick twice
+				; Set Q̂ to (U[i] × B + U[i+1]) ÷ V[1] => qhat := ( num[i] << 32 | uHigh ) // divHigh
+				; Set R̂ to (U[i] × B + U[i+1]) % V[1] => rhat := Mod(num[i] << 32 | uHigh, divHigh)
+				uHigh := num[i + 1]
+				uLow := num[i + 2]
+				qtmp := baseDivPrec * num[i]
+				rtmp := baseRemPrec * num[i] + uHigh
+				qhat := (qtmp + rtmp // divHigh) ; & BigInteger.INT_MASK
+				rhat := Mod(rtmp, divHigh)
+				; this overflows so instead of qhat * divlow, do (rhat * base + uLow) // divLow using precomputation trick
+				; Test if Q̂ equals B or Q̂ × V[2] is greater than R̂ × B + U[i+2] => qhat * divLow > rhat * base + uLow
+				while (qhat == BigInteger.INT32 || (divLow > 0 && (qhat > (cDivPrec * rhat + (cRemPrec * rhat + uLow) // divLow)))) {
+					; If yes, then decrease Q̂ by 1, increase R̂ by V[1], and repeat this test while R is less than B.
+					qhat--
+					rhat += divHigh
+					if (rhat >= BigInteger.INT32)
+						break
+				}
+				; Replace (U[i]U[i+1]…U[i+n]) by (U[i]U[i+1]…U[i+n]) − Q̂ × (V[1]…V[n-1]V[n]).
+				tDiv := BigInteger.Helpers.sliceMagnitude(num, i, divLen)
+				tProd := BigInteger.Helpers.multiplyMagnitudes(div, [qhat])
+				; Decrease Q[j] by 1 and add (0V[1]…V[n-1]V[n]) to (U[i]U[i+1]…U[i+n-1]U[i+n]).
+				if (BigInteger.Helpers.compareMagnitudes(tDiv, tProd) == -1) {
+					tProd := BigInteger.Helpers.subtractMagnitudes(tProd, div)
+					qhat--
+				}
+				Loop(divLen - tProd.Length)
+					tProd.InsertAt(1, 0)
+				magSubSliceHelper(i) ; performs [3,1,2,9,....,5,6] - [1,1,0] = [2,0,2,9,....,5,6] (with the window shifting by i)
+				mag.push(qhat)
+			}
+			remainder := BigInteger.Helpers.shiftMagnitudeRight(BigInteger.Helpers.stripLeadingZeros(num), shift)
+			return BigInteger.Helpers.stripLeadingZeros(mag)
+
+			; mag1 = [A,B,C,D,E,...,K,L]
+			; mag2 =     [M,N,O,P,R,S] 
+			; index = 3
+			; trust that [C,D,E,F,G,H] - [M,N,O,P,R,S] will be positive
+			; =>     [A,B, [C,D,E,F,G,H] - [M,N,O,P,R,S], I,J,K,L]
+			magSubSliceHelper(index) {
+				offset := index - 1
+				; subtract nums from index to index + mag2.Length (backwards)
+				carry := 0
+				i := divLen
+				while (i > 0) {
+					diff := num[offset + i] - tProd[i] - carry
+					if (carry := (diff < 0))
+						diff += BigInteger.INT32
+					num[offset + i] := diff
+					i--
+				}
+			}
+		}
+
+		/**
+		 * shifts a magnitude <= 32 digits to the right and returns an array of the shift result and remainder.
+		 * This is a helper function for division by powers of two and exists solely because shiftMagnitudeRight doesn't return remainder
+		 * @param mag 
+		 * @param shift 
+		 * @returns {Array} 
+		 */
+		static magDivHelperShiftRight(mag, shift) {
+			quotient := []
 			remainder := 0
-			mask := (1 << shiftBits) - 1 ; mask to retrieve bottom <shiftBits> bits
-			shiftBitsLeft := 32 - shiftBits
-			for i, digit in tMag {
-				result.push((digit >> shiftBits) | (remainder << shiftBitsLeft))
+			mask := (1 << shift) - 1
+			shiftLeft := 32 - shift
+			for digit in mag {
+				quotient.push((digit >> shift) | (remainder << shiftLeft))
 				remainder := digit & mask
 			}
-			BigInteger.stripLeadingZeros(result)
+			BigInteger.Helpers.stripLeadingZeros(quotient)
+			return [quotient, remainder]
 		}
-		return result
-	}
 
-	/**
-	 * Divides one magnitude by another magnitude using Knuth's Algorithm D (long division).
-	 * Trusts that dividend > divisor.
-	 * Trusts that divisor.Length > 1 (Use divideByInt otherwise)
-	 * See https://skanthak.hier-im-netz.de/division.html for information
-	 * @param {Array} mag1 Dividend magnitude
-	 * @param {Array} mag2 Divisor magnitude
-	 * @param {&BigInteger} remainder The remainder
-	 * @returns {Array} Quotient magnitude and remainder magnitude
-	 */
-	static divideMagnitudes(dividend, divisor, &remainder?) {
-		; assert div.intLen > 1
-		; factor out power of two. a / divisor = a / (q * 2^n) =
-		shift := BigInteger.numberOfLeadingZeros(divisor[1]) - 32
-		; U, the dividend of m+n digits
-		numLen := dividend.Length + 1
-		; V, the divisor of n digits
-		divLen := divisor.Length + 1
-		; Q, the quotient of m+1 digits, and R, the remainder of n digits
-		resLen := numLen - divLen + 1
-		; normalize the divisor so that its >= 2**31 (>= Base / 2)
-		num := BigInteger.shiftMagnitudeLeft(dividend, shift)
-		div := BigInteger.shiftMagnitudeLeft(divisor, shift)
-		if (div.Length == num.Length) { ; we assume mag2 > mag1, so if after normalization we get this, its one. This check isn't necessary, but helps
-			remainder := BigInteger.subtractMagnitudes(dividend, divisor)
-			return [1]
+		/**
+		 * Divides a magnitude in base 2**32 by divisor, trusting that the divisor is < 2**31 to avoid overflow calculation
+		 * @param mag 
+		 * @param divisor 
+		 * @returns {Array} 
+		 */
+		static magDivHelperDivide(mag, divisor) {
+			quotient := []
+			remainder := 0
+			for digit in mag {
+				dividend := (remainder << 32) + digit
+				q := dividend // divisor
+				remainder := Mod(dividend, divisor)
+				quotient.push(q)
+			}
+			BigInteger.Helpers.stripLeadingZeros(quotient)
+			return [quotient, remainder]
 		}
-		divHigh := div[1]
-		divLow := div[2]
-		mag := []
-		baseDivPrec := BigInteger.INT32 // divHigh
-		baseRemPrec := Mod(BigInteger.INT32, divHigh)
-		cDivPrec := divLow > 0 ? BigInteger.INT32 // divLow : 0
-		cRemPrec := divLow > 0 ? Mod(BigInteger.INT32, divLow) : 0
-		; U is m+n digits stored in m+n+1 digit array. The shiftLeft may have caused this to already exist, otherwise fill it in.
-		if num.Length < numLen ; shifting did not cause a spillover, so pad with 0
-			num.InsertAt(1, 0)
-		Loop (resLen) { ; big endian notation
-			i := A_Index
-			; these calculations overflow so apply precomputation trick twice
-			; Set Q̂ to (U[i] × B + U[i+1]) ÷ V[1] => qhat := ( num[i] << 32 | uHigh ) // divHigh
-			; Set R̂ to (U[i] × B + U[i+1]) % V[1] => rhat := Mod(num[i] << 32 | uHigh, divHigh)
-			uHigh := num[i + 1]
-			uLow := num[i + 2]
-			qtmp := baseDivPrec * num[i]
-			rtmp := baseRemPrec * num[i] + uHigh
-			qhat := (qtmp + rtmp // divHigh) ; & BigInteger.INT_MASK
-			rhat := Mod(rtmp, divHigh)
-			; this overflows so instead of qhat * divlow, do (rhat * base + uLow) // divLow using precomputation trick
-			; Test if Q̂ equals B or Q̂ × V[2] is greater than R̂ × B + U[i+2] => qhat * divLow > rhat * base + uLow
-			while (qhat == BigInteger.INT32 || (divLow > 0 && (qhat > (cDivPrec * rhat + (cRemPrec * rhat + uLow) // divLow)))) {
-				; If yes, then decrease Q̂ by 1, increase R̂ by V[1], and repeat this test while R is less than B.
-				qhat--
-				rhat += divHigh
-				if (rhat >= BigInteger.INT32)
+
+		/**
+		 * Divides a magnitude in base 2**32 by divisor, while accounting for overflow
+		 * @param mag 
+		 * @param divisor 
+		 * @param baseDivPrecompute 
+		 * @param baseRemPrecompute 
+		 * @returns {Array} 
+		 */
+		static magDivHelperOverflowDivide(mag, divisor, baseDivPrecompute, baseRemPrecompute) {
+			/**
+			 * Long Division:
+			 * Go most significant to least significant
+			 * First digit, divide the digit by the divisor and get the remainder through Mod
+			 * next digit, remainder * base + digit gives the full number
+			 * thus
+			 * dividend := remainder * 2**32 + digit
+			 * quotient := dividend // divisor
+			 * remainder := Mod(divident, divisor)
+			 * 1. Optimization: // INT32 <-> >> 32, * INT32 <-> << 32, Mod(,Int32) <-> & INT32 - 1
+			 * dividend := (remainder << 32) + digit
+			 * quotient := isPowerOfTwo ? dividend >> z : dividend // divisor
+			 * remainder := isPowerOfTwo ? dividend & mask : Mod(dividend, base)
+			 * 2. remainder < divisor. This means that if divisor >= 2**31, then remainder * 2**32 >= 2**63 => overflow
+			 * Thus
+			 * quotient = (remainder * base + digit) // divisor ; overflows
+			 * 			= (remainder * (base//divisor * divisor + Mod(base, divisor)) + digit) // divisor
+			 * 			= (remainder * base//divisor * divisor + remainder * Mod(base, divisor) + digit) // divisor
+			 * 			= remainder * base//divisor + (remainder * Mod(base, divisor) + digit) // divisor
+			 * 			= base//divisor * remainder + (Mod(base, divisor) * remainder + digit) // divisor
+			 * 			= const1	    * remainder + (const2             * remainder + digit) // divisor
+			 * 			= const1	    * remainder + (const2             * remainder + digit) // divisor
+			 * remainder= Mod(remainder * base + digit, divisor)
+			 * 			= Mod(remainder * base//divisor * divisor + remainder * Mod(base, divisor) + digit, divisor)
+			 * 			= Mod(remainder * Mod(base, divisor) + digit, divisor)
+			 * 			= Mod(const2 * remainder + digit, divisor)
+			 * 3. base // divisor = 0 if divisor > base. So in case of converting from base < 2**32 to base 2**32:
+			 * quotient = (remainder * base + digit) // divisor
+			 * 			= (remainder * 0 * divisor + remainder * Mod(base, divisor) + digit) // divisor
+			 * 			= (remainder * Mod(base, divisor) + digit) // divisor
+			 * 			= const2 * remainder + digit) // divisor
+			 * remainder= unchanged
+			 */
+			; baseDivPrecompute := BigInteger.INT32 // divisor
+			; baseRemPrecompute := Mod(BigInteger.INT32, divisor)
+			quotient := []
+			remainder := 0
+			for digit in mag {
+				qtmp1 := baseDivPrecompute * remainder
+				qtmp2 := baseRemPrecompute * remainder + digit
+				quotDigit := (qtmp1 + qtmp2 // divisor) & BigInteger.INT_MASK
+				remainder := Mod(qtmp2, divisor) ; no mask, divisor <= MASK
+				quotient.push(quotDigit)
+			}
+			BigInteger.Helpers.stripLeadingZeros(quotient)
+			return [quotient, remainder]
+		}
+
+		; start is inclusive. array of 10, start of 4, len of 3 will get index 4,5,6
+		/**
+		 * Slices a magnitude (or any other array) starting at index start and ending at index start+len-1
+		 * @param mag 
+		 * @param start 
+		 * @param len 
+		 * @returns {Array} 
+		 * @example
+		 * BigInteger.sliceMagnitude([1,2,3,4,5,6,7], 3, 3) => [3,4,5]
+		 */
+		static sliceMagnitude(mag, start, len) {
+			newMag := []
+			Loop (len)
+				newMag.push(mag[start + A_Index - 1])
+			return newMag
+		}
+
+		static stripLeadingZeros(mag) {
+			while (mag.Length > 1 && mag[1] == 0)
+				mag.RemoveAt(1)
+			return mag
+		}
+
+		/**
+		 * Returns the number of zero bits preceding the highest-order one-bit in the two's complement representation of n.
+		 * @param n An ahk-based Integer (long long int)
+		 * @returns {Integer}
+		 */
+		static numberOfLeadingZeros(n) {
+			if n <= 0
+				return n == 0 ? 64 : 0
+			return 63 - Floor(Log(n) / Log(2))
+		}
+
+		/**
+		 * Returns the number of zero bits succeeding the lowest set one-bit in n
+		 * @param n An ahk-based Integer (long long int)
+		 * @returns {Integer}
+		 */
+		static numberOfTrailingZeros(n) {
+			if (n == 0)
+				return -1
+			return Floor(Log(n & -n) / Log(2))
+		}
+
+		/**
+		 * Checks if m is a power of n. Returns the exponent k st n^k == m if true, or 0 otherwise. If both 1 and 0 would be valid exponents, returns 1.
+		 * Note that this implies 1 is a power of any number, since x^0 == 1
+		 * This has O(log log m) complexity
+		 * @param {Integer} n The base to check
+		 * @param {Integer} m The power to check
+		 * @returns {Integer} 0 or the exponent to which n is raised to equal m
+		 */
+		static isPowerOf(n, m) {
+			if n == 0 || n == 1
+				return n == m ? 1 : 0
+			if m == 1
+				return 0
+			pow := n
+			i := 1
+			while (pow < m) {
+				powP := pow
+				pow *= pow
+				i *= 2
+				if pow < powP
 					break
 			}
-			; Replace (U[i]U[i+1]…U[i+n]) by (U[i]U[i+1]…U[i+n]) − Q̂ × (V[1]…V[n-1]V[n]).
-			tDiv := BigInteger.sliceMagnitude(num, i, divLen)
-			tProd := BigInteger.multiplyMagnitudes(div, [qhat])
-			; Decrease Q[j] by 1 and add (0V[1]…V[n-1]V[n]) to (U[i]U[i+1]…U[i+n-1]U[i+n]).
-			if (BigInteger.compareMagnitudes(tDiv, tProd) == -1) {
-				tProd := BigInteger.subtractMagnitudes(tProd, div)
-				qhat--
+			if (pow == m)
+				return i
+			low := 0
+			high := i // 2
+			; binary search using i
+			while (low + 1 < high) {
+				mid := high // 2 + low // 2
+				result := powP * n**mid
+				if (result == m)
+					return i // 2 + mid
+				if (result < m)
+					low := mid
+				else
+					high := mid
 			}
-			Loop(divLen - tProd.Length)
-				tProd.InsertAt(1, 0)
-			magSubSliceHelper(i) ; performs [3,1,2,9,....,5,6] - [1,1,0] = [2,0,2,9,....,5,6] (with the window shifting by i)
-			mag.push(qhat)
+			return 0
 		}
-		remainder := BigInteger.shiftMagnitudeRight(BigInteger.stripLeadingZeros(num), shift)
-		return BigInteger.stripLeadingZeros(mag)
-
-		; mag1 = [A,B,C,D,E,...,K,L]
-		; mag2 =     [M,N,O,P,R,S] 
-		; index = 3
-		; trust that [C,D,E,F,G,H] - [M,N,O,P,R,S] will be positive
-		; =>     [A,B, [C,D,E,F,G,H] - [M,N,O,P,R,S], I,J,K,L]
-		magSubSliceHelper(index) {
-			offset := index - 1
-			; subtract nums from index to index + mag2.Length (backwards)
-			carry := 0
-			i := divLen
-			while (i > 0) {
-				diff := num[offset + i] - tProd[i] - carry
-				if (carry := (diff < 0))
-					diff += BigInteger.INT32
-				num[offset + i] := diff
-				i--
-			}
-		}
-	}
-
-	/**
-	 * shifts a magnitude <= 32 digits to the right and returns an array of the shift result and remainder.
-	 * This is a helper function for division by powers of two and exists solely because shiftMagnitudeRight doesn't return remainder
-	 * @param mag 
-	 * @param shift 
-	 * @returns {Array} 
-	 */
-	static magDivHelperShiftRight(mag, shift) {
-		quotient := []
-		remainder := 0
-		mask := (1 << shift) - 1
-		shiftLeft := 32 - shift
-		for digit in mag {
-			quotient.push((digit >> shift) | (remainder << shiftLeft))
-			remainder := digit & mask
-		}
-		BigInteger.stripLeadingZeros(quotient)
-		return [quotient, remainder]
-	}
-
-	/**
-	 * Divides a magnitude in base 2**32 by divisor, trusting that the divisor is < 2**31 to avoid overflow calculation
-	 * @param mag 
-	 * @param divisor 
-	 * @returns {Array} 
-	 */
-	static magDivHelperDivide(mag, divisor) {
-		quotient := []
-		remainder := 0
-		for digit in mag {
-			dividend := (remainder << 32) + digit
-			q := dividend // divisor
-			remainder := Mod(dividend, divisor)
-			quotient.push(q)
-		}
-		BigInteger.stripLeadingZeros(quotient)
-		return [quotient, remainder]
-	}
-
-	/**
-	 * Divides a magnitude in base 2**32 by divisor, while accounting for overflow
-	 * @param mag 
-	 * @param divisor 
-	 * @param baseDivPrecompute 
-	 * @param baseRemPrecompute 
-	 * @returns {Array} 
-	 */
-	static magDivHelperOverflowDivide(mag, divisor, baseDivPrecompute, baseRemPrecompute) {
-		/**
-		 * Long Division:
-		 * Go most significant to least significant
-		 * First digit, divide the digit by the divisor and get the remainder through Mod
-		 * next digit, remainder * base + digit gives the full number
-		 * thus
-		 * dividend := remainder * 2**32 + digit
-		 * quotient := dividend // divisor
-		 * remainder := Mod(divident, divisor)
-		 * 1. Optimization: // INT32 <-> >> 32, * INT32 <-> << 32, Mod(,Int32) <-> & INT32 - 1
-		 * dividend := (remainder << 32) + digit
-		 * quotient := isPowerOfTwo ? dividend >> z : dividend // divisor
-		 * remainder := isPowerOfTwo ? dividend & mask : Mod(dividend, base)
-		 * 2. remainder < divisor. This means that if divisor >= 2**31, then remainder * 2**32 >= 2**63 => overflow
-		 * Thus
-		 * quotient = (remainder * base + digit) // divisor ; overflows
-		 * 			= (remainder * (base//divisor * divisor + Mod(base, divisor)) + digit) // divisor
-		 * 			= (remainder * base//divisor * divisor + remainder * Mod(base, divisor) + digit) // divisor
-		 * 			= remainder * base//divisor + (remainder * Mod(base, divisor) + digit) // divisor
-		 * 			= base//divisor * remainder + (Mod(base, divisor) * remainder + digit) // divisor
-		 * 			= const1	    * remainder + (const2             * remainder + digit) // divisor
-		 * 			= const1	    * remainder + (const2             * remainder + digit) // divisor
-		 * remainder= Mod(remainder * base + digit, divisor)
-		 * 			= Mod(remainder * base//divisor * divisor + remainder * Mod(base, divisor) + digit, divisor)
-		 * 			= Mod(remainder * Mod(base, divisor) + digit, divisor)
-		 * 			= Mod(const2 * remainder + digit, divisor)
-		 * 3. base // divisor = 0 if divisor > base. So in case of converting from base < 2**32 to base 2**32:
-		 * quotient = (remainder * base + digit) // divisor
-		 * 			= (remainder * 0 * divisor + remainder * Mod(base, divisor) + digit) // divisor
-		 * 			= (remainder * Mod(base, divisor) + digit) // divisor
-		 * 			= const2 * remainder + digit) // divisor
-		 * remainder= unchanged
-		 */
-		; baseDivPrecompute := BigInteger.INT32 // divisor
-		; baseRemPrecompute := Mod(BigInteger.INT32, divisor)
-		quotient := []
-		remainder := 0
-		for digit in mag {
-			qtmp1 := baseDivPrecompute * remainder
-			qtmp2 := baseRemPrecompute * remainder + digit
-			quotDigit := (qtmp1 + qtmp2 // divisor) & BigInteger.INT_MASK
-			remainder := Mod(qtmp2, divisor) ; no mask, divisor <= MASK
-			quotient.push(quotDigit)
-		}
-		BigInteger.stripLeadingZeros(quotient)
-		return [quotient, remainder]
-	}
-
-	; start is inclusive. array of 10, start of 4, len of 3 will get index 4,5,6
-	/**
-	 * Slices a magnitude (or any other array) starting at index start and ending at index start+len-1
-	 * @param mag 
-	 * @param start 
-	 * @param len 
-	 * @returns {Array} 
-	 * @example
-	 * BigInteger.sliceMagnitude([1,2,3,4,5,6,7], 3, 3) => [3,4,5]
-	 */
-	static sliceMagnitude(mag, start, len) {
-		newMag := []
-		Loop (len)
-			newMag.push(mag[start + A_Index - 1])
-		return newMag
 	}
 
 	/**
@@ -1910,95 +2028,27 @@ class BigInteger {
 		return copyNums[1]
 	}
 
-	static stripLeadingZeros(mag) {
-		while (mag.Length > 1 && mag[1] == 0)
-			mag.RemoveAt(1)
-		return mag
-	}
-
 	/**
-	 * Returns the number of zero bits preceding the highest-order one-bit in the two's complement representation of n.
-	 * @param n An ahk-based Integer (long long int)
-	 * @returns {Integer}
-	 */
-	static numberOfLeadingZeros(n) {
-		if n <= 0
-			return n == 0 ? 64 : 0
-		return 63 - Floor(Log(n) / Log(2))
-	}
-
-	/**
-	 * Returns the number of zero bits succeeding the lowest set one-bit in n
-	 * @param n An ahk-based Integer (long long int)
-	 * @returns {Integer}
-	 */
-	static numberOfTrailingZeros(n) {
-		if (n == 0)
-			return -1
-		return Floor(Log(n & -n) / Log(2))
-	}
-
-	/**
-	 * Checks if m is a power of n. Returns the exponent k st n^k == m if true, or 0 otherwise. If both 1 and 0 would be valid exponents, returns 1.
-	 * Note that this implies 1 is a power of any number, since x^0 == 1
-	 * This has O(log log m) complexity
-	 * @param {Integer} n The base to check
-	 * @param {Integer} m The power to check
-	 * @returns {Integer} 0 or the exponent to which n is raised to equal m
-	 */
-	static isPowerOf(n, m) {
-		if n == 0 || n == 1
-			return n == m ? 1 : 0
-		if m == 1
-			return 0
-		pow := n
-		i := 1
-		while (pow < m) {
-			powP := pow
-			pow *= pow
-			i *= 2
-			if pow < powP
-				break
-		}
-		if (pow == m)
-			return i
-		low := 0
-		high := i // 2
-		; binary search using i
-		while (low + 1 < high) {
-			mid := high // 2 + low // 2
-			result := powP * n**mid
-			if (result == m)
-				return i // 2 + mid
-			if (result < m)
-				low := mid
-			else
-				high := mid
-		}
-		return 0
-	}
-
-	/**
-	 * Validates a given potential BigInteger and returns a BigInteger
+	 * Validates a given potential BigInteger and returns either the given BigInteger or a newly constructed one from the given value
 	 * @param {Integer | String | BigInteger} anyInt
 	 * @returns {BigInteger} A BigInteger representing the given value
 	 */
 	static validateBigInteger(anyInt) => anyInt is BigInteger ? anyInt : BigInteger.valueOf(anyInt)
 
 	; BigInteger constant -1
-	static MINUS_ONE => BigInteger.fromMagnitude([1], -1)
+	static MINUS_ONE => BigInteger.Helpers.fromTrustedMagnitude([1], -1)
 	; BigInteger constant 0
-	static ZERO => BigInteger.fromMagnitude([0], 0)
+	static ZERO => BigInteger.Helpers.fromTrustedMagnitude([0], 0)
 	; BigInteger constant 1
-	static ONE => BigInteger.fromMagnitude([1], 1)
+	static ONE => BigInteger.Helpers.fromTrustedMagnitude([1], 1)
 	; BigInteger constant 2
-	static TWO => BigInteger.fromMagnitude([2], 1)
+	static TWO => BigInteger.Helpers.fromTrustedMagnitude([2], 1)
 	; BigInteger constant 10
-	static TEN => BigInteger.fromMagnitude([10], 1)
+	static TEN => BigInteger.Helpers.fromTrustedMagnitude([10], 1)
 	; BigInteger constant 1000
-	static THOUSAND => BigInteger.fromMagnitude([1000], 1)
+	static THOUSAND => BigInteger.Helpers.fromTrustedMagnitude([1000], 1)
 	; BigInteger constant 2^32
-	static TWO_POW_32 => BigInteger.fromMagnitude([1, 0], 1)
+	static TWO_POW32 =>	BigInteger.Helpers.fromTrustedMagnitude([1, 0], 1)
 
 	/**
 	 * BigInteger Properties. THESE VALUES ARE LISTED HERE FOR COMPLETENESS SAKE. USE THEIR GETTER FUNCTIONS TO GET THEM.
@@ -2019,14 +2069,10 @@ class BigInteger {
 	static INT32 := 1 << 32
 	; Masks values to < 2**64, 0xFFFFFFFFFFFFFFFF
 	static LONG_MASK := 0xFFFFFFFFFFFFFFFF
-	; Masks values to < 2**63, 0x7FFFFFFFFFFFFFFF
-	static SIGNED_LONG_MASK := 0x7FFFFFFFFFFFFFFF
 	; Masks values to < 2**32, 0xFFFFFFFF
 	static INT_MASK := 0xFFFFFFFF
 	; Masks values to < 2**16, 0xFFFF
 	static SHORT_MASK := 0xFFFF
-	; The number of bytes necessary to store an ahk integer, long int: 64
-	static MAX_INT_SIZE := 64
 
 	class Error {
 		static NOT_INTEGER[n] => ValueError("Received non-integer input: " (IsObject(n) ? Type(n) : n))
