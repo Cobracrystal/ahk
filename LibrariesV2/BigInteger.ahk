@@ -230,14 +230,13 @@ class BigInteger {
 		if radix < 2 || radix > 36
 			throw BigInteger.Error.INVALID_RADIX[radix]
 
-		str := this.signum < 0 ? '-' : ''
 		exponent := this.Length(radix) - 1
 		ndigits := this.getFirstNDigits(radix, 10)
-		return str . SubStr(ndigits, 1, 1) . "." SubStr(ndigits, 2) . "e+" exponent
+		return SubStr(ndigits, 1, 1) . "." SubStr(ndigits, 2) . "e+" exponent
 	}
 
 	/**
-	 * Returns the first N digits of the BigInteger. This is slower (why?) than directly calling toString, but may be preferable for very large numbers due to string manipulation being expensive.
+	 * Returns the first N digits of the BigInteger. This is slower than directly calling toString for small numbers, but may be preferable for very large numbers due to string manipulation being expensive.
 	 * @param {Integer} radix The radix that the digits should be returned in. Should be between 2 and 36
 	 * @param {Integer} digits The amount of digits to return. Numbers larger than the length of the biginteger will simply return toString()
 	 * @returns {String} The first N digits of the BigInteger
