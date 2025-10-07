@@ -1,8 +1,8 @@
 /************************************************************************
  * @description A class to handle arbitrary precision Integers
  * @author cobracrystal
- * @date 2025/10/02
- * @version 0.9.7
+ * @date 2025/10/07
+ * @version 1.0.0
  ***********************************************************************/
 
 /**
