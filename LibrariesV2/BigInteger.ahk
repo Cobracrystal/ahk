@@ -5,11 +5,6 @@
  * @version 0.9.7
  ***********************************************************************/
 
-; Todo getFirstNDigits and divideByIntPower should utilize radix expansion to be more efficient.
-; Todo shrinkMagnitudeToPowRadix should use bitshifting if converting to power of two (expandMagnitude too)
-; Todo toom-cook-3 square/multiplication
-; Todo primality functions
-
 /**
  * METHODS
  * @example

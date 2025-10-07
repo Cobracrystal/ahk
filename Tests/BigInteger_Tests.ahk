@@ -7,6 +7,11 @@
 #SingleInstance Force
 
 
+; Todo getFirstNDigits and divideByIntPower should utilize radix expansion to be more efficient.
+; Todo shrinkMagnitudeToPowRadix should use bitshifting if converting to power of two (expandMagnitude too)
+; Todo toom-cook-3 square/multiplication
+; Todo primality functions
+
 ; Todo: Make test with 0, 1, -1, pos digit, neg digit, pos pow2 digit, neg pow2 digit, pos multi-digit, neg multi-digit and all combinations of the two
 RunTests(1)
 
@@ -66,7 +71,7 @@ testSquareThresholds() {
 	testT(n) {
 		snap := qpc()
 		loop(10)
-			BigInteger.Helpers.squareMagnitude(arr[Ceil(A_Index / 3)], n)
+			BigInteger.Helpers.squareMagnitude(arr[Ceil(A_Index / 3)]) ; ,n)
 		return Round((qpc() - snap) * 200,5)
 	}
 }
