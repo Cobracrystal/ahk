@@ -2,76 +2,73 @@
  * @description A class to handle arbitrary precision Integers
  * @author cobracrystal
  * @date 2025/10/02
- * @version 0.9.3
+ * @version 0.9.7
  ***********************************************************************/
 
-; static alias for these?
-; FINAL DOESN'T MEAN THAT DOCS ARE ADDED!!!!
 ; Todo getFirstNDigits and divideByIntPower should utilize radix expansion to be more efficient.
-; todo shrinkMagnitudeToPowRadix should use bitshifting if converting to power of two (expandMagnitude too)
+; Todo shrinkMagnitudeToPowRadix should use bitshifting if converting to power of two (expandMagnitude too)
+; Todo toom-cook-3 square/multiplication
+; Todo primality functions
 
 /**
  * METHODS
- * @example														; NOTES:
+ * @example
  * ; Construction from and output to native values
- * BigInteger.Prototype.__New(intOrString) 						; IMPLEMENTED, FINAL
- * BigInteger.valueOf(intOrString) 								; IMPLEMENTED, FINAL
- * BigInteger.fromMagnitude([digits*], 1) 						; IMPLEMENTED, FINAL
- * BigInteger.fromAnyMagnitude([digits*], radix, signum)		; IMPLEMENTED, FINAL
- * BigInteger.fromTwosComplement([signWord, digits*])			; IMPLEMENTED, FINAL
- * BigInteger.Prototype.toString(radix) 						; IMPLEMENTED, FINAL
- * BigInteger.Prototype.toStringApprox(radix)					; IMPLEMENTED, FINAL
- * BigInteger.Prototype.getFirstNDigits(radix, digits)			; IMPLEMENTED, FINAL
- * BigInteger.Prototype.Length(radix) 							; IMPLEMENTED, FINAL
+ * .__New(intOrString)
+ * BigInteger.valueOf(intOrString)
+ * BigInteger.fromMagnitude([digits*], signum)
+ * BigInteger.fromAnyMagnitude([digits*], radix, signum)
+ * BigInteger.fromTwosComplement([signWord, digits*])
+ * .toString(radix)
+ * .toStringApprox(radix)
+ * .getFirstNDigits(radix, digits)
+ * .Length(radix)
  * ; Arithmetic
- * BigInteger.Prototype.abs()							 		; IMPLEMENTED, FINAL
- * BigInteger.Prototype.negate()								; IMPLEMENTED, FINAL
- * BigInteger.Prototype.add(anyInt) 							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.subtract(anyInt) 						; IMPLEMENTED, FINAL
- * BigInteger.Prototype.multiply(anyInt) 						; IMPLEMENTED, SEMI-EFFICIENT
- * BigInteger.Prototype.pow(anyInt) 							; IMPLEMENTED, FINAL (APART FROM SQUAREMAG)
- * BigInteger.Prototype.divide(anyInt, &remainder) 				; IMPLEMENTED, FINAL
- * BigInteger.Prototype.divideByIntPower(int, int, &remainder)	; IMPLEMENTED, FINAL
- * BigInteger.Prototype.mod(anyInt) 							; IMPLEMENTED, FINAL
- * BigInteger.mod(numerator, divisor) 							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.gcd(anyInt) 							; IMPLEMENTED, FINAL
- * BigInteger.gcd(anyInt, anyInts*)								; IMPLEMENTED, FINAL
- * BigInteger.Prototype.sqrt()							 		; IMPLEMENTED, FINAL
- * BigInteger.Prototype.nthRoot(k)						 		; IMPLEMENTED, FINAL
+ * .abs()
+ * .negate()
+ * .add(anyInt)
+ * .subtract(anyInt)
+ * .multiply(anyInt)
+ * .pow(anyInt)
+ * .divide(anyInt, &remainder)
+ * .divideByIntPower(divisor, exponent, &remainder)
+ * .mod(anyInt)
+ * BigInteger.mod(numerator, divisor)
+ * .gcd(anyInt)
+ * BigInteger.gcd(anyInt, anyInts*)
+ * .sqrt(&remainder)
+ * .nthRoot(n, &remainder)
  * ; Comparison
- * BigInteger.Prototype.equals(anyInt) 							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.compareTo(anyInt) 						; IMPLEMENTED, FINAL
- * BigInteger.Prototype.min(anyInt*)							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.max(anyInt*)							; IMPLEMENTED, FINAL
- * BigInteger.min(anyInt*)										; IMPLEMENTED, FINAL
- * BigInteger.max(anyInt*)										; IMPLEMENTED, FINAL
- * BigInteger.Sort(anyInt, anyInts*) 							; IMPLEMENTED, FINAL
+ * .equals(anyInt)
+ * .compareTo(anyInt)
+ * .min(anyInts*)
+ * .max(anyInts*)
+ * BigInteger.min(anyInt, anyInts*)
+ * BigInteger.max(anyInt, anyInts*)
+ * BigInteger.Sort(anyInt, anyInts*)
  * ; bitwise arithmetic
- * BigInteger.Prototype.and(anyInt) 							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.not()							 		; IMPLEMENTED, FINAL
- * BigInteger.Prototype.andNot(anyInt) 							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.or(anyInt) 								; IMPLEMENTED, FINAL
- * BigInteger.Prototype.xor(anyInt) 							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.shiftLeft(int) 							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.shiftRight(int) 						; IMPLEMENTED, FINAL
- * BigInteger.Prototype.maskBits(int) 							; IMPLEMENTED, FINAL
+ * .and(anyInt)
+ * .not()
+ * .andNot(anyInt)
+ * .or(anyInt)
+ * .xor(anyInt)
+ * .shiftLeft(int)
+ * .shiftRight(int)
+ * .maskBits(int)
  * ; Type conversion
- * BigInteger.Prototype.shortValue() 							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.int32Value() 							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.intValue() 								; IMPLEMENTED, FINAL
- * BigInteger.Prototype.getBitLength()							; IMPLEMENTED, FINAL
- * BigInteger.Prototype.getLowestSetBit()						; IMPLEMENTED, FINAL
- * BigInteger.Prototype.toTwosComplement()						; IMPLEMENTED, FINAL
- * ; Primes
- * BigInteger.Prototype.isProbablePrime()						; TODO
- * BigInteger.Prototype.nextProbablePrime()						; TODO
+ * .shortValue()
+ * .int32Value()
+ * .intValue()
+ * .getBitLength()
+ * .getLowestSetBit()
+ * .toTwosComplement()
  * ; Properties
- * BigInteger.Prototype.getSignum()								; IMPLEMENTED, FINAL
- * BigInteger.Prototype.getMagnitude()							; IMPLEMENTED, FINAL
+ * .getSignum()
+ * .getMagnitude()
  * ; Other
- * BigInteger.Prototype.Clone()									; IMPLEMENTED, FINAL (Overriding default .Clone())
+ * .Clone()
  * BigInteger.validateBigInteger()
- * BigInteger.gcdInt()
+ * BigInteger.gcdInt(intValue, intValues*)
  * ; Constants
  * BigInteger.MINUS_ONE ; -1
  * BigInteger.ZERO ; 0
@@ -81,6 +78,7 @@
  * BigInteger.THOUSAND ; 1000
  * BigInteger.TWO_POW32 ; 2^32
  */
+
 class BigInteger {
 	/**
 	 * Constructs a BigInteger given any integer-like input
@@ -535,7 +533,7 @@ class BigInteger {
 	}
 
 	/**
-	 * Modulo. Returns the remainder of anyIntNum divided by anyIntDiv. This is an alias for BigInteger.Prototype.divide(anyInt, &remainder) with its parameters swapped.
+	 * Modulo. Returns the remainder of anyIntNum divided by anyIntDiv. This is an alias for .divide(anyInt, &remainder) with its parameters swapped.
 	 * @param {Integer | String | BigInteger} anyIntNum An Integer, a string representing an integer or a BigInteger
 	 * @param {Integer | String | BigInteger} anyIntDiv An Integer, a string representing an integer or a BigInteger
 	 * @param {&BigInteger?} quotient This will be set to the result of the division, if given.
