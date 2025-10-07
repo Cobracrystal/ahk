@@ -18,11 +18,11 @@ RunTests(1)
 
 RunTests(detailedOutput := false) {
 	; live-generate tests
-	; testGcd(3000, detailedOutput)
-	; testArithmeticMethodsSmall(3000,detailedOutput)
-	; testBitWiseMethodsSmall(3000,detailedOutput)
-	; testCacheMethods(detailedOutput)
-	testSquareThresholds()
+	testGcd(3000, detailedOutput)
+	testArithmeticMethodsSmall(3000,detailedOutput)
+	testBitWiseMethodsSmall(3000,detailedOutput)
+	testCacheMethods(detailedOutput)
+	; testSquareThresholds()
 }
 
 testGcd(loops := 1000, detailedOutput := false) {
@@ -80,7 +80,7 @@ testCacheMethods(detailedOutput) {
 	static cacheMethods := Map(
 		"tests_arithmetic", Map(
 			0, ["negate", "abs", "not"],
-			1, ["add", "subtract", "multiply", "divide", "mod", "and", "andNot", "or", "xor", "equals", "compareTo"] ; not gcd because it takes forever
+			1, ["add", "subtract", "multiply", "divide", "gcd", "mod", "and", "andNot", "or", "xor", "equals", "compareTo"]
 		),
 		"tests_powAndBit", Map(
 			1, ["pow", "shiftLeft", "shiftRight", "maskBits"]
@@ -107,9 +107,10 @@ testCacheMethods(detailedOutput) {
 		for paramCount, methods in methodMap
 			for method in methods
 				resps.push(performanceTestMethod(cacheTests[testFile], method, paramCount, detailedOutput))
-	str := strMultiply('=', 50) '`n' FormatTime(,'yyyy-MM-dd-HH.mm.ss') '`n' objCollect(resps, (b,e) => b '`n' e[2], '') '`n'
-	FileAppend(str, 'test_results.txt', 'UTF-8')
-	FileAppend('Total stats: ' toString(resps[-1][1]), 'test_results.txt', 'UTF-8')
+	str := strMultiply('=', 50) '`n' FormatTime(,'yyyy-MM-dd HH:mm:ss') '`n' objCollect(resps, (b,e) => b '`n' e[2], '') '`n'
+	f := FileOpen('test_results.txt', 'w', 'UTF-8')
+	f.Write(str)
+	f.Write('Total stats: ' toString(resps[-1][1]))
 	print(resps[-1][1])
 }
 
