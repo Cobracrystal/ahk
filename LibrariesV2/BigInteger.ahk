@@ -232,7 +232,12 @@ class BigInteger {
 
 		exponent := this.Length(radix) - 1
 		ndigits := this.getFirstNDigits(radix, 10)
-		return SubStr(ndigits, 1, 2) . "." SubStr(ndigits, 3) . "e+" exponent
+		res := ''
+		if SubStr(ndigits, 1, 1) == '-' {
+			res := '-'
+			ndigits := SubStr(ndigits, 2)
+		}
+		return res . SubStr(ndigits, 1, 1) . "." SubStr(ndigits, 2) . "e+" exponent
 	}
 
 	/**
