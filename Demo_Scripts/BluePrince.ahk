@@ -5,6 +5,7 @@
 #Include %A_LineFile%\..\..\LibrariesV2\MathUtilities.ahk
 mainfunc()
 
+; this solves the numeric core puzzle in blue prince, by decoding words into numbers and solving the numeric core
 mainfunc() {
 	; basicCore := "HEAT"
 	; print(numericCore.solveCores(basicCore))
