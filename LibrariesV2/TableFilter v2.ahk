@@ -1138,7 +1138,7 @@ class TableFilter {
 		settingsGui.OnEvent("Escape", settingsGUIClose)
 		settingsGui.OnEvent("Close", settingsGUIClose)
 		settingsGui.SetFont("c0x000000") ; this is necessary to force font of checkboxes / groupboxes
-		settingsGui.AddText("Center Section", "Settings for YoutubeDL Gui")
+		settingsGui.AddText("Center Section", "Settings for TableFilter")
 
 		; color theme
 		settingsGui.AddText("xs 0x200 R1.45", "GUI Color Theme:")

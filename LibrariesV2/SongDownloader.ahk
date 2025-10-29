@@ -301,7 +301,7 @@ class SongDownloader {
 			if RegExMatch(artist, "(.*)(\S)\s*\b(?:feat|ft)\b\.?(.*)", &match) {
 				open := match[2]
 				closed := unicodeData.getBidiPairedBracket(match[2])
-				if (open != closed && RegExMatch(title, Format("(.*){}\s*(?:feat|ft)\.?(.*?){}(.*)", open, closed), &match2)) ; eg Artist (feat. Thing) [some other stuff]
+				if (open != closed && RegExMatch(title, Format("(.*)\{}\s*(?:feat|ft)\.?(.*?)\{}(.*)", open, closed), &match2)) ; eg Artist (feat. Thing) [some other stuff]
 					artist := Trim(match2[1]) " ft " Trim(match2[2]) . " " Trim(match2[3])
 				else ; of the form Artist - Title feat. Singer (and thus there isn't a bracket) (or they forgot to close the bracket)
 					artist := Trim(match[1] . match[2]) " ft " Trim(match[3])
