@@ -357,7 +357,7 @@ class ReminderManager {
 			r == "Cancel" ? 0 : 
 				( 
 					A_Clipboard := "1337", 
-					WinExist("ahk_exe discord.exe") ? WinActivate("ahk_exe discord.exe") : 0
+					WinExist("Discord") ? WinActivate() : 0
 				)
 			))
 	}

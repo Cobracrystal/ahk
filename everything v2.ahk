@@ -650,7 +650,7 @@ customExit(ExitReason, ExitCode) {
 }
 
 ; LONG STRINGS
-#HotIf WinActive("ahk_exe Discord.exe")
+#HotIf WinActive("Discord")
 :X*:@potet:: fastPrint("<@245189840470147072>")
 :X*:@burny:: fastPrint("<@318350925183844355>")
 :X*:@Y:: fastPrint("<@354316862735253505>")
@@ -672,8 +672,6 @@ customExit(ExitReason, ExitCode) {
 :*?:=/=::≠
 :*?:+-::±
 :*?:~=::≈
-:*:\disap::ಠ_ಠ
-:*:\checkmark::▣
 
 ; ENGLISH AUTOCORRECT
 :*:yall::y'all
