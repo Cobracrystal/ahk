@@ -178,7 +178,7 @@ if (!GLOBALVAR_WASRELOADED)
 		KeyWait(key)
 	BlockInput(1)
 	hook := InputHook("C*", , password)
-    hook.KeyOpt("{All}", "S")
+	hook.KeyOpt("{All}", "S")
 	g := Gui('AlwaysOnTop -SysMenu', 'Keyboard Input Blocked')
 	g.AddText('w250','Keyboard Input is currently blocked.`nClick <Unblock> to resume')
 	g.AddButton('Default x60 h50 w150', 'Unblock').OnEvent('Click', (*) => (g.Destroy(), BlockInput(0), hook.stop()))
@@ -520,7 +520,7 @@ SystemCursor(mode := 1) {   ;// stolen from https://www.autohotkey.com/boards/vi
 	;// INIT = "I"/"Init", OFF = 0/"Off", TOGGLE = -1/"T"/"Toggle", ON = 1
 	static AndMask, XorMask, h_cursor, c := [], b := [], h := [], flag := true
 	; c = system cursors, b = blank cursors, h = handles of default cursors
-	if (SubStr(mode, 1, 1) = "I" || c.Length == 0) {       ; init when requested or at first call
+	if (SubStr(mode, 1, 1) = "I" || c.Length == 0) {	   ; init when requested or at first call
 		h_cursor := Buffer(4444, 1)
 		andMask := Buffer(32 * 4, 0xFF)
 		XOrMask := Buffer(32 * 4, 0)
@@ -1056,45 +1056,52 @@ loadTableAsHotstrings(filePath) {
 }
 
 WinSetVolume(level, target?) {
-    appName := WinGetProcessName(target ?? WinExist() || "A")
-    GUID := Buffer(16)
-    DllCall("ole32\CLSIDFromString", "Str", "{77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F}", "Ptr", GUID)
-    IMMDeviceEnumerator := ComObject("{BCDE0395-E52F-467C-8E3D-C4579291692E}", "{A95664D2-9614-4F35-A746-DE8DB63617E6}")
-    ComCall(4, IMMDeviceEnumerator, "UInt", 0, "UInt", 1, "Ptr*", &IMMDevice := 0)
-    ComCall(3, IMMDevice, "Ptr", GUID, "UInt", 23, "Ptr", 0, "Ptr*", &IAudioSessionManager2 := 0)
-    ObjRelease(IMMDevice)
-    ComCall(5, IAudioSessionManager2, "Ptr*", &IAudioSessionEnumerator := 0)
-    ObjRelease(IAudioSessionManager2)
-    ComCall(3, IAudioSessionEnumerator, "UInt*", &sessionCount := 0)
-    loop sessionCount {
-        ComCall(4, IAudioSessionEnumerator, "Int", A_Index - 1, "Ptr*", &IAudioSessionControl := 0)
-        IAudioSessionControl2 := ComObjQuery(IAudioSessionControl, "{BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D}")
-        ObjRelease(IAudioSessionControl)
-        ComCall(14, IAudioSessionControl2, "UInt*", &pid := 0)
+	static IID_IAudioSessionManager2 := "{77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F}"
+	static CLSID_MMDeviceEnumerator := "{BCDE0395-E52F-467C-8E3D-C4579291692E}"
+	static IID_IMMDeviceEnumerator := "{A95664D2-9614-4F35-A746-DE8DB63617E6}"
+	static IID_IAudioSessionControl2 := "{bfb7ff88-7239-4fc9-8fa2-07c950be9c6d}"
+	static IID_IAudioMeterInformation := "{c02216f6-8c67-4b5b-9d00-d008e73e0064}"
+	static IID_ISimpleAudioVolume := "{87CE5498-68D6-44E5-9215-6DA47EF883D8}"
 
-        if (!pid || ProcessGetName(pid) != appName)
-            continue
+	appName := WinGetProcessName(target ?? WinExist() || "A")
+	GUID := Buffer(16)
+	DllCall("ole32\CLSIDFromString", "Str", IID_IAudioSessionManager2, "Ptr", GUID)
+	IMMDeviceEnumerator := ComObject(CLSID_MMDeviceEnumerator, IID_IMMDeviceEnumerator)
+	ComCall(4, IMMDeviceEnumerator, "UInt", 0, "UInt", 1, "Ptr*", &IMMDevice := 0)
+	ComCall(3, IMMDevice, "Ptr", GUID, "UInt", 23, "Ptr", 0, "Ptr*", &IAudioSessionManager2 := 0)
+	ObjRelease(IMMDevice)
+	ComCall(5, IAudioSessionManager2, "Ptr*", &IAudioSessionEnumerator := 0)
+	ObjRelease(IAudioSessionManager2)
+	ComCall(3, IAudioSessionEnumerator, "UInt*", &sessionCount := 0)
+	Loop sessionCount {
+		ComCall(4, IAudioSessionEnumerator, "Int", A_Index - 1, "Ptr*", &IAudioSessionControl := 0)
+		IAudioSessionControl2 := ComObjQuery(IAudioSessionControl, IID_IAudioSessionControl2)
+		ObjRelease(IAudioSessionControl)
+		ComCall(14, IAudioSessionControl2, "UInt*", &pid := 0)
 
-        ISimpleAudioVolume := ComObjQuery(IAudioSessionControl2, "{87CE5498-68D6-44E5-9215-6DA47EF883D8}")
-        ComCall(6, ISimpleAudioVolume, "Int*", &muted := 0)
-        if muted || level = 0
-            ComCall(5, ISimpleAudioVolume, "Int", !muted, "Ptr", 0)
+		if (!pid || ProcessGetName(pid) != appName)
+			continue
 
-        if level {
-            ComCall(4, ISimpleAudioVolume, "Float*", &levelOld := 0)
+		ISimpleAudioVolume := ComObjQuery(IAudioSessionControl2, IID_ISimpleAudioVolume)
+		ComCall(6, ISimpleAudioVolume, "Int*", &muted := 0)
+		if muted || level = 0
+			ComCall(5, ISimpleAudioVolume, "Int", !muted, "Ptr", 0)
 
-            if (level ~= "^[-+]")
-                levelNew := clamp(levelOld + (level / 100), 0, 1)
-            else
-                levelNew := clamp(level / 100, 0, 1)
+		if level {
+			ComCall(4, ISimpleAudioVolume, "Float*", &levelOld := 0)
 
-            if (levelNew != levelOld)
-                ComCall(3, ISimpleAudioVolume, "Float", levelNew, "Ptr", 0)
-        }
-        break
-    }
-    ObjRelease IAudioSessionEnumerator
-    return (IsSet(levelNew) ? Round(levelNew * 100) : -1)
+			if (level ~= "^[-+]")
+				levelNew := clamp(levelOld + (level / 100), 0, 1)
+			else
+				levelNew := clamp(level / 100, 0, 1)
+
+			if (levelNew != levelOld)
+				ComCall(3, ISimpleAudioVolume, "Float", levelNew, "Ptr", 0)
+		}
+		break
+	}
+	ObjRelease IAudioSessionEnumerator
+	return (IsSet(levelNew) ? Round(levelNew * 100) : -1)
 }
 
 #HotIf WinActive("GT: New Horizons")
