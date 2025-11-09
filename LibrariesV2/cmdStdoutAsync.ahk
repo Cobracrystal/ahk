@@ -52,7 +52,7 @@ ReadOutput(myGui, line, complete := 0) {
 
 class CmdStdOutAsync {
 	__New(cmd, encoding?, callback?, timeOut?, finalCallback?) {
-		Persistent()
+		this.wasPersistent := Persistent(1)
 		encoding := encoding ?? 'cp' . DllCall('GetOEMCP', 'UInt')
 		this.event := CmdStdOutAsync.Event()
 		this.params := {
@@ -93,6 +93,7 @@ class CmdStdOutAsync {
 		this.event.Set()
 		this.signal.Clear()
 		this.process.Clear()
+		Persistent(this.wasPersistent)
 	}
 
 	__Delete() { ; MODIFIED: Unsure if these are actually needed, but for the sake of modifying as little as possible, kept

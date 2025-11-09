@@ -279,7 +279,6 @@ menu_RemoveSpace(menuHandle, applyToSubMenus := true) {
 	return true
 }
 
-
 /**
  * Opens Color picking Window
  * @param Color 

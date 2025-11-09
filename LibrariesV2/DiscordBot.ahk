@@ -28,6 +28,7 @@ class DiscordBot extends DiscordClient {
 	}
 
 	getHighestRole(userRoles, serverRoles) {
+		highestRole := serverRoles[1]
 		for i, e in serverRoles
 			if (this.inArr(userRoles, e["id"]) && e["position"] >= highestRole["position"])
 				highestRole := e

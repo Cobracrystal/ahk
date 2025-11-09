@@ -120,6 +120,7 @@ if (!GLOBALVAR_WASRELOADED)
 	TimestampConverter.textTimestampConverter()
 }
 
+Launch_App2::
 ^q:: { ; Show Folderswitch Menu
 	FolderSwitch.showMenu()
 }

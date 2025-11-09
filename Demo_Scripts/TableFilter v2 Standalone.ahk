@@ -6779,7 +6779,7 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 		whr := ComObject("Msxml2.XMLHTTP")
 		whr.Open(method, url, true)
 		whr.OnReadyStateChange := callBackFuncObj
-	whr.Send()
+		whr.Send()
 	}
 	else
 		whr := ComObject("WinHttp.WinHttpRequest.5.1")

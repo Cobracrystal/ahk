@@ -368,11 +368,11 @@ class WindowManager {
 				}
 				style := WinGetStyle(wHandle)
 				exStyle := WinGetExStyle(wHandle)
-				checkState := style & WinUtilities.EXSTYLES.WS_EX_TOPMOST ? "Check" : "Uncheck"
+				checkState := style & WinUtilities.EXSTYLES.TOPMOST ? "Check" : "Uncheck"
 				this.menus.subMenu.%checkState%("Toggle Window Lock")
-				checkState := style & WinUtilities.STYLES.WS_CAPTION ? "Check" : "Uncheck"
+				checkState := style & WinUtilities.STYLES.CAPTION ? "Check" : "Uncheck"
 				this.menus.subMenu.%checkState%("Toggle Title Bar")
-				checkState := style & WinUtilities.STYLES.WS_VISIBLE ? "Check" : "Uncheck"
+				checkState := style & WinUtilities.STYLES.VISIBLE ? "Check" : "Uncheck"
 				this.menus.subMenu.%checkState%("Toggle Visibility")
 				this.menus.menu.show()
 			case "DoubleClick":
@@ -421,13 +421,13 @@ class WindowManager {
 			"Restore Window", 		wHandle => WinUtilities.isBorderlessFullscreen(wHandle) ? WinUtilities.resetWindowPosition(wHandle, 5/7) : WinRestore(wHandle),
 			"Move Windows to Monitor 1", wHandle => WinUtilities.resetWindowPosition(wHandle,,1),
 			"Move Windows to Monitor 2", wHandle => WinUtilities.resetWindowPosition(wHandle,,2),
-			"Toggle Window Lock", 	wHandle => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & WinUtilities.EXSTYLES.WS_EX_TOPMOST ? 0 : 1, wHandle)),
+			"Toggle Window Lock", 	wHandle => (WinSetAlwaysOnTop(WinGetExStyle(wHandle) & WinUtilities.EXSTYLES.TOPMOST ? 0 : 1, wHandle)),
 			"Set Window Lock", 		WinSetAlwaysOnTop.bind(true),
 			"Remove Window Lock", 	WinSetAlwaysOnTop.bind(false),
-			"Toggle Title Bar",		WinSetStyle.bind('^' WinUtilities.STYLES.WS_CAPTION),
-			"Add Title Bar", 		WinSetStyle.bind("+" WinUtilities.STYLES.WS_CAPTION),
-			"Remove Title Bar", 	WinSetStyle.bind("-" WinUtilities.STYLES.WS_CAPTION),
-			"Toggle Visibility", 	wHandle => WinGetStyle(wHandle) & WinUtilities.STYLES.WS_VISIBLE ? WinHide(wHandle) : WinShow(wHandle),
+			"Toggle Title Bar",		WinSetStyle.bind('^' WinUtilities.STYLES.CAPTION),
+			"Add Title Bar", 		WinSetStyle.bind("+" WinUtilities.STYLES.CAPTION),
+			"Remove Title Bar", 	WinSetStyle.bind("-" WinUtilities.STYLES.CAPTION),
+			"Toggle Visibility", 	wHandle => WinGetStyle(wHandle) & WinUtilities.STYLES.VISIBLE ? WinHide(wHandle) : WinShow(wHandle),
 			"Show Window", 			WinShow,
 			"Hide Window", 			WinHide,
 			"View Command Line", 	wHandle => MsgBoxAsGui(WinUtilities.winmgmt("CommandLine", "Where ProcessId = " . WinGetPID(wHandle))[1],,,,,,this.gui.hwnd,1),

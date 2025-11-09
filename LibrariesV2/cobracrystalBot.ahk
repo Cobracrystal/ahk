@@ -2,7 +2,7 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
-class ccBot extends DiscordBot {
+class CCBot extends DiscordBot {
 
 	__New(token) {
 		super.__New(token)
@@ -24,17 +24,17 @@ class ccBot extends DiscordBot {
 		if (IsSet(filepathRoles)) {
 			SplitPath(filepathRoles, , , &ext)
 			if (ext == "csv")
-				roleThemes := this.parseColorCSV(filepathRoles)
+				roleThemes := CCBot.parseColorCSV(filepathRoles)
 			else if (ext == "json")
-				roleThemes := this.readJson(filepathRoles)
+				roleThemes := CCBot.readJson(filepathRoles)
 			else throw(Error())
 		}
 		if (IsSet(filepathChannels)) {
 			SplitPath(filepathChannels, , , &ext)
 			if (ext == "csv")
-				channelThemes := this.parseColorCSV(filepathChannels)
+				channelThemes := CCBot.parseColorCSV(filepathChannels)
 			else if (ext == "json")
-				channelThemes := this.readJson(filepathChannels)
+				channelThemes := CCBot.readJson(filepathChannels)
 			else throw(Error())
 		}
 		if !(IsSet(roleThemes) || IsSet(channelThemes))
@@ -42,9 +42,9 @@ class ccBot extends DiscordBot {
 		this.themes := {roles:roleThemes??Map(), channels: channelThemes??Map()}
 		if (save) {
 			if IsSet(roleThemes)
-				this.writeJson(roleThemes, this.workingDir, "rolethemes")
+				CCBot.writeJson(roleThemes, this.workingDir, "rolethemes")
 			if IsSet(channelThemes)
-				this.writeJson(channelThemes, this.workingDir, "channelthemes")
+				CCBot.writeJson(channelThemes, this.workingDir, "channelthemes")
 		}
 	}
 	
