@@ -9,11 +9,12 @@ SetBatchLines, -1
 
 pathArr := {  "/":"mainIndex"
 			, "404":"NotFound"
-			, "/whoami":"whoami"
+			, "/whoami/*":"whoami"
 			, "/iptracker": "whoami"
 			, "/redirect":"redirectFlo"
 			, "/page":"page"
 			, "/calc":"calc"
+			, "/solar/*":"solar"
 			, "/counter/*": "mediocrecounter"
 			, "/bettercounter/*":"bettercounter"
 			, "/webfiles/*":"handleWebfiles"
@@ -72,6 +73,52 @@ calc(ByRef req, ByRef res) {
 	serve := StrReplace(ahp, "[var]", req.queries["num1"] "+" req.queries["num2"] "=" answer)
     res.SetBodyText(serve, "text/html")
     res.status := 200
+}
+
+solar(ByRef req, ByRef res, ByRef server) {
+	static target := "http://raspi.local:5000"
+	static URLOrigin := "/solar"
+	logger(req)
+	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+	url := target . SubStr(req.path, StrLen(URLOrigin) + 1)
+	OutputDebug, % "Got req.path " req.path "`n"
+	OutputDebug, % "sending to " url "`n"
+	whr.Open("GET", url, false)
+	for name, value in req.headers
+		whr.SetRequestHeader(name, value)
+	Loop % 2 {
+		try {
+			if req.Body
+				whr.Send(req.Body)
+			else
+				whr.Send()
+			whr.WaitForResponse()
+		} catch {
+			Sleep, 100
+			continue
+		}
+		break
+	}
+	for name, value in StrSplit(whr.GetAllResponseHeaders(), "`r`n") {
+		if (name == "")
+			continue
+		parts := StrSplit(value, ":",,2)
+		if (parts.Length() == 2)
+			res.SetHeader(Trim(parts[1]), Trim(parts[2]))
+	}
+	respText := whr.ResponseText
+	if req.path == "/solar" || req.path == "/solar/" {
+		respText := StrReplace(respText, "src=""/static", "src=""/solar/static")
+		respText := StrReplace(respText, "fetch('/", "fetch('/solar/")
+		res.SetBodyText(respText, "text/html")
+	}
+	else if InStr(req.path, ".json")
+		res.SetBodyText(respText, "application/json")
+	else if InStr(req.path, ".js")
+		res.SetBodyText(respText, "application/javascript")
+	else
+		res.SetBody(whr.ResponseBody)
+	res.Status := 200
 }
 
 whoami(ByRef req, ByRef res, ByRef server) {
