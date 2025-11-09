@@ -560,18 +560,17 @@ class SongDownloader {
 
 	static thumbnailPreviewer(metadata) {
 		static HTML_TEMPLATE := '<!DOCTYPE html><html><head><style>html,body {margin: 0;padding: 0;}.overlay {position: absolute;top: 0;height: {3};background-color: #000;filter: alpha(opacity=85);}</style></head><body><div style="width:{2};height:{3};"><img src="{1}" alt="Picture" style="width:{2};height:{3};"><div class="overlay" style="left:0;width:{4}px;"></div><div class="overlay" style="right:0;width:{4}px;"></div></div></body></html>'
-		if metadata.HasOwnProp("thumbnails") {
-			RegExMatch(metadata.thumbnails[1].url, "https:\/\/.*?\/.*?\/([a-zA-Z0-9-_]{11})\/.*?\.", &o)
-			getThumbs := InStr(metadata.link, o[1]) ? 0 : 1
-		}
-		if !metadata.HasOwnProp("thumbnails") || getThumbs {
+		getThumbs := !(metadata.HasOwnProp("thumbnails") 
+			&& RegExMatch(metadata.thumbnails[1].url, "https:\/\/.*?\/.*?\/([a-zA-Z0-9-_]{11})\/.*?\.", &o) 
+			&& InStr(metadata.link, o[1]))
+		if getThumbs {
 			if (!metadata.link)
 				return MsgBoxAsGui("No Link set to retrieve thumbnail from and retrieving it from metadata is not yet implemented.")
 			timedTooltip('Retrieving thumbnails...')
-			this.getRawMetadataFromLinks(metadata.link, tfunc.bind(metadata))
+			this.getRawMetadataFromLinks(metadata.link, callback.bind(metadata))
 			return
 
-			tfunc(metadata, dataStr) {
+			callback(metadata, dataStr) {
 				metadata.thumbnails := this.parseMetadata(dataStr).thumbnails
 				this.thumbnailPreviewer(metadata)
 			}
@@ -587,7 +586,7 @@ class SongDownloader {
 		height := flagHasSize ? clamp(thumb.height, 1, 500) : 500
 		width := flagHasSize ? Round(height/thumb.height * thumb.width) : 889
 		squareOffset := (width - height) // 2
-		g := Gui("+Border +OwnDialogs +E" WinUtilities.EXSTYLES.WS_EX_COMPOSITED, "Thumbnail Preview")
+		g := Gui("+Border +OwnDialogs +E" WinUtilities.EXSTYLES.COMPOSITED, "Thumbnail Preview")
 		g.OnEvent("Close", (*) => g.Destroy())
 		sect := g.AddText("Section 0x200 R1.45", "Link | Thumbnail ID: " )
 		sect.GetPos(&sectX)
@@ -605,7 +604,10 @@ class SongDownloader {
 		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x + 125 - width//2, this.data.coords.y + 200 - 100 - height//2))
 
 		changeThumbId(ctrlObj, info?) {
-			id := Integer(g["ThumbID"].Value)
+			val := g["ThumbID"].Value
+			if !IsInteger(val)
+				return
+			id := Integer(val)
 			if i := objContainsValue(metadata.thumbnails, id, v => v.id) {
 				thumb := metadata.thumbnails[i]
 				if Instr(thumb.url, ".webp")
@@ -623,10 +625,6 @@ class SongDownloader {
 				}
 			}
 		}
-	}
-
-	static launchffmpeg() {
-
 	}
 
 	static onFinishMsgBox(logID) {
@@ -748,6 +746,7 @@ class SongDownloader {
 			profile := [
 				{ option: this.ytdloptions.ignore_config }, 
 				{ option: this.ytdloptions.default_search, param: "ytsearch" }, 
+				{ option: this.ytdloptions.no_warnings },
 				{ option: this.ytdloptions.skip_download }, 
 				{ option: this.ytdloptions.write_info_json }, 
 				{ option: this.ytdloptions.dump_json }
@@ -796,7 +795,7 @@ class SongDownloader {
 				; { option: this.ytdloptions.no_overwrites },
 				{ option: this.ytdloptions.no_playlist },
 				{ option: this.ytdloptions.no_vid },
-				{ option: this.ytdloptions.no_warning },
+				{ option: this.ytdloptions.no_warnings },
 				{ option: this.ytdloptions.print, param: "after_move:%(filepath)s | %(original_url)s" },
 				{ option: this.ytdloptions.output, param: outputTemplate},
 				{ option: this.ytdloptions.paths, param: "temp:" A_AppData "\yt-dlp\temp"},
@@ -905,7 +904,7 @@ class SongDownloader {
 		convert_thumbnail: { name: "--convert-thumbnail",  param: true },
 		postprocessor_args: { name: "--postprocessor-args",  alias:"--ppa", param: true },
 		sponsorblock_remove: { name: "--sponsorblock-remove",  alias:"--ppa", param: true },
-		no_warning: { name: "--no-warning", param: false },
+		no_warnings: { name: "--no-warnings", param: false },
 		print: { name: "--print",  param: true }
 	}
 
@@ -1114,7 +1113,7 @@ class SongDownloader {
 				}
 			}
 			for e in comparisons {
-				print(e)
+				print(e,,,0)
 				; res := MsgBoxAsGui("Choose Metadata that is embedded in the File or the one defined in the json?",,,,1,,,,["File", "JSON"])
 				; if (res == "JSON") {
 				; 	SongDownloader.writeMetadataToFile(folder, SongDownloader.settings.outputBaseFolder "\" folder "\" e.filename ".mp3", e.index)
