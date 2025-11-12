@@ -11,7 +11,7 @@
  */
 getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name") => getFilesAsArr(folder "\" filePattern, mode, getMode, sortedBy)
 
-getFilesAsArr(filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name") {
+getFilesAsArr(filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name", disableSorting := false) {
 	files := []
 	loop files filePattern, mode {
 		switch getMode {
@@ -48,6 +48,8 @@ getFilesAsArr(filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name
 				})
 		}
 	}
+	if disableSorting
+		return files
 	sorted := arraySort(files, getMode == 1 || getMode == 2 ? unset : a => a.%sortedBy%)
 	return sorted
 }
@@ -87,13 +89,18 @@ getFileInfo(filePath, getMode := 0) {
 		}
 }
 
+
 removeDupes(folder1, folder2) {
 	count := 0
+	if !InStr(folder1, ":") || !InStr(folder2, ":")
+		throw(Error("Must be absolute paths"))
+	folder1 := RTrim(folder1, "\/")
+	folder2 := RTrim(folder2, "\/")
 	loop files folder1 "\*", "R" {
-		fName := A_LoopFileName
+		relPath := StrReplace(A_LoopFilePath, folder1)
 		fSize := A_LoopFileSize
-		if (FileExist(folder2 "\" fName) && fSize == FileGetSize(folder2 "\" fName)) {
-			FileDelete(folder2 "\" fName)
+		if (FileExist(folder2 . relPath) && fSize == FileGetSize(folder2 .1 relPath)) {
+			FileDelete(folder2 . relPath)
 			count++
 		}
 	}
@@ -174,14 +181,63 @@ strReplaceIllegalChars(str, &replaceCount) {
  * @param folder2 
  * @returns {Map} 
  */
-compareFolders(folder1, folder2, recursive := false) {
-	f1exists := Map()
-	changes := Map()
-	loop files folder1 "\*", recursive ? 'FDR' : 'FD' {
-		if !FileExist(folder2 "\" A_LoopFilename)
-			changes[A_LoopFileName] := true
+compareFolders(folder1, folder2, recursive := true) {
+	arr := []
+	if !InStr(folder1, ":") || !InStr(folder2, ":")
+		throw(Error("Must be absolute paths"))
+	folder1 := RTrim(folder1, "\/")
+	folder2 := RTrim(folder2, "\/")
+	files1 := getFolderAsArr(folder1,, recursive ? 'FDR' : 'FD',0)
+	for i, fl in files1 {
+		relPath := StrReplace(fl.path, folder1)
+		if InStr(fl.attrib, "D") {
+			if DirExist(folder2 . relPath)
+				continue
+		} else {
+			if (FileExist(folder2 . relPath) && fl.size == FileGetSize(folder2 . relPath))
+				continue
+		}
+		arr.push(fl)
 	}
-	return changes
+	return arr
+}
+
+/**
+ * Compares folder1 and folder2. If an item is present in folder1, but not present in folder2 (or its size is different), it is deleted. No other actions are taken.
+ * @param folder1 
+ * @param folder2 
+ * @param deleteFolders whether to delete folders, default true
+ * @returns {Integer} Count of items deleted
+ */
+syncDeletesToLeftFolder(folder1, folder2, deleteFolders := true) {
+	count := 0
+	if !InStr(folder1, ":") || !InStr(folder2, ":")
+		throw(Error("Must be absolute paths"))
+	folder1 := RTrim(folder1, "\/")
+	folder2 := RTrim(folder2, "\/")
+	loop files folder1 "\*", "R" {
+		relPath := StrReplace(A_LoopFilePath, folder1)
+		fSize := A_LoopFileSize
+		if (FileExist(folder2 . relPath) && fSize == FileGetSize(folder2 . relPath))
+			continue
+		print("Delete: " folder1 . relPath)
+		FileDelete(folder1 . relPath)
+		count++
+	}
+	if !deleteFolders
+		return count
+	loop files folder1 "\*", "DR" {
+		relPath := StrReplace(A_LoopFilePath, folder1)
+		if FileExist(folder2 . relPath)
+			continue
+		try {
+			DirDelete(folder1 . relPath, 1)
+			print("Delete: " folder1 . relPath)
+		} catch as e
+			print("[ERROR] Fail Delete: " folder1 . relPath)
+		count++
+	}
+	return count
 }
 
 class FGP {

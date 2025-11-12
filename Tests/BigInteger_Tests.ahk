@@ -107,7 +107,7 @@ testCacheMethods(detailedOutput) {
 		for paramCount, methods in methodMap
 			for method in methods
 				resps.push(performanceTestMethod(cacheTests[testFile], method, paramCount, detailedOutput))
-	str := strMultiply('=', 50) '`n' FormatTime(,'yyyy-MM-dd HH:mm:ss') '`n' objCollect(resps, (b,e) => b '`n' e[2], '') '`n'
+	str := strMultiply('=', 50) '`n' FormatTime(,'yyyy-MM-dd HH:mm:ss') '`n' objCollectString(resps, '`n', v => v[2]) '`n'
 	f := FileOpen('test_results.txt', 'w', 'UTF-8')
 	f.Write(str)
 	f.Write('Total stats: ' toString(resps[-1][1]))

@@ -64,10 +64,16 @@ objContainsMatch(obj, match := (itKey,itVal) => (true), retAllMatches := 0) {
  * @param obj 
  * @returns {Integer} 
  */
-objGetValueCount(obj, recursive := false) {
-	if !recursive
-		return obj is Map ? obj.Count : (obj is Array ? obj.Length : ObjOwnPropCount(obj))
-	return objCollect(obj, (b, e?) => b + (IsSet(e) && IsObject(e) ? objGetValueCount(e, true) : 1), 0)
+objGetValueCount(obj, recursive := false, countUnsetValues := true) {
+	if !recursive {
+		if countUnsetValues
+			return obj is Map ? obj.Count : (obj is Array ? obj.Length : ObjOwnPropCount(obj))
+		else
+			return objgetsum(obj, a => 1)
+	}
+	if countUnsetValues
+		return objGetSum(obj, (e?) => IsSet(e) && IsObject(e) ? objGetValueCount(e, true, true) : 1, (i,e?) => true)
+	return objgetsum(obj, e => IsObject(e) ? objGetValueCount(e, true, countUnsetValues) : 1)
 }
 
 objGetRandomValue(obj) {
@@ -226,7 +232,7 @@ objFilter(obj, filter := (k, v) => (true)) {
 	return clone
 }
 
-objDoForEach(obj, fn := (v) => toString(v), conditional := (itKey?, itVal?) => true, useKeys := false) {
+objDoForEach(obj, fn := (v => toString(v)), conditional := (itKey?, itVal?) => true, useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || IsObject(obj))
@@ -245,11 +251,12 @@ objDoForEach(obj, fn := (v) => toString(v), conditional := (itKey?, itVal?) => t
 	return clone
 }
 
-objGetMinimum(obj) => objCollect(obj, (a,b) => Min(a,b))
-objGetMaximum(obj) => objCollect(obj, (a,b) => Max(a,b))
-objGetSum(obj) => objCollect(obj, (a,b) => (a+b), 0)
-objGetAverage(obj) => objGetSum(obj) / objGetValueCount(obj)
-objGetProd(obj) => objCollect(obj, (b,i) => b*i)
+objGetMinimum(obj, fn := a => a) => objCollect(obj, (a,b) => Min(a,b), fn)
+objGetMaximum(obj, fn := a => a) => objCollect(obj, (a,b) => Max(a,b), fn)
+objGetSum(obj, fn := a => a, cond := (i,e?) => IsSet(e)) => objCollect(obj, (a,b) => (a+b), fn,, cond)
+objGetAverage(obj, fn := a => a) => objGetSum(obj, fn) / objGetValueCount(obj)
+objGetProd(obj, fn := a => a) => objCollect(obj, (a,b) => a*b, fn)
+objCollectString(obj, separator := ",", fn := a => toString(a)) => objCollect(obj, (a,b) => (a separator b), fn)
 
 objDoForEachRecursive(obj, fn := v => v, conditional := (itKey?, itVal?) => true, useKeys := false) {
 	return recurse(obj)
@@ -262,21 +269,36 @@ objDoForEachRecursive(obj, fn := v => v, conditional := (itKey?, itVal?) => true
 /**
  * 
  * @param obj 
- * @param {Func} fn function responsible for collecting objects. Equivalent to fn(fn(....fn(fn(base,obj[1]),obj[2])...,obj[n-1]),obj[n])
+ * @param {Func} collector function responsible for collecting objects. Equivalent to fn(fn(....fn(fn(base,obj[1]),obj[2])...,obj[n-1]),obj[n])
+ * @param {Func} transformer function responsible for transforming iterated elements into usable parameters for collector. Note that elements are not transformed when given to conditional.
  * @param {Any} initialBase Initial value of the base on which fn operates. If not given, first element in object becomes base. Set this if fn operators onto properties or items of enumerable values.
  * @param {Any} value Optional Value to check conditional upon
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
  * @returns {Any} Collected Value
  */
-objCollect(obj, fn := ((base, e) => (base . ", " . toString(e))), initialBase?, conditional := (itKey?, itVal?) => true, useKeys := false) {
+objCollect(obj, collector := ((base, e) => (base ", " e)), transformer := (a => a), initialBase?, conditional := (itKey, itVal?) => IsSet(itVal), useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
-	if (IsSet(initialBase))
+	flagInitialBase := IsSet(initialBase)
+	if (flagInitialBase) {
 		base := initialBase
-	for i, e in objGetEnumerator(obj)
+		j := 0
+	} else {
+		for i, e in objGetEnumerator(obj) {
+			if !conditional(i,e?)
+				continue
+			base := useKeys ? transformer(i) : transformer(e)
+			j := i
+			break
+		}
+	}
+	for i, e in objGetEnumerator(obj) {
+		if i <= j && !flagInitialBase
+			continue
 		if (conditional(i, e?))
-			base := IsSet(base) ? (useKeys ? fn(base, i?) : fn(base, e?)) : e
+			base := (useKeys ? collector(base, transformer(i?)) : collector(base, transformer(e?)))
+	}
 	return base ?? ""
 }
 

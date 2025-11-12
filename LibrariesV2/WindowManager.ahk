@@ -89,7 +89,7 @@ class WindowManager {
 		this.gui.AddEdit("ys vEditFilterWindows").OnEvent("Change", this.guiListviewCreate.bind(this, false, false))
 		this.gui.AddText("ys+2 0x200 R1.45 xs+" LVWidth-160 " w100 vWindowCount", "Window Count: 0")
 		this.gui.AddButton("xs+" LVWidth-50 " ys w50 vBTNSettings", "Settings").OnEvent("Click", this.createSettingsGui.bind(this))
-		this.LV := this.gui.AddListView("xs R20 w1000 +Multi", objCollect(this.config.columnsProfile, (b, e) => (b.push(e.name), b), []))
+		this.LV := this.gui.AddListView("xs R20 w1000 +Multi", objDoForEach(this.config.columnsProfile, v => v.name))
 		this.LV.Opt("+LV" LVS_EX_DOUBLEBUFFER)
 		this.LV.OnNotify(LVN_KEYDOWN, this.LV_Event.bind(this, "Key"))
 		this.LV.OnNotify(NM_RCLICK, this.LV_Event.bind(this, "ContextMenu"))
@@ -354,12 +354,12 @@ class WindowManager {
 						this.guiListviewCreate(false, true)
 				}
 			case "ContextMenu":
-				rowN := NumGet(param, 24, "int")
-				if (rowN == 0 || rowN > this.LV.getCount()) { ; clicked header
+				rowN := NumGet(param, 24, "int") + 1 ; rowN is sometimes 0 if you click on the first row instead of header. fix how?
+				if (rowN == 0 || rowN > this.LV.getCount()) { ; clicked header. 
 					this.menus.columnsMenu.show()
 					return
 				}
-				if (rowN == -1)
+				if (rowN < 0)
 					return
 				wHandle := Integer(this.LV.GetText(rowN, 2))
 				if (!WinExist(wHandle)) {

@@ -249,8 +249,24 @@ objIterate(o,f) { ; this could be a oneliner
 	)
 }
 
-ao3GetBookmarkChapterCount(pages) => objCollect(ao3GetBookmarks(pages), (a, b) => a + ((p := InStr(b.chapters, "/")) ? SubStr(b.chapters, 1, p-1) : b.chapters), 0)
-ao3GetBookmarkWordcount(pages) => objCollect(ao3GetBookmarks(pages), (a, b) => a + b.words, 0)
+printCompareFolders(folder1, folder2) {
+	comp := compareFolders(folder1, folder2)
+	comp := objSort(comp, a => a.size, "N A")
+	for e in comp
+		print((instr(e.attrib, "D") ? "Folder: " : "File:   ") . strfill( "[" e.size "] ", 15) e.path)
+	print("Total size: " objGetSum(comp, a => a.size))
+	print("Total count: "  comp.Length)
+
+	comp := compareFolders(folder2, folder1)
+	comp := objSort(comp, a => a.size, "N A")
+	for e in comp
+		print((instr(e.attrib, "D") ? "Folder: " : "File:   ") . strfill( "[" e.size "] ", 15) e.path)
+	print("Total size: " objGetSum(comp, a => a.size))
+	print("Total count: "  comp.Length)
+}
+
+ao3GetBookmarkChapterCount(pages) => objGetSum(ao3GetBookmarks(pages), v => ((p := InStr(v.chapters, "/")) ? SubStr(v.chapters, 1, p-1) : v.chapters))
+ao3GetBookmarkWordcount(pages) => objGetSum(ao3GetBookmarks(pages), v => v.words)
 ao3GetBookmarks(pages) {
 	bigArr := []
 	arr := getBookmarks(pages)

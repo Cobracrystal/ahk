@@ -28,7 +28,7 @@ class numericCore {
 			arr.push(objDoForEach(StrSplit(e), char => (ord(char) - ord("A") + 1)))
 		solutions := []
 		arr2 := objClone(arr)
-		arr2 := objDoForEach(arr2, o => objCollect(o, (b,e) => b . e))
+		arr2 := objDoForEach(arr2, o => objCollectString(o, ''))
 		arr2 := objDoForEach(arr2, n => Number(n))
 		for i, e, f in objZip(arr, arr2) {
 			solutions.push(this.numericCore(e*))

@@ -521,7 +521,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	if !IsSet(maxTextWidth) {
 		maxTextWidth := Max(minTextWidth, totalButtonWidth)
 		lens := strGetSplitLen(IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text, "`n")
-		minim := min(lens*), maxim := max(lens*), avg := objGetSum(lens) / lens.Length
+		minim := min(lens*), maxim := max(lens*), avg := objGetAverage(lens)
 		if (2 * avg > maxim && maxim < 1500)
 			maxTextWidth := Max(minTextWidth, maxim)
 		if StrLen(text) > 10000 && !IsSet(maxCharsVisible)

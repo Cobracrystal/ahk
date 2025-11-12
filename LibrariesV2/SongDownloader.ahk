@@ -320,7 +320,7 @@ class SongDownloader {
 			})
 		}
 		if receivedBadInfo.Length > 0 {
-			str := objCollect(receivedBadInfo, (b, v) => b . "`n" v)
+			str := objCollectString(receivedBadInfo, '`n')
 			MsgBoxAsGui("Received issues while parsing Metadata. Received`n`n" str,,,,,,,1,,,,2000)
 		}
 		if (metaData.Length == 1)
