@@ -496,9 +496,15 @@ class SongDownloader {
 					temp := g["Artist"].Value
 					g["Artist"].Value := g["Title"].Value
 					g["Title"].Value := temp
+					metadata.artist := g["Artist"].Value
+					metadata.title := g["Title"].Value
 					g["FileName"].Value := this.getFileNameFromMetadata(metadata,,1)
-				case "Title", "Artist":
+				case "Title":
+					metadata.title := g["Title"].Value
 					g["FileName"].Value := this.getFileNameFromMetadata(metadata,,1)
+				case "Artist":
+					metadata.artist := g["Artist"].Value
+					g["Filename"].Value := this.getFileNameFromMetadata(metadata,,1)
 			}
 		}
 
@@ -514,7 +520,6 @@ class SongDownloader {
 						album: gData.Album, genre: gData.Genre,
 						link: metadata.link, description: metadata.Description
 					}
-					this.getFileNameFromMetadata(songData)
 					this.songDLGui(songData, dirname, true)
 				case "EditMetadata":
 					this.editMetadata(filePath, gData)
