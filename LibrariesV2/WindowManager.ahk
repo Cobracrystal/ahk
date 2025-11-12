@@ -66,7 +66,7 @@ class WindowManager {
 		} else {
 			subMenu := TrayMenu.submenus["GUIs"]
 			subMenu.Add(menuText, this.windowManager.Bind(this))
-			A_TrayMenu.Insert("1&", "GUIs", subMenu)
+			A_TrayMenu.Add("GUIs", subMenu)
 		}
 		this.columnsHeaderMap := Map()
 		for key, col in this.columns.OwnProps()
