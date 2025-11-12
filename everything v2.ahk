@@ -1056,6 +1056,16 @@ loadTableAsHotstrings(filePath) {
 	WinSetVolume("-5", hwnd)
 }
 
+^+!WheelUp::{ ; Increase Volume of current Window by +1
+	MouseGetPos(,,&hwnd)
+	WinSetVolume("+1", hwnd)
+}
+
+^+!WheelDown::{ ; Decrease Volume of current Window by -1
+	MouseGetPos(,,&hwnd)
+	WinSetVolume("-1", hwnd)
+}
+
 WinSetVolume(level, target?) {
 	static IID_IAudioSessionManager2 := "{77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F}"
 	static CLSID_MMDeviceEnumerator := "{BCDE0395-E52F-467C-8E3D-C4579291692E}"
