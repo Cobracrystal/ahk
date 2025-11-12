@@ -7,7 +7,7 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\cmdStdoutAsync.ahk"
 
 class YoutubeDLGui {
-	youtubeDLGui(mode := "O") {
+	static toggleGui(mode := "O") {
 		mode := SubStr(mode, 1, 1)
 		if (mode == "T")
 			mode := (this.data.guiVisibility ? "H" : "O")
@@ -31,9 +31,9 @@ class YoutubeDLGui {
 		}
 	}
 
-	__New(flagDebug := 0) {
+	static __New(flagDebug := 0) {
 		guiMenu := TrayMenu.submenus["GUIs"]
-		guiMenu.Add("Open YoutubeDL Gui", (*) => this.youtubeDLGui())
+		guiMenu.Add("Open YoutubeDL Gui", (*) => this.toggleGui())
 		A_TrayMenu.Add("GUIs", guiMenu)
 		; establish basic data necessary for handling
 		this.data := {
@@ -49,10 +49,10 @@ class YoutubeDLGui {
 		this.resetGUI()
 	}
 
-	guiCreate() {
+	static guiCreate() {
 		this.gui := Gui("+Border +OwnDialogs", "YoutubeDL Wrapper")
-		this.gui.OnEvent("Escape", (*) => this.youtubeDLGui("Hide"))
-		this.gui.OnEvent("Close", (*) => this.youtubeDLGui("Close"))
+		this.gui.OnEvent("Escape", (*) => this.toggleGui("Hide"))
+		this.gui.OnEvent("Close", (*) => this.toggleGui("Close"))
 		this.gui.AddText("Center Section", "Enter Link(s) to download")
 		this.controls.editInput := this.gui.AddEdit("ys+17 xs r7 w373")
 		this.gui.AddCheckbox("vCheckboxConvertToAudio yp xs+383 Checked" . (this.settings.resetConverttoAudio ? 0 : this.options["extract-audio"].selected), "Convert to Audio?").OnEvent("Click", this.settingsHandler.bind(this))
@@ -66,7 +66,7 @@ class YoutubeDLGui {
 		this.data.guiVisibility := 1
 	}
 	
-	updateGuiOutput2(links, cmdLine, done := 0) {
+	static updateGuiOutput2(links, cmdLine, done := 0) {
 		static WM_VSCROLL := 0x115 
 		static SB_BOTTOM  := 7
 		static lastLine := ""
@@ -92,7 +92,7 @@ class YoutubeDLGui {
 			lastLineOverwrite := 0
 			this.controls.editOutput.value := tFulloutput . YoutubeDLGui.UIComponents.separator
 			if (!WinActive(this.gui))
-				this.YoutubeDLGui("Hide")
+				this.toggleGui("Hide")
 			if (links == "" || !this.settings.openExplorer)
 				return
 			if (this.settings.trySelectFile) {
@@ -129,7 +129,7 @@ class YoutubeDLGui {
 		}
 	}
 
-	ytdlOptionHandler(option := 0, select := -1, param := -1, updateGui := true) {
+	static ytdlOptionHandler(option := 0, select := -1, param := -1, updateGui := true) {
 		if (option is Map) {
 			for i, e in option
 				this.options[i].selected := e
@@ -160,7 +160,7 @@ class YoutubeDLGui {
 			this.controls.editCmdConfig.value := str
 	}
 
-	settingsHandler(ctrlObject, *) {
+	static settingsHandler(ctrlObject, *) {
 		switch ctrlObject.Name {
 			case "CheckboxConvertToAudio":
 				if (this.settings.ffmpegPath == "") {
@@ -214,7 +214,7 @@ class YoutubeDLGui {
 		this.settingsManager("Save")
 	}
 
-	mainButton() {
+	static mainButton() {
 		links := this.controls.editInput.Value
 		if (this.settings.ytdlPath == "") {
 			Msgbox("Please set YoutubeDL path.")
@@ -227,7 +227,7 @@ class YoutubeDLGui {
 		
 	}
 
-	settingsGUI(*) {
+	static settingsGUI(*) {
 		settingsGui := Gui("+Border +OwnDialogs +Owner" . this.gui.Hwnd, "Settings")
 		this.gui.Opt("+Disabled")
 		settingsGui.OnEvent("Escape", settingsGUIClose)
@@ -295,7 +295,7 @@ class YoutubeDLGui {
 		}
 	}
 
-	resetGUI() {
+	static resetGUI() {
 		if (this.settings.resetConverttoAudio) {
 			this.ytdlOptionHandler(["extract-audio", "audio-quality", "audio-format"], false, , false)
 			this.ytdlOptionHandler("format", , "bestvideo[height<=1080]+bestaudio/best", false)
@@ -307,7 +307,7 @@ class YoutubeDLGui {
 		this.gui := 0
 	}
 
-	settingsManager(mode := "Save") {
+	static settingsManager(mode := "Save") {
 		mode := StrUpper(Substr(mode, 1, 1))
 		if (!Instr(FileExist(this.data.savePath), "D"))
 			DirCreate(this.data.savePath)

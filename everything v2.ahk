@@ -163,8 +163,7 @@ Launch_App2::
 }
 
 ^+F10:: {	; YTDL GUI
-	static youtubeDL := YoutubeDLGui()
-	youtubeDL.YoutubeDLGui("T")
+	YoutubeDLGui.toggleGui("T")
 }
 
 ^!Numpad0:: {	; Toggle NumpadKeys to Move Cursor
