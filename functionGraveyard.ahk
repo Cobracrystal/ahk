@@ -1,6 +1,7 @@
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\ObjectUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\TimeUtilities.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\FileUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\PrimitiveUtilities.ahk"
 
 drawMouseCircle(radius, centerX?, centerY?, max_degrees := 360) {
