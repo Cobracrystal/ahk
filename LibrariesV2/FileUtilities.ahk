@@ -220,7 +220,6 @@ syncDeletesToLeftFolder(folder1, folder2, deleteFolders := true) {
 		fSize := A_LoopFileSize
 		if (FileExist(folder2 . relPath) && fSize == FileGetSize(folder2 . relPath))
 			continue
-		print("Delete: " folder1 . relPath)
 		FileDelete(folder1 . relPath)
 		count++
 	}
@@ -232,9 +231,8 @@ syncDeletesToLeftFolder(folder1, folder2, deleteFolders := true) {
 			continue
 		try {
 			DirDelete(folder1 . relPath, 1)
-			print("Delete: " folder1 . relPath)
 		} catch as e
-			print("[ERROR] Fail Delete: " folder1 . relPath)
+			continue
 		count++
 	}
 	return count
