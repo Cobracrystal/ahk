@@ -170,6 +170,7 @@ betterFileNames(linkArray) {
 }
 
 extractLinksFromLandingPages(lnkAr) {
+	static 
 	for i, e in lnkAr {
 		ext := ""
 		RegExMatch(e.url, "([^\/\?]+)(\?.*)?$", &o)
@@ -181,16 +182,21 @@ extractLinksFromLandingPages(lnkAr) {
 		else { ; we are on a landing page. (probably.)
 			Loop(2) {
 				ToolTip("Extracting Links.. " (100*i//lnkAr.Length) "% done", 3, 3)
-				html := StrReplace(sendRequest(e.url), "`n")
+				headers := Map("Sec-Fetch-Site", "same-origin", "Sec-Fetch-Mode", "navigate", "Sec-Fetch-Dest", "document", "referer", RegExReplace(e.url, "i)(^https?:\/\/[^\/]+\/?).*", "$1"))
+				html := StrReplace(sendRequest(e.url, ,,,, headers), "`n")
 				title := RegExMatch(html, "<title>(.*)</title>", &title) ? title[1] : ""
 				if (InStr(title, "Rate limiting")) {
 					ToolTip("Rate Limited, Sleeping", 3, 3)
 					Sleep(500)
 					continue
 				}
-				link := RegexMatch(html, '<meta\s*property\s*=\s*"og:image".*?content="(.*?)".*?\/?>', &link) ? link[1] : ""
-				if !(link)
-					link := RegexMatch(html, '<meta\s*property\s*=\s*"og:video".*?content="(.*?)".*?\/?>', &link) ? link[1] : ""
+				if InStr(e.url, "yande.re") {
+					link := RegExMatch(html, '"file_url":"(.*?)"', &link) ? link[1] : ""
+				} else {
+					link := RegexMatch(html, '<meta\s*property\s*=\s*"og:image".*?content="(.*?)".*?\/?>', &link) ? link[1] : ""
+					if !(link)
+						link := RegexMatch(html, '<meta\s*property\s*=\s*"og:video".*?content="(.*?)".*?\/?>', &link) ? link[1] : ""
+				}
 				lnkAr[i].origin := e.url
 				lnkAr[i].url := link
 				if (RegexMatch(link, "([^\/\?]+)(\?.*)?$", &f))
