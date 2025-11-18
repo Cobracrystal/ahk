@@ -89,6 +89,17 @@ strChangeEncoding(str, encodingFrom, encodingTo := 'UTF-16') {
 	return StrGet(strBuffer(str, encodingFrom), encodingTo)
 }
 
+strCheckPossibleEncodings(str) {
+	; utf8, utf16, ansi, western EU, west EU 2, japanese, simplified chinese, traditional chinese
+	static encodingsToCheck := ['UTF-8', 'UTF-16', 'CP0', 'CP850', 'CP1252', 'CP932', 'CP936', 'CP950']
+	arr := []
+	for from in encodingsToCheck
+		for to in encodingsToCheck
+			if from != to
+				arr.push({from: from, to: to, str: strChangeEncoding(str, from, to)})
+	return arr
+}
+
 /**
  * Makes a string literal for regex usage
  * @param str 
