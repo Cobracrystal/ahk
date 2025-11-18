@@ -60,7 +60,7 @@ objContainsMatch(obj, match := (itKey,itVal) => (true), retAllMatches := 0) {
 }
 
 /**
- * Returns ObjOwnPropCount if obj is Object, else .Length or .Count for Array/Map
+ * Returns ObjOwnPropCount if obj is Object, else .Length or .Count for Array/Map if nonrecursive. Otherwise calls itself for each object in the given object.
  * @param obj 
  * @returns {Integer} 
  */
@@ -143,30 +143,13 @@ objMerge(obj1, obj2, createNew := false, overwriteIdenticalKeys := false) {
  * @param {Array | Map} obj
  * @param value the value to remove
  * @param {Integer} limit if 0, removes all
+ * @param {Func} conditional
+ * @param {Any?} EmptyValue to replace removed value with.
  * @returns {Integer} count
  */
-objRemoveValue(obj, value := "", limit := 0, conditional := ((itKey, itVal, val) => (itVal = val)), emptyValue?) {
-	isArrLike := ((isArr := obj is Array) || obj is Map)
-	if !(isArrLike || IsObject(obj))
-		throw(TypeError("objRemoveValue does not handle type " . Type(obj)))
-	queue := []
-	count := 0
-	for i, e in objGetEnumerator(obj)
-		if conditional(i, e, value) {
-			if (!limit || count++ < limit)
-				queue.push(i)
-			else
-				break
-		}
-	n := queue.Length
-	if (IsSet(emptyValue)) {
-		for e in queue
-			isArrLike ? obj[e] := emptyValue : obj.%e% := emptyValue
-	} else {
-		while (queue.Length != 0)
-			isArrLike ? (isArr ? obj.RemoveAt(queue.Pop()) : obj.Delete(queue.Pop())) : obj.DeleteProp(queue.Pop())
-	}
-	return n
+objRemoveValue(obj, value := "", limit := 0, conditional := ((itKey, itVal) => (itVal = value)), emptyValue?) {
+	_conditional := conditional.MaxParams == 3 ? conditional : (i, v, v2) => conditional(i, v)
+	return objRemoveValues(obj, [value], limit, _conditional, emptyValue?)
 }
 
 /**
@@ -951,24 +934,25 @@ arrayBasicSort(arr, sortMode := "") => objBasicSort(arr, sortMode)
 arraySortNumerically(arr, sortMode := "N") => objSortNumerically(arr, sortMode)
 
 arrayContainsArray(arr, subArray, comparator := (arrVal,subArrVal) => (arrVal == subArrVal)) {
-	sequenceIndex := 1
 	if !subArray.length
 		return 1
-	firstEl := subArray[sequenceIndex]
+	firstEl := subArray[1]
 	for i, e in arr {
 		if comparator(firstEl, e) {
 			seqStart := i - 1
+			if arr.Length < seqStart + subArray.Length
+				return false
 			for j, k in subArray
 				if !comparator(arr[seqStart + j], k)
-					return 0
+					return false
 			return seqStart + 1
 		}
 	}
-	return 0
+	return false
 }
 
 /**
- * Sorts an object directly, returning the sorted Values Note that this converts everything to strings.
+ * Sorts an object directly, returning the sorted Values. Note that this converts everything to strings.
  * @param obj Given object
  * @param {String} sortMode
  * @returns {Array} 

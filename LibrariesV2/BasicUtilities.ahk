@@ -830,6 +830,7 @@ doNothing(*) {
 }
 
 printAlign(value, width := 128, padChar := ' ') => print(strFill(IsObject(value) ? toString(value) : value, width,,padChar),,,,,,0)
+pretty(value, options?, fallbackMsgbox := true) => print(value, options?, true, false, false, true, fallbackMsgbox)
 
 print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true, fallbackMsgbox := true) {
 	if IsObject(value)

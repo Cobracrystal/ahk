@@ -37,7 +37,7 @@ class SongDownloader {
 			simulate: false,
 			useAliases: true,
 			useVisibleCMD: false,
-			currentTodo: 72,
+			currentIterator: 73,
 			outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
 			outputSubFolder: "",
 			logMetadata: true,
@@ -54,7 +54,7 @@ class SongDownloader {
 				skipNonMusic: true
 			}
 		}
-		this.settings.outputSubFolder := Format("p{:03}", this.settings.currentTodo)
+		this.settings.outputSubFolder := Format("p{:03}", this.settings.currentIterator)
 		this.data := {
 			coords: {x: 750, y: 425},
 			currentOutputSubFolder: this.settings.outputSubFolder,
@@ -341,14 +341,15 @@ class SongDownloader {
 			SplitPath(destination, &fl)
 			outputFolder := fl
 		}
+		metadataVar := ObjOwnPropCount(this.data.lastSongMetadata) > 0 ? this.data.lastSongMetadata : data
 		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", outputFolder).OnEvent("Change", guiHandler)
 		g.AddButton("xs+151 ys-1 w100", "Open Link").OnEvent("Click", (*) => Run(data.link))
 		g.AddEdit("xs w250 R1 vLink " (editableLink ? "" : "ReadOnly"), data.link).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Title")
 		g.AddButton("xs+151 yp-1 w100", "Show Thumbnail").OnEvent("Click", (*) => this.thumbnailPreviewer(data))
 		g.AddEdit("xs w250 vTitle", data.title).OnEvent("Change", guiHandler)
-		g.AddText("", "Artist")
-		metadataVar := ObjOwnPropCount(this.data.lastSongMetadata) > 0 ? this.data.lastSongMetadata : data
+		g.AddText("0x200 R1.45", "Artist")
+		g.AddButton("xs+151 yp-1 vSwapButton w100", "Swap Title - Artist").OnEvent("Click", guiHandler)
 		g.AddEdit("xs w250 vArtist", metadataVar.artist).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Album")
 		g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
@@ -388,11 +389,20 @@ class SongDownloader {
 			name := guiCtrlObj.Name
 			val := Trim(guiCtrlObj.Value)
 			switch name {
+				case "SwapButton":
+					temp := g["Artist"].Value
+					g["Artist"].Value := g["Title"].Value
+					g["Title"].Value := temp
+					guiHandler(g["Title"])
+					guiHandler(g["Artist"])
 				case "Title", "Artist", "Album", "Genre":
 					rem := [{ option: this.ytdloptions.output, param: this.getOutputPatternFromMetadata(data)}]
+					rem2 := this.PROFILE_PARSE_METADATA[data]
 					data.%name% := val ; THIS LINE BEING IN THIS ORDER IS RELEVANT
 					add := [{ option: this.ytdloptions.output, param: this.getOutputPatternFromMetadata(data)}]
+					add2 := this.PROFILE_PARSE_METADATA[data]
 					profile := this.addRemoveProfile(profile, rem, add, true, true)
+					profile := this.addRemoveProfile(profile, rem2, add2, true, true)
 				case "Link":
 					data.link := val
 				case "OutputFolder":
@@ -701,9 +711,8 @@ class SongDownloader {
 
 	static toggleProfile(profile, profileToToggle) {
 		nProfile := profile.clone()
-		paramLambda := (k, v, v2) => (objCompare(v, v2))
 		for o in profileToToggle {
-			if !objRemoveValue(nProfile, o,, paramLambda)
+			if !objRemoveValue(nProfile, o,, (k, v) => (objCompare(v, o)))
 				nProfile.push(o)
 		}
 		return nProfile
@@ -721,25 +730,25 @@ class SongDownloader {
 	}
 
 	static addRemoveProfile(profile, profileToRemove := [], profileToAdd := [], paramCompare := true, inplace := false) {
+		static optCompare := (v, v2) => (objCompare(v.option, v2.option))
+		static allCompare := (v, v2) => (objCompare(v, v2))
+		static optCompare2 := (k, v, v2) => (objCompare(v.option, v2.option))
+		static allCompare2 := (k, v, v2) => (objCompare(v, v2))
 		nProfile := profile.clone() ; deepclone unnecessary.
-		optCompare := (k, v, v2) => (objCompare(v.option, v2.option))
-		optCompare2 := (v, v2) => (objCompare(v.option, v2.option))
-		allCompare2 := (v, v2) => (objCompare(v, v2))
-		allCompare := (k, v, v2) => (objCompare(v, v2))
 		lambda := paramCompare ? allCompare : optCompare
-		lambda2 := paramCompare ? allCompare : optCompare
+		lambda2 := paramCompare ? allCompare2 : optCompare2
 		if (inplace) {
-			if (profileToRemove.Length != profileToAdd.Length) {
-				if pos := arrayContainsArray(nProfile, profileToRemove, lambda2) {
-					nProfile.RemoveAt(pos, profileToRemove.Length)
-					nProfile.InsertAt(pos, profileToAdd*)
-				} else
-					throw(ValueError("Given Arrays have different Lengths and aren't sequential in profile"))
+			if pos := arrayContainsArray(nProfile, profileToRemove, lambda) {
+				nProfile.RemoveAt(pos, profileToRemove.Length)
+				nProfile.InsertAt(pos, profileToAdd*)
+			} else if (profileToRemove.Length != profileToAdd.Length) {
+				throw(ValueError("Given Arrays have different Lengths and aren't sequential in profile"))
+			} else {
+				for e, f in objZip(profileToRemove, profileToAdd)
+					objRemoveValue(nProfile, e,,lambda2, f)
 			}
-			for e, f in objZip(profileToRemove, profileToAdd)
-				objRemoveValue(nProfile, e,, lambda, f)
 		} else {
-			objRemoveValues(nProfile, profileToRemove,, lambda)
+			objRemoveValues(nProfile, profileToRemove,, lambda2)
 			for i, e in (profileToAdd)
 				nProfile.push(e)
 		}

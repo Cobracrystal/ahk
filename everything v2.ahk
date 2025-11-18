@@ -283,7 +283,7 @@ Alt & Capslock::{
 		switch MsgBoxAsGui("Tile Windows?", "Confirm Dialog", 0x7, 4, true,,,, ["Vertically", "Horizontally", "Cascade", "No"]) {
 			case "Vertically":
 				list := WinUtilities.getAllWindowInfo()
-				objRemoveValue(list,,,(key,a,b) => (WinGetMinMax(a) == -1))
+				objRemoveValue(list,,,(key,a) => (WinGetMinMax(a) == -1))
 				; msgbox(ToString(list, false))
 				; Loop(list.Length) {
 				; 	a := 5
