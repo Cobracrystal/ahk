@@ -193,6 +193,30 @@ combinations(arr) {
 }
 
 /**
+ * Given an array of n values, chooses all combinations with [num] numbers, ignoring order.
+ * @param arr 
+ * @param num 
+ */
+chooseCombinations(arr, num) {
+	if (arr.Length <= num)
+		return [arr.Clone()]
+	collection := []
+	if (num == 1) {
+		for element in arr
+			collection.push([element])
+		return collection
+	}
+	Loop(arr.Length - num + 1) {
+		i := A_Index
+		temp := arraySlice(arr, i+1)
+		tResults := chooseCombinations(temp, num - 1)
+		for combination in tResults
+			collection.push([arr[i], combination*])
+	}
+	return collection
+}
+
+/**
  * Given array, returns powerset of all of its members.
  * @param arr 
  */
