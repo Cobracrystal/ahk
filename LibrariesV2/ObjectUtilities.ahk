@@ -285,6 +285,13 @@ objCollect(obj, collector := ((base, e) => (base ", " e)), transformer := (a => 
 	return base ?? ""
 }
 
+/**
+ * Flattens obj into an array of either keys or values
+ * @param obj 
+ * @param {(e) => void} fn 
+ * @param {Integer} keys 
+ * @returns {Array} 
+ */
 objFlatten(obj, fn := (e => e), keys := false) {
 	arr := []
 	for key, e in objGetEnumerator(obj)
@@ -734,7 +741,7 @@ range(startOrEnd, end?, step?, inclusiveEnd := true) {
 
 rangeAsArr(startEnd, end?, step?, inclusive := true) {
 	local arr := []
-	arr.Capacity := Floor(Abs((end ?? 0) - startEnd) * 1/step) + inclusive
+	arr.Capacity := Floor(Abs((end ?? 0) - startEnd) * 1/(step??1)) + inclusive
 	for e in range(startEnd, end?, step?, inclusive)
 		arr.push(e)
 	return arr
@@ -783,6 +790,12 @@ arrayMergeSort(nums, comparator := (a,b) => (a <= b)) { ; iterative mergesort
 	return res
 }
 
+/**
+ * Merges two (ascending) sorted arrays into one efficiently.
+ * @param arr1 
+ * @param arr2 
+ * @returns {Array} 
+ */
 arrayMergeSorted(arr1, arr2) {
 	ret := []
 	p1 := 1, p2 := 1
@@ -796,6 +809,12 @@ arrayMergeSorted(arr1, arr2) {
 	return ret
 }
 
+/**
+ * Verifies that an array is numerically sorted. By default, checks that each successive element is larger than its predecessor.
+ * @param arr 
+ * @param {Integer} downwards 
+ * @returns {Integer} 
+ */
 arrayIsSorted(arr, downwards := false) {
 	if downwards {
 		Loop(arr.Length - 1)
@@ -811,6 +830,7 @@ arrayIsSorted(arr, downwards := false) {
 
 /**
  * For an array subset whose values are all contained in arr, and a value contained in arr, inserts the value in the position defined through the ordering in set.
+ * @description This essentially just re-creates the ordering in arr into subarr. eg if subarr contained 1,2,5, and arr contains 1,2,3,4,5,6, and we call arrInsertSorted with the value 4, it would be inserted in subarr to the result of [1,2,4,5] because that's where 4 is located in arr.
  * @param arr 
  * @param subarr 
  * @param compareValue 
@@ -831,6 +851,16 @@ arrayInsertSorted(arr, subarr, compareValue, insertValue := compareValue, transf
 	return next
 }
 
+/**
+ * Slices the given array arr and returns a new array starting at index [from] until index [to]. 
+ * @param arr 
+ * @param {Integer} from 
+ * @param {Integer} to 
+ * @returns {Array} 
+ * @example arraySlice(["a","b","c","d","e"], 2) => ["b","c","d","e"]
+ * arraySlice(["a","b","c","d","e"], 1,3) => ["a","b","c"]
+ * arraySlice(["a","b","c","d","e"], 5) => ["e"]
+ */
 arraySlice(arr, from := 1, to := arr.Length) {
 	arr2 := []
 	to := to > arr.Length ? arr.Length : to
@@ -840,6 +870,13 @@ arraySlice(arr, from := 1, to := arr.Length) {
 	return arr2
 }
 
+/**
+ * Masks an array with the given function (by default IsSet()). Keeps the element if the mask function returns true, throws it out otherwise.
+ * @param arr 
+ * @param {(a) => Integer} maskFunc 
+ * @param {Integer} keepEmpty 
+ * @returns {Array} 
+ */
 arrayFunctionMask(arr, maskFunc := (a) => (IsSet(a)), keepEmpty := true) {
 	arr2 := []
 	if keepEmpty
@@ -855,6 +892,18 @@ arrayFunctionMask(arr, maskFunc := (a) => (IsSet(a)), keepEmpty := true) {
 	return arr2
 }
 
+/**
+ * Masks an array with the given mask array. If the element at index j in mask is truthy, index j in arr will be kept. By default, puts empty values into the array at falsy values.
+ * @param arr 
+ * @param mask 
+ * @param {Integer} keepEmpty 
+ * @returns {Array} 
+ * @example arrayMask(
+ * [5,7,2,4,5,7,1,0,0,1],
+ * [0,1,1,1,0,0,0,1,0,1]
+ * ) =>
+ * [ ,7,2,4, , , ,0, , ]
+ */
 arrayMask(arr, mask, keepEmpty := true) {
 	if arr.Length != mask.Length
 		throw Error("Invalid mask given")

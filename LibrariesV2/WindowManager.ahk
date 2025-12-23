@@ -168,6 +168,7 @@ class WindowManager {
 			if !WinUtilities.isVisible(this.gui.hwnd)
 				this.data.currentWinInfo.InsertAt(1, WinUtilities.getWindowInfo(this.gui.Hwnd, this.config.getCommandLine))
 		}
+		this.LV.Opt("+Count" this.data.currentWinInfo.Length)
 		for i, win in this.data.currentWinInfo
 			if (this.isIncludedInSearch(win)) {
 				options := ""

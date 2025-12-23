@@ -174,9 +174,16 @@ factors(n) {
 }
 
 /**
- * Given an array (or Map) containing arrays, returns all possible combinations of values from the subarrays.
+ * Given an array (or Map) containing arrays, returns all possible combinations of values from the subarrays, where each combinations contains one item from each subarray.
+ * @param arr
  * Eg, [[1,2], [3,4]] returns [[1,3],[1,4],[2,3],[2,4]]
- * @param arrOfArrs 
+ * @example 
+ * combinations([[1,2]]) => [[1],[2]] 
+ * combinations([[1,2],[3,4]]) => [[1,3],[1,4],[2,3],[2,4]] 
+ * @example
+ * ; calculating (a+b) * (c + d + k) * g
+ * combinations([["a","b"],["c","d","k"],["g"]]) => [["a","c","g"],["a","d","g"],["a","k","g"],["b","c","g"],["b","d","g"],["b","k","g"]] 
+ * ; the result is thus acg + adg + akg + bcg + bdg + bkg
  */
 combinations(arr) {
 	collection := []
@@ -193,24 +200,24 @@ combinations(arr) {
 }
 
 /**
- * Given an array of n values, chooses all combinations with [num] numbers, ignoring order.
- * @param arr 
- * @param num 
+ * Given an array of (unique) values, chooses all unique combinations with n of those values, ignoring order and returns an array of them.
+ * @param arr An array of any values.
+ * @param n How long the combination should be. Must be 1 <= n <= arr.Length 
+ * @example chooseCombinations([1,2,3,4], 2) => [[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]]
+ * chooseCombinations([1,2,3,4,5],3) => [[1,2,3],[1,2,4],[1,2,5],[1,3,4],[1,3,5],[1,4,5],[2,3,4],[2,3,5],[2,4,5],[3,4,5]]
  */
-chooseCombinations(arr, num) {
-	if (arr.Length <= num)
+chooseCombinations(arr, n) {
+	if (arr.Length <= n)
 		return [arr.Clone()]
 	collection := []
-	if (num == 1) {
+	if (n == 1) {
 		for element in arr
 			collection.push([element])
 		return collection
 	}
-	Loop(arr.Length - num + 1) {
+	Loop(arr.Length - n + 1) {
 		i := A_Index
-		temp := arraySlice(arr, i+1)
-		tResults := chooseCombinations(temp, num - 1)
-		for combination in tResults
+		for combination in chooseCombinations(arraySlice(arr, i+1), n - 1)
 			collection.push([arr[i], combination*])
 	}
 	return collection
@@ -218,8 +225,10 @@ chooseCombinations(arr, num) {
 
 /**
  * Given array, returns powerset of all of its members.
- * @param arr 
- */
+ * @param arr
+ * @returns {Array}
+ * @example powerset(["a","b","c"]) => [[],["a"],["b"],["a","b"],["c"],["a","c"],["b","c"],["a","b","c"]] 
+*/
 powerset(arr) {
 	local ps := []
 	i := 0
@@ -240,13 +249,23 @@ powerset(arr) {
 /**
  * Given a list of parameters, returns array of all permutations of its members
  * @param arr 
+ * @returns {Array}
+ * @example permutations([1,2,3]) =>
+	[
+	[1,2,3],
+	[1,3,2],
+	[2,1,3],
+	[2,3,1],
+	[3,1,2],
+	[3,2,1]
+	]
  */
-permutations(variables) {
-	if variables.Length == 1
-		return [variables]
+permutations(arr) {
+	if arr.Length == 1
+		return [arr]
 	local permutationArr := []
-	for i, e in variables {
-		perms := permutations(arrayIgnoreIndex(variables, i))
+	for i, e in arr {
+		perms := permutations(arrayIgnoreIndex(arr, i))
 		for f in perms
 			permutationArr.push([e, f*])
 	}

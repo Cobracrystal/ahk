@@ -1,6 +1,6 @@
 ﻿#Requires AutoHotkey v2.0
 #SingleInstance Off
-#Include "%A_MyDocuments%\..\Desktop\programs\programming\ahk\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 CoordMode("ToolTip", "Screen")
 mainFunc()
 return
@@ -178,8 +178,7 @@ extractLinksFromLandingPages(lnkAr) {
 			if (!e.fileName || InStr(e.fileName, o[1]))
 				lnkAr[i].fileName := SubStr(o[1], 1, -4)
 			lnkAr[i].extension := ext[1]
-		}
-		else { ; we are on a landing page. (probably.)
+		} else { ; we are on a landing page. (probably.)
 			Loop(2) {
 				ToolTip("Extracting Links.. " (100*i//lnkAr.Length) "% done", 3, 3)
 				headers := Map("Sec-Fetch-Site", "same-origin", "Sec-Fetch-Mode", "navigate", "Sec-Fetch-Dest", "document", "referer", RegExReplace(e.url, "i)(^https?:\/\/[^\/]+\/?).*", "$1"))

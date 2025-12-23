@@ -844,7 +844,7 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 	catch Error 
 		if fallbackMsgbox
 			MsgBoxAsGui(value,,,,,,,1)
-	return value
+	return value . finalChar
 }
 
 /**

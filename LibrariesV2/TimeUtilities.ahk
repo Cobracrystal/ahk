@@ -42,6 +42,13 @@ DateAddW(dateTime, amount, timeUnit) {
 	}
 }
 
+/**
+ * The difference is negative if dateTime1 is earlier than dateTime2
+ * @param dateTime1 
+ * @param dateTime2 
+ * @param timeUnit 
+ * @returns {Number} 
+ */
 DateDiffW(dateTime1, dateTime2, timeUnit) {
 	timeUnit := validateTimeUnit(timeUnit)
 	switch timeUnit, 0 {

@@ -508,6 +508,7 @@ strSplitRecursive(str, splits := StrLen(str)) {
 	return arr
 }
 
+strSplitOnWhiteSpace(str) => StrSplit(str, [' ', '`t', '`n', '`r'], " `t`r`n")
 strSplitOnSpace(str) => StrSplit(str, " ")
 strSplitOnNewLine(str, omitCarriageReturn := true) => StrSplit(str, '`n', omitCarriageReturn ? '`r' : unset)
 

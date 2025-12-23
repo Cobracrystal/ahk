@@ -96,7 +96,7 @@ class SongDownloader {
 			metaData := this.parseMetadata(rawDataString, true)
 			ToolTip()
 			if !metaData || !objGetValueCount(metadata)
-				return
+				return 0
 			this.songDLGui(metaData)
 		}
 	}
@@ -309,7 +309,7 @@ class SongDownloader {
 			thumbnails := videoData["thumbnails"]
 			objRemoveValues(videoData, ["formats", "requested_formats", "thumbnails", "subtitles"],,(i,e,v) => (i=v), "MANUALLY REMOVED")
 			metaData.push({
-				link: this.constructLink(videoData["id"]),
+				link: videoData["webpage_url"],
 				title: Trim(title),
 				artist: Trim(artist),
 				album: Trim(album),
@@ -379,7 +379,7 @@ class SongDownloader {
 		]
 		cropToSquare := this.settings.ytdl.cropThumbnailToSquare ; for use of the checkbox
 		g.AddEdit("vCMD w250 R1 Readonly", this.cmdStringBuilder(this.settings.ytdlPath, profile,, data.link))
-		g.AddButton("xs-1 h30 w251 Default", "Launch yt-dlp").OnEvent("Click", finishGui)
+		g.AddButton("xs-1 h30 w251", "Launch yt-dlp").OnEvent("Click", finishGui)
 		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 
 		; USE SETTINGS GUI FOR AFFECTING SETTINGS.
@@ -1017,7 +1017,7 @@ class SongDownloader {
 		path := this.settings.logFolder "\" metadataFile
 		try metadataFilepath := MapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
 		catch
-			return
+			return 0
 		this.compareFolderToData(folder, callback, metadataFilepath, true, false)
 		
 		callback(comparisons) {
