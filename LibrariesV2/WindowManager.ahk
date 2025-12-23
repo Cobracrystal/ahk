@@ -514,7 +514,7 @@ class WindowManager {
 		}
 		else {
 			colObj := this.columnsHeaderMap[itemName]
-			index := arrayInsertSorted(this.columnsOrder, this.config.columnsProfile, itemName, colObj, a => a.name)
+			index := arrayProjectSortedValue(this.columnsOrder, this.config.columnsProfile, itemName, colObj, a => a.name)
 			this.LV.InsertCol(index, colObj.isInteger ? "+Integer" : "", colObj.name)
 			menuObj.Check(itemName)
 		}

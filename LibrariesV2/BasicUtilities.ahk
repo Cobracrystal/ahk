@@ -124,25 +124,6 @@ tryCatchBinarySearch(fn, lower := 1, upper := 100000) {
 	}
 }
 
-/**
- * Given a function fn, returns the largest possible value in given range where fn returns true.
- * @param fn 
- * @param {Integer} lower 
- * @param {Integer} upper 
- */
-binarySearch(fn, lower := 0, upper := 100000) {
-	n := lower + (upper - lower)//2
-	while(true) {
-		if (Abs(lower - upper) <= 1)
-			break
-		if (fn(n))
-			lower := n
-		else
-			upper := n
-		n := lower + (upper - lower)//2
-	}
-	return n
-}
 
 ExecHelperScript(expression, wait := true, void := false) {
 	input := '#Warn All, Off`n'

@@ -228,7 +228,7 @@ getNextPeriodicTimestamp(time, intervalLength, intervalUnit) {
 
 /**
  * Given a timestamp and a unit, returns that value for the respective unit
- * @param time 
+ * @param time timestamp
  * @param timeUnit
  * @returns {Integer}
  */

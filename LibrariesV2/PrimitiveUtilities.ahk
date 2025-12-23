@@ -1,4 +1,24 @@
 /**
+ * Given a function fn, returns the largest possible value in given range where fn returns true.
+ * @param fn 
+ * @param {Integer} lower 
+ * @param {Integer} upper 
+ */
+binarySearch(fn, lower := 0, upper := 100000) {
+	n := lower + (upper - lower)//2
+	while(true) {
+		if (Abs(lower - upper) <= 1)
+			break
+		if (fn(n))
+			lower := n
+		else
+			upper := n
+		n := lower + (upper - lower)//2
+	}
+	return n
+}
+
+/**
  * Given a string HayStack and a string SearchText, returns the amount of times SearchText is found within HayStack
  * @param HayStack 
  * @param SearchText 

@@ -829,7 +829,24 @@ arrayIsSorted(arr, downwards := false) {
 }
 
 /**
- * For an array subset whose values are all contained in arr, and a value contained in arr, inserts the value in the position defined through the ordering in set.
+ * Inserts a value into a sorted (ascending) array, inserting it so that the array remains sorted. Requires O(log(n)) on average due to binary search. (O(n) worst case)
+ * @param {Array} arr 
+ * @param value 
+ * @param {(itVal) => (itVal)} transformer 
+ * @param {(a, b) => a > b} comparator The function will insert val at the first position where comparator(val, iterator) is true
+ */
+arrayInsertSorted(arr, value, transformer := (itVal => itVal), comparator := (a, b) => a < b) {
+	for i, e in arr {
+		if comparator(transformer(value), transformer(e)) {
+			arr.InsertAt(i, value)
+			return arr
+		}
+	}
+	arr.push(value)
+	return arr
+}
+/**
+ * For an array subset whose values are all contained in arr, and a value contained in arr, inserts the value in the position defined through the ordering in arr.
  * @description This essentially just re-creates the ordering in arr into subarr. eg if subarr contained 1,2,5, and arr contains 1,2,3,4,5,6, and we call arrInsertSorted with the value 4, it would be inserted in subarr to the result of [1,2,4,5] because that's where 4 is located in arr.
  * @param arr 
  * @param subarr 
@@ -838,7 +855,7 @@ arrayIsSorted(arr, downwards := false) {
  * @param {(itVal, compVal) => Number} comparator 
  * @returns {Integer} Index of the inserted element
  */
-arrayInsertSorted(arr, subarr, compareValue, insertValue := compareValue, transformer := (itVal => itVal)) {
+arrayProjectSortedValue(arr, subarr, compareValue, insertValue := compareValue, transformer := (itVal => itVal)) {
 	next := 1
 	for i, e in arr {
 		if (transformer(e) == compareValue || next > subarr.Length) {
