@@ -52,8 +52,8 @@ GroupAdd("nonMenuWindows", "ahk_exe cs2.exe")
 GroupAdd("nonMenuWindows", "Satisfactory ahk_class UnrealWindow")
 GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
 GroupAdd("nonMenuWindows", "ahk_exe javaw.exe")
-remInst := ReminderManager(, , token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
-try remInst.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBALVAR_WASRELOADED, remInst.discordReminder.bind(remInst, "245189840470147072"))
+ReminderManager.setOptions(,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
+ReminderManager.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBALVAR_WASRELOADED, ReminderManager.Notification.all, "245189840470147072")
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", remInst.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
@@ -151,7 +151,7 @@ Launch_App2::
 }
 
 ^F8:: {	; Shows Reminder GUI
-	remInst.ReminderManagerGUI("T")
+	ReminderManager.Gui.Toggle()
 }
 
 ^+K:: { ; Toggle Taskbar Transparency
