@@ -1,4 +1,5 @@
 #Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
+#Include "%A_ScriptDir%\LibrariesV2\MathUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\ObjectUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\TimeUtilities.ahk"
 #Include "%A_ScriptDir%\LibrariesV2\FileUtilities.ahk"
@@ -371,6 +372,124 @@ sessionBuddyTransformSpecificCollectionsWithReadInName(text) {
 		
 	}
 	return jsongo.Stringify(collectionsArray)
+}
+calculateCompatibilityData()
+
+calculateCompatibilityData() {
+	input := "
+	( LTrim
+	REDACTED 66	93	42	54	70	59	88	69	90	79
+	REDACTED 93	26	98	77	64	96	69	70	39	82
+	REDACTED 42	98	31	41	68	40	77	66	95	69
+	REDACTED 54	77	41	71	90	56	72	80	85	70
+	REDACTED 70	64	68	90	100	74	75	93	76	80
+	REDACTED 59	96	40	56	74	59	88	72	96	81
+	REDACTED 88	69	77	72	75	88	97	78	74	91
+	REDACTED 69	70	66	80	93	72	78	95	81	86
+	REDACTED 90	39	95	85	76	96	74	81	56	85
+	REDACTED 79	82	69	70	80	81	91	86	85	94
+	)"
+	names := Map()
+	compareNames := Map()
+	compData := parseInput(input)
+	; obj := calculateNComp(3)
+	obj := calculateHarem(7)
+	; obj := objSort(obj, v => v.score, 'N D')
+	; A_Clipboard := prettyPrintNCompList(obj)
+	A_Clipboard := prettyPrintHaremList(obj)
+	; g := gui()
+	; lv := g.AddListView('w800 h400 Sort Hdr', ["Score", "Name", "Name", "Name"])
+	; for e in obj
+	; 	lv.Add(, Round(e.score), e.names*)
+	; Loop(4)
+	; 	lv.ModifyCol(A_Index, 'AutoHdr')
+	; g.show()
+	return
+
+	prettyPrintHaremList(data) {
+		str := ""
+		for i, e in data
+			str .= print(e.master '`t' objCollectString(e.members, '`t') '`t' e.score)
+		return str
+	}
+
+	prettyPrintNCompList(data) {
+		str := ""
+		for i, e in data
+			str .= print(objCollectString(e.names, '`t') . '`t' . e.score)
+		return str
+	}
+
+	; calculates compatibility of a harem, meaning one person + [members] other people
+	calculateHarem(members) {
+		n := members + 1
+		obj := []
+		dataLenRange := rangeAsArr(1, compData[1].Length)
+		for memberIndexes in chooseCombinations(dataLenRange, n) {
+			listOfPairs := chooseCombinations(memberIndexes, 2)
+			if samePersonTwice(listOfPairs)
+				continue
+			for i, haremMaster in memberIndexes {
+				haremMembers := arrayIgnoreIndex(memberIndexes, i)
+				score := 0
+				for j, member in haremMembers
+					score += compData[haremMaster][member]
+				obj.push({ score: Round(score / members, 1), members: objDoForEach(haremMembers, v => Format("{:T}", names[v])), master: Format("{:T}", names[haremMaster])})
+			}
+		}
+		return obj
+	}
+
+	calculateThrouple() => calculateNComp(3)
+	calculateQuartett() => calculateNComp(4)
+
+	; calculates average compability between n members
+	calculateNComp(n) {
+		obj := []
+		dataLenRange := rangeAsArr(1, compData[1].Length)
+		for memberIndexes in chooseCombinations(dataLenRange, n) {
+			listOfPairs := chooseCombinations(memberIndexes, 2)
+			if samePersonTwice(listOfPairs)
+				continue
+			score := 0
+			loop(n)
+				score += scoreFromIndexArr(listOfPairs[A_Index])
+			obj.push({ score: Round(score / n, 1), names: objDoForEach(memberIndexes, v => Format("{:T}", names[v]))})
+		}
+		return obj
+	}
+
+	scoreFromIndexArr(inArr) => compData[inArr[1]][inArr[2]]
+
+	samePersonTwice(obj) {
+		for a in obj
+			if strInEachOther(a[1], a[2])
+				return true			
+		return false
+		
+		strInEachOther(i, j) => compareNames[i] == compareNames[j]
+	}
+
+	parseInput(input) {
+		arr := []
+		for i, line in strSplitOnNewLine(input) {
+			tArr := []
+			for k, pNum in strSplitOnWhiteSpace(line) {
+				if !IsInteger(pNum) {
+					if k == 1 {
+						compareNames[i] := pNum
+						name := pNum
+					} else
+						name .= ' ' pNum
+				}
+				else
+					tArr.push(Integer(pNum))
+			}
+			names[i] := Trim(name)
+			arr.push(tArr)
+		}
+		return arr
+	}
 }
 
 sessionBuddyCollectionTransformToFoldersAndFaviconLinks() {
