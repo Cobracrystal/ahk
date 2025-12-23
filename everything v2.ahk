@@ -51,6 +51,7 @@ GroupAdd("instantCloseWindows", "pCloud Promо ahk_exe pCloud.exe") ; THE SECOND
 GroupAdd("nonMenuWindows", "ahk_exe cs2.exe")
 GroupAdd("nonMenuWindows", "Satisfactory ahk_class UnrealWindow")
 GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
+GroupAdd("nonMenuWindows", "ahk_exe javaw.exe")
 remInst := ReminderManager(, , token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")))
 try remInst.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBALVAR_WASRELOADED, remInst.discordReminder.bind(remInst, "245189840470147072"))
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", remInst.discordReminder.bind(0, token, "CHANNELID"))
@@ -120,11 +121,12 @@ if (!GLOBALVAR_WASRELOADED)
 	TimestampConverter.textTimestampConverter()
 }
 
+#HotIf !WinActive("ahk_group nonMenuWindows")
 Launch_App2::
 ^q:: { ; Show Folderswitch Menu
 	FolderSwitch.showMenu()
 }
-
+#HotIf 
 
 ^!I:: {	; Show Hex code as Color
 	colorPreviewGUI(fastCopy())
@@ -1134,20 +1136,23 @@ WinSetVolume(level, target?) {
 	Sleep(30)
 	MouseMove(x, y)
 }
-^Numpad2::{
+^w::RevoIdle.sacrificeUnderCursor()
+
+^NumpadDown::{
 	static toggle := false
 	if toggle := !toggle {
 		RevoIdle.instantExit := false
-		SetTimer(RevoIdle.bigLoop.bind(RevoIdle), 180000)
+		SetTimer(RevoIdle.bigLoop.bind(RevoIdle), 6000)
 		RevoIdle.bigLoop()
 	}
 	else
 		RevoIdle.instantExit := true
 }
-^Numpad3::{ ; Revo Idle: Basic spawn increase
-	Loop(5)
-		RevoIdle.spawnAndIncrease()
-}
+
+^NumpadEnd::RevoIdle.bigLoop()
+XButton1::RevoIdle.useTarotCardUnderCursor()
+Del::RevoIdle.trashMineralUnderCursor()
+
 class RevoIdle {
 	static instantExit := false
 	static bigLoop() {
@@ -1156,24 +1161,14 @@ class RevoIdle {
 			SetTimer(,0)
 		Critical(0)
 		this.clickNormalMinerals()
-		Sleep(60)
-		this.clickAutospawn()
 		Sleep(50)
 		this.doRefinePrestige()
 		Sleep(50)
 		Loop(2) {
-			Loop(5) {
-				this.spawnAndIncrease(num)
-				Sleep(50)
-			}
 			this.doPolishPrestige()
-			Sleep(50)
+			Sleep(350)
 		}
-		Loop(5) {
-			this.spawnAndIncrease(num)
-			Sleep(50)
-		}
-		this.clickAutospawn()
+		this.openRefineMenu()
 	}
 
 	static openPolishMenu() {
@@ -1193,7 +1188,6 @@ class RevoIdle {
 	static doPolishPrestige() {
 		static polishPrestige := [1178, 362]
 		static polishPrestigeConfirm := [1180, 640]
-		static swordlvlup := [1420, 896]
 		if this.instantExit
 			Exit()
 		this.openPolishMenu()
@@ -1210,25 +1204,6 @@ class RevoIdle {
 		if this.instantExit
 			Exit()
 		MouseClick('L', normalMinerals*)
-	}
-
-	static clickAutospawn() {
-		static autospawn := [800, 840]
-		if this.instantExit
-			Exit()
-		MouseClick('L', autospawn*)
-	}
-
-	static spawnAndIncrease(num := "999") {
-		static spawn := [675, 990]
-		static spawnlvl := [740, 898]
-		if this.instantExit
-			Exit()
-		MouseClick("L", spawn*)
-		Sleep(75)
-		MouseClick("L", spawnlvl*)
-		Sleep(75)
-		Send(num)
 	}
 
 	static doRefinePrestige() {
@@ -1255,6 +1230,36 @@ class RevoIdle {
 		if this.instantExit
 			Exit()
 		MouseClick('L', refineClose*)
+	}
+
+	static sacrificeUnderCursor() {
+		MouseGetPos(&x, &y)
+		MouseClick("Left",,,,,'D')
+		Sleep(300)
+		MouseMove(400, 700)
+		Sleep(300)
+		MouseClick("Left",,,,,'U')
+		Sleep(100)
+		MouseMove(x, y)
+	}
+
+	
+	static trashMineralUnderCursor() {
+		MouseGetPos(&x, &y)
+		MouseClick("Left",,,,,'D')
+		Sleep(100)
+		MouseMove(775, 700)
+		Sleep(100)
+		MouseClick("Left",,,,,'U')
+		Sleep(100)
+		MouseMove(x, y)
+	}
+
+	static useTarotCardUnderCursor() {
+		MouseGetPos(&x, &y)
+		MouseClick("Left", 1450, 1000)
+		Sleep(200)
+		MouseMove(x, y)
 	}
 }
 #HotIf
