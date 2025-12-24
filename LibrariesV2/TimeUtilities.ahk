@@ -85,7 +85,7 @@ DateDiffW(dateTime1, dateTime2, timeUnit) {
 */
 nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?) {
 	Now := A_Now
-	local paramInfo := gap(years?, months?, days?, hours?, minutes?, seconds?)
+	local paramInfo := getTimeUnitInfo(years?, months?, days?, hours?, minutes?, seconds?)
 	switch paramInfo.first {
 		case 0:
 			return Now
@@ -94,7 +94,7 @@ nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				tStamp := nextMatchingTime(, months?, days?, hours?, minutes?, seconds?)
 				return (parseTime(tStamp, "Y") == years) ? tStamp : 0
 			}
-			tStamp := (years ?? A_Year) tf(months ?? 1) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
+			tStamp := years tf(months ?? 1) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (!IsTime(tStamp)) {
 				if (!IsSet(years) && IsSet(months) && months == 2 && IsSet(days) && days == 29) ; correct leap year
 					tStamp := (A_Year + 4 - Mod(A_Year, 4)) . SubStr(tStamp, 5)
@@ -103,10 +103,10 @@ nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?) {
 				if (!IsTime(tStamp))
 					throw(ValueError("Invalid date specified."))
 			}
-			if (DateDiff(tStamp, Now, "S") >= 0)
+			if (DateDiff(tStamp, Now, "S") >= 0) ; year is in the future
 				return tStamp
 			; this case is ONLY for when year is in the present AND there is no gap present (if year is in the future, datediff must be positive.)
-			if (paramInfo.after < 6) ; populate unset vars with current time before giving up
+			if (paramInfo.last < 6) ; populate unset vars with current time before giving up
 				return nextMatchingTime(years, months ?? A_MM, days ?? A_DD, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
 			return 0 ; a year in the past will never occur again
 		case 2:
@@ -123,8 +123,18 @@ nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?) {
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
-			if (paramInfo.after < 6)
-				return nextMatchingTime(, months, days ?? A_DD, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
+			nStamp := A_Year tf(months) tf(days??A_DD) tf(hours??0) tf(minutes ?? 0) tf(seconds ?? 0)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
+			nStamp := A_Year tf(months) tf(days??A_DD) tf(hours??A_Hour) tf(minutes ?? 0) tf(seconds ?? 0)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
+			nStamp := A_Year tf(months) tf(days??A_DD) tf(hours??A_Hour) tf(minutes ?? A_Min) tf(seconds ?? 0)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
+			nStamp := A_Year tf(months) tf(days??A_DD) tf(hours??A_Hour) tf(minutes ?? A_Min) tf(seconds ?? A_Sec)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
 			return DateAddW(tStamp, 1, "Y")
 		case 3:
 			if (days == A_DD && paramInfo.gap) {
@@ -142,30 +152,42 @@ nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?) {
 			}
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
-			if (paramInfo.after < 6)
-				return nextMatchingTime(, , days, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
+			nStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? A_Hour) tf(minutes ?? 0) tf(seconds ?? 0)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
+			nStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? A_Hour) tf(minutes ?? A_Min) tf(seconds ?? 0)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
+			nStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? A_Hour) tf(minutes ?? A_Min) tf(seconds ?? A_Sec)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
 			return DateAddW(tStamp, 1, "Mo")
 		case 4:
-			if (tf(hours) == A_Hour && paramInfo.gap) {
-				tStamp := nextMatchingTime(, , , , minutes?, seconds?)
-				return (parseTime(tStamp, "H") == tf(hours)) ? tStamp : DateAddW(tStamp, 1, "D")
+			if (tf(hours) == A_Hour && paramInfo.gap) { ; minutes are missing, so just increase seconds until it matches
+				tStamp := nextMatchingTime(, , , , , seconds?)
+				return (parseTime(tStamp, "H") == tf(hours)) ? tStamp : DateAddW(tStamp, 1, "D") ; might be 59:xx but specified <xx -> +1D
 			}
 			tStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? 0) tf(seconds ?? 0)
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
-			if (paramInfo.after < 6)
-				return nextMatchingTime(, , , hours, minutes ?? A_Min, seconds ?? A_Sec)
+			nStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? A_Min) tf(seconds ?? 0)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
+			nStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? A_Min) tf(seconds ?? A_Sec)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
 			return DateAddW(tStamp, 1, "D")
 		case 5:
 			if (tf(minutes) == A_Min) {
 				tStamp := nextMatchingTime(, , , , , seconds?)
 				return parseTime(tStamp, "M") == tf(minutes) ? tStamp : 0
 			}
-			tStamp := SubStr(Now, 1, 10) . tf(minutes) . tf(seconds ?? 0)
+			tStamp := SubStr(Now, 1, 10) tf(minutes) tf(seconds ?? 0)
 			if (DateDiff(tStamp, Now, "S") >= 0)
 				return tStamp
-			if (paramInfo.after < 6)
-				return nextMatchingTime(, , , , minutes, seconds ?? A_Sec)
+			nStamp := SubStr(Now, 1, 10) tf(minutes) tf(seconds ?? A_Sec)
+			if (DateDiff(nStamp, Now, "S") >= 0)
+				return nStamp
 			return DateAddW(tStamp, 1, "H")
 		case 6:
 			tStamp := SubStr(Now, 1, 12) . tf(seconds)
@@ -175,18 +197,89 @@ nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?) {
 	}
 	tf(n) => Format("{:02}", n)
 
-	gap(y?, mo?, d?, h?, m?, s?) {
-		mapA := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?)
-		first := 0, last := 0
-		for i, e in mapA {
-			if (A_Index == 1)
-				first := i
-			last := i
-			if (first + A_Index - 1 != i)
-				return { first: first, after: last, gap: true }
-		}
-		return {first: first, after: last, gap: false}
+}
+
+/**
+ * Transforms an object with time unit properties into an array of Length six, containing these in descending order.
+ * @param timeObject 
+ * @returns {Array} 
+ */
+flattenTimeVariableObject(timeObject) {
+	tObj := {}
+	for i, e in (timeObject is Map ? timeObject : timeObject.OwnProps()) {
+		unit := validateTimeUnit(i)
+		tObj.%unit% := e
 	}
+	arr := []
+	for e in ["years","months","days","hours","minutes","seconds"]
+		arr.push(tObj.HasOwnProp(e) ? tObj.%e% : unset)
+	return arr
+}
+
+; Returns the index of the first set unit, the index of the last set unit, and whether there is a gap between them
+getTimeUnitInfo(y?, mo?, d?, h?, m?, s?) {
+	mapA := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?)
+	first := 0, last := 0
+	for i, e in mapA {
+		if (A_Index == 1)
+			first := i
+		last := i
+		if (first + A_Index - 1 != i)
+			return { first: first, after: last, gap: true }
+	}
+	return {first: first, last: last, gap: false}
+}
+
+enumerateTimeUnits(unit) {
+	unit := validateTimeUnit(unit)
+	switch unit {
+		case "Years":
+			return 1
+		case "Months":
+			return 2
+		case "Days":
+			return 3
+		case "Hours":
+			return 4
+		case "Minutes":
+			return 5
+		case "Seconds":
+			return 6
+	}
+}
+
+enumerateTimeUnitIndex(unitIndex) {
+	switch unitIndex {
+		case 1:
+			return "Years"
+		case 2:
+			return "Months"
+		case 3:
+			return "Days"
+		case 4:
+			return "Hours"
+		case 5:
+			return "Minutes"
+		case 6:
+			return "Seconds"
+		default:
+			throw(Error("Invalid Unit Index: " . unitIndex))
+	}
+}
+
+/**
+* Given a set of time units which MUST be in the past, returns a YYYYMMDDHH24MISS timestamp
+; of the last possible time in the past when all given parts match
+ * @param y
+ * @param mo 
+ * @param d 
+ * @param h 
+ * @param m 
+ * @param s 
+ */
+lastMatchingTime(y, mo?, d?, h?, m?, s?) {
+	return y . tf(mo ?? 12) . tf(d ?? (IsSet(mo) ? enumerateMonthDays(mo, y) : 31)) . tf(h??23) . tf(m??59) . tf(s??59)
+	tf(n) => Format("{:02}", n)
 }
 
 /**
@@ -205,7 +298,7 @@ getNextPeriodicTimestamp(time, intervalLength, intervalUnit) {
 		return time
 	if intervalLength <= 0
 		throw ValueError("Huh")
-	switch intervalUnit, 0 {
+	switch intervalUnit {
 		case "Seconds", "Minutes", "Hours", "Days", "Weeks":
 			intervalLengthSecs := convertToSeconds(intervalLength, intervalUnit)
 			secsSinceLastInterval := Mod(secsDiff, intervalLengthSecs)
@@ -277,6 +370,17 @@ enumerateDay(day) { ; sunday == 1 because WDay uses 1 for sunday.
 			return -1
 	}
 	return A_DD - A_WDAY + day
+}
+
+enumerateMonthDays(month, year?) {
+	switch month {
+		case 1,3,5,7,8,10,12:
+			return 31
+		case 2:
+			return IsSet(year) && Mod(year, 4) == 0 ? 29 : 28
+		case 4,6,9,11:
+			return 30
+	}
 }
 
 validateTimeUnit(timeUnit) {
