@@ -7,6 +7,7 @@
 
 ; if nextTimeMS >= 2**32, do nextTimeMS -= 2**32, custom function that will restart itself until timeMS < 2**32, then launch function.
 #Include "%A_LineFile%\..\..\LibrariesV2\TimeUtilities.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\DiscordBot.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
@@ -20,22 +21,23 @@ class ReminderManager {
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Reminder Manager", (*) => this.Gui.Open())
 		A_TrayMenu.Add("GUIs", guiMenu)
-		this.settings := { debug: 0, token: 0, threshold: 604800 }
-		this.timerList := []
+		this.settings := { debug: 0, token: 0, threshold: 86400, omitBlankValuesOnSave: 1, defaultPath: "Reminders\reminders.json" }
+		this.timerList := Map()
 	}
 
 	/**
 	 * Sets options for ReminderManager usage.
 	 * @param flagDebug Enables seconds for reminders and more notifications
-	 * @param {Integer} threshold Threshold beyond which reminders will not be set, ie 64800 means a reminder of >1 day will not be set.
+	 * @param {Integer} threshold Threshold beyond which missed reminders will not be notified
 	 * @param token Discord token.
 	 */
-	static setOptions(flagDebug?,  token?, threshold := this.settings.threshold, notification := this.Notification.default) {
+	static setOptions(flagDebug?,  token?, threshold := this.settings.threshold, notification := this.Notification.default, omitBlankValuesOnSave := true) {
 		if IsSet(flagDebug)
 			this.settings.debug := flagDebug
 		if IsSet(token)
 			this.settings.token := token
 		this.settings.threshold := threshold
+		this.settings.omitBlankValuesOnSave := omitBlankValuesOnSave
 		this.Notification.default := notification
 	}
 
@@ -58,55 +60,94 @@ class ReminderManager {
 
 	/**
 	 * Sets a reminder at the given timestamp
-	 * @param time YYYYMMDDHHMISS timestamp on which the reminder will be called
-	 * @param message An optional message to be displayed via MsgBox instead of a function object
-	 * @param function A function object that will be called when the reminder is called
-	 * If neither a message or function object are specified, a simple message box will open.
+	 * @param time 
+	 * @param {String|Integer|Object} time A string/Integer representing a valid YYYYMMDDHHMISS timestamp or an object with specified time units. 
+	 * @param {String} message The message to display
+	 * @param {String} function A function object or name of a valid Notification function
+	 * @param {Any*} fparams Additional parameters to feed the function 
+	 * @returns {Integer} 
 	 */
 	static setTimerOn(time, message := "", function := "", fparams*) {
 		MSec := A_MSec
-		if (!IsTime(time))
-			throw (Error("Invalid Timestamp given: " . time))
-		timeDiff := DateDiff(time, A_Now, "Seconds")
+		flagTimeUnitObject := IsObject(time)
+		timestamp := flagTimeUnitObject ? nextMatchingTime(flattenTimeVariableObject(timestamp)*) : time
+		if (!IsTime(timestamp))
+			throw (Error("Invalid Timestamp given: " . timestamp))
+		timeDiff := DateDiff(timestamp, A_Now, "Seconds")
 		if (timeDiff < 0)
-			throw (Error("Cannot create Reminder in the Past: " time " is " timeDiff * -1 " seconds in the past."))
-		nextTimeMS := (timeDiff == 0 ? -1 : timeDiff * -1000 + MSec - 10)
-		if (nextTimeMS < -4294967295)
-			throw (Error("Integer Limit for Timers reached."))
+			throw (Error("Cannot create Reminder in the Past: " timestamp " is " timeDiff * -1 " seconds in the past."))
+		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
 		funcName := this.getFuncName(function)
 		callable := this.getCallableFunc(message, function, fparams*)
-		timerObj := this._handleTimer.bind(this, 0, callable, this.timerList.Length + 1)
-		this.timerList.Push({ nextTime: time, multi: 0, message: message, function: funcName, fparams: fparams, timer: timerObj })
+		listKey := (nextTimeMS * -1) '_' A_Now . MSec
+		if (nextTimeMS > -4294967296)
+			timerObj := this._handleTimer.bind(this, callable, listKey, 0)
+		else {
+			timerObj := this._handleTimer.bind(this, callable, listKey,,,, true, timestamp)
+			nextTimeMS := -4000000000
+		}
+		reminderObj := {
+			function: funcName,
+			message: message,
+			multi: 0,
+			fparams: fparams,
+			timer: timerObj,
+			occurenceTimestamp: timestamp
+		}
+		if flagTimeUnitObject
+			reminderObj.units := time
+		else
+			reminderObj.nextTime := timestamp
+		this.timerList[listKey] := reminderObj
 		SetTimer(timerObj, nextTimeMS)
 		return 1
 	}
 
 	/**
 	 * Sets a timer with given period after a given time
-	 * @param time year, month, day, hour, minute, second. If omitted, defaults to next instance of largest set units.
-	 * @param period Integer period in which the timer will repeat
-	 * @param periodUnit Time Unit can be one of the strings (or their first letter): Years, Weeks, Days, Hours, Minutes, Seconds
-	 * @param message An optional message to display when the reminder finishes.
-	 * @param function An optional function object that will be called when the reminder finishes. If both function and message are given, the function object must accept at least one parameter. Alternatively, specify a name of any of the .Notification functions
-	 * @param fparams Optional parameters passed to the function, used for "discordReminder" or other special reminders
 	 * If neither a message or function object are specified, a simple message box will open.
+	 * @param {String|Integer|Object} time A string/Integer representing a valid YYYYMMDDHHMISS timestamp or an object with specified time units. 
+	 * @param {Integer} period Integer period in which the timer will repeat
+	 * @param {String} periodUnit Time Unit can be one of the strings (or their first letter): Years, Weeks, Days, Hours, Minutes, Seconds
+	 * @param {String} message An optional message to display when the reminder finishes.
+	 * @param {String} function An optional function object that will be called when the reminder finishes. If both function and message are given, the function object must accept at least one parameter. Alternatively, specify a name of any of the .Notification functions
+	 * @param {Any*} fparams Optional parameters passed to the function, used for "discordReminder" or other special reminders
 	 */
 	static setPeriodicTimerOn(time, period := 1, periodUnit := "Days", message := "", function := "", fparams*) {
 		MSec := A_Msec
 		Now := A_Now
 		periodUnit := validateTimeUnit(periodUnit)
-		nextTime := getNextPeriodicTimestamp(time, period, periodUnit)
+		flagTimeUnitObject := IsObject(time)
+		timestamp := flagTimeUnitObject ? nextMatchingTime(flattenTimeVariableObject(time)*) : time
+		nextTime := getNextPeriodicTimestamp(timestamp, period, periodUnit)
 		timeDiff := DateDiffW(nextTime, Now, "Seconds")
 		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
-		if (nextTimeMS < -4294967295)
-			return
-		;			throw(Error("Integer Limit for Timers reached."))
 		if (this.settings.debug)
 			timedTooltip(nextTimeMS "`n" MSec)
+		listKey := (nextTimeMS * -1) '_' A_Now . MSec
 		funcName := this.getFuncName(function)
 		callable := this.getCallableFunc(message, function, fparams*)
-		timerObj := this._handleTimer.bind(this, 1, callable, this.timerList.Length + 1, period, periodUnit)
-		this.timerList.Push({ nextTime: DateAdd(Now, timeDiff, "S"), multi: 1, period: period, periodUnit: periodUnit, message: message, function: funcName, fparams: fparams, timer: timerObj })
+		if (nextTimeMS > -4294967296)
+			timerObj := this._handleTimer.bind(this, callable, listKey, 1, period, periodUnit)
+		else {
+			timerObj := this._handleTimer.bind(this, callable, listKey, 1, period, periodUnit, true, timestamp)
+			nextTimeMS := -4000000000
+		}
+		reminderObj := {
+			function: funcName,
+			message: message,
+			multi: 1, 
+			period: period, 
+			periodUnit: periodUnit, 
+			fparams: fparams,
+			timer: timerObj,
+			occurenceTimestamp: timestamp
+		}
+		if flagTimeUnitObject
+			reminderObj.units := time
+		else
+			reminderObj.nextTime := timestamp
+		this.timerList[listKey] := reminderObj
 		SetTimer(timerObj, nextTimeMS)
 	}
 
@@ -123,7 +164,7 @@ class ReminderManager {
 		else if !(function is BoundFunc) {
 			name := this.getFuncName(function)
 			if (Instr(name, ".")) {
-				loop ((cNames := StrSplit(name, ".")).Length)
+				loop ((cNames := StrSplit(name, ".")).Length - 1)
 					classObj := A_Index == 1 ? %cNames[1]% : classObj.%cNames[A_Index]%
 				function := function.bind(classObj)
 			}
@@ -166,21 +207,41 @@ class ReminderManager {
 			return this.Notification.default
 	}
 
-	static _handleTimer(isMulti, callable, index, period?, periodUnit?) {
+	static _handleTimer(callable, listKey, isMulti := 0, period?, periodUnit?, isExtended := 0, finalTimestamp := 0) {
 		MSec := A_MSec
-		if (!isMulti) {
-			this.timerList.Delete(index)
-			if this.Gui.current
-				this.Gui.LVDeleteRow(index)
+		if (isExtended) { ; for timers that are too long
+			reminderObj := this.timerList[listKey]
+			timeDiff := DateDiffW(finalTimestamp, A_Now, "Seconds")
+			nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
+			if (nextTimeMS > -4294967296) {
+				newTimerObj := this._handleTimer.bind(this, callable, listKey, isMulti, period?, periodUnit?)
+				reminderObj.timer := newTimerObj
+				SetTimer(newTimerObj, nextTimeMS)
+			} else {
+				SetTimer(reminderObj.timer, -4000000000)
+			}
+			return
 		}
-		else {
+		reminderObj := this.timerList.Delete(listKey)
+		if (!isMulti) {
+			if this.Gui.current
+				this.Gui.LVDeleteRow(listKey)
+			this.exportReminders(this.settings.defaultPath)
+		} else {
 			nextOccurence := DateAddW(A_Now, period, periodUnit)
 			nextTimeMS := 1000 * DateDiff(A_Now, nextOccurence, "Seconds") + MSec - 10 ; -10 -> correction against cases of .999
-			if (nextTimeMS > -4294967296)
-				SetTimer(this.timerList[index].timer, nextTimeMS)
-			this.timerList[index].nextTime := nextOccurence
+			listKey := (nextTimeMS * -1) '_' A_Now . MSec
+			if (nextTimeMS > -4294967296) {
+				newTimerObj := this._handleTimer.bind(this, callable, listKey, 1, period, periodUnit)
+				SetTimer(newTimerObj, nextTimeMS)
+			} else {
+				newTimerObj := this._handleTimer.bind(this, callable, listKey, 1, period, periodUnit, 1, nextOccurence)
+				SetTimer(newTimerObj, -4000000000)
+			}
+			reminderObj.timer := newTimerObj
+			this.timerList[listKey] := reminderObj
 			if this.Gui.current
-				this.Gui.LVModifyRowTimestamp(index, FormatTime(nextOccurence, "yyyy-MM-dd, HH:mm:ss"))
+				this.Gui.LVModifyRowTimestamp(listKey, FormatTime(nextOccurence, "yyyy-MM-dd, HH:mm:ss"))
 		}
 		callable()
 	}
@@ -191,7 +252,8 @@ class ReminderManager {
 				coords: { x: 565, y: 300 }, 
 				variables: {
 					reminderIn: { message: "rem1Message", seconds: "rem1S", minutes: "rem1M", hours: "rem1H"},
-					reminderOn: { message: "rem2Message", seconds: "rem2S", minutes: "rem2M", hours: "rem2H", days: "rem2D", months: "rem2Mo"}
+					reminderOn: { message: "rem2Message", seconds: "rem2S", minutes: "rem2M", hours: "rem2H", days: "rem2D", months: "rem2Mo"},
+					multiReminderOn: { message: "rem3Message", seconds: "rem3S", minutes: "rem3M", hours: "rem3H", days: "rem3D", months: "rem3Mo", period: "rem3P", periodUnit: "rem3PU" }
 				} 
 			}
 			this.core := ReminderManager
@@ -228,7 +290,7 @@ class ReminderManager {
 			this.current := Gui("+Border", "Reminder Manager")
 			this.current.OnEvent("Escape", (*) => this.close())
 			this.current.OnEvent("Close", (*) => this.close())
-			this.current.AddGroupBox("Section w400 h90", "Add Reminder in")
+			this.current.AddGroupBox("Section w411 h90", "Add Reminder in")
 			this.current.SetFont("s9")
 			this.current.AddText("Center ys+22 xs+10", "Remind me in ")
 			; this.gui.AddEdit("ys+20 x+5 r1", 0).Name := this.guiVars.1[5]
@@ -241,8 +303,10 @@ class ReminderManager {
 			this.current.AddText("Center ys+22 x+5", "s")
 			this.current.AddText("Center ys+22 x+5", "with the message:")
 			this.current.AddEdit("ys+47 xs+10 r2 w375").Name := this.data.variables.reminderIn.message
-			this.current.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", (*) => setReminderIn())
-			this.current.AddGroupBox("xs Section w400 h90", "Add Reminder on")
+			this.current.AddButton("ys+5 h85 w80", "Add Reminder").OnEvent("Click", (*) => setReminderIn())
+			this.current.AddButton("ys+5 h30 w65", "Settings").OnEvent("Click", (*) => settingsGui())
+			this.current.AddButton("xp h49 w65", "Recurring`nReminders").OnEvent("Click", (*) => recurringReminderGui())
+			this.current.AddGroupBox("xs Section w411 h90", "Add Reminder on")
 			this.current.SetFont("s9")
 			this.current.AddText("Center ys+22 xs+10", "Remind me on")
 			this.current.AddEdit("ys+20 x+5 r1 w30", A_DD).Name := this.data.variables.reminderOn.days
@@ -256,8 +320,8 @@ class ReminderManager {
 			this.current.AddEdit("ys+20 x+5 r1 w30 " (this.core.settings.debug ? "" : "Hidden"), (this.core.settings.debug ? A_Sec : 0)).Name := this.data.variables.reminderOn.seconds
 			this.current.AddText("Center ys+22 x+5", "with the message:")
 			this.current.AddEdit("ys+47 xs+10 r2 w375").Name := this.data.variables.reminderOn.message
-			this.current.AddButton("ys+5 h60 w80", "Add Reminder").OnEvent("Click", (*) => setReminderOn())
-			this.LV := this.current.AddListView("xs R10 w500 -Multi Sort", ["Next Occurence", "Period", "Message", "Function", "Index"])
+			this.current.AddButton("ys+5 h85 w80", "Add Reminder").OnEvent("Click", (*) => setReminderOn())
+			this.LV := this.current.AddListView("xs R10 w575 -Multi Sort", ["Next Occurence", "Period", "Message", "Function", "Index"])
 			this.LV.OnEvent("ContextMenu", onContextMenu)
 			this.LV.OnNotify(LVN_KEYDOWN, onKeyPress)
 			createListView()
@@ -265,15 +329,17 @@ class ReminderManager {
 
 			createListView() {
 				this.LV.Delete()
-				this.LV.ModifyCol(5, 0)
-				for i, e in this.core.timerList
-					if (IsSet(e))
-						this.LV.Add(, FormatTime(e.nextTime, "yyyy-MM-dd, HH:mm:ss"),
-							HasProp(e, "period") ? e.period " " (e.period == 1 ? SubStr(e.periodUnit, 1, -1) : e.periodUnit) : "/",
-							e.message,
-							e.function,
-							i
-						)
+				if !this.core.settings.debug
+					this.LV.ModifyCol(5, 0)
+				for i, e in this.core.timerList {
+					this.LV.Add(, 
+						FormatTime(e.occurenceTimestamp, "yyyy-MM-dd, HH:mm:ss"),
+						HasProp(e, "period") ? e.period " " (e.period == 1 ? SubStr(e.periodUnit, 1, -1) : e.periodUnit) : "/",
+						e.message,
+						e.function,
+						i
+					)
+				}
 				Loop (2)
 					this.LV.ModifyCol(A_Index, "+AutoHdr")
 				this.LV.ModifyCol(3, 225)
@@ -294,6 +360,7 @@ class ReminderManager {
 					msgbox("Problem setting the Reminder. Check if entered time is valid.`nSpecifically: " e.What " failed with`n" e.Message)
 					return 0
 				}
+				this.core.exportReminders(this.core.settings.defaultPath)
 				timedTooltip("Success!", 1000)
 				this.current[names.message].Value := ""
 				this.current[names.hours].Value := 0
@@ -324,13 +391,14 @@ class ReminderManager {
 					MsgBox("Invalid Time specified.")
 					return 0
 				}
+				this.core.exportReminders(this.core.settings.defaultPath)
 				timedTooltip("Success!", 1000)
 				this.current[names.message].Value := ""
 				this.current[names.months].Value := A_Mon
 				this.current[names.days].Value := A_MDay
 				this.current[names.hours].Value := A_Hour
 				this.current[names.minutes].Value := A_Min
-				this.current[names.seconds].Value := A_Sec
+				this.current[names.seconds].Value := this.core.settings.debug ? A_Sec : 0 
 				createListView()
 			}
 
@@ -344,9 +412,10 @@ class ReminderManager {
 					case "46": 	;// Del/Entf Key -> Delete Reminder
 						if ((rowN := this.LV.GetNext()) == 0)
 							return
-						index := Integer(this.LV.GetText(rowN, 5))
-						try SetTimer(this.core.timerList[index].timer, 0)
-						this.core.timerList.delete(index)
+						key := this.LV.GetText(rowN, 5)
+						try SetTimer(this.core.timerList[key].timer, 0)
+						if !this.core.timerList[key].multi
+							this.core.timerList.Delete(key)
 						this.LV.delete(rowN)
 					case "116":	;// F5 Key -> Reload
 						createListView()
@@ -354,20 +423,85 @@ class ReminderManager {
 						return
 				}
 			}
+
+			settingsGui(*) {
+				return
+			}
+
+			recurringReminderGui(*) {
+				multiRemGui := Gui("+Border", "Recurring Reminder Creator")
+				multiRemGui.OnEvent("Escape", (*) => multiRemGui.Destroy())
+				multiRemGui.OnEvent("Close", (*) => multiRemGui.Destroy())
+				multiRemGui.AddGroupBox("Section w400 h125", "Add Recurring Reminder")
+				multiRemGui.SetFont("s9")
+				multiRemGui.AddText("Center R1.45 ys+22 xs+10", "Remind me on")
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.days
+				multiRemGui.AddText("Center R1.45 ys+22 x+5", ".")
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.months
+				multiRemGui.AddText("Center R1.45 ys+22 x+5", " at")
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.hours
+				multiRemGui.AddText("Center R1.45 ys+22 x+5", ":")
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.minutes
+				multiRemGui.AddText("Center R1.45 ys+22 x+5", ":")
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.seconds
+				multiRemGui.AddText("Center R1.45 ys+50 xs+10", "and then every")
+				multiRemGui.AddEdit("ys+47 x+5 r1 w30", '1').Name := this.data.variables.multiReminderOn.period
+				multiRemGui.AddDDL("ys+47 x+5 r7 w65 Choose1", ["Years", "Months", "Weeks", "Days", "Hours", "Minutes", "Seconds"]).Name := this.data.variables.multiReminderOn.periodUnit
+				multiRemGui.AddText("Center R1.45 ys+50 x+5", "with the message:")
+				multiRemGui.AddEdit("ys+74 xs+10 r2 w375").Name := this.data.variables.multiReminderOn.message
+				multiRemGui.AddButton("ys+5 h85 w80", "Add Reminder").OnEvent("Click", (*) => setRecurringReminderOn())
+				multiRemGui.Show("Autosize")
+
+				setRecurringReminderOn() {
+					static names := this.data.variables.multiReminderOn
+					vars := multiRemGui.Submit(false)
+					message := vars.%names.message%
+					period := vars.%names.period%
+					periodUnit := vars.%names.periodUnit%
+					if !(message) || !(period)
+						return MsgBoxAsGui("You have not set a reminder message or have entered an invalid period. You must set both before setting a multireminder.", "Reminder")
+					try {
+						units := {
+							months: IsInteger(vars.%names.months%) ? vars.%names.months% : unset,
+							days: IsInteger(vars.%names.days%) ? vars.%names.days% : unset,
+							hours: IsInteger(vars.%names.hours%) ? vars.%names.hours% : unset,
+							minutes: IsInteger(vars.%names.minutes%) ? vars.%names.minutes% : unset,
+							seconds: IsInteger(vars.%names.seconds%) ? vars.%names.seconds% : unset
+						}
+						this.core.setPeriodicTimerOn(units, period, periodUnit, message)
+					}
+					catch Error {
+						MsgBox("Invalid Time specified.")
+						return 0
+					}
+					this.core.exportReminders(this.core.settings.defaultPath)
+					timedTooltip("Success!", 1000)
+					multiRemGui[names.message].Value := ""
+					multiRemGui[names.months].Value := '/'
+					multiRemGui[names.days].Value := '/'
+					multiRemGui[names.hours].Value := '/'
+					multiRemGui[names.minutes].Value := '/'
+					multiRemGui[names.seconds].Value := '/'
+					multiRemGui[names.period].Value := '/'
+					multiRemGui[names.periodUnit].Choose(1)
+					createListView()
+				}
+			}
+
 		}
 
-		static LVDeleteRow(index) {
+		static LVDeleteRow(key) {
 			Loop(this.LV.GetCount()) {
-				if (this.LV.GetText(A_Index, 5) == index) {
+				if (this.LV.GetText(A_Index, 5) == key) {
 					this.LV.delete(A_Index)
 					break
 				}
 			}
 		}
 
-		static LVModifyRowTimestamp(index, timestamp) {
+		static LVModifyRowTimestamp(key, timestamp) {
 			Loop(this.LV.GetCount()) {
-				if (this.LV.GetText(A_Index, 5) == index) {
+				if (this.LV.GetText(A_Index, 5) == key) {
 					this.LV.Modify(A_Index, timestamp)
 					this.LV.ModifyCol(1, "AutoHdr Sort")
 					break
@@ -393,54 +527,60 @@ class ReminderManager {
 	 * @param {Array} overrideReminderFunc Array of functions to use instead of the default for all unset reminders in the file. 
 	 * @param {String} encoding 
 	 */
-	static importReminders(filePath, ignoreInstantNotifications := false, overrideReminderFunc?, overridefparams?, encoding := "UTF-8") {
+	static importReminders(filePath, ignoreInstantNotifications := false, ignoreMissedNotifications := false, overrideReminderFunc?, overridefparams?, encoding := "UTF-8") {
 		jsonStr := FileRead(filePath, encoding)
 		remArr := MapToObj(jsongo.Parse(jsonStr))
 		for i, o in remArr {
-			if o.HasOwnProp('nextTime') && IsTime(o.nextTime)
-				earliestTimestamp := o.nextTime
-			else {
-				y := o.units.HasOwnProp("years") ? o.units.years : unset
-				mo := o.units.HasOwnProp("months") ? o.units.months : unset
-				d := o.units.HasOwnProp("days") ? o.units.days : unset
-				h := o.units.HasOwnProp("hours") ? o.units.hours : unset
-				m := o.units.HasOwnProp("minutes") ? o.units.minutes : unset
-				s := o.units.HasOwnProp("seconds") ? o.units.seconds : unset
-				earliestTimestamp := nextMatchingTime(y?, mo?, d?, h?, m?, s?)
+			if o.HasOwnProp('nextTime') && IsTime(o.nextTime) {
+				timeParam := o.nextTime
+				earliestTimestamp := timeParam
+			} else {
+				timeParam := o.units
+				unitArr := flattenTimeVariableObject(timeParam)
+				earliestTimestamp := nextMatchingTime(unitArr*)
 			}
 			fparams := o.HasOwnProp("fparams") ? o.fparams : overridefparams ? overridefparams : []
 			if !(fparams is Array)
 				fparams := [fparams]
 			function := o.HasOwnProp("function") ? o.function : overrideReminderFunc ? overrideReminderFunc : ""
 			multi := o.HasOwnProp("multi") ? o.multi : 0
-			if (ignoreInstantNotifications && Abs(DateDiff(earliestTimestamp, A_Now, "Seconds")) <= 1) {
+			if (earliestTimestamp == 0)
+				earliestTimestamp := lastMatchingTime(unitArr*)
+			diff := DateDiff(A_Now, earliestTimestamp, 'S')
+			if (diff > 1) && !multi { ; we are in the past
+				if ignoreMissedNotifications || diff > this.settings.threshold
+					continue
+				fparams.push(1, earliestTimestamp)
+				this.getCallableFunc(o.message, function, fparams*)()
+				continue
+			} else if (ignoreInstantNotifications && Abs(DateDiff(earliestTimestamp, A_Now, "Seconds")) <= 1) {
 				if (multi) {
 					if o.HasOwnProp('nextTime') && IsTime(o.nextTime) ; exact timestamp -> add period
-						this.setPeriodicTimerOn(DateAddW(o.nextTime, o.period, o.periodUnit))
+						this.setPeriodicTimerOn(DateAddW(o.nextTime, o.period, o.periodUnit), o.period, o.periodUnit)
 					else {
-						units := [y, mo, d, h, m, s]
-						Loop (units.Length) { ; trim the smallest unset units.
-							if !units.Has(-A_Index)
-								units.Pop()
-						}
-						secondBestTime := nextMatchingTime(units*)
-						interval := DateDiffW(secondBestTime, earliestTimestamp, o.periodUnit)
-						if (interval > o.period)
-							secondBestTime := DateAddW(secondBestTime, -(interval // o.period) * o.period, o.periodUnit)
+						lastSetUnitIndex := getTimeUnitInfo(unitArr).last ; ignore year
+						; leftalign with spaces, replace spaces with 0. 2+lastSetUnitIndex*2 because everything but the year has width 2
+						minimalEarliestTimestamp := StrReplace(Format("{:-14}",SubStr(earliestTimestamp, 1, 2+lastSetUnitIndex*2)), ' ', 0)
+						secondBestTime := DateAddW(minimalEarliestTimestamp, 1, o.periodUnit)
 						this.setPeriodicTimerOn(secondBestTime, o.period, o.periodUnit, o.message, function, fparams*)
 					}
 				}
 				continue
 			}
 			if (o.multi)
-				this.setPeriodicTimerOn(earliestTimestamp, o.period, o.periodUnit, o.message, function, fparams*)
+				this.setPeriodicTimerOn(timeParam, o.period, o.periodUnit, o.message, function, fparams*)
 			else
-				this.setTimerOn(earliestTimestamp, o.message, function, fparams*)
+				this.setTimerOn(timeParam, o.message, function, fparams*)
 		}
+
+		tf(n) => Format("{:02}", n)
 	}
 
 	static exportReminders(filepath := "") {
-		jsonString := jsongo.Stringify(this.timerList, ["timer"], "`t")
+		arr := []
+		for i, e in this.timerList
+			arr.push(e)
+		jsonString := jsongo.Stringify(arr, ["timer", "occurenceTimestamp"], "`t")
 		FileOpen(filePath, "w", "UTF-8").Write(jsonString)
 	}
 
@@ -451,16 +591,17 @@ class ReminderManager {
 			this.default := this.notificationAsyncMsgBox
 		}
 
-		static generateReminderMessage(msg) {
+		static generateReminderMessage(msg, isOld := false, oldTimestamp := 0) {
 			time := FormatTime("L1033", "dddd, dd.MM.yyyy, HH:mm:ss") ; L1033 -> en-US for day name.
-			message := "It is " . time . "`nYou set a reminder for this point in time."
+			message := "It is " . time . "`n"
+			message .= isOld ? ("You have a missed reminder from " . FormatTime(oldTimestamp . " L1033", "dddd, dd.MM.yyyy, HH:mm:ss")) : "You set a reminder for this point in time."
 			message .= (msg == "" ? "" : "`nReminder Message: " . msg)
 			return message
 		}
 
-		static notificationAsyncMsgBox(msg := "") {
+		static notificationAsyncMsgBox(msg := "", isOld := false, oldTimestamp := 0) {
 			SoundPlay("*48")
-			MsgBoxAsGui(this.generateReminderMessage(msg), "Reminder")
+			MsgBoxAsGui(this.generateReminderMessage(msg, isOld, oldTimestamp), "Reminder")
 		}
 
 		static _1337(*) {
@@ -479,13 +620,13 @@ class ReminderManager {
 		 * @param msg The message to send.
 		 * @param id The id of the user.
 		 */
-		static discord(msg, id) {
+		static discord(msg, id, isOld := false, oldTimestamp := 0) {
 			static bot := DiscordBot(this.core.settings.token)
-			bot.sendMessageToUser(id, { content: this.generateReminderMessage(msg) })
+			bot.sendMessageToUser(id, { content: this.generateReminderMessage(msg, isOld, oldTimestamp) })
 		}
 
-		static toast(msg) {
-			TrayTip(this.generateReminderMessage(msg), "Reminder")
+		static toast(msg, isOld := false, oldTimestamp := 0) {
+			TrayTip(this.generateReminderMessage(msg, isOld, oldTimestamp), "Reminder")
 		}
 
 		/**
@@ -493,10 +634,10 @@ class ReminderManager {
 		 * @param msg The message to send.
 		 * @param id The id of the user.
 		 */
-		static all(msg, id) {
-			this.notificationAsyncMsgBox(msg)
-			this.toast(msg)
-			this.discord(msg, id)
+		static all(msg, id, isOld := false, oldTimestamp := 0) {
+			this.notificationAsyncMsgBox(msg, isOld, oldTimestamp)
+			this.toast(msg, isOld, oldTimestamp)
+			this.discord(msg, id, isOld, oldTimestamp)
 		}
 	}
 }
