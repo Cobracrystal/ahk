@@ -417,3 +417,8 @@ randomTime(timestamp1 := "16010101000000", timestamp2 := A_Now) {
 	r := Random(0, DateDiff(timestamp2, timestamp1, "Seconds"))
 	return DateAdd(timestamp1, r, "Seconds")
 }
+
+formatTimeLongDateTimeUS(timestamp := A_Now) => FormatTime(timestamp " L1033", "dddd, dd.MM.yyyy, HH:mm:ss")
+formatTimeDateTime(timestamp := A_Now, dateTimeSep := '_') => FormatTime(timestamp, "dd.MM.yyyy" dateTimeSep "HH:mm:ss")
+formatTimeISO8601(timestamp := A_Now, dateTimeSep := 'T') => FormatTime(timestamp, "yyyy-MM-dd" dateTimeSep "HH:mm:ss")
+formatTimeISO8601File(timestamp := A_Now, dateTimeSep := 'T') => FormatTime(timestamp, "yyyy-MM-dd" dateTimeSep "HH-mm-ss")
