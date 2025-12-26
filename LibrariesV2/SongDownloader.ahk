@@ -37,7 +37,7 @@ class SongDownloader {
 			simulate: false,
 			useAliases: true,
 			useVisibleCMD: false,
-			currentIterator: 73,
+			currentIterator: 74,
 			outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
 			outputSubFolder: "",
 			logMetadata: true,
