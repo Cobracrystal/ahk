@@ -14,7 +14,7 @@ TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think.ico", , true)
 ; OnExit(customExit)
 Hotstring("EndChars", "-()[]{}:;`'`"/\,.?!" . A_Space . A_Tab)
 
-GLOBALVAR_WASRELOADED := (InStr(DllCall("GetCommandLine", "str"), "/restart") ? true : false)
+A_IsReloaded := (InStr(DllCall("GetCommandLine", "str"), "/restart") ? true : false)
 
 ; Delete Tray Menu Items before including files that may modify them
 A_TrayMenu.Delete()
@@ -52,9 +52,9 @@ GroupAdd("nonMenuWindows", "ahk_exe cs2.exe")
 GroupAdd("nonMenuWindows", "Satisfactory ahk_class UnrealWindow")
 GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
 GroupAdd("nonMenuWindows", "ahk_exe javaw.exe")
-ReminderManager.setOptions(1,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")), 86400)
-; ReminderManager.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBALVAR_WASRELOADED,, ReminderManager.Notification.all, "245189840470147072")
-ReminderManager.importReminders(A_WorkingDir . "\Reminders\reminders.json", GLOBALVAR_WASRELOADED,, ReminderManager.Notification.all, "245189840470147072")
+ReminderManager.setOptions(0,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")), 86400)
+; ReminderManager.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded,, ReminderManager.Notification.all, "245189840470147072")
+ReminderManager.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded, A_IsReloaded, ReminderManager.Notification.all, "245189840470147072")
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", remInst.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
@@ -85,7 +85,7 @@ expressionCalculator.setWolframAlphaToken(FileRead(A_WorkingDir "\everything\wol
 ; replace the tray menu with my own
 customTrayMenu()
 ; Synchronize nextDNS IP
-if (!GLOBALVAR_WASRELOADED)
+if (!A_IsReloaded)
 	connectNextDNS()
 ; ###########################################################################
 ; ############################# CONTROL HOTKEYS #############################
@@ -1264,3 +1264,12 @@ class RevoIdle {
 	}
 }
 #HotIf
+
+^+!o::{
+	text := A_Clipboard
+	text := RegExReplace(text, "[^A-Za-z0-9 `t]")
+	res := ''
+	for e in strSplitOnWhiteSpace(text)
+		res .= e ? Chr(Integer('0x' e)) : ''
+	MsgBoxAsGui(res)
+}
