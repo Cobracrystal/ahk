@@ -573,7 +573,7 @@ class SongDownloader {
 		}
 	}
 
-	static thumbnailPreviewer(metadata) {
+	static thumbnailPreviewer(metadata, retry := true) {
 		static HTML_TEMPLATE := '<!DOCTYPE html><html><head><style>html,body {margin: 0;padding: 0;}.overlay {position: absolute;top: 0;height: {3};background-color: #000;filter: alpha(opacity=85);}</style></head><body><div style="width:{2};height:{3};"><img src="{1}" alt="Picture" style="width:{2};height:{3};"><div class="overlay" style="left:0;width:{4}px;"></div><div class="overlay" style="right:0;width:{4}px;"></div></div></body></html>'
 		getThumbs := !(metadata.HasOwnProp("thumbnails") 
 			&& RegExMatch(metadata.thumbnails[1].url, "https:\/\/.*?\/.*?\/([a-zA-Z0-9-_]{11})\/.*?\.", &o) 
@@ -587,7 +587,8 @@ class SongDownloader {
 
 			callback(metadata, dataStr) {
 				metadata.thumbnails := this.parseMetadata(dataStr).thumbnails
-				this.thumbnailPreviewer(metadata)
+				if retry
+					this.thumbnailPreviewer(metadata, false)
 			}
 		}
 		
