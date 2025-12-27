@@ -549,7 +549,7 @@ class ReminderManager {
 				unitArr := flattenTimeVariableObject(timeParam)
 				earliestTimestamp := nextMatchingTime(unitArr*)
 			}
-			fparams := o.HasOwnProp("fparams") ? o.fparams : overridefparams ? overridefparams : []
+			fparams := o.HasOwnProp("fparams") ? o.fparams : overridefparams && !o.HasOwnProp("function") ? overridefparams : []
 			if !(fparams is Array)
 				fparams := [fparams]
 			function := o.HasOwnProp("function") ? o.function : overrideReminderFunc ? overrideReminderFunc : ""
@@ -574,7 +574,12 @@ class ReminderManager {
 					else {
 						lastSetUnitIndex := getTimeUnitInfo(unitArr).last ; ignore year
 						; leftalign with spaces, replace spaces with 0. 2+lastSetUnitIndex*2 because everything but the year has width 2
-						minimalEarliestTimestamp := StrReplace(Format("{:-14}",SubStr(earliestTimestamp, 1, 2+lastSetUnitIndex*2)), ' ', 0)
+						timestampPart := SubStr(earliestTimestamp, 1, 2+lastSetUnitIndex*2)
+						if lastSetUnitIndex < 2
+							timestampPart .= '01'
+						if lastSetUnitIndex < 3
+							timestampPart .= '01'
+						minimalEarliestTimestamp := StrReplace(Format("{:-14}",timestampPart), ' ', 0)
 						secondBestTime := DateAddW(minimalEarliestTimestamp, 1, o.periodUnit)
 						this.setPeriodicTimerOn(secondBestTime, o.period, o.periodUnit, o.message, function, fparams*)
 					}
