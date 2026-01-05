@@ -38,8 +38,50 @@ strCountStr(HayStack, SearchText, CaseSense := false) {
  * @param {Integer} StartPos 
  * @param {Integer} Occurence 
  */
-stringssInStr(HayStack, SearchTexts, CaseSense, StartPos := 1, Occurence := 1) {
-	throw Error("Not implemented")
+stringssInStr(HayStack, SearchTexts, CaseSense := 0, StartPos := 1, Occurence := 1) {
+	if SearchTexts is String
+		needles := [SearchTexts]
+	else
+		needles := SearchTexts.Clone()
+	if needles.Length == 1
+		return InStr(HayStack, needles[1], CaseSense, StartPos, Occurence)
+	indices := []
+	offsets := []
+	lens := []
+	for i, e in needles {
+		offsets.push(StartPos)
+		lens.push(StrLen(e))
+	}
+	while (needles.Length > 0) {
+		queue := []
+		for i, needle in needles {
+			next := InStr(HayStack, needle, CaseSense, offsets[i], 1)
+			if (next == 0) {
+				queue.push(i) ; then remove needles with that queue backwards. eventually it'll be empty
+				continue
+			}
+			simpleInsertSorted()
+			offsets[i] := next + lens[i]
+		}
+		Loop (queue.Length) { ; delete unnecessary needles
+			needles.removeAt(queue[-A_Index])
+			offsets.RemoveAt(queue[-A_Index])
+		}
+		; we must continue for all possible needles until ALL have surpassed occurence. eg [1, 2] and string is 1 1 1 1 1 2 2 2 2 2 with occurence 5 
+	}
+	if (Occurence == 0)
+		return indices
+	else if Occurence > indices.length
+		return 0
+	else
+		return indices[Occurence]
+
+	simpleInsertSorted() {
+		for k, e in indices
+			if (next < e)
+				return indices.InsertAt(k, next)
+		indices.push(next)
+	}
 }
 
 strReverse(str) {
