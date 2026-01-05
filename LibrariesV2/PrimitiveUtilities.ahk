@@ -502,7 +502,7 @@ strGetSplitLen(str, delim, omit := '') {
 	lens := []
 	Loop Parse, str, delim, omit
 		lens.push(StrLen(A_LoopField))
-	return lens
+	return lens.Length > 0 ? lens : [StrLen(str)]
 }
 
 /**
