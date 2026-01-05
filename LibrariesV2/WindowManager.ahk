@@ -223,17 +223,21 @@ class WindowManager {
 			"processPath",	["processPath", "path", "ahk_exe"],
 			"commandLine",	["command", "cmdl", "cmd", "commandLine", "ahk_cmd"]
 		)
+		static tagMap := Map()
 		search := this.gui["EditFilterWindows"].Value
 		if (search == "")
 			return true
-		tagMap := Map()
-		for normalizedTag, aliasTag in aliases
-			for tagAlias in aliasTag
-				tagMap[tagAlias] := normalizedTag
+		if (tagMap.Count == 0) { ; init of tagmap
+			for normalizedTag, possibleTags in aliases
+				for tagAlias in possibleTags
+					tagMap[tagAlias] := normalizedTag
+		}
 		; tagMap: {handle => hwnd, id => hwnd, hwnd => hwnd, ahk_id => hwnd, title => title, ahk_title => title, ...}
 		searches := Map()
 		for aliasTag, normalizedTag in tagMap {
-			flagAHKSyntax := (SubStr(aliasTag, 1, 4) == "ahk_")
+			if !InStr(search, aliasTag) ; to avoid calling >30 regex calls per search
+				continue
+			flagAHKSyntax := InStr(aliasTag, "ahk_")
 			RegexMatch(search, "(?:^|\s)" aliasTag . (flagAHKSyntax ? "(?::|\s+)" : ":") . "([^\s]+)", &o)
 			if (o) {
 				searches[normalizedTag] := o[1]
