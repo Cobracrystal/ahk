@@ -38,7 +38,7 @@ strCountStr(HayStack, SearchText, CaseSense := false) {
  * @param {Integer} StartPos 
  * @param {Integer} Occurence 
  */
-stringssInStr(HayStack, SearchTexts, CaseSense := 0, StartPos := 1, Occurence := 1) {
+stringsInStr(HayStack, SearchTexts, CaseSense := 0, StartPos := 1, Occurence := 1) {
 	if SearchTexts is String
 		needles := [SearchTexts]
 	else
