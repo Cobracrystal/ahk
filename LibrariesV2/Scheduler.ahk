@@ -12,7 +12,7 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\DiscordBot.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
 
-class TimerWorker {
+class Scheduler {
 	
 	/**
 	 * Initializes some settings
@@ -34,7 +34,7 @@ class TimerWorker {
 	}
 
 	/**
-	 * Sets options for TimerWorker usage.
+	 * Sets options for Scheduler usage.
 	 * @param flagDebug Enables seconds for reminders and more notifications
 	 * @param {Integer} threshold Threshold beyond which missed reminders will not be notified
 	 * @param token Discord token.
@@ -265,7 +265,7 @@ class TimerWorker {
 					multiReminderOn: { message: "rem3Message", seconds: "rem3S", minutes: "rem3M", hours: "rem3H", days: "rem3D", months: "rem3Mo", period: "rem3P", periodUnit: "rem3PU" }
 				} 
 			}
-			this.core := TimerWorker
+			this.core := Scheduler
 			this.current := 0
 			this.currentLV := 0
 		}
@@ -613,7 +613,7 @@ class TimerWorker {
 	class Notification {
 
 		static __New() {
-			this.core := TimerWorker
+			this.core := Scheduler
 			this.default := this.notificationAsyncMsgBox
 		}
 

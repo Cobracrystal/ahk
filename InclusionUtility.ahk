@@ -8,7 +8,7 @@ Just include this file instead of all the smaller ones separately.
 #Include "%A_ScriptDir%\LibrariesV2"
 #Include "NumberNameDictionary.ahk"
 #Include "openDTU.ahk"
-#Include "TimerWorker.ahk"
+#Include "Scheduler.ahk"
 
 #Include "TableFilter v2.ahk"
 #Include "TextEditMenu.ahk"

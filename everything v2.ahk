@@ -23,7 +23,7 @@ A_TrayMenu.Delete()
 #Include "TransparentTaskbar.ahk"
 #Include "HotkeyManager.ahk"
 #Include "WindowManager.ahk"
-#Include "TimerWorker.ahk"
+#Include "Scheduler.ahk"
 #Include "YoutubeDLGui.ahk"
 #Include "SongDownloader.ahk"
 #Include "TextEditMenu.ahk"
@@ -52,9 +52,9 @@ GroupAdd("nonMenuWindows", "ahk_exe cs2.exe")
 GroupAdd("nonMenuWindows", "Satisfactory ahk_class UnrealWindow")
 GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
 GroupAdd("nonMenuWindows", "ahk_exe javaw.exe")
-TimerWorker.setOptions(0,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")), 86400)
-; TimerWorker.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded,, TimerWorker.Notification.all, "245189840470147072")
-TimerWorker.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded, A_IsReloaded, TimerWorker.Notification.all, "245189840470147072")
+Scheduler.setOptions(0,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")), 86400)
+; Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded,, Scheduler.Notification.all, "245189840470147072")
+Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded, A_IsReloaded, Scheduler.Notification.all, "245189840470147072")
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", remInst.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
@@ -152,7 +152,7 @@ Launch_App2::
 }
 
 ^F8:: {	; Shows Reminder GUI
-	TimerWorker.Gui.Toggle()
+	Scheduler.Gui.Toggle()
 }
 
 ^+K:: { ; Toggle Taskbar Transparency
