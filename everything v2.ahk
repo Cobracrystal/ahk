@@ -717,39 +717,52 @@ customExit(ExitReason, ExitCode) {
 ; ###########################################################################
 
 *^LWin Up:: { ; Open Everything Search Window
-	static searchString := "Everything ahk_exe Everything.exe ahk_class EVERYTHING"
-	state := GetKeyState("Shift")
-	move := true, list := []
-	if (WinExist(searchString)) {
-		move := false
-		list := WinGetList(searchString)
+	static everythingWinIdentifier := "Everything ahk_exe Everything.exe ahk_class EVERYTHING"
+	static currentTimer := 0
+	static currentWin := 0
+	if (currentTimer) { ; timer is running -> window is open and volatile. thus disable timer
+		SetTimer(currentTimer, 0)
+		currentTimer := 0
+		return
 	}
-	Run('"C:\Program Files\Everything\Everything.exe" -newwindow')
-	Loop {
-		if (WinGetCount(searchString) == list.Length) {
-			Sleep(50)
-			continue
-		}
-		list2 := WinGetList(searchString)
-		for i, e in list2 {
-			if (!objContainsValue(list, e))
-				hwnd := e
-		}
-		if (IsSet(hwnd)) ; if we found the window, good
+	if (!currentTimer && currentWin && WinExist(currentWin)) { ; window is open and stable and exists. thus close it
+		WinClose(currentWin)
+		currentWin := 0
+		return
+	}
+	list := WinGetList(everythingWinIdentifier) ; get potentially existing current windows
+	Run('"C:\Program Files\Everything\Everything.exe" -newwindow -minimized')
+	while ((newList := WinGetList(everythingWinIdentifier)).Length == list.Length) ; wait until window exists
+		Sleep(50)
+	for i, e in newList {
+		if (!objContainsValue(list, e)) {
+			hwnd := e
 			break
-		return 0 ; give up else, we probably interfered and closed the window or something
+		}
 	}
+	if !IsSet(hwnd)
+		return 0 ; window didn't launch correctly or user interfered
+	currentWin := hwnd
+	pos := WinUtilities.getWindowPlacement(hwnd)
+	if !(pos.x == 40 && pos.y == 400 && pos.w == 784 && pos.h == 648)
+		WinUtilities.setWindowPlacement(hwnd, 40, 400, 784, 648)
+	if WinGetMinMax(hwnd) != 0
+		WinRestore(hwnd)
 	WinActivate(hwnd)
 	WinMoveTop(hwnd)
-	mmx := WinGetMinMax(hwnd)
-	if (mmx == 1 || mmx == -1)
-		WinRestore(hwnd)
-	if (move)
-		winSlowMove(hwnd, 40, 400, 784, 648, 8)
-	if (state)
-		return
-	WinWaitNotActive(hwnd)
-	try WinClose(hwnd)
+	currentTimer := closeIfNotActive.bind(hwnd)
+	SetTimer(currentTimer, 25)
+
+	closeIfNotActive(hwnd) {
+		if !WinActive(hwnd) {
+			SetTimer(currentTimer, 0)
+			currentTimer := 0
+			if WinExist(hwnd) { ; reset to state 0
+				WinClose(hwnd)
+				currentWin := 0
+			}
+		}
+	}
 }
 
 #HotIf !WinExist("ahk_exe AutoClickerPos.exe")
