@@ -32,4 +32,3 @@ Just include this file instead of all the smaller ones separately.
 #Include "jsongo.ahk"
 #Include "MacroRecorder.ahk"
 #Include "MathUtilities.ahk"
-#Include "NeoKeyboardLayout.ahk"
