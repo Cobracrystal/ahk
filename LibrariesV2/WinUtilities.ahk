@@ -291,17 +291,17 @@ class WinUtilities {
 		return { cw: NumGet(clientRect, 8, "int"), ch: NumGet(clientRect, 12, "int") }
 	}
 	
-	static setWindowPlacement(hwnd := "", x := "", y := "", w := "", h := "", action := 9) {
+	static setWindowPlacement(hwnd, x?, y?, w?, h?, action := 9) {
 		NumPut("Uint", 44, pos := Buffer(44, 0))
 		DllCall("User32.dll\GetWindowPlacement", "Ptr", hwnd, "Ptr", pos)
 		rx := NumGet(pos, 28, "Int")
 		rt := NumGet(pos, 32, "Int")
 		rw := NumGet(pos, 36, "Int") - rx
 		rh := NumGet(pos, 40, "Int") - rt
-		left := x = "" ? rx : x
-		top := y = "" ? rt : y
-		right := left + (w = "" ? rw : w)
-		bot := top + (h = "" ? rh : h)
+		left := x ?? rx
+		top := y ?? rt
+		right := left + (w ?? rw)
+		bot := top + (h ?? rh)
 
 		NumPut("UInt", action, pos, 8)
 		NumPut("UInt", left, pos, 28)
