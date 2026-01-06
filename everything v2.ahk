@@ -54,7 +54,7 @@ GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
 GroupAdd("nonMenuWindows", "ahk_exe javaw.exe")
 Scheduler.setOptions(0,token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")), 86400)
 ; Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded,, Scheduler.Notification.all, "245189840470147072")
-Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded, A_IsReloaded, Scheduler.Notification.all, "245189840470147072")
+Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded, A_IsReloaded)
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", remInst.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
@@ -447,6 +447,17 @@ clipCursor(mode := true, window := "A") {
 	return DllCall("ClipCursor", "Ptr", llrectA)
 }
 
+customFunc1337Reminder(*) {
+	SoundPlay("*48")
+	MsgBoxAsGui("Copy 1337 in clipboard and activate discord?", "1337", 0x1, , , f)
+	
+	f(r) {
+		if r == "Cancel" || !WinExist("Discord")
+			return
+		A_Clipboard := 1337
+		WinActivate("Discord")
+	}
+}
 ; ###########################################################################
 ; ########################## OS-RELATED FUNCTIONS ###########################
 ; ###########################################################################
