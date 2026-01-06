@@ -724,6 +724,41 @@ BoundFnName(Obj) {
 	return Obj.Name
 }
 
+getFuncFromName(functionName) {
+	if Type(functionName) == "Func" || Type(functionName) == "BoundFunc"
+		return functionName
+	try { ; name of a function that exists
+		f := %functionName%
+		if Type(f) == "Func"
+			return f
+	}
+	if functionName is String && InStr(functionName, ".") { ; name of a class function that exists
+		try {
+			cNames := StrSplit(functionName, ".")
+			obj := %cNames[1]%
+			loop (cnames.Length - 1) ; eg Scheduler.Notification.Toast -> %Scheduler%.%Notification%.%Toast%
+				obj := obj.%cNames[A_Index + 1]%
+			if Type(obj) == "Func"
+				return obj
+		}
+	}
+	return 0
+}
+
+; for obj = ClassA.ClassB.Func, returns ClassA.ClassB as the object (not the name)
+getClassFromMember(function) {
+	if Instr(function.name, ".") {
+		try {
+			cNames := StrSplit(function.Name, ".")
+			classObj := %cNames[1]%
+			Loop (cNames.Length - 2)
+				classObj := classObj.%cNames[A_Index + 1]%
+			return classObj
+		}
+	}
+	return 0
+} 
+
 range(startOrEnd, end?, step?, inclusiveEnd := true) {
 	start := IsSet(end) ? startOrEnd : 1
 	end := end ?? startOrEnd
