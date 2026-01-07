@@ -540,6 +540,23 @@ strMaxCharsPerLine(str, maxCharsPerLine) {
 	return nStr
 }
 
+/**
+ * Splits a string into chunks where each chunk has a length of len, with the last one being cut off.
+ * @param str 
+ * @param len 
+ */
+strSplitChunks(str, len) {
+	if !IsInteger(len)
+		throw ValueError("Expected Integer length")
+	arr := []
+	offset := 1
+	Loop(Ceil(StrLen(str) / len)) {
+		arr.push(SubStr(str, offset, len))
+		offset += len
+	}
+	return arr
+}
+
 strGetSplitLen(str, delim, omit := '') {
 	lens := []
 	Loop Parse, str, delim, omit

@@ -1137,7 +1137,7 @@ WinSetVolume(level, target?) {
 		}
 		break
 	}
-	ObjRelease IAudioSessionEnumerator
+	ObjRelease(IAudioSessionEnumerator)
 	return (IsSet(levelNew) ? Round(levelNew * 100) : -1)
 }
 
