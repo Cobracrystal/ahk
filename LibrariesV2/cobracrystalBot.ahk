@@ -78,19 +78,20 @@ class CCBot extends DiscordBot {
 					if (rolesbyID.Has(i)) {
 						if (rolesbyID[i]["position"] < highestRole["position"]) {
 							this.modifyGuildRole(serverID, i, e)
+							print("Edit Role " i ": " rolesbyID[i]["name"] " => " (e.HasOwnProp("name") ? e.name : tostring(e,1,1)))
 							rolesEditedCount++ 
 						}
-						else 
-							errorlog .= "Did not edit Role " i "(" rolesbyID[i]["name"] ") because it was higher ranked than the Bot role.`n"
+						else
+							errorlog .= print("Did not edit Role " i "(" rolesbyID[i]["name"] ") because it was higher ranked than the Bot role.")
 					}
 					else
-						errorlog .= "Did not edit Role " i "(" ( roleThemeOriginal.Has(i) ? roleThemeOriginal[i] : "Unknown" ) ") because it wasn't found.`n"
+						errorlog .= print("Did not edit Role " i "(" ( roleThemeOriginal.Has(i) ? roleThemeOriginal[i] : "Unknown" ) ") because it wasn't found.`n")
 				}
 			}
 			catch as e {
 				MsgBoxAsGui("Role Error: " errorlog . "`n" . e.Message "`n" e.What "`n" e.Extra)
 			} finally {
-				errorlog .= rolesEditedCount . " roles edited.`n"
+				errorlog .= print(rolesEditedCount . " roles edited.`n")
 			}
 		}
 		if (this.themes.channels.Has(themeName)) {
@@ -110,16 +111,17 @@ class CCBot extends DiscordBot {
 				for i, e in channelTheme {
 					if (this.inArr(channelIDs, i)) {
 						this.modifyChannel(i, e)
+						print("Edit Channel " i ": " ( channelThemeOriginal.Has(i) ? channelThemeOriginal[i] : "Unknown" ) " => " (e.HasOwnProp("name") ? e.name : tostring(e,1,1)))
 						channelsEditedCount++
 					}
 					else
-						errorlog .= "Did not edit Channel " i "(" ( channelThemeOriginal.Has(i) ? channelThemeOriginal[i] : "Unknown" ) ") because it wasn't found.`n"
+						errorlog .= print("Did not edit Channel " i "(" ( channelThemeOriginal.Has(i) ? channelThemeOriginal[i] : "Unknown" ) ") because it wasn't found.`n")
 				}
 			}
 			catch as e {
 				MsgBoxAsGui("Channel Error: " . errorlog . "`n" . e.Message "`n" e.What "`n" e.Extra)
 			} finally {
-				errorlog .= channelsEditedCount . " channels edited.`n"
+				errorlog .= print(channelsEditedCount . " channels edited.`n")
 			}
 		}
 		return errorlog
