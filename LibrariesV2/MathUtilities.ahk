@@ -14,9 +14,9 @@ class expressionCalculator {
 		if (SubStr(expression, 1, 2) == "w:")
 			result := this.giveUpAndCallWolframalpha(SubStr(expression, 3))
 		else if (SubStr(expression, 1, 2) == "b:")
-			return ExecHelperScript(this.clean_expression(SubStr(expression, 3)), false, true)
+			return ExecHelperScript(this.replaceConstants(SubStr(expression, 3)), false, true)
 		else
-			result := this.readableFormat(ExecHelperScript(this.clean_expression(expression)))
+			result := this.readableFormat(ExecHelperScript(this.replaceConstants(expression)))
 		; READ THE ERROR STREAM. IF THERE'S SOME ERROR IN THERE, ALSO GIVE IT TO WOLFRAMALPHA
 		; ADD A CONTEXT MENU OPTION FOR THIS, EITHER WOLFRAM OR SOMETHING ELSE OR LOCAL
 	;	result := this.giveUpAndCallWolframalpha(expression)
@@ -95,7 +95,7 @@ class expressionCalculator {
 		}
 	}
 
-	static clean_expression(expression) {
+	static replaceConstants(expression) {
 		list := [{ key: "\pi", val: "3.141592653589793" }, { key: "\phi", val: "((1+sqrt(5))/2)" }, { key: "\e", val: "2.718281828459045" }
 		]
 		for i, e in list
@@ -200,7 +200,7 @@ combinations(arr) {
 }
 
 /**
- * Given an array of (unique) values, chooses all unique combinations with n of those values, ignoring order and returns an array of them.
+ * Given an array of (unique) values, chooses all unique combinations with n of those values, **ignoring order** and returns an array of them.
  * @param arr An array of any values.
  * @param n How long the combination should be. Must be 1 <= n <= arr.Length 
  * @example chooseCombinations([1,2,3,4], 2) => [[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]]
@@ -219,6 +219,28 @@ chooseCombinations(arr, n) {
 		i := A_Index
 		for combination in chooseCombinations(arraySlice(arr, i+1), n - 1)
 			collection.push([arr[i], combination*])
+	}
+	return collection
+}
+
+/**
+ * Given an array n of some values, calculates all unique combinations of values of the array with length n.
+ * @param arr 
+ * @param n 
+ * @example chooseCombinationsOrdered([1,2,3,4], 2) => [[1,2],[1,3],[1,4],[2,1],[2,3],[2,4],[3,1],[3,2],[3,4],[4,1],[4,2],[4,3]]
+ */
+chooseCombinationsOrdered(arr, n) {
+	if arr.length <= n
+		return [arr.clone()]
+	collection := []
+	if (n == 1) {
+		for e in arr
+			collection.push([e])
+		return collection
+	}
+	for i, e in arr {
+		for k, v in chooseCombinationsOrdered(arrayIgnoreIndex(arr, i), n - 1)
+			collection.push([e, v*])
 	}
 	return collection
 }
@@ -421,9 +443,17 @@ nextPrime(n) {
 }
 
 factorial(n) {
-	if n == 1 || n == 0
-		return 1
-	return Float(n) * factorial(n-1)
+	; stirling approx derivation: ln(n!) = ln(1) + ln(2) + ... + ln(n) = sum1-n: ln j ≈ integral1-n ln x dx = n ln n - n + 1
+	if (n is BigInteger || n * log(n) / log(2.719) - n + 1 > 300) {
+		r := BigInteger.ONE
+		Loop(n)
+			r := r.multiply(A_Index)
+		return r.toString()
+	}
+	r := 1.0
+	Loop(n)
+		r *= Float(A_Index)
+	return r
 }
 
 binomialCoefficient(n,m) {
@@ -486,7 +516,7 @@ perfectPowers(n) {
 	return arr
 }
 
-streetInDice(streetLen, diceAmount, filePath) {
+streetInDice(streetLen, diceAmount) {
 	strDice := ""
 	nums := 6**diceAmount
 	dices := []
@@ -504,14 +534,9 @@ streetInDice(streetLen, diceAmount, filePath) {
 				dices[A_Index] := 1
 		}
 		; next dice sequence
-		thing := numscontainStreet(dices, streetLen)
-		strDice .= "] " thing "`n"
-		fullStr .= strDice
-		strDice := ""
-		amount += thing
+		amount += numscontainStreet(dices, streetLen)
 	}
-	FileAppend(fullStr, filePath)
-	FileAppend(amount " out of " nums " contain a street of " streetLen " in them. That's " amount / nums * 100 "%", filePath)
+	return [amount, nums]
 
 	numscontainStreet(sequence, streetLen) {
 		; LOG

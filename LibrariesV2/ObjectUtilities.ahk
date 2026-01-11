@@ -197,19 +197,20 @@ objFilter(obj, filter := (k, v) => (true)) {
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objRemoveValue does not handle type " . Type(obj)))
 	clone := %Type(obj)%()
+	lambda := filter.MaxParams == 1 ? (i, e) => filter(e) : (i, e) => filter(i, e)
 	if isArr
 		clone.Capacity := obj.Length
 	if isArr {
 		for i, e in obj
-			if filter(i, e)
+			if lambda(i, e)
 				clone.push(e)
 	} else if isArrLike {
 		for i, e in obj
-			if filter(i, e)
+			if lambda(i, e)
 				clone[i] := e
 	} else {
 		for i, e in ObjOwnProps(obj)
-			if filter(i, e)
+			if lambda(i, e)
 				clone.%i% := e
 	}
 	return clone
@@ -339,10 +340,12 @@ objGetDuplicates(obj, fn := (a => a), caseSense := true, grouped := false) {
 }
 
 /**
- * 
+ * Removes **ALL** duplicate values from an object. Use objGetUniques to remove all but one duplicate values
  * @param obj Object to search duplicates in
  * @param {(a) => (a)} fn Function to get value to compare for duplications. Ie for [{x:1,y:5},{x:4,y:5}] specify (a) => (a.y) to get entries where y is the same
  * @returns {Object} CLONE of obj without duplicates
+ * @example objRemoveDuplicates([1,2,3,4,2]) => [1,3,4]
+ * @example objGetUniques([1,2,3,4,2]) => [1,2,3,4]
  */
 objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 	isArrLike := (obj is Array || obj is Map)
