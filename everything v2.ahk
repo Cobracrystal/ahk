@@ -123,7 +123,7 @@ if (!A_IsReloaded)
 }
 
 #HotIf !WinActive("ahk_group nonMenuWindows")
-Launch_App2::
+Launch_App2:: ; Show Folderswitch Menu
 ^q:: { ; Show Folderswitch Menu
 	FolderSwitch.showMenu()
 }
@@ -133,7 +133,7 @@ Launch_App2::
 	colorPreviewGUI(fastCopy())
 }
 
-^!+NumpadSub:: {	; Record Macro
+^+!NumpadSub:: {	; Record Macro
 	MacroRecorder.createMacro(A_ThisHotkey)
 }
 
@@ -173,7 +173,7 @@ Launch_App2::
 	toggleNumpadMouseMove()
 }
 
-^!+F11:: { ; Block keyboard input until password "password123" is typed
+^+!F11:: { ; Block keyboard input until password "password123" is typed
 	if !(runAsAdmin())
 		return
 	password := "password123"
@@ -249,11 +249,11 @@ Launch_App2::
 	}
 }
 
-Alt & Capslock::{
+Alt & Capslock::{	; Switch to specified window
 	m := Menu()
 	windows := WinUtilities.getAllWindowInfo()
 	for e in windows
-		m.Add("&" e.title, (i,p,m) => WinActivate(windows[p]))
+		m.Add("&" RegExReplace(e.title, "^[^A-Za-z0-9]+"), (i,p,m) => WinActivate(windows[p]))
 	m.show()
 }
 
@@ -278,7 +278,7 @@ Alt & Capslock::{
 	}
 }
 
-^!+J:: { ; Tiles Windows Vertically
+^+!J:: { ; Tiles Windows Vertically
 	static windowInfo, tileState := false
 	if (tileState := !tileState) {
 		WindowManager.DesktopState.save("TilingState")
@@ -308,12 +308,12 @@ Alt & Capslock::{
 		WindowManager.DesktopState.restore("TilingState")
 }
 
-^!+L:: { ; save / restore desktop state
+^+!L:: { ; save / restore desktop state
 	WindowManager.DesktopState.restore()
 }
 
 
-^!+I:: { ; Center & Adjust Active Window
+^+!I:: { ; Center & Adjust Active Window
 	if WinActive("ahk_group cornerMusicPlayers")
 		WinMove(-600, 550, 515, 550)
 	else if WinActive("Discord ahk_exe Discord.exe")
@@ -322,7 +322,7 @@ Alt & Capslock::{
 		WinUtilities.resetWindowPosition(,5/7)
 }
 
-^!+H:: { ; Make Active Window Transparent
+^+!H:: { ; Make Active Window Transparent
 	static toggle := false
 	WinSetTransparent((toggle := !toggle) ? 120 : "Off", "A")
 }
@@ -655,7 +655,7 @@ customExit(ExitReason, ExitCode) {
 ; ############################### HOTSTRINGS ################################
 ; ###########################################################################
 
-^!+F12:: { ; Toggles LaTeX Hotstrings
+^+!F12:: { ; Toggles LaTeX Hotstrings
 	HotstringLoader.switchHotstringState("Latex", "T")
 }
 
@@ -1163,7 +1163,7 @@ WinSetVolume(level, target?) {
 }
 ^w::RevoIdle.sacrificeUnderCursor()
 
-^NumpadDown::{
+^NumpadDown::{	; RevoIdle: Loop refine
 	static toggle := false
 	if toggle := !toggle {
 		RevoIdle.instantExit := false
@@ -1289,7 +1289,7 @@ class RevoIdle {
 }
 #HotIf
 
-^+!o::{
+^+!o::{	; decode Hex to text
 	text := A_Clipboard
 	text := RegExReplace(text, "[^A-Za-z0-9 `t]")
 	res := ''
@@ -1297,3 +1297,4 @@ class RevoIdle {
 		res .= e ? Chr(Integer('0x' e)) : ''
 	MsgBoxAsGui(res)
 }
+
