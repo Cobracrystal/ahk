@@ -37,6 +37,9 @@ class HotkeyManager {
 		; Tray Menu
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Hotkey Manager", this.hotkeyManager.Bind(this))
+		HotIfWinactive("Hotkey Manager ahk_class AutoHotkeyGUI")
+		Hotkey("^BackSpace", (*) => Send("^{Left}^{Delete}"))
+		HotIfWinactive()
 		A_TrayMenu.Add("GUIs", guiMenu)
 		fileMenu := TrayMenu.submenus["Files"]
 		fileMenu.Add("Edit Hotkey File", (*) => this.runEditor(this.data.savedHotkeysPath))
@@ -82,26 +85,46 @@ class HotkeyManager {
 		this.gui.Opt("+Disabled")
 		this.lv[num].Opt("-Redraw")
 		this.lv[num].Delete()
+		search := this.gui["EditFilterHotkeys"].Value
 		switch num {
 			case 1:
-				for i, e in this.data.hotkeys {
-					if (this.isIncludedInSearch(e)) {
+				if (search == "") {
+					for i, e in this.data.hotkeys {
 						SplitPath(e.file, &fileName)
 						this.lv[1].Add(,e.line, e.hotkey, e.comment, fileName)
 					}
+				} else {
+					for i, e in this.data.hotkeys {
+						if (InStr(e.comment, search) || keywordMatch(e.hotkey, search)) {
+							SplitPath(e.file, &fileName)
+							this.lv[1].Add(,e.line, e.hotkey, e.comment, fileName)
+						}
+					}
 				}
 			case 2:
-				for i, e in this.data.savedHotkeys
-					if (this.isIncludedInSearch(e))
+				if (search == "") {
+					for i, e in this.data.savedHotkeys
 						this.lv[2].Add(,e.hotkey, e.program, e.comment)
+				} else {
+					for i, e in this.data.savedHotkeys
+						if (InStr(e.program, search) || InStr(e.comment, search) || keywordMatch(e.hotkey, search))
+							this.lv[2].Add(,e.hotkey, e.program, e.comment)
+				}
 			case 3:
-				for i, e in this.data.hotstrings {
-					if (this.isIncludedInSearch(e)) {
+				if (search == "") {
+					for i, e in this.data.hotstrings {
 						SplitPath(e.file, &fileName)
 						this.lv[3].Add(,e.line, e.options, e.hotstring, e.replaceString, e.comment, fileName)
 					}
+				} else {
+					for i, e in this.data.hotstrings {
+						if (InStr(e.hotstring, search) || InStr(e.replacestring, search) || InStr(e.comment, search) || InStr(e.options, search)) {
+							SplitPath(e.file, &fileName)
+							this.lv[3].Add(,e.line, e.options, e.hotstring, e.replaceString, e.comment, fileName)
+						}
+					}
 				}
-		}
+			}
 		if (this.lv[num].GetCount() == 0)
 			this.LV[num].Add("", "/", "Nothing Found.")
 		if (first) {
@@ -114,15 +137,26 @@ class HotkeyManager {
 		}
 		this.lv[num].Opt("+Redraw")
 		this.gui.Opt("-Disabled")
+		
+		
+		keywordMatch(haystack, needleString) {
+			for needle in strSplitOnWhiteSpace(needleString) {
+				if needle == "" 
+					continue
+				if !(pos := InStr(haystack, needle))
+					return false
+				else
+					haystack := SubStr(haystack, 1, pos - 1) . SubStr(haystack, pos + strlen(needle))
+			}
+			return true
+		}
 	}
 
-	static isIncludedInSearch(hkeyObj) {
-		search := this.gui["EditFilterHotkeys"].Value
-		if (search == "")
-			return true
-		for i, e in hkeyObj.OwnProps()
+	static isIncludedInSearch(num, search, hkeyObj) {
+		for i, e in hkeyObj.OwnProps() {
 			if (InStr(e, search) && i != "file")
 				return true
+		}
 		return false 
 	}
 
