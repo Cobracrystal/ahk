@@ -814,8 +814,13 @@ printAlign(value, width := 128, padChar := ' ') => print(strFill(IsObject(value)
 pretty(value, options?, fallbackMsgbox := true) => print(value, options?, true, false, false, true, fallbackMsgbox)
 
 print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true, fallbackMsgbox := true) {
-	if IsObject(value)
-		value := toString(value, compact, compress, strEscape)
+	if IsObject(value) {
+		if value.HasMethod("toString") {
+			try value := value.toString()
+		} else {
+			value := toString(value, compact, compress, strEscape)
+		}
+	}
 	if (putNewline == true || (putNewline == -1 && InStr(value, '`n')))
 		finalChar := '`n'
 	else
