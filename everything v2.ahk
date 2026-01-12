@@ -814,6 +814,11 @@ customExit(ExitReason, ExitCode) {
 ^W::!F4	; Fotoanzeige: StrgW->AltF4
 #HotIf
 
+#HotIf WinActive("ahk_exe Image Eye.exe")
+Up Up::Send("{WheelUp}") ; Image Eye: Scroll Up
+Down Up::Send("{WheelDown}") ; Image Eye: Scroll Down
+#HotIf
+
 #HotIf WinActive("ahk_exe firefox.exe")
 ^h::^+h ; Firefox: Ctrl H -> Ctrl Shift H
 #HotIf
@@ -920,14 +925,6 @@ F11::Escape	; BTD6: Rebind Escape
 		SetTimer(timer, 20)
 	else
 		SetTimer(timer, 0)
-}
-#HotIf
-
-#HotIf WinActive("ahk_exe Skul.exe")
-+:: {	; Skul: Spam l
-	static sTimer := Send.Bind("l")
-	static toggle := false
-	SetTimer(sTimer, toggle := !toggle ? 50 : 0)
 }
 #HotIf
 
