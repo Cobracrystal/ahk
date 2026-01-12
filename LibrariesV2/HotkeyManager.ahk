@@ -37,9 +37,6 @@ class HotkeyManager {
 		; Tray Menu
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Hotkey Manager", this.hotkeyManager.Bind(this))
-		HotIfWinactive("Hotkey Manager ahk_class AutoHotkeyGUI")
-		Hotkey("^BackSpace", (*) => Send("^{Left}^{Delete}"))
-		HotIfWinactive()
 		A_TrayMenu.Add("GUIs", guiMenu)
 		fileMenu := TrayMenu.submenus["Files"]
 		fileMenu.Add("Edit Hotkey File", (*) => this.runEditor(this.data.savedHotkeysPath))
@@ -177,6 +174,9 @@ class HotkeyManager {
 		if (ctrl := GuiCtrlFromHwnd(hwnd)) {
 			if (ctrl.gui == this.gui) {
 				switch wParam {
+					case "8":
+						if (GetKeyState("Ctrl") && ctrl.hwnd == this.gui["EditFilterHotkeys"].hwnd)
+							SetTimer((*) => Send("{Backspace}^{Left}^{Delete}"), -10)
 					case "70": ; ctrl F
 						if (GetKeyState("Ctrl")) {
 							this.gui["EditFilterHotkeys"].Focus()
@@ -291,9 +291,10 @@ class HotkeyManager {
 	}
 
 	static getSavedHotkeys()	{
-		if 	!(FileExist(this.data.savedHotkeysPath)) {
-			if !(DirExist(A_WorkingDir "\HotkeyManager"))
-				DirCreate("HotkeyManager")
+		if !(FileExist(this.data.savedHotkeysPath)) {
+			SplitPath(this.data.savedHotkeysPath,, &dir)
+			if !(DirExist(dir))
+				DirCreate(dir)
 			FileAppend("// Add Custom Hotkeys not from the script here to show up in the Hotkey List.`n// Format is Hotkey/Hotstring:[hotkey/hotstring], [Program], [Command (optional)]", this.data.savedHotkeysPath)
 			return []
 		}
