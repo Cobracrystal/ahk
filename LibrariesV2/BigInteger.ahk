@@ -1014,11 +1014,8 @@ class BigInteger {
 
 	/**
 	 * Gets the last n bits. Equivalent to (this) & ((1 << n) - 1) ignoring signum.
-	 * 
 	 * As there is no fixed sign bit, masking will always cause the leading bits to be 0 and the number thus positive.
-	 * 
 	 * Thus while -342 & ((1 << 64) - 1) = -342 & 0xFFFFFFFFFFFFFFFF == -342 natively, here the leading bit is not interpreted as a sign, but literally.
-	 * 
 	 * Thus BigInteger(-342).maskBits(64).toString() = 18446744073709551274. This is useful since this is 0b1111111111111111111111111111111111111111111111111111111010101010 which ahk interprets as -342 again.
 	 * @param {Integer} n The number of bits to mask
 	 * @returns {BigInteger} A BigInteger which represents the n bits.
@@ -1250,7 +1247,7 @@ class BigInteger {
 		 */
 		static validateMagnitudeRadix(mag, radix) {
 			if radix > BigInteger.INT32
-				throw BigInteger.Error.INVALID_RADIX[radix '(Must be < 2^32)']
+				throw BigInteger.Error.INVALID_RADIX[radix ' (Must be < 2^32)']
 			possibleAlphaDigit := radix > 10 && radix <= 36
 			newMag := []
 			for i, e in mag {
@@ -1258,7 +1255,7 @@ class BigInteger {
 					n := e
 				else {
 					if !possibleAlphaDigit
-						throw BigInteger.Error.INVALID_RADIX[radix '( Found alphanumerical digit ' e ')']
+						throw BigInteger.Error.INVALID_RADIX[radix ' ( Found alphanumerical digit ' e ')']
 					n := Ord(e) - 55
 				}
 				if n >= radix
@@ -1393,7 +1390,7 @@ class BigInteger {
 			if base == BigInteger.INT32
 				return mag.clone()
 			if base == 0
-				throw ValueError("You entered base 0, which doesn't exist. If you do think that it exists, please write me an email.")
+				throw ValueError("Base 0 doesn't exist.")
 			if (isPowerOfTwo := (base & (base - 1) == 0)) { ; base is 2^n
 				if this.isPowerOf(base, BigInteger.INT32) ; 2**32 is (base^n), so digits can be read per word
 					return this.expandMagnitudeToRadix(mag, BigInteger.INT32, base)
@@ -1966,8 +1963,13 @@ class BigInteger {
 		}
 
 		static stripLeadingZeros(mag) {
-			while (mag.Length > 1 && mag[1] == 0)
-				mag.RemoveAt(1)
+			for i, e in mag {
+				if (e != 0) {
+					mag.RemoveAt(1, i-1) ; [0,0,1] -> 2 zeros
+					return mag
+				}
+			}
+			mag.RemoveAt(1, mag.Length - 1) ; only zeroes in mag.
 			return mag
 		}
 

@@ -74,14 +74,14 @@ DateDiffW(dateTime1, dateTime2, timeUnit) {
 * Given a set of time units, returns a YYYYMMDDHH24MISS timestamp
 ; of the earliest possible time in the future when all given parts match
 * Examples: The current time is 27th December, 2023, 17:16:34
-* parseTime() -> A_Now
-* parseTime(2023,12) -> A_Now.
-* parseTime(2023, , 27) -> A_Now.
-* parseTime(2023, , 28) -> 20231228000000.
-* parseTime(, 2, 29) -> 20240229000000 (next leap year).
-* parseTime(2022, ...) -> 0.
-* parseTime(2025, 02, 29) -> throw Error: Invalid Date
-* parseTime(, 1, , , 19) -> 20240101001900
+* nextMatchingTime() -> A_Now
+* nextMatchingTime(2023,12) -> A_Now.
+* nextMatchingTime(2023, , 27) -> A_Now.
+* nextMatchingTime(2023, , 28) -> 20231228000000.
+* nextMatchingTime(, 2, 29) -> 20240229000000 (next leap year).
+* nextMatchingTime(2022, ...) -> 0.
+* nextMatchingTime(2025, 02, 29) -> throw Error: Invalid Date
+* nextMatchingTime(, 1, , , 19) -> 20240101001900
 */
 nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?) {
 	Now := A_Now

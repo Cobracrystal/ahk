@@ -373,7 +373,6 @@ sessionBuddyTransformSpecificCollectionsWithReadInName(text) {
 	}
 	return jsongo.Stringify(collectionsArray)
 }
-calculateCompatibilityData()
 
 calculateCompatibilityData() {
 	input := "

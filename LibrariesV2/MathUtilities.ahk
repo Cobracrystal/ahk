@@ -203,7 +203,8 @@ combinations(arr) {
  * Given an array of (unique) values, chooses all unique combinations with n of those values, **ignoring order** and returns an array of them.
  * @param arr An array of any values.
  * @param n How long the combination should be. Must be 1 <= n <= arr.Length 
- * @example chooseCombinations([1,2,3,4], 2) => [[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]]
+ * @example 
+ * chooseCombinations([1,2,3,4], 2) => [[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]]
  * chooseCombinations([1,2,3,4,5],3) => [[1,2,3],[1,2,4],[1,2,5],[1,3,4],[1,3,5],[1,4,5],[2,3,4],[2,3,5],[2,4,5],[3,4,5]]
  */
 chooseCombinations(arr, n) {
@@ -239,8 +240,10 @@ chooseCombinationsOrdered(arr, n) {
 		return collection
 	}
 	for i, e in arr {
-		for k, v in chooseCombinationsOrdered(arrayIgnoreIndex(arr, i), n - 1)
-			collection.push([e, v*])
+		for k, v in chooseCombinationsOrdered(arrayIgnoreIndex(arr, i), n - 1) {
+			v.InsertAt(1, e)
+			collection.push(v)
+		}
 	}
 	return collection
 }
