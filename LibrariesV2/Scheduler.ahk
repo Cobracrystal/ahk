@@ -570,7 +570,7 @@ class Scheduler {
 					continue
 				this.getCallableNotification( function, 1, earliestTimestamp, fparams*).Call()
 				if this.settings.logReminders
-					this.logReminder(function, fparams, earliestTimestamp)
+					this.logReminder(this.getFuncName(function), fparams, earliestTimestamp)
 				continue
 			} else if (ignoreInstantNotifications && Abs(DateDiff(earliestTimestamp, A_Now, "Seconds")) <= 1) {
 				if (multi) {
