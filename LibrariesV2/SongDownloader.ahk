@@ -713,7 +713,7 @@ class SongDownloader {
 	static toggleProfile(profile, profileToToggle) {
 		nProfile := profile.clone()
 		for o in profileToToggle {
-			if !objRemoveValue(nProfile, o,, (k, v) => (objCompare(v, o)))
+			if !objRemoveValue(nProfile, o,, (k, v, v2) => (objCompare(v, v2)))
 				nProfile.push(o)
 		}
 		return nProfile
