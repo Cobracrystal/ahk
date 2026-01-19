@@ -662,7 +662,7 @@ class Scheduler {
 		static all(remObj, id, text?) {
 			this.asyncMsgBox(remObj, text)
 			this.toast(remObj, text)
-			this.discord(remObj, text, id)
+			this.discord(remObj, id, text)
 		}
 	}
 }
