@@ -40,7 +40,7 @@ class TimestampConverter {
 			timestampMenu.Add("Invalid Date", doNothing)
 			timestampMenu.Disable("Invalid Date")
 		} else {
-			if (WinActive("Discord ahk_exe Discord.exe")) {
+			if (WinActive("Discord")) {
 				timestampMenu.Add("Paste numeric Timestamp (" formats.unix ")", 				(*) => fastPrint(formats.unix))
 				timestampMenu.Add("Paste 'related' format (<t:" formats.unix ":R>)", 			(*) => fastPrint("<t:" formats.unix ":R>"))
 				timestampMenu.Add("Paste short time (" formats.time ")", 						(*) => fastPrint("<t:" formats.unix ":t>"))

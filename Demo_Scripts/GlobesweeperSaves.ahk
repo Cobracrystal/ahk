@@ -1,7 +1,7 @@
 ﻿#Requires AutoHotkey >=v2.0
 #SingleInstance Force  
 Persistent()
-SetWorkingDir(A_ScriptDir "\script_files\GlobesweeperSaves")
+SetWorkingDir(A_ScriptDir "\..\script_files\GlobesweeperSaves")
 counter := IniRead("GlobesweeperSaves.ini", "variables", "counter", 1)
 global timePerBackup := 300000
 savestatebackup()
@@ -16,7 +16,9 @@ savestatebackup(force := 0) {
 		if !force
 			WinClose("ahk_exe Globesweeper.exe")
 		Sleep(4000)
-		FileCopy(path "\*.dat", Format("{}_*.*", counter))
+		FileCopy(path "\GameInfo.dat", Format("{}_GameInfo.dat", counter))
+		FileCopy(path "\GamePref.dat", Format("{}_GamePref.dat", counter))
+		FileCopy(path "\GameStat.dat", Format("{}_GameStat.dat", counter))
 		counter++
 		IniWrite(counter, "GlobesweeperSaves.ini", "variables", "counter")
 		Run("steam://launch/982220")
@@ -32,10 +34,9 @@ savestaterestore() {
 	try WinClose("ahk_exe Globesweeper.exe")
 	Sleep(3000)
 	i := counter - 1
-	f := Format("{}_Game*.dat", i)
-	FileCopy(f, path "\Game*.dat", true)
-	FileCopy(f, path "\Game*.dat", true)
-	FileCopy(f, path "\Game*.dat", true)
+	FileCopy(Format("{}_GameInfo.dat", i), path "\GameInfo.dat", true)
+	FileCopy(Format("{}_GamePref.dat", i), path "\GamePref.dat", true)
+	FileCopy(Format("{}_GameStat.dat", i), path "\GameStat.dat", true)
 	Sleep(1000)
 	SetTimer(savestatebackup, timePerBackup)
 	Run("steam://launch/982220")

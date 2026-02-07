@@ -37,7 +37,7 @@ class SongDownloader {
 			simulate: false,
 			useAliases: true,
 			useVisibleCMD: false,
-			currentIterator: 74,
+			currentIterator: 75,
 			outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
 			outputSubFolder: "",
 			logMetadata: true,
@@ -338,8 +338,7 @@ class SongDownloader {
 		g.AddText("Section 0x200 R1.45", "Links | Current Folder: " )
 		outputFolder := this.settings.outputSubFolder
 		if IsSet(destination) {
-			SplitPath(destination, &fl)
-			outputFolder := fl
+			outputFolder := Trim(StrReplace(destination, this.settings.outputBaseFolder), "\/")
 		}
 		metadataVar := ObjOwnPropCount(this.data.lastSongMetadata) > 0 ? this.data.lastSongMetadata : data
 		g.AddEdit("xs+110 ys R1 w30 vOutputFolder", outputFolder).OnEvent("Change", guiHandler)
@@ -462,14 +461,19 @@ class SongDownloader {
 			fullCommand := this.cmdStringBuilder(this.settings.ytdlPath, profile, false, songData.link)
 			if (this.settings.debug)
 				print(fullCommand)
-			if (gData.useVisibleCMD)
+			if (gData.useVisibleCMD) {
+				fullCommand := StrReplace(fullCommand, '--no-warnings --print "after_move:%(filepath)s | %(original_url)s"')
 				Run("wt cmd " (this.settings.debug ? "/k" : "/c") " chcp 65001 && title SongDownloader && echo " fullCommand " && " fullCommand)
+			}
 			else
 				CmdStdOutAsync(fullCommand, "UTF-8",,, doneHandler)
 
 			doneHandler(output, success := 0) {
 				this.logAction(output, gData.OutputFolder)
-				this.onFinishMsgBox(gData.OutputFolder)
+				if RegExMatch(output, "^\[*error")
+					this.onFinishMsgBox(gData.OutputFolder, 1)
+				else 
+					this.onFinishMsgBox(gData.OutputFolder, 0)
 			}
 		}
 	}
@@ -530,7 +534,7 @@ class SongDownloader {
 						album: gData.Album, genre: gData.Genre,
 						link: metadata.link, description: metadata.Description
 					}
-					this.songDLGui(songData, dirname, true)
+					this.songDLGui(songData, dir, true)
 				case "EditMetadata":
 					this.editMetadata(filePath, gData)
 			}
@@ -643,7 +647,9 @@ class SongDownloader {
 		}
 	}
 
-	static onFinishMsgBox(logID) {
+	static onFinishMsgBox(logID, errorNotify := false, info := "") {
+		if errorNotify
+			return MsgBoxAsGui("Got Error in Downloads:`n" info, "Done",,,,doneHandler,,,["OK", "Open Folder", "Open Log", "Open Both"])
 		return MsgBoxAsGui("Finished All Downloads", "Finished",,,,doneHandler,,,["OK", "Open Folder", "Open Log", "Open Both"])
 		
 		doneHandler(ret) {

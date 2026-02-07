@@ -1,6 +1,7 @@
 ﻿; https://github.com/cobracrystal/ahk
 ; todo:
 ; custom functions -> text body of function that you write just gets saved in file, timer is set to run that file
+; add function like .resume() or something that imports reminders from the cache of functions
 #Include "%A_LineFile%\..\..\LibrariesV2\TimeUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
@@ -512,7 +513,7 @@ class Scheduler {
 	}
 
 	/**
-	 * Imports reminders from a file. File must containv valid json with an array of values of the following form:
+	 * Imports reminders from a file. File must contain valid json with an array of values of the following form:
 	 * {
 	 * 	function: function name or an empty string
 	 * 	multi: Boolean, whether it is periodic

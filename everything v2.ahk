@@ -253,7 +253,8 @@ Alt & Capslock::{	; Switch to specified window
 	m := Menu()
 	windows := WinUtilities.getAllWindowInfo()
 	for e in windows
-		m.Add("&" RegExReplace(e.title, "^[^A-Za-z0-9]+"), (i,p,m) => WinActivate(windows[p]))
+		m.Add("&" RegExReplace(e.title, RegExMatch(e.title, "[A-Za-z]") ? "^[^A-Za-z]+" : "^[^A-Za-z0-9]"), 
+			(i,p,m) => WinActivate(windows[p]))
 	m.show()
 }
 
@@ -727,6 +728,7 @@ customExit(ExitReason, ExitCode) {
 ; ################### HOTKEYS RELATED TO SPECIFIC PROGRAMS ##################
 ; ###########################################################################
 
+#f:: ; Open Everything Search Window
 *^LWin Up:: { ; Open Everything Search Window
 	static everythingWinIdentifier := "Everything ahk_exe Everything.exe ahk_class EVERYTHING"
 	static currentTimer := 0
@@ -815,8 +817,9 @@ customExit(ExitReason, ExitCode) {
 #HotIf
 
 #HotIf WinActive("ahk_exe Image Eye.exe")
-Up Up::Send("{WheelUp}") ; Image Eye: Scroll Up
-Down Up::Send("{WheelDown}") ; Image Eye: Scroll Down
+Up::Send("{WheelUp}") ; Image Eye: Scroll Up
+Down::Send("{WheelDown}") ; Image Eye: Scroll Down
+Del::Send("^x") ; Image Eye: Deöete
 #HotIf
 
 #HotIf WinActive("ahk_exe firefox.exe")
@@ -826,14 +829,6 @@ Down Up::Send("{WheelDown}") ; Image Eye: Scroll Down
 #HotIf WinActive("Minecraft ahk_exe javaw.exe")
 ^z::y ; MC: ctrl z -> y
 ^y::z ; MC: ctrl y -> z
-^ö:: {	; MC: Spam shift Key
-	static toggle := 0
-	static timer := ((*) => (Send("{Shift Down}"), Sleep(10), Send("{Shift Up}")))
-	if (toggle := !toggle)
-		SetTimer(timer, 20)
-	else
-		SetTimer(timer, 0)
-}
 #HotIf
 
 /*
@@ -928,10 +923,8 @@ F11::Escape	; BTD6: Rebind Escape
 }
 #HotIf
 
-#HotIf WinActive('ahk_exe Terraria.exe')
-^ä::{	; Terrari: W Down
-	Send("{w down}")
-}
+#HotIf WinActive('ahk_exe Skul.exe')
+p::Shift
 #HotIf
 
 ; ###########################################################################
@@ -1295,3 +1288,19 @@ class RevoIdle {
 	MsgBoxAsGui(res)
 }
 
+
+
+
+#HotIf WinActive("ahk_exe left4dead2.exe")
+^o::{
+	if !FileExist(A_Clipboard)
+		return
+	cmd := 'C:\Users\Simon\Desktop\programs\other\ProgramUtilities\Left4Dead2SprayChange\set_spray.bat "' . A_Clipboard '"'
+	cmdRetAsync(cmd,,,,tempFunc)
+	
+
+	tempFunc(output, success) {
+		timedTooltip(success ? "Success" : "Failure")
+	}
+}
+#HotIf 
