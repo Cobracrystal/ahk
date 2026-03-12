@@ -185,26 +185,26 @@ class jsongo {
                 case 'String': return '"' encode(&item) '"'
                 case 'Integer','Float': return item
                 case 'Array':
-                    str := '['
+                    _str := '['
                     if (ila := this.inline_arrays ?  1 : 0)
                         for i, v in item
                             InStr('String|Float|Integer', Type(v), 1) ? 1 : ila := ''
                         until (!ila)
                     for i, v in item
-                        (if_rep = 2 && omit[i]) ? '' : (if_rep = 1 && (v := replacer(i, v, remove)) = remove) ? '' : str .= (ila ? extract_data(v, ind _ind) ', ' : lf ind _ind extract_data(v, ind _ind) ',')
-                    return ((str := RTrim(str, ', ')) == '[') ? '[]' : str (ila ? '' : lf ind) ']'
+                        (if_rep = 2 && omit[i]) ? '' : (if_rep = 1 && (v := replacer(i, v, remove)) = remove) ? '' : _str .= (ila ? extract_data(v, ind _ind) ', ' : lf ind _ind extract_data(v, ind _ind) ',')
+                    return ((_str := RTrim(_str, ', ')) == '[') ? '[]' : _str (ila ? '' : lf ind) ']'
                 case 'Map':
-                    str := '{'
+                    _str := '{'
                     for k, v in item
-                        (if_rep = 2 && omit[k]) ? '' : (if_rep = 1 && (v := replacer(k, v, remove)) = remove) ? '' : str .= lf ind _ind (k is String ? '"' encode(&k) '"' cln : err(11, 'String', Type(k))) extract_data(v, ind _ind) ','
-                    return ((str := RTrim(str, ',')) == '{') ? '{}' : str lf ind '}'
+                        (if_rep = 2 && omit[k]) ? '' : (if_rep = 1 && (v := replacer(k, v, remove)) = remove) ? '' : _str .= lf ind _ind (k is String ? '"' encode(&k) '"' cln : err(11, 'String', Type(k))) extract_data(v, ind _ind) ','
+                    return ((_str := RTrim(_str, ',')) == '{') ? '{}' : _str lf ind '}'
                 case 'Object':
                     (this.extract_objects) ? 1 : err(12, value_types, Type(item))
                     Object:
-                    str := '{'
+                    _str := '{'
                     for k, v in item.OwnProps()
-                        (if_rep = 2 && omit[k]) ? '' : (if_rep = 1 && (v := replacer(k, v, remove)) = remove) ? '' : str .= lf ind _ind (k is String ? '"' encode(&k) '"' cln : err(11, 'String', Type(k))) extract_data(v, ind _ind) ','
-                    return ((str := RTrim(str, ',')) == '{') ? '{}' : str lf ind '}'
+                        (if_rep = 2 && omit[k]) ? '' : (if_rep = 1 && (v := replacer(k, v, remove)) = remove) ? '' : _str .= lf ind _ind (k is String ? '"' encode(&k) '"' cln : err(11, 'String', Type(k))) extract_data(v, ind _ind) ','
+                    return ((_str := RTrim(_str, ',')) == '{') ? '{}' : _str lf ind '}'
                 case 'VarRef','ComValue','ComObjArray','ComObject','ComValueRef': return err(15, 'These are not of type "Object":`nVarRef ComValue ComObjArray ComObject and ComValueRef', Type(item))
                 default:
                     !extract_all ? err(13, value_types, Type(item)) : 0

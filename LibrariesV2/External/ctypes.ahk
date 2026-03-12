@@ -294,8 +294,8 @@ class ctypes {
 			info := ctypes.__get_typeinfo(type), name := info.name
 			if name && obj := ctypes.types.Get(name .= '[' length ']', 0)
 				return obj
-			obj := { base: array := ctypes.array, Prototype: { __Class: name } }, name && ctypes.types[name] := obj
-			NumPut('uint', 1, 'ptr', ObjPtrAddRef(array.Prototype), ObjPtr(proto := obj.Prototype), A_PtrSize + 4)
+			obj := { base: arr := ctypes.array, Prototype: { __Class: name } }, name && ctypes.types[name] := obj
+			NumPut('uint', 1, 'ptr', ObjPtrAddRef(arr.Prototype), ObjPtr(proto := obj.Prototype), A_PtrSize + 4)
 			proto.DefineProp('__Item', ctypes.__get_prop_desc(0, info.type, info.wrapper, ele_size := info.size))
 			ObjRelease(ObjPtr(Object.Prototype)), align := info.pack, size := ele_size * length
 			proto.DefineProp('length', { value: length })
@@ -570,16 +570,16 @@ class ctypes {
 					RegExMatch(tp, '^(.+)\[(\d+)\]$', &tp) && ctypes.array(tp[1], Integer(tp[2])))
 		}
 		if HasBase(tp, ctypes.struct) || HasBase(tp, ctypes.array)
-			|| HasProp(tp, 'type') && basic_types.HasOwnProp(type := tp.type) {
-			if IsSet(type)
-				align := 0, pack := size := basic_types.%type%, !tp.HasProp('name') && tp.name := type
+			|| HasProp(tp, 'type') && basic_types.HasOwnProp(_type := tp.type) {
+			if IsSet(_type)
+				align := 0, pack := size := basic_types.%_type%, !tp.HasProp('name') && tp.name := _type
 			else {
-				size := tp.size, type := 0
+				size := tp.size, _type := 0
 				if HasBase(tp, ctypes.struct)
 					align := tp.align, pack := tp.__max_align
 				else align := 0, pack := tp.align
 			}
-			return { align: align, size: size, pack: pack, type: type, name: tp.name, wrapper: tp }
+			return { align: align, size: size, pack: pack, type: _type, name: tp.name, wrapper: tp }
 		}
 		throw TypeError('unknown type', , t ?? tp)
 	}

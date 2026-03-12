@@ -1,5 +1,6 @@
-#Include <OVERLAPPED>
-#Include <ctypes>
+#Include "%A_LineFile%\..\OVERLAPPED.ahk"
+#Include "%A_LineFile%\..\ctypes.ahk"
+#Include "%A_LineFile%\..\jsongo.ahk"
 
 class HttpServer {
 	static Prototype._id := 0
@@ -100,7 +101,7 @@ class HttpServer {
 					}
 					else {
 						if IsObject(body)
-							body := JSON.stringify(body), ctv := 'application/json'
+							body := jsongo.Stringify(body), ctv := 'application/json'
 						else ctv := 'text/html'
 						ctv := headers.Get(CT, 0) || headers[CT] := ctv
 						if !InStr(ctv, 'charset=')
