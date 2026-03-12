@@ -467,6 +467,37 @@ binomialCoefficient(n,m) {
 }
 
 /**
+ * Calculates the chance of m successes with chance p occuring in n events.
+ * This is equivalent to simply calculating choose(n, m) * p**m * (1-p)**(n-m)
+ * @param n Total number of events
+ * @param m Number of successes.
+ * @param p Probability of one success.
+ */
+probabilityMassFunction(n, m, p) {
+	return binomialCoefficient(n, m) * p**m * (1-p)**(n-m)
+}
+
+/**
+ * Returns an array (or optionally, map) of probabilities for all possible amounts of successes occuring with chance p.
+ * This is not efficient (as in, no caching or efficient binomial coefficient calculation) 
+ * @param n Total number of events.
+ * @param p Probability of success.
+ */
+binomialDistribution(n, p, asMap := false) {
+	if (asMap) {
+		result := Map()
+		Loop(n+1)
+			result[A_Index-1] := probabilityMassFunction(n, A_Index - 1, p)
+	} else {
+		result := []
+		result.Length := n+1
+		Loop(n+1)
+			result[A_Index] := probabilityMassFunction(n, A_Index - 1, p)
+	}
+	return result
+}
+
+/**
  * Returns Integer multiplication n * m that is closest to given number. 
  * @param num Number
  * @param {Integer} direction 0 for both directions, -1 to give the largest number smaller than num, 1 to give the smallest number larger than num

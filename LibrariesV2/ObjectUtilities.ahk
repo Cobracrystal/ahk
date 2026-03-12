@@ -216,6 +216,22 @@ objFilter(obj, filter := (k, v) => (true)) {
 	return clone
 }
 
+objDoForEachVoid(obj, fn := (v => toString(v)), conditional := (itKey?, itVal?) => true) {
+	isArrLike := (obj is Array || obj is Map)
+	isMap := (obj is Map)
+	if !(isArrLike || IsObject(obj))
+		throw(TypeError("objDoForEach does not handle type " . Type(obj)))
+	for i, e in objGetEnumerator(obj) {
+		if !conditional(i, e?)
+			continue
+		if IsSet(e) && IsObject(e)
+			fn(e?)
+		else
+			isArrLike ? obj[i] := fn(e?) : obj.%i% := fn(e?)
+	}
+	return obj
+}
+
 objDoForEach(obj, fn := (v => toString(v)), conditional := (itKey?, itVal?) => true, useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
@@ -278,7 +294,7 @@ objCollect(obj, collector := ((base, e) => (base ", " e)), transformer := (a => 
 		}
 	}
 	for i, e in objGetEnumerator(obj) {
-		if i <= j && !flagInitialBase
+		if i == j && !flagInitialBase
 			continue
 		if (conditional(i, e?))
 			base := (useKeys ? collector(base, transformer(i?)) : collector(base, transformer(e?)))
@@ -785,6 +801,49 @@ rangeAsArr(startEnd, end?, step?, inclusive := true) {
 	return arr
 }
 
+/**
+ * Iterators over array that contains any number of nested arrays, with values in any point. Cycles over all arrays, independently iterating forwards.
+ * @param arr 
+ * @example iterateNestedArrays([["a", "b"], "2", ["c", ["x", "y"]], "4"]) =>
+ * a, 2, c, 4, b, 2, x, 4, a, 2, c, 4, b, 2, y, 4
+ */
+iterateNestedArrays(arr) {
+	static q := { dummy: 1 }
+	static uniqueId := ObjPtr(q)
+	iterators := getIterators(arr)
+	totalIndex := 1
+	return enum
+
+	enum(&i, &e := uniqueId) {
+		it := iterators
+		cur := arr
+		while (true) {
+			curIndex := it.iterator
+			it.iterator := mod(it.iterator, cur.Length) + 1
+			cur := cur[curIndex]
+			if !(cur is Array)
+				break
+			it := it[curIndex]
+		}
+		if IsSet(e) && e == uniqueId
+			i := cur
+		else {
+			i := totalIndex++
+			e := cur
+		}
+		return 1
+	}
+
+	getIterators(arr) {
+		its := Map()
+		its.iterator := 1
+		for i, e in arr
+			if e is Array
+				its[i] := getIterators(e)
+		return its
+	}
+}
+
 arrayMerge(arrs*) {
 	ret := []
 	len := 0
@@ -848,22 +907,38 @@ arrayMergeSorted(arr1, arr2) {
 }
 
 /**
- * Verifies that an array is numerically sorted. By default, checks that each successive element is larger than its predecessor.
+ * Verifies that an array is numerically sorted. By default, checks that each successive element is larger or equal to its predecessor.
  * @param arr 
  * @param {Integer} downwards 
+ * @param {Integer} strict If this is turned on, the array must be strictly ordered, ie no elements may be equal.
  * @returns {Integer} 
  */
-arrayIsSorted(arr, downwards := false) {
-	if downwards {
-		Loop(arr.Length - 1)
-			if arr[A_Index] < arr[A_Index + 1]
-				return false
-		return true
+arrayIsSorted(arr, downwards := false, strict := false) {
+	if (downwards) {
+		if (strict) {
+			Loop(arr.Length - 1)
+				if (arr[A_Index] <= arr[A_Index + 1])
+					return false
+			return true
+		} else {
+			Loop(arr.Length - 1)
+				if (arr[A_Index] < arr[A_Index + 1])
+					return false
+			return true
+		}
+	} else {
+		if (strict) {
+			Loop(arr.Length - 1)
+				if arr[A_Index] >= arr[A_Index + 1]
+					return false
+			return true
+		} else {
+			Loop(arr.Length - 1)
+				if arr[A_Index] > arr[A_Index + 1]
+					return false
+			return true
+		}
 	}
-	Loop(arr.Length - 1)
-		if arr[A_Index] > arr[A_Index + 1]
-			return false
-	return true
 }
 
 /**
@@ -1009,6 +1084,22 @@ arrayInReverse(arr) {
 		IsSet(e) ? i := arr[index] : (i := index, e := arr[index]),
 		index > 1 ? (index--, 1) : (flagEnd ? 0 : flagEnd := 1)
 	)
+	
+	; enum(&i, &e := -1) {
+	; 	if IsSet(e)
+	; 		i := arr[index]
+	; 	else {
+	; 		i := index
+	; 		e := arr[index]
+	; 	}
+	; 	if (index > 1) {
+	; 		index--
+	; 		return 1
+	; 	}
+	; 	if flagEnd
+	; 		return 0
+	; 	flagEnd := 1
+	; }
 }
 
 arraySort(arr, fn := (a => a), sortMode := "") {
