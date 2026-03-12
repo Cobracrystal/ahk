@@ -1,6 +1,6 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\DiscordClient.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
 
 
 class DiscordBot extends DiscordClient {

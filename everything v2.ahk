@@ -37,7 +37,7 @@ A_TrayMenu.Delete()
 #Include "TableFilter v2.ahk"
 #Include "DiscordClient.ahk"
 ; #Include "%A_ScriptDir%\not_mine_or_examples\AquaHotkey\AquaHotkey.ahk"
-; #Include "jsongo.ahk"
+; #Include "External\jsongo.ahk"
 ; for windows in which ctrl+ should replace scrolling
 GroupAdd("zoomableWindows", "ahk_exe Mindustry.exe")
 ; for windows that should be put in the corner when ctrlaltI'd

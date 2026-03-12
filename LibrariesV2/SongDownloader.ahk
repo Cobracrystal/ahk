@@ -3,8 +3,8 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\FileUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\unicodeData.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\cmdStdoutAsync.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\External\cmdStdoutAsync.ahk"
 
 ; todo: split video chapters into separate files option
 ; todo: attempt to parse artist/title from description if title/uploader doesn't seem correct

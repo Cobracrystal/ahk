@@ -1,5 +1,5 @@
 #Requires AutoHotkey v2
-#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
 SetWorkingDir(A_WorkingDir "\..\script_files")
 fileNameFrom := A_WorkingDir "\TableFilter\Kayoogis.json"
 

@@ -15,7 +15,7 @@ fix dark mode for DDL/Dropdownlist via custom intercept function
 #Requires AutoHotkey >=v2.0 
 #SingleInstance Force
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\TextEditMenu.ahk"
 
 tableInstance := TableFilter()

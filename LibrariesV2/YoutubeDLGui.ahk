@@ -3,8 +3,8 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\cmdStdoutAsync.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\External\cmdStdoutAsync.ahk"
 
 class YoutubeDLGui {
 	static toggleGui(mode := "O") {

@@ -1,5 +1,5 @@
 ; this should never be used in a serious setting, its a shitty temporary solution
-#Include "%A_LineFile%\..\..\LibrariesV2\jsongo.ahk"
+#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 
 ; password := FileRead(A_Desktop "\programs\Files\openDTUAuth.pw")
