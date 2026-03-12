@@ -129,7 +129,7 @@ ExecHelperScript(expression, wait := true, void := false) {
 	input := '#Warn All, Off`n'
 	input .= '#Include "*i ' A_LineFile '"`n'
 	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\MathUtilities.ahk"`n'
-	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print\(.*\)') || RegexMatch(expression, 'i)\.Show\(.*\)'))
+	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print(?:\(.*\)|\s+.*)') || RegexMatch(expression, 'i)\.Show\(.*\)'))
 		input .= expression
 	else
 		input .= 'print(' expression ',,false,true)'
