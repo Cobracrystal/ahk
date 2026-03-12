@@ -528,6 +528,343 @@ class WinUtilities {
 		COMPOSITED: 0x02000000,
 		NOACTIVATE: 0x08000000 
 	}
+
+	class Window {
+		__New(identifier := 0, isMulti := false, ignoreHiddenWindows := true) {
+			hidden := DetectHiddenWindows(!ignoreHiddenWindows)
+			if !(hwnd := WinExist(identifier))
+				throw Error("Nonexistent Window")
+			this.multi := isMulti
+			if isMulti
+				this.hwnd := WinGetList(identifier)
+			else
+				this.hwnd := [WinExist(identifier)]
+			DetectHiddenWindows(hidden)
+			return this
+		}
+
+		; Activates the specified window. 
+		Activate() {
+			WinActivate(this.hwnd[1])
+			return this
+		}
+
+		; Same as WinActivate except that it activates the bottommost matching window rather than the topmost. 
+		ActivateBottom() {
+			WinActivate(this.hwnd[-1])
+			return this
+		}
+
+		; Checks if the specified window exists and is currently active (foremost). 
+		Active() {
+			return WinActive(this.hwnd[1])
+		}
+
+		; Closes the specified window. 
+		Close() {
+			for hwnd in this.hwnd
+				WinClose(hwnd)
+			this.DeleteProp("hwnd")
+		}
+
+		; Checks if the specified window exists. 
+		Exist(anyWindow := true) {
+			if anyWindow {
+				for hwnd in this.hwnd
+					if WinExist(hwnd)
+						return true
+			} else {
+				for hwnd in this.hwnd
+					if !WinExist(hwnd)
+						return false
+			}
+		}
+
+		; Retrieves the specified window's class name. 
+		GetClass() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetClass(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Retrieves the position and size of the specified window's client area. 
+		GetClientPos() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetClientPos(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns an array of names (ClassNNs) for all controls in the specified window. 
+		GetControls() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetControls(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns an array of unique ID numbers (HWNDs) for all controls in the specified window. 
+		GetControlsHwnd() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetControlsHwnd(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns the number of existing windows that match the specified criteria. 
+		GetCount() {
+			return this.hwnd.Length
+		}
+
+		; Returns the unique ID number (HWND) of the specified window. 
+		GetID() {
+			return this.hwnd[1]
+		}
+
+		; Returns the unique ID number (HWND) of the last/bottommost window if there is more than one match. 
+		GetIDLast() {
+			return this.multi ? this.hwnd[-1] : this.hwnd[1]
+		}
+
+		; Returns an array of unique ID numbers (HWNDs) for all existing windows that match the specified criteria. 
+		GetList() {
+			return this.hwnd
+		}
+
+		; Returns a non-zero number if the specified window is maximized or minimized. 
+		GetMinMax() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetMinMax(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns the Process ID number (PID) of the specified window. 
+		GetPID() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetPID(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Retrieves the position and size of the specified window. 
+		GetPos() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetPos(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns the name of the process that owns the specified window. 
+		GetProcessName() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetProcessName(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns the full path and name of the process that owns the specified window. 
+		GetProcessPath() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetProcessPath(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns the style or extended style (respectively) of the specified window. 
+		GetStyle() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetStyle(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns the style or extended style (respectively) of the specified window. 
+		GetExStyle() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetExStyle(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Retrieves the text from the specified window. 
+		GetText() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetText(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Retrieves the title of the specified window. 
+		GetTitle() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetTitle(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns the color that is marked transparent in the specified window. 
+		GetTransColor() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetTransColor(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Returns the degree of transparency of the specified window. 
+		GetTransparent() {
+			arr := []
+			for hwnd in this.hwnd
+				arr.push(WinGetTransparent(hwnd))
+			return this.multi ? arr : arr[1]
+		}
+
+		; Hides the specified window. 
+		Hide() {
+			for hwnd in this.hwnd
+				WinHide(hwnd)
+			return this
+		}
+
+		; Forces the specified window to close. 
+		Kill() {
+			for hwnd in this.hwnd
+				WinKill(hwnd)
+			this.DeleteProp("hwnd")
+		}
+		
+		; Enlarges the specified window to its maximum size. 
+		Maximize() {
+			for hwnd in this.hwnd
+				WinMaximize(hwnd)
+			return this
+		}
+
+		; Collapses the specified window into a button on the task bar. 
+		Minimize() {
+			for hwnd in this.hwnd
+				WinMinimize(hwnd)
+			return this
+		}
+
+		; Changes the position and/or size of the specified window. 
+		Move() {
+			for hwnd in this.hwnd
+				WinMove(hwnd)
+			return this
+		}
+
+		; Sends the specified window to the bottom of stack; that is, beneath all other windows. 
+		MoveBottom() {
+			for hwnd in this.hwnd
+				WinMoveBottom(hwnd)
+			return this
+		}
+		
+		; Brings the specified window to the top of the stack without explicitly activating it. 
+		MoveTop() {
+			for hwnd in this.hwnd
+				WinMoveTop(hwnd)
+			return this
+		}
+		
+		; Redraws the specified window. 
+		Redraw() {
+			for hwnd in this.hwnd
+				WinRedraw(hwnd)
+			return this
+		}
+
+		; Unminimizes or unmaximizes the specified window if it is minimized or maximized. 
+		Restore() {
+			for hwnd in this.hwnd
+				WinRestore(hwnd)
+			return this
+		}
+
+		; Makes the specified window stay on top of all other windows (except other always-on-top windows). 
+		SetAlwaysOnTop() {
+			for hwnd in this.hwnd
+				WinSetAlwaysOnTop(hwnd)
+			return this
+		}
+
+		; Enables or disables the specified window. 
+		SetEnabled() {
+			for hwnd in this.hwnd
+				WinSetEnabled(hwnd)
+			return this
+		}
+
+		; Changes the shape of the specified window to be the specified rectangle, ellipse, or polygon. 
+		SetRegion() {
+			for hwnd in this.hwnd
+				WinSetRegion(hwnd)
+			return this
+		}
+
+		; Changes the style or extended style of the specified window, respectively. 
+		SetStyle() {
+			for hwnd in this.hwnd
+				WinSetStyle(hwnd)
+			return this
+		}
+		
+		; Changes the style or extended style of the specified window, respectively. 
+		SetExStyle() {
+			for hwnd in this.hwnd
+				WinSetExStyle(hwnd)
+			return this
+		}
+
+		; Changes the title of the specified window. 
+		SetTitle() {
+			for hwnd in this.hwnd
+				WinSetTitle(hwnd)
+			return this
+		}
+
+		; Makes all pixels of the chosen color invisible inside the specified window. 
+		SetTransColor() {
+			for hwnd in this.hwnd
+				WinSetTransColor(hwnd)
+			return this
+		}
+
+		; Makes the specified window semi-transparent. 
+		SetTransparent() {
+			for hwnd in this.hwnd
+				WinSetTransparent(hwnd)
+			return this
+		}
+
+		; Unhides the specified window. 
+		Show() {
+			for hwnd in this.hwnd
+				WinShow(hwnd)
+			return this
+		}
+		
+		; Waits until the specified window is active or not active. 
+		WaitActive(timeout?) {
+			WinWaitActive(this.hwnd[1],,timeout?)
+			return this
+		}
+
+		; Waits until the specified window is active or not active. 
+		WaitNotActive(timeout?) {
+			WinWaitNotActive(this.hwnd[1],,timeout?)
+			return this
+		}
+
+		; Waits until no matching windows can be found. 
+		WaitClose(timeout?) {
+			ret := WinWaitClose(this.hwnd[1],,timeout?)
+			this.DeleteProp("hwnd")
+			return ret
+		}
+	}
 }
 
 class ShellWrapper {
