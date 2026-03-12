@@ -62,7 +62,7 @@ class TextEditMenu {
 		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(strDoPerChar, " "))
 		textModifyMenu.Add("Add Zalgo", (*) => modifySelectedText(this.zalgo.bind(this), 5))
 		textModifyMenu.Add("Get Char Names", (*) => MsgBoxAsGui(objCollectString(objDoForEach(StrSplitUTF8(fastCopy()), e => e " | " unicodeData.charName(e)), '`n'), "Character Names",,,,,,1))
-		textModifyMenu.Add("Type Char By Name", (*) => fastPrint(unicodeData.charFromName(InputBox('Type in a Unicode Char Name', 'Char Name').Value)))
+		textModifyMenu.Add("Type Char By Name", (*) => ((res := InputBox('Type in a Unicode Char Name', 'Char Name').Value) != "" ? fastPrint(unicodeData.charFromName(res)) : 0))
 		;	menu_RemoveSpace(textModifyMenu.Handle) ; this also decreases vertical spacing.
 		this.menu := textModifyMenu
 	}
