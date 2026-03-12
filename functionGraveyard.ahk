@@ -491,6 +491,40 @@ calculateCompatibilityData() {
 	}
 }
 
+getRandomDataDistributionHoloMemsGuessr() {
+	static memberData := MapToObj(jsongo.parse(FileRead(A_WorkingDir "\Test\holomemsguessrMemberData.json")))
+	static init := objDoForEachVoid(memberData, v => (v.songLink := StrSplit(v.songLink, ",", ' ')))
+	memberIds := Map()
+	loopiterations := 3000
+	Loop (loopiterations) {
+		data := sendRequest("https://holomemsguesser-kqvor.ondigitalocean.app/unlimitedMember")
+		data := jsongo.Parse(data)
+		memId := data[2]
+		memSongID := data[5]
+		if memberIds.Has(memId) {
+			memberIds[memId].count++
+			if memberIds[memId].songIDs.Has(memSongID)
+				memberIds[memId].songIDs[memSongID]++
+			else
+				memberIds[memId].songIDs[memSongID] := 1
+		}
+		else
+			memberIds[memId] := { count: 1, songIDs: Map(memSongID, 1)}
+		if Mod(A_Index, loopiterations//10) == 0
+			print(Round(100 * A_Index / loopiterations) '% - ',, false) 
+		Sleep(10)
+	}
+	print("")
+	s := ""
+	for id, memData in memberIds {
+		member := memberData[id+1]
+		str := strFill(member.name, 21, false) . ":" strFill(memData.count,4) '    '
+		str .= 'Song Distribution: ' objCollectString(memData.songIDs)
+		s .= print(str)
+	}
+	return s
+}
+
 sessionBuddyCollectionTransformToFoldersAndFaviconLinks() {
 	text := FileRead("C:\Users\Simon\Desktop\programs\programming\ahk\oneTabJson.json", "UTF-8")
 	obj := jsongo.parse(text)
