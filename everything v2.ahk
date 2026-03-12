@@ -778,7 +778,15 @@ customExit(ExitReason, ExitCode) {
 	}
 }
 
-#HotIf !WinExist("ahk_exe AutoClickerPos.exe")
+^!Numpad5::{
+	static toggle := 0
+	if (toggle := !toggle)
+		Run("C:\Users\Simon\Desktop\programs\other\ProgramUtilities\AutoClicker-3.1.1.exe")
+	else
+		try WinClose("OP Auto Clicker 3.1.1 ahk_exe AutoClicker-3.1.1.exe ahk_class 442")
+}
+
+#HotIf !WinExist("OP Auto Clicker 3.1.1 ahk_exe AutoClicker-3.1.1.exe ahk_class 442")
 ^Numpad5::{	; Toggle Autoclicker
 	static timer := Click.Bind("L")
 	static toggle := 0
@@ -1064,22 +1072,22 @@ loadTableAsHotstrings(filePath) {
 
 ^+WheelUp::{ ; Increase Volume of current Window by +5
 	MouseGetPos(,,&hwnd)
-	WinSetVolume("+5", hwnd)
+	timedTooltip(WinSetVolume("+5", hwnd), 300)
 }
 
 ^+WheelDown::{ ; Decrease Volume of current Window by -5
 	MouseGetPos(,,&hwnd)
-	WinSetVolume("-5", hwnd)
+	timedTooltip(WinSetVolume("-5", hwnd), 300)
 }
 
 ^+!WheelUp::{ ; Increase Volume of current Window by +1
 	MouseGetPos(,,&hwnd)
-	WinSetVolume("+1", hwnd)
+	timedTooltip(WinSetVolume("+1", hwnd), 300)
 }
 
 ^+!WheelDown::{ ; Decrease Volume of current Window by -1
 	MouseGetPos(,,&hwnd)
-	WinSetVolume("-1", hwnd)
+	timedTooltip(WinSetVolume("-1", hwnd), 300)
 }
 
 WinSetVolume(level, target?) {
@@ -1291,12 +1299,12 @@ class RevoIdle {
 
 
 
-#HotIf WinActive("ahk_exe left4dead2.exe")
+#HotIf WinExist("ahk_exe left4dead2.exe")
 ^o::{
+	static cmd := 'C:\Users\Simon\Desktop\programs\other\ProgramUtilities\Left4Dead2SprayChange\set_spray.bat "{}"'
 	if !FileExist(A_Clipboard)
 		return
-	cmd := 'C:\Users\Simon\Desktop\programs\other\ProgramUtilities\Left4Dead2SprayChange\set_spray.bat "' . A_Clipboard '"'
-	cmdRetAsync(cmd,,,,tempFunc)
+	cmdRetAsync(Format(cmd, A_Clipboard),,,,tempFunc)
 	
 
 	tempFunc(output, success) {
