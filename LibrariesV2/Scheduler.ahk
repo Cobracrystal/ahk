@@ -35,7 +35,7 @@ class Scheduler {
 	 * @param {Integer} threshold Threshold beyond which missed reminders will not be notified
 	 * @param token Discord token.
 	 */
-	static setOptions(flagDebug?,  token?, threshold := this.settings.notifyOnMissedRemindersThreshold, notification := this.Notification.default, omitBlankValuesOnSave := true) {
+	static setOptions(flagDebug?, token?, threshold := this.settings.notifyOnMissedRemindersThreshold, notification := this.Notification.default, omitBlankValuesOnSave := true) {
 		if IsSet(flagDebug)
 			this.settings.debug := flagDebug
 		if IsSet(token)

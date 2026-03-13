@@ -274,6 +274,7 @@ objDoForEachRecursive(obj, fn := v => v, conditional := (itKey?, itVal?) => true
  * @param {Any} initialBase Initial value of the base on which fn operates. If not given, first element in object becomes base. Set this if fn operators onto properties or items of enumerable values.
  * @param {Any} value Optional Value to check conditional upon
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
+ * @param {Boolean} useKeys if checked true, transformer will receive key and value from the iteration, ie (k, v) => (k . ": " . v)
  * @returns {Any} Collected Value
  */
 objCollect(obj, collector := ((base, e) => (base ", " e)), transformer := (a => a), initialBase?, conditional := (itKey, itVal?) => IsSet(itVal), useKeys := false) {
@@ -288,7 +289,7 @@ objCollect(obj, collector := ((base, e) => (base ", " e)), transformer := (a => 
 		for i, e in objGetEnumerator(obj) {
 			if !conditional(i,e?)
 				continue
-			base := useKeys ? transformer(i) : transformer(e)
+			base := useKeys ? transformer(i, e) : transformer(e)
 			j := i
 			break
 		}
@@ -297,7 +298,7 @@ objCollect(obj, collector := ((base, e) => (base ", " e)), transformer := (a => 
 		if i == j && !flagInitialBase
 			continue
 		if (conditional(i, e?))
-			base := (useKeys ? collector(base, transformer(i?)) : collector(base, transformer(e?)))
+			base := (useKeys ? collector(base, transformer(i?, e?)) : collector(base, transformer(e?)))
 	}
 	return base ?? ""
 }
