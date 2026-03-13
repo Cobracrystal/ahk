@@ -463,22 +463,6 @@ customFunc1337Reminder(*) {
 ; ########################## OS-RELATED FUNCTIONS ###########################
 ; ###########################################################################
 
-runAsAdmin() {
-	params := ""
-	for i, e in A_Args  ; For each parameter:
-		params .= A_Space . e
-	if !A_IsAdmin
-	{
-		if A_IsCompiled
-			v := DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_ScriptFullPath, "str", params, "str", A_WorkingDir, "int", 1)
-		else
-			v := DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_AhkPath, "str", '"' . A_ScriptFullPath . '"' . A_Space . params, "str", A_WorkingDir, "int", 1)
-		if (v <= 32)
-			return false
-		return true
-	}
-	return true
-}
 
 connectNextDNS() {
 	try 

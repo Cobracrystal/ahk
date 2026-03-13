@@ -147,6 +147,23 @@ ExecScript(input, Wait := true) {
 	return RTrim(strChangeEncoding(output, 'CP0', 'UTF-8'), " `t`n")
 }
 
+runAsAdmin(scriptFile := A_ScriptFullPath) {
+	params := ""
+	for i, e in A_Args  ; For each parameter:
+		params .= A_Space . e
+	if !A_IsAdmin
+	{
+		if A_IsCompiled
+			v := DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", scriptFile, "str", params, "str", A_WorkingDir, "int", 1)
+		else
+			v := DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", A_AhkPath, "str", '"' . scriptFile . '"' . A_Space . params, "str", A_WorkingDir, "int", 1)
+		if (v <= 32)
+			return false
+		return true
+	}
+	return true
+}
+
 cmdRet(sCmd, callBackFuncObj?, encoding := "CP" . DllCall("GetOEMCP", "UInt")) {
 	; encoding := "CP" . DllCall("GetOEMCP", "UInt") ; CP0 -> Ansi. Example: CP850 Western European Ansi.
 	static HANDLE_FLAG_INHERIT := 0x1, CREATE_NO_WINDOW := 0x08000000, STARTF_USESTDHANDLES := 0x100, ptrsize := A_PtrSize

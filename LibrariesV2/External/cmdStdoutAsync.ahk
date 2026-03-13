@@ -142,10 +142,10 @@ class CmdStdOutAsync {
 		}
 
 		Read() {
-			buf := this.info.buf, overlapped := this.info.overlapped
-			overlapped.__New(overlapped.Size, 0)
-			NumPut('Ptr', this.info.hEvent, overlapped, A_PtrSize * 2 + 8)
-			bool := DllCall('ReadFile', 'Ptr', this.hPipeRead, 'Ptr', buf, 'UInt', buf.Size, 'UIntP', &size := 0, 'Ptr', overlapped)
+			buf := this.info.buf, _overlapped := this.info.overlapped
+			_overlapped.__New(_overlapped.Size, 0)
+			NumPut('Ptr', this.info.hEvent, _overlapped, A_PtrSize * 2 + 8)
+			bool := DllCall('ReadFile', 'Ptr', this.hPipeRead, 'Ptr', buf, 'UInt', buf.Size, 'UIntP', &size := 0, 'Ptr', _overlapped)
 			if bool {
 				this.info.outData .= str := StrGet(buf, size, this.info.encoding)
 				if this.info.HasProp('callback')
