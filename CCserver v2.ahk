@@ -4,6 +4,7 @@
 #Include "BasicUtilities.ahk"
 #Include "FileUtilities.ahk"
 #Include "TimeUtilities.ahk"
+#Include "YoutubeDLGuiv2.ahk"
 #Include "External\WebSocket.ahk"
 #Include "External\httpserver.ahk"
 #Include "External\jsongo.ahk"
@@ -11,22 +12,13 @@
 Persistent()
 SetWorkingDir(A_ScriptDir "\script_files\httpserver")
 
-
-
-
-/*
-TODO
-whr.body directly into res how
-what the fuck is solar doing
-flutter not working correctly
-line 209 redirect doesn't work cause vpath doesn't include the origin
-
-*/
 CCServer.Serve("3141")
-testRequest()
+; testRequest()
+
 class CCServer {
 	static __New() {
 		this.baseURL := "http://localhost"
+		this.catchAllURL := "http://+"
 		this.paths := Map(
 			"/", this.mainIndex.bind(this),
 			"/favicon.ico", this.favicon.bind(this),
@@ -35,22 +27,30 @@ class CCServer {
 			"/redirect", this.redirect.bind(this,,, "https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
 			"/page", this.page.bind(this),
 			"/calc", this.calc.bind(this),
-			"/solar", this.solar.bind(this),
+			"/solar", this.redirect.bind(this,,, "https://solar.cobracrystal.com"), ; this.solar.bind(this),
 			"/counter", this.mediocreCounter.bind(this),
 			"/bettercounter", this.betterCounter.bind(this),
 			"/webfiles", this.FileIndex.web.bind(this.FileIndex),
 			"/music", this.FileIndex.music.bind(this.FileIndex),
-			"/ahk", this.FileIndex.ahk.bind(this.FileIndex)
-			; "/embed/*", "embedder" 
+			"/ahk", this.FileIndex.ahk.bind(this.FileIndex),
+			"/embed", this.embedder.bind(this)
 		)
 	}
 
-	static Serve(port) {
+	/**
+	 * Runs the server on the specified port.
+	 * @param port 
+	 * @param {Integer} allIPs Whether to catch all routes. Otherwise uses localhost. Requires administrator privileges
+	 * NOTE: Cloudflare One allows overriding of http headers when routing requests through a tunnel, which, when set to localhost, will still be accepted without catchall
+	 */
+	static Serve(port, allIPs := false) {
 		this.publicIP := sendRequest("https://icanhazip.com") ; SEE NOTES AT BOTTOM OF SCRIPT
 		this.server := HttpServer()
-		this.serverURL := this.baseURL . ":" port
-		; Monitor all IPs on the current computer, requiring administrator privileges
-		; this.server.Add('http://+:1212/', handler)
+		if (allIPs && !A_IsAdmin) {
+			runAsAdmin()
+			ExitApp()
+		}
+		this.serverURL := (allIPs ? this.catchAllURL : this.baseURL) . ":" port
 
 		for vPath, handler in this.paths
 			this.server.Add(this.serverURL . vPath, handler)
@@ -97,45 +97,19 @@ class CCServer {
 		path := this.parsePath(req)
 		whr := ComObject("WinHttp.WinHttpRequest.5.1")
 		url := target . SubStr(path, StrLen(URLOrigin) + 1)
-		OutputDebug("Got request path " path "`n")
-		OutputDebug("sending to " url "`n")
 		whr.Open("GET", url, false)
 		for name, value in req.headers
 			whr.SetRequestHeader(name, value)
-		Loop(2) {
-			try {
-				if req.Body
-					whr.Send(req.Body)
-				else
-					whr.Send()
-				whr.WaitForResponse()
-			} catch {
-				Sleep(100)
-				continue
-			}
-			break
-		}
-		for name, value in StrSplit(whr.GetAllResponseHeaders(), "`r`n") {
-			if (name == "")
-				continue
-			parts := StrSplit(value, ":",,2)
-			if (parts.Length() == 2)
-				res.SetHeader(Trim(parts[1]), Trim(parts[2]))
-		}
+		whr.Send(req.Body ? StrGet(req.Body, "UTF-8") : unset)
+		whr.WaitForResponse()
+		res["Content-Type"] := contentType := whr.GetResponseHeader("Content-Type")
 		respText := whr.ResponseText
-		if (req.path == "/solar" || req.path == "/solar/") {
+		if (path == "/solar" || path == "/solar/") { ; its index.html
 			respText := StrReplace(respText, 'src="/static', 'src="/solar/static')
 			respText := StrReplace(respText, "fetch('/", "fetch('/solar/")
-			res["Content-Type"] := 'text/html;charset=utf-8'
+		} 
+		if (InStr(contentType, "text/html") || InStr(contentType, "application/json") || InStr(contentType, "application/javascript"))
 			res(respText)
-		} else if InStr(req.path, ".json") {
-			res["Content-Type"] := 'application/json'
-			res(respText)
-		}
-		else if InStr(req.path, ".js") {
-			res["Content-Type"] := 'application/javascript'
-			res(respText)
-		}
 		else
 			res(whr.ResponseBody)
 	}
@@ -176,7 +150,36 @@ class CCServer {
 	}
 
 	static embedder(req, res) {
-		msgbox("IMPLEMENT!!!")
+		static URLorigin := "/embed/"
+		static ytdlPath := RegexReplace(A_MyDocuments, "\\[^\\]*$", "") . "\Music\ConvertMusic\ytdl\yt-dlp.exe"
+		static valid_user_agents := ["Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)", "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.6; rv:92.0) Gecko/20100101 Firefox/92.0"]
+		this.logger(req)
+		queries := this.parseQueries(req)
+		probablyUrl := SubStr(req.CookedUrl.AbsPath, StrLen(URLorigin) + 1)
+		probablyUrl := RegexReplace(probablyUrl, "(https?:\/)([^\/])", "$1/$2",,1)
+		probablyUrl := RegexReplace(probablyUrl, "^(?:https?:\/\/)?(?:www\.)?(?:x|twitter|fixupx|fxtwitter|vxtwitter)\.com", "https://twitter.com") ; fix x->twitter for ytdlp
+		if (req.CookedUrl.QueryString && RegexMatch(probablyUrl, "^(https?:\/\/)?(www\.)?youtube\.com") && queries.Has("v"))
+			probablyUrl .= "?v=" queries["v"]
+		if (req.headers.get("CF-Connecting-IP", 0) != this.publicIP && (!objContainsValue(valid_user_agents, req.headers["user-agent"]) || InStr(probablyUrl, "twitter.com"))) {
+			probablyUrl := StrReplace(probablyUrl, "twitter.com", "vxtwitter.com")
+			this.redirect(req, res, probablyUrl)
+			return
+		}
+		outputF := A_WorkingDir . "\embedder\" . RegExReplace(probablyUrl, '[\?<>\/\\\*"|:]', "")
+		if (!FileExist(outputF . ".*")) {
+			cmd := Format('{1} --ignore-config --limit-rate "5M" --no-playlist --no-overwrites --retries "0" --format "(bv+ba/b/bv*)[filesize<=?5MB]" --merge-output-format "mp4" -S "filesize:5M" --output "{}.%(ext)s" "{}"', ytdlPath, outputF, probablyUrl)
+			; if (InStr(probablyUrl, "twitter.com"))
+			; 	cmd = %ytdlPath% --ignore-config --limit-rate "5M" --no-playlist --no-overwrites --retries "0" --format "bv+ba/b" -S "height:480" --output "%outputF%.`%(ext)s" "%probablyUrl%"		
+			RunWait(cmd)
+		}
+		if (FileExist(outputF . ".*")) {
+			outputF := getFilesAsArr(outputF . ".*", ,2)[1]
+			res(HttpServer.File(outputF))
+		}
+		else {
+			res["Content-Type"] := 'text/plain;charset=utf-8'
+			res("oh nyo! something went wrong (╯°□°)╯︵ ┻━┻")
+		}
 	}
 
 
@@ -196,10 +199,10 @@ class CCServer {
 			static URLorigin := "/music/"
 			this.t.logger(req)
 			vpath := StrReplace(SubStr(this.t.parsePath(req), StrLen(URLorigin)), "/", "\")
-			if (req.headers.Has("CF-Connecting-IP") && req.headers["CF-Connecting-IP"] != CCServer.publicIP)
-				res("Not allowed to see.", 200)
-			else {
+			if (req.headers.get("CF-Connecting-IP", 0) == CCServer.publicIP)
 				this.genericIndex(req, res, origin, vpath, "/music")
+			else {
+				res("Not allowed to see.", 200)
 			}
 		}
 
@@ -213,11 +216,10 @@ class CCServer {
 
 		static genericIndex(req, res, origin, vpath := "\", title := "", ext := "*", mode := "DF") {
 			normPath := normalizePath(origin . vpath)
-		;	FileAppend, % "normpath: " normPath . "`n", * ; debugging purposes
 			if (t := FileExist(normPath)) && InStr(normPath, origin) {
 				if (InStr(t, "D")) {
 					if (SubStr(vpath, -1) != "\") {
-						res["Location"] := StrReplace(vpath, "\", "/") . "/"
+						res["Location"] := StrReplace(this.t.parsePath(req), "\", "/") . "/"
 						res(, 308)
 						return
 					}
@@ -226,12 +228,10 @@ class CCServer {
 				}
 				else {
 					SplitPath(normPath,,,&fExt)
-					if (ext == "*" || fExt == ext) {
+					if (ext == "*" || fExt == ext)
 						res(HttpServer.File(normPath))
-					;	res.Set ; make a title for the tab??
-					}
 					else
-						res("File not available.")
+						res("File cannot be accessed.")
 				}
 			}
 			else
@@ -258,7 +258,13 @@ class CCServer {
 	}
 
 	static whoami(req, res) {
-		logFile := A_WorkingDir . "\fullRequestLogV2.txt"
+		static rawPath := "/whoami/raw"
+		if (SubStr(req.CookedUrl.AbsPath, 1, StrLen(rawPath)) == rawPath) {
+			res["Content-Type"] := 'text/plain;charset=utf-8'
+			res(toString(req, false, false, true,,, true, false, false, false))
+			return
+		}
+		logFile := A_WorkingDir . "\logWhoAmI.txt"
 		str := Format("
 		(
 			-----------------------------------------------------
@@ -266,15 +272,17 @@ class CCServer {
 			-----------------------------------------------------
 			Request Path: {3}
 			Request Method: {4}
-			Request Protocol: {5}
+			Request Remote Address: {5}
 			Request Headers: {6}
 			Request Query: {7}
+			Request Body: {8}
 		)", formatTimeISO8601(), Mod(A_TickCount,1000),
 			req.CookedUrl.AbsPath,
-			"GET?",
-			"PROTOCOL?",
+			req.Verb,
+			req.RemoteAddress,
 			objCollect(req.Headers, (b, e) => (b . "`n" e), (k, v) => ("`t" k ": " v),"",, true),
-			req.CookedUrl.QueryStringLength > 0 ? req.CookedUrl.QueryString : ""
+			req.CookedUrl.QueryString || "",
+			StrGet(req.body, 'UTF-8')
 		)
 		res["Content-Type"] := 'text/plain;charset=utf-8'
 		res(str)
@@ -290,40 +298,8 @@ class CCServer {
 		res("Page not found", 404)
 	}
 
-
-	static test(req, res) {
-		; set response header
-		res['from'] := 'ahk server'
-		; send file as response
-		; res(HttpServer.File(filepath))
-
-		; send 404 not found
-		; res(, 404)
-
-		html :=
-		(
-			'<h1>hello world</h1>
-			<h3>rawurl</h3>' req.RawUrl '
-			<h3>query</h3>' (req.CookedUrl.QueryString || '') '
-			<h3>address</h3>' req.RemoteAddress '
-			<h3>verb</h3>' req.Verb '
-			<h3>headers</h3>' jsongo.Stringify(req.Headers) '
-			<h3>postdata</h3>' StrGet(req.body, 'cp0')
-		)
-		encoding := req.Headers.Get('Accept-Encoding', '')
-		if InStr(encoding, e := 'zstd') || InStr(encoding, e := 'gzip') {
-			; send utf-8 html with zstd/gzip compress
-			StrPut(html, buf := Buffer(StrPut(html, 'utf-8') - 1), 'utf-8')
-			res['Content-Type'] := 'text/html;charset=utf-8'
-			res(compress.encode(buf, , res['Content-Encoding'] := e))
-		} else
-			; send utf-8 html
-			res(html)
-	}
-
 	static logger(req) {
-		static logFile := A_WorkingDir . "\logAllRequestsV2.txt"
-		; print(ToStringNoBases(req),,,0)
+		static logFile := A_WorkingDir . "\logAnyRequests.txt"
 		str := Format("
 		( LTrim
 			-----------------------------------------------------
@@ -331,21 +307,23 @@ class CCServer {
 			Path: {3}
 			IP: {4} (Country: {5})
 			User Agent: {6}
-			Queries: {7}"
+			Queries: {7}
+			Type: {8}
 		)", formatTimeISO8601(), 
 			Mod(A_TickCount,1000),
 			req.CookedUrl.AbsPath,
-			req.headers.has("CF-Connecting-IP") ? req.headers["CF-Connecting-IP"] . (req.headers["CF-Connecting-IP"] == this.publicIP ? " (self)" : "") : "?",
-			req.headers.has("CF-IPCountry") ? req.headers["CF-IPCountry"] : "?",
-			req.headers.has("user-agent") ? req.headers["user-agent"] : "?",
-			req.CookedUrl.QueryStringLength > 0 ? req.CookedUrl.QueryString : ""
+			(t := req.headers.get("CF-Connecting-IP", req.RemoteAddress)) . (t == this.publicIP ? " (self)" : ""),
+			req.headers.get("CF-IPCountry", "?"),
+			req.headers.get("user-agent", "?"),
+			req.CookedUrl.QueryString || "",
+			req.Verb . (req.Verb != "GET" ? "(Body: " StrGet(req.Body, "UTF-8") ")" : "")
 		)
 		str .= "`n"
 		FileAppend(str, logFile, "UTF-8")
 	}
 
 	static parsePath(req) {
-		if req.CookedUrl.QueryStringLength > 0
+		if req.CookedUrl.QueryStringLength
 			return SubStr(req.CookedUrl.AbsPath, 1, -req.CookedUrl.QueryStringLength)
 		return req.CookedUrl.AbsPath
 	}
@@ -365,20 +343,24 @@ class CCServer {
 	}
 }
 
-; if !A_IsAdmin {
-;	Run('*RunAs ' Format('"{}" /restart "{}"', A_AhkPath, A_ScriptFullPath))
-;	ExitApp()
+; how to send compressed data:
+; encoding := req.Headers.Get('Accept-Encoding', '')
+; if InStr(encoding, e := 'zstd') || InStr(encoding, e := 'gzip') {
+; 	; send utf-8 html with zstd/gzip compress
+; 	StrPut(html, buf := Buffer(StrPut(html, 'utf-8') - 1), 'utf-8')
+; 	res['Content-Type'] := 'text/html;charset=utf-8'
+; 	res(compress.encode(buf, , res['Content-Encoding'] := e))
 ; }
 
 testRequest() {
-	; headers := Map("Sec-Fetch-Site", "same-origin", "Sec-Fetch-Mode", "navigate", "Sec-Fetch-Dest", "document", "Sec-Fetch-Dest2", "document")
-	; html := sendRequest(CCServer.serverURL, "POST",,,, headers)
-	; html := sendRequest(CCServer.serverURL "/whoami", "GET")
-	; MsgBoxAsGui(html)
-	; whr := ComObject('WinHttp.WinHttpRequest.5.1')
-	; whr.Open('POST', 'http://localhost:3141/aa.htm?hsy=6&jss=6', 1)
-	; whr.SetRequestHeader('abcd', 'hello')
-	; whr.Send('abcdefghi')
-	; whr.WaitForResponse()
-	; MsgBoxAsGui(whr.GetAllResponseHeaders() '`n' whr.ResponseText)
+	headers := Map("Sec-Fetch-Site", "same-origin", "Sec-Fetch-Mode", "navigate", "Sec-Fetch-Dest", "document", "Sec-Fetch-Dest2", "document")
+	html := sendRequest(CCServer.serverURL, "POST",,,, headers)
+	html := sendRequest(CCServer.serverURL "/whoami", "GET")
+	MsgBoxAsGui(html)
+	whr := ComObject('WinHttp.WinHttpRequest.5.1')
+	whr.Open('POST', 'http://localhost:3141/aa.htm?hsy=6&jss=6', 1)
+	whr.SetRequestHeader('abcd', 'hello')
+	whr.Send('abcdefghi')
+	whr.WaitForResponse()
+	MsgBoxAsGui(whr.GetAllResponseHeaders() '`n' whr.ResponseText)
 }
