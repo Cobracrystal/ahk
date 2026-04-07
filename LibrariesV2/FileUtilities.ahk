@@ -90,7 +90,7 @@ getFileInfo(filePath, getMode := 0) {
 }
 
 
-removeDupes(folder1, folder2) {
+removeFileDuplicates(folder1, folder2) {
 	count := 0
 	if !InStr(folder1, ":") || !InStr(folder2, ":")
 		throw(Error("Must be absolute paths"))
@@ -107,39 +107,51 @@ removeDupes(folder1, folder2) {
 	return count
 }
 
-getFileDupes(recursive := true, caseSense := false, bySize := false, byName := true, byExt := true, grouped := true, folders*) {
+/**
+ * 
+ * @param folders Either one or an array of multiple folder paths
+ * @param {Integer} recursive 
+ * @param {Integer} caseSense 
+ * @param {Array} comparisonKeys Array of keys to compare by. Must be one of the following valid keys returned by getFileInfo:
+ * name, nameNoExt, ext, path, shortPath, shortName, dir, attrib, size, sizeKB, sizeMB, timeModified, timeCreated, timeAccessed
+ * All keys listed must be equal between two items for them to count as a duplicate
+ * @param {Integer} grouped 
+ * @param {(v) => void} transformer 
+ * @returns {Array} 
+ */
+getFileDuplicates(folders, comparisonKeys := ["name", "ext"], recursive := true, getFoldersOnly := false, caseSense := false, grouped := true, transformer := (v => v)) {
+	static validKeys := Map("name", 1, "nameNoExt", 1, "ext", 1, "path", 1, "shortPath", 1, "shortName", 1, "dir", 1, "attrib", 1, "size", 1, "sizeKB", 1, "sizeMB", 1, "timeModified", 1, "timeCreated", 1, "timeAccessed", 1)
 	fileList := []
-	mode := recursive ? 'FDR' : 'FD'
+	if folders is String
+		folders := [ folders ]
+	mode := (getFoldersOnly ? 'D' : 'F') . (recursive ? 'R' : '')
 	for folder in folders
-		fileList.push(getFolderAsArr(folder, , mode , 3)*)
-	switch {
-		case bySize && byName && byExt:
-			fn := (a => (a.size "|" a.name))
-		case bySize && byName && !byExt:
-			fn := (a => (a.size "|" a.nameNoExt))
-		case bySize && !byName && byExt:
-			fn := (a => (a.size . "|" a.ext))
-		case bySize && !byName && !byExt:
-			fn := (a => (a.size))
-		case !bySize && byName && byExt:
-			fn := (a => (a.name))
-		case !bySize && byName && !byExt:
-			fn := (a => (a.nameNoExt))
-		case !bySize && !byName && byExt:
-			fn := (a => (a.ext))
-		case !bySize && !byName && !byExt:
-			throw(ValueError("You must compare by something"))
+		fileList.push(getFolderAsArr(folder, , mode , 0)*)
+	for e in comparisonKeys {
+		if !validKeys.Has(e)
+			throw(ValueError("Invalid file property key specified: " e))
 	}
-	indices := objGetDuplicates(fileList, fn, caseSense, grouped)
+	fn := comparator.bind(objClone(comparisonKeys), transformer)
+	indices := objGetDuplicates(fileList, v => fn(v), caseSense, grouped)
 	dupes := []
 	for e in indices {
-		if grouped
+		if grouped {
+			item := []
 			for f in e
-				dupes.push(fileList[f])
+				item.push(fileList[f])
+			dupes.push(item)
+		}
 		else
 			dupes.push(fileList[e])
 	}
 	return dupes
+
+	comparator(keys, transformer, v) {
+		s := ""
+		for key in keys
+			s .= v.%key%
+		return s
+	}
 }
 
 getMetadataFolder(folder, metadata := []) {
@@ -357,6 +369,11 @@ class FGP {
 	}
 }
 
+
+isAbsolutePath(path) {
+	SplitPath(path, &name, &dir, &ext, &noExt, &drive)
+	return (drive != "")
+}
 
 /**
  * Given a path, removes any backtracking of paths through \..\ to create a unique absolute path.
