@@ -32,6 +32,7 @@ A_TrayMenu.Delete()
 #Include "FolderSwitch.ahk"
 #Include "AltDrag.ahk"
 #Include "MathUtilities.ahk"
+#Include "WinUtilities.ahk"
 #Include "BasicUtilities.ahk"
 #Include "HotstringLoader.ahk"
 #Include "TableFilter v2.ahk"
@@ -792,12 +793,6 @@ customExit(ExitReason, ExitCode) {
 }
 #HotIf
 
-#HotIf WinActive("Mozilla Firefox ahk_exe firefox.exe")
-^D:: {		; Firefox: Expand Tab Sidebar
-	ControlClick("X70 Y20", WinExist("Mozilla Firefox ahk_exe firefox.exe"), , , , "Pos NA")
-}
-#HotIf
-
 #HotIf WinActive("ahk_group zoomableWindows")
 ^+::WheelUp ; Zoomable: Zoom in
 ^-::WheelDown
@@ -812,10 +807,6 @@ customExit(ExitReason, ExitCode) {
 Up::Send("{WheelUp}") ; Image Eye: Scroll Up
 Down::Send("{WheelDown}") ; Image Eye: Scroll Down
 Del::Send("^x") ; Image Eye: Deöete
-#HotIf
-
-#HotIf WinActive("ahk_exe firefox.exe")
-^h::^+h ; Firefox: Ctrl H -> Ctrl Shift H
 #HotIf
 
 #HotIf WinActive("Minecraft ahk_exe javaw.exe")
@@ -1133,7 +1124,7 @@ WinSetVolume(level, target?) {
 #HotIf
 
 #HotIf WinActive("Revolution Idle")
-^q::{ ; Revo Idle: trash item under cursor
+^e::{ ; Revo Idle: trash item under cursor
 	MouseGetPos(&x, &y)
 	Send("{LButton Down}")
 	Sleep(30)
@@ -1241,11 +1232,11 @@ class RevoIdle {
 
 	static sacrificeUnderCursor() {
 		MouseGetPos(&x, &y)
-		MouseClick("Left",,,,,'D')
-		Sleep(300)
-		MouseMove(400, 700)
-		Sleep(300)
-		MouseClick("Left",,,,,'U')
+		Send("{LButton Down}")
+		Sleep(100)
+		MouseMove(680, 1000)
+		Sleep(100)
+		Send("{LButton Up}")
 		Sleep(100)
 		MouseMove(x, y)
 	}
@@ -1296,3 +1287,32 @@ class RevoIdle {
 	}
 }
 #HotIf 
+
+
+; ^r::{
+; 	try Run("steam://openurl/" . A_Clipboard)
+; }
+
+; ^e::{
+; 	static backupPath := "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine\projects\backup"
+; 	static defaultPath := "C:\Program Files (x86)\Steam\SteamApps\workshop\content\431960"
+; 	Send("{F6}")
+; 	Sleep(75)
+; 	Send("^c")
+; 	Sleep(75)
+; 	str := A_Clipboard
+; 	if !RegExMatch(str, "filedetails\/\?id=(\d+)", &o)
+; 		return
+; 	if DirExist(backupPath "\" o[1]) || DirExist(defaultPath "\" o[1])
+; 		MsgBoxAsGui("Already exists")
+; 	else
+; 		timedTooltip("Does not exist yet")
+; }
+#HotIf WinActive("Revolution Idle")
+^Insert::{	; Automatic Hotkey generated 06.04.2026, 17:05:30
+	MouseGetPos(&x, &y)	
+	MouseClick("L", 1500, 974)
+	Sleep(100)
+	MouseMove(x, y)
+}
+#HotIf
