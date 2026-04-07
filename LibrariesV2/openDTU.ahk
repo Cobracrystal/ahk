@@ -2,8 +2,8 @@
 #Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 
-; password := FileRead(A_Desktop "\programs\Files\openDTUAuth.pw")
-; onlineURL := FileRead(A_Desktop "\programs\Files\openDTUurl.dt")
+; password := FileRead(A_ScriptDir "\..\script_files\openDTU\openDTUAuth.pw")
+; onlineURL := FileRead(A_ScriptDir "\..\script_files\openDTU\openDTUurl.dt")
 
 
 ; openDTUman := openDTU("http://192.168.178.48", 80, "admin", password)
