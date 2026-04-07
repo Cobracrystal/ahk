@@ -7,8 +7,8 @@ mainfunc()
 
 ; this solves the numeric core puzzle in blue prince, by decoding words into numbers and solving the numeric core
 mainfunc() {
-	; basicCore := "HEAT"
-	; print(numericCore.solveCores(basicCore))
+	example := "86455"
+	print(numericCore.bestNumericCore(example))
 	; coatOfArms := [1000, 200, 11, 2]
 	; print(numericCore.numericCore(coatOfArms*))
 	bigPuzzle := "PIGS SAND MAIL DATE HEAD CLAM PEAK HEAT JOYA WELL TOAD CARD WILL TAPE LEGS TREE ROAD MAID SLAB ROCK HAND VASE SAFE CLAY TOES"
@@ -50,7 +50,7 @@ class numericCore {
 		if solutions.Length == 0
 			return 0
 		sortedSolutions := objSort(solutions, a => a[1], "N")
-		s := sortedSolutions[1].value
+		s := sortedSolutions[1]
 		if (s[1] >= 1000) {
 			ncr := this.bestNumericCore(s[1])
 			ncr.push(s*)
