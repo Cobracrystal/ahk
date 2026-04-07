@@ -4,7 +4,6 @@
 #Include "BasicUtilities.ahk"
 #Include "FileUtilities.ahk"
 #Include "TimeUtilities.ahk"
-#Include "YoutubeDLGuiv2.ahk"
 #Include "External\WebSocket.ahk"
 #Include "External\httpserver.ahk"
 #Include "External\jsongo.ahk"
@@ -12,12 +11,17 @@
 Persistent()
 SetWorkingDir(A_ScriptDir "\script_files\httpserver")
 
+; this requires administrator permissions unless you add it in netsh before:
+; netsh http add urlacl url=http://192.168.178.48:80/ user=Everyone
+CCServer.baseURLs.push('http://192.168.178.48')
 CCServer.Serve("3141")
 ; testRequest()
+; fuck off remoteaddress is still buggy
 
 class CCServer {
 	static __New() {
-		this.baseURL := "http://localhost"
+		this.baseURLs := [ "http://localhost" ]
+		this.serverURLs := []
 		this.catchAllURL := "http://+"
 		this.paths := Map(
 			"/", this.mainIndex.bind(this),
@@ -44,16 +48,22 @@ class CCServer {
 	 * NOTE: Cloudflare One allows overriding of http headers when routing requests through a tunnel, which, when set to localhost, will still be accepted without catchall
 	 */
 	static Serve(port, allIPs := false) {
-		this.publicIP := sendRequest("https://icanhazip.com") ; SEE NOTES AT BOTTOM OF SCRIPT
+		this.publicIP := sendRequest("https://icanhazip.com") ; could also be a selfrequest, but lazy
 		this.server := HttpServer()
 		if (allIPs && !A_IsAdmin) {
 			runAsAdmin()
 			ExitApp()
 		}
-		this.serverURL := (allIPs ? this.catchAllURL : this.baseURL) . ":" port
-
-		for vPath, handler in this.paths
-			this.server.Add(this.serverURL . vPath, handler)
+		if (allIPs) {
+			this.serverURLs := [this.catchAllURL]
+		} else {
+			for url in this.baseURLs
+				this.serverURLs.push( url ':' port)
+		}
+		for serverURL in this.serverURLs {
+			for vPath, handler in this.paths
+				this.server.Add(serverURL . vPath, handler)
+		}
 	}
 
 	static mainIndex(req, res) {
@@ -84,16 +94,16 @@ class CCServer {
 		this.logger(req)
 		queries := this.parseQueries(req)
 		ahp := "<html>`n<title>Still a query test.</title>`n<body>`n<b>[var]</b>`n</body>`n</html>"
-		answer := queries["num1"] + queries["num2"]
+		try answer := queries["num1"] + queries["num2"]
+		catch 
+			answer := "NaN"
 		serve := StrReplace(ahp, "[var]", queries["num1"] "+" queries["num2"] "=" answer)
-		res["Content-Type"] := 'text/html;charset=utf-8' ; unnecessary ? 
 		res(serve)
 	}
 
 	static solar(req, res) {
 		static target := "http://raspi.local:5000"
 		static URLOrigin := "/solar"
-		this.logger(req)
 		path := this.parsePath(req)
 		whr := ComObject("WinHttp.WinHttpRequest.5.1")
 		url := target . SubStr(path, StrLen(URLOrigin) + 1)
@@ -105,6 +115,7 @@ class CCServer {
 		res["Content-Type"] := contentType := whr.GetResponseHeader("Content-Type")
 		respText := whr.ResponseText
 		if (path == "/solar" || path == "/solar/") { ; its index.html
+			this.logger(req) ; don't log dataupdates
 			respText := StrReplace(respText, 'src="/static', 'src="/solar/static')
 			respText := StrReplace(respText, "fetch('/", "fetch('/solar/")
 		} 
@@ -127,12 +138,12 @@ class CCServer {
 	}
 
 	static mediocreCounter(req, res) {
-		static data := ""
+		static data
 		static URLorigin := "/counter/"
 		static cfile := A_WorkingDir . "\countingData.json"
 		
 		vpath := Substr(this.parsePath(req), StrLen(URLorigin))
-		if (data == "")
+		if (!IsSet(data))
 			data := jsongo.Parse(FileRead(cfile, "UTF-8"))
 		if (vpath == "/" || vPath == "") {
 			res(HttpServer.File(A_WorkingDir . "\meta\button.html"))
@@ -167,6 +178,7 @@ class CCServer {
 		}
 		outputF := A_WorkingDir . "\embedder\" . RegExReplace(probablyUrl, '[\?<>\/\\\*"|:]', "")
 		if (!FileExist(outputF . ".*")) {
+			; realistically, this should use the YoutubeDL class, but it should be adjusted to reflect changes from songdownloader (and separated out, so to avoid having to redo it, this serves as a good temporary permanent solution)
 			cmd := Format('{1} --ignore-config --limit-rate "5M" --no-playlist --no-overwrites --retries "0" --format "(bv+ba/b/bv*)[filesize<=?5MB]" --merge-output-format "mp4" -S "filesize:5M" --output "{}.%(ext)s" "{}"', ytdlPath, outputF, probablyUrl)
 			; if (InStr(probablyUrl, "twitter.com"))
 			; 	cmd = %ytdlPath% --ignore-config --limit-rate "5M" --no-playlist --no-overwrites --retries "0" --format "bv+ba/b" -S "height:480" --output "%outputF%.`%(ext)s" "%probablyUrl%"		
@@ -286,7 +298,7 @@ class CCServer {
 		)
 		res["Content-Type"] := 'text/plain;charset=utf-8'
 		res(str)
-		FileAppend(str, logFile, "UTF-8")
+		FileAppend(str . "`n", logFile, "UTF-8")
 	}
 
 	static favicon(req, res) {
@@ -319,7 +331,7 @@ class CCServer {
 			req.Verb . (req.Verb != "GET" ? "(Body: " StrGet(req.Body, "UTF-8") ")" : "")
 		)
 		str .= "`n"
-		FileAppend(str, logFile, "UTF-8")
+		try FileAppend(str, logFile, "UTF-8")
 	}
 
 	static parsePath(req) {
@@ -343,7 +355,7 @@ class CCServer {
 	}
 }
 
-; how to send compressed data:
+; how to send compressed data: (except this doesn't work, since the compress class fucks up zstd implementation)
 ; encoding := req.Headers.Get('Accept-Encoding', '')
 ; if InStr(encoding, e := 'zstd') || InStr(encoding, e := 'gzip') {
 ; 	; send utf-8 html with zstd/gzip compress
@@ -354,8 +366,8 @@ class CCServer {
 
 testRequest() {
 	headers := Map("Sec-Fetch-Site", "same-origin", "Sec-Fetch-Mode", "navigate", "Sec-Fetch-Dest", "document", "Sec-Fetch-Dest2", "document")
-	html := sendRequest(CCServer.serverURL, "POST",,,, headers)
-	html := sendRequest(CCServer.serverURL "/whoami", "GET")
+	html := sendRequest(CCServer.serverURLs, "POST",,,, headers)
+	html := sendRequest(CCServer.serverURLs "/whoami", "GET")
 	MsgBoxAsGui(html)
 	whr := ComObject('WinHttp.WinHttpRequest.5.1')
 	whr.Open('POST', 'http://localhost:3141/aa.htm?hsy=6&jss=6', 1)
