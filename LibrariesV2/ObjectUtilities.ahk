@@ -107,9 +107,8 @@ objClone(obj) {
 		copy := obj.clone()
 		encountered[ptr] := copy
 		for i, e in objGetEnumerator(obj)
-			for i, e in obj
-				if IsObject(e)
-					isArrLike ? copy[i] := _clone(e) : copy.%i% := _clone(e)
+			if IsObject(e)
+				isArrLike ? copy[i] := _clone(e) : copy.%i% := _clone(e)
 		return copy
 	}
 }

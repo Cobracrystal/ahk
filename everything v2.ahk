@@ -285,7 +285,14 @@ Alt & Capslock::{	; Switch to specified window
 	if (tileState := !tileState) {
 		WindowManager.DesktopState.save("TilingState")
 		shell := ComObject("Shell.Application")
-		switch MsgBoxAsGui("Tile Windows?", "Confirm Dialog", 0x7, 4, true,,,, ["Vertically", "Horizontally", "Cascade", "No"]) {
+		switch MsgBoxAsGui.fromConfig({
+			text: "Tile Windows?", 
+			title: "Confirm Dialog", 
+			buttonStyle: 0x7, 
+			defaultButton: 4, 
+			wait: true, 
+			buttonNames: ["Vertically", "Horizontally", "Cascade", "No"]
+		}) {
 			case "Vertically":
 				list := WinUtilities.getAllWindowInfo()
 				objRemoveValue(list,,,(key,a) => (WinGetMinMax(a) == -1))
@@ -306,7 +313,9 @@ Alt & Capslock::{	; Switch to specified window
 				return
 		}
 	}
-	else if MsgBoxAsGui("Restore Previous State?", "Confirm Dialog", 0x1,,true) == "OK"
+	else if MsgBoxAsGui.fromConfig({
+		text: "Restore Previous State?", title: "Confirm Dialog", buttonStyle: 0x1, wait: true
+	}) == "OK"
 		WindowManager.DesktopState.restore("TilingState")
 }
 
@@ -451,7 +460,12 @@ clipCursor(mode := true, window := "A") {
 
 customFunc1337Reminder(*) {
 	SoundPlay("*48")
-	MsgBoxAsGui("Copy 1337 in clipboard and activate discord?", "1337", 0x1, , , f)
+	MsgBoxAsGui.fromConfig({
+		text: "Copy 1337 in clipboard and activate discord?",
+		title: "1337",
+		buttonStyle: 0x1,
+		funcObj: f
+	})
 	
 	f(r) {
 		if r == "Cancel" || !WinExist("Discord")

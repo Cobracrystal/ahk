@@ -499,7 +499,44 @@ class MsgBoxAsGui {
 	
 	static INSTANCES := Map()
 
-	__New(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := 0, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {	
+	/**
+	 * Launches a MsgBox from a config object
+	 * @param {Object} config May contain any of the following keys. 
+	 * 
+	 * 	text: "Press OK to continue",
+	 * 	title: A_ScriptName,
+	 * 	buttonStyle: 0,
+	 * 	defaultButton: 1,
+	 * 	wait: false,
+	 * 	funcObj: unset,
+	 * 	owner: unset,
+	 * 	addCopyButton: false,
+	 * 	buttonNames: [],
+	 * 	icon: unset,
+	 * 	timeout: unset,
+	 * 	maxCharsVisible: unset,
+	 * 	maxTextWidth: unset
+	 * @returns {Object} 
+	 */
+	static fromConfig(config) {
+		return this(
+			config.HasOwnProp("text") ? config.text : unset,
+			config.HasOwnProp("title") ? config.title : unset,
+			config.HasOwnProp("buttonStyle") ? config.buttonStyle : unset,
+			config.HasOwnProp("defaultButton") ? config.defaultButton : unset,
+			config.HasOwnProp("wait") ? config.wait : unset,
+			config.HasOwnProp("funcObj") ? config.funcObj : unset,
+			config.HasOwnProp("owner") ? config.owner : unset,
+			config.HasOwnProp("addCopyButton") ? config.addCopyButton : unset,
+			config.HasOwnProp("buttonNames") ? config.buttonNames : unset,
+			config.HasOwnProp("icon") ? config.icon : unset,
+			config.HasOwnProp("timeout") ? config.timeout : unset,
+			config.HasOwnProp("maxCharsVisible") ? config.maxCharsVisible : unset,
+			config.HasOwnProp("maxTextWidth") ? config.maxTextWidth : unset
+		)
+	}
+
+	__New(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := false, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {
 		if MsgBoxAsGui.BUTTON_STYLE_ALIASES.Has(buttonStyle)
 			buttonStyle := MsgBoxAsGui.BUTTON_STYLE_ALIASES[buttonStyle]
 		if (buttonNames.Length == 0) {
@@ -512,8 +549,7 @@ class MsgBoxAsGui {
 		this.retValue := ""
 		this.text := text
 		this.funcObj := funcObj ?? 0
-		this.owner := owner ?? 0
-		this.timeout := timeout ?? 0
+		this.timeout := timeout ?? -1
 		totalButtonWidth := MsgBoxAsGui.buttonSpace * (this.buttonNames.Length + (addCopyButton ? 1 : 0))
 		ownerStr := IsSet(owner) ? "+Owner" owner : ''
 		this.guiFontOptions := MsgBoxAsGui.MB_HASFONTINFORMATION ? "S" MsgBoxAsGui.MB_FONTSIZE " W" MsgBoxAsGui.MB_FONTWEIGHT (MsgBoxAsGui.MB_FONTISITALIC ? " italic" : "") : ""
@@ -650,6 +686,50 @@ class MsgBoxAsGui {
 			"-E0x200 ReadOnly w{} h{}", this.guiWidth, this.whiteBoxHeight
 		), this.text)
 		miniGui.show()
+	}
+
+	; necessary override since default .Bind requires this to be passed as a parameter
+	static Bind(params*) {
+		return ObjBindMethod(this,, params*)
+	}
+
+	; creates a bound func object with the given config applied.
+	; can be cal
+	/**
+	 * Creates a Bound Func with the given config bound. Can be called only with another optional config, which causes it to call this() with the bound config supplemented by the given config.
+	 * If the new config supplied on call contains values already defined in the bound config, the new config values are taken.
+	 * @param config 
+	 * @returns {BoundFunc} 
+	 */
+	static BindMergableConfig(config) {
+		return fn.bind(objClone(config))
+
+		fn(oldConfig, newConfig?) {
+			if IsSet(newConfig) {
+				for name, value in newConfig.OwnProps()
+					oldConfig.%name% := value
+			}
+			return MsgBoxAsGui.fromConfig(oldConfig)
+		}
+	}
+
+	static BindConfig(config) {
+		return ObjBindMethod(
+			this, , 
+			config.HasOwnProp("text") ? config.text : unset,
+			config.HasOwnProp("title") ? config.title : unset,
+			config.HasOwnProp("buttonStyle") ? config.buttonStyle : unset,
+			config.HasOwnProp("defaultButton") ? config.defaultButton : unset,
+			config.HasOwnProp("wait") ? config.wait : unset,
+			config.HasOwnProp("funcObj") ? config.funcObj : unset,
+			config.HasOwnProp("owner") ? config.owner : unset,
+			config.HasOwnProp("addCopyButton") ? config.addCopyButton : unset,
+			config.HasOwnProp("buttonNames") ? config.buttonNames : unset,
+			config.HasOwnProp("icon") ? config.icon : unset,
+			config.HasOwnProp("timeout") ? config.timeout : unset,
+			config.HasOwnProp("maxCharsVisible") ? config.maxCharsVisible : unset,
+			config.HasOwnProp("maxTextWidth") ? config.maxTextWidth : unset
+		)
 	}
 
 	
@@ -890,7 +970,10 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		FileAppend(value . finalChar, "*", options ?? "UTF-8")
 	catch Error 
 		if fallbackMsgbox
-			MsgBoxAsGui(value,,,,,,,1)
+			MsgBoxAsGui.fromConfig({
+				text: value,
+				addCopyButton: true
+			})
 	return value
 }
 

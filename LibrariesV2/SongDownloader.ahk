@@ -73,15 +73,28 @@ class SongDownloader {
 				else
 					Run(A_LineFile)
 			} catch { ; something wack is happening
-				MsgBoxAsGui("Invalid JSON/Download: " str,,,,,,,,,,,1000)
+				MsgBoxAsGui.fromConfig({
+					text: "Invalid JSON/Download: " str,
+					maxCharsVisible: 1000
+				})
 			}
 		} else if FileExist(str) || (RegExMatch(str, '^(?:filelist:)?(")?(\w:\\.*?)\1?$', &o) && FileExist(o[2])) {
 			this.editMetadataWithGui(IsSet(o) ? o[2] : str)
 		} else if ((count := strCountStr(str, "`n")) > 1) { ; assume its multiple songs, so retrieve metadata
-			if !(MsgBoxAsGui("You are about to download metadata for " count " Links/Searches. Continue?",,'YNC',2,true) == 'Yes')
+			if !(MsgBoxAsGui.fromConfig({
+				text: "You are about to download metadata for " count " Links/Searches. Continue?", 
+				buttonStyle: 'YNC', defaultButton: 2, wait: true
+			}))
 				return
-			if (A_LineFile == A_ScriptFullPath)
-				this.getMetadataFromLinks(str, MsgBoxAsGui.bind(, "Metadata",,0,,,,1,,"i",,1000))
+			if (A_LineFile == A_ScriptFullPath) {
+				this.getMetadataFromLinks(str, MsgBoxAsGui.BindConfig({
+					title: "Metadata",
+					defaultButton: 0,
+					addCopyButton: true,
+					icon: "i",
+					maxCharsVisible: 1000
+				}))
+			}
 			else
 				Run(A_LineFile)
 		} else {
@@ -326,7 +339,11 @@ class SongDownloader {
 		}
 		if receivedBadInfo.Length > 0 {
 			str := objCollectString(receivedBadInfo, '`n')
-			MsgBoxAsGui("Received issues while parsing Metadata. Received`n`n" str,,,,,,,1,,,,2000)
+			MsgBoxAsGui.fromConfig({
+				text: "Received issues while parsing Metadata. Received`n`n" str,
+				addCopyButton: true,
+				maxCharsVisible: 2000
+			})
 		}
 		if (metaData.Length == 1)
 			metaData := metaData[1]
@@ -356,11 +373,16 @@ class SongDownloader {
 		g.AddButton("xs+151 yp-1 vSwapButton w100", "Swap Title - Artist").OnEvent("Click", guiHandler)
 		g.AddEdit("xs w250 vArtist", metadataVar.artist).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Album")
-		g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(data.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
+		g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui.fromConfig({
+			text: data.description, title: "Video Description", defaultButton: 0, owner: g.hwnd, addCopyButton: 1, maxTextWidth: 1200
+		}))
 		g.AddEdit("xs w250 vAlbum", metadataVar.album).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Genre")
-		if data.HasOwnProp("shortJson")
-			g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui(toString(data.shortJson,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
+		if data.HasOwnProp("shortJson") {
+			g.AddButton("xs+151 yp-1 w100", "Show Full Json").OnEvent("Click", (*) => MsgBoxAsGui.fromConfig({
+				text: data.shortJson, title: "JSON", defaultButton: 0, owner: g.hwnd, addCopyButton: 1, maxCharsVisible: 800, maxTextWidth: 1200
+			}))
+		}
 		g.AddEdit("xs w250 vGenre", metadataVar.genre).OnEvent("Change", guiHandler)
 		g["Title"].Focus()
 		g.AddCheckbox("xs vEmbedThumbnail Checked" this.settings.ytdl.embedThumbnail, "Embed Thumbnail").OnEvent("Click", guiHandler)
@@ -502,8 +524,11 @@ class SongDownloader {
 		g.AddButton("xs+151 yp-1 w100 vSwapButton", "Swap Title - Artist").OnEvent("Click", guiHandler)
 		g.AddEdit("xs w250 vArtist", metadata.artist).OnEvent("Change", guiHandler)
 		g.AddText("0x200 R1.45", "Album")
-		if metadata.HasOwnProp("description")
-			g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui(metadata.description, "Video Description",,0,,,g.hwnd,1,,,,,1200))
+		if metadata.HasOwnProp("description") {
+			g.AddButton("xs+151 yp-1 w100", "Show Description").OnEvent("Click", (*) => MsgBoxAsGui.fromConfig({
+				text: metadata.description, title: "Video Description", defaultButton: 0, owner: g.hwnd, addCopyButton: 1, maxTextWidth: 1200
+			}))
+		}
 		g.AddEdit("xs w250 vAlbum", metadata.album).OnEvent("Change", guiHandler)
 		g.AddText("", "Genre")
 		g.AddEdit("xs w250 vGenre", metadata.genre).OnEvent("Change", guiHandler)
@@ -570,7 +595,7 @@ class SongDownloader {
 		finishEdit(output, success := 0) {
 			fullOutput := ""
 			if success == -1 || InStr(output, "Error") {
-				MsgBoxAsGui("ERROR:`n" output,,,,,,,1)
+				MsgBoxAsGui.fromConfig({text: "ERROR:`n" output, addCopyButton: 1})
 				return
 			} else if (FileExist(targetFilePath)) {
 				if (flagSameFileName)
@@ -620,7 +645,9 @@ class SongDownloader {
 		g.AddEdit("xs+110 ys R1 w30 vThumbID", thumb.id).OnEvent("Change", changeThumbId)
 		g.AddText("xs+150 w150 0x200 R1.45 ys vThumbInfo", flagHasSize ? "Dimensions: " thumb.width " x " thumb.height : "Unknown Dimensions")
 		g.AddText("xs+310 w150 0x200 R1.45 ys vThumbInfo2", "")
-		g.AddButton(Format("xs+{} ys-1 w130", width-129), "View Thumbnails Json").OnEvent("Click", (*) => MsgBoxAsGui(toString(metadata.thumbnails,0,0,1), "JSON",,0,,,g.hwnd,1,,,,800, 1200))
+		g.AddButton(Format("xs+{} ys-1 w130", width-129), "View Thumbnails Json").OnEvent("Click", (*) => MsgBoxAsGui.fromConfig({
+			text: metadata.thumbnails, titel: "JSON", defaultButton: 0, owner: g.hwnd, addCopyButton: 1, maxCharsVisible: 800, maxTextWidth: 1200
+		}))
 		g.AddEdit(Format("xs w{} R1 vFile", width), thumb.url)
 		WBObj := g.AddActiveX(Format("xs w{} h{} vThumb", width, height), "Shell.Explorer2").Value ; Explorer2 because persistently vanishing scrollbars.
 		WBObj.Silent := true
@@ -655,9 +682,20 @@ class SongDownloader {
 	}
 
 	static onFinishMsgBox(logID, errorNotify := false, info := "") {
-		if errorNotify
-			return MsgBoxAsGui("Got Error in Downloads:`n" info, "Done",,,,doneHandler,,,["OK", "Open Folder", "Open Log", "Open Both"])
-		return MsgBoxAsGui("Finished Download. Ongoing Operations: " this.data.ongoingOperations, "Finished",,,,doneHandler,,,["OK", "Open Folder", "Open Log", "Open Both"])
+		if errorNotify {
+			return MsgBoxAsGui.fromConfig({
+				text: "Got Error in Downloads:`n" info, 
+				title: "Done",
+				funcObj: doneHandler, 
+				buttonNames: ["OK", "Open Folder", "Open Log", "Open Both"]
+			})
+		}
+		return MsgBoxAsGui.fromConfig({
+			text: "Finished Download. Ongoing Operations: " this.data.ongoingOperations, 
+			title: "Finished",
+			funcObj: doneHandler,
+			buttonNames: ["OK", "Open Folder", "Open Log", "Open Both"]
+		})
 		
 		doneHandler(ret) {
 			flagFolder := (ret == "Open Folder" || ret == "Open Both")
@@ -1053,7 +1091,9 @@ class SongDownloader {
 		}
 
 		askPermissionMsgbox(str, btns) {
-			return MsgBoxAsGui(str, "Confirm",,,true,,,,btns)
+			return MsgBoxAsGui.fromConfig({
+				text: str, title: "Confirm", wait: true, buttonNames: btns 
+			})
 		}
 	}
 
@@ -1103,7 +1143,9 @@ class SongDownloader {
 		}
 
 		askPermissionMsgbox(str, btns) {
-			return MsgBoxAsGui(str, "Confirm",,,true,,,,btns)
+			return MsgBoxAsGui.fromConfig({
+				text: str, title: "Confirm", wait: true, buttonNames: btns 
+			})
 		}
 	}
 
@@ -1123,7 +1165,9 @@ class SongDownloader {
 					StrLenUTF8(oldJson), strCountStr(oldJson, "`n") + 1, strCountStr(oldJson, '"title":'), 
 					StrLenUTF8(json), strCountStr(json, "`n") + 1, folderMetadata.Length
 				)
-				res := MsgBoxAsGui(text, "Confirm", 0x1,, true,,,,["Overwrite", "Rename", "Cancel"])
+				res := MsgBoxAsGui.fromConfig({
+					text: text, title: "Confirm", buttonStyle: 0x1, wait: true, buttonNames: ["Overwrite", "Rename", "Cancel"] 
+				})
 				if res == "Cancel"
 					return
 				if res == "Rename" {
@@ -1177,7 +1221,10 @@ class SongDownloader {
 			}
 			for e in comparisons {
 				print(e,,,0)
-				; res := MsgBoxAsGui("Choose Metadata that is embedded in the File or the one defined in the json?",,,,1,,,,["File", "JSON"])
+				; res := MsgBoxAsGui.fromConfig({
+				; 	text: "Choose Metadata that is embedded in the File or the one defined in the json?",
+				; 	wait: true, buttonNames: ["File", "JSON"]
+				; })
 				; if (res == "JSON") {
 				; 	SongDownloader.writeMetadataToFile(folder, SongDownloader.settings.outputBaseFolder "\" folder "\" e.filename ".mp3", e.index)
 				; } else if res == "File" {

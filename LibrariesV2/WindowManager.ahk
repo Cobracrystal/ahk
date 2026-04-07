@@ -440,7 +440,7 @@ class WindowManager {
 			"Toggle Visibility", 	wHandle => WinGetStyle(wHandle) & WinUtilities.STYLES.VISIBLE ? WinHide(wHandle) : WinShow(wHandle),
 			"Show Window", 			WinShow,
 			"Hide Window", 			WinHide,
-			"View Command Line", 	wHandle => MsgBoxAsGui(WinUtilities.winmgmt("CommandLine", "Where ProcessId = " . WinGetPID(wHandle))[1],,,,,,this.gui.hwnd,1),
+			"View Command Line", 	wHandle => MsgBoxAsGui.fromConfig({ text: WinUtilities.winmgmt("CommandLine", "Where ProcessId = " . WinGetPID(wHandle))[1], owner: this.gui.hwnd, addCopyButton: 1}),
 			"View Properties", 		wHandle => Run('properties "' WinGetProcessPath(wHandle) '"'),
 			"View Program Folder", 	wHandle => Run('explorer.exe /select,"' . WinGetProcessPath(wHandle) . '"')
 		)
@@ -478,7 +478,9 @@ class WindowManager {
 							text .= "--- " ControlGetClassNN(ctrlHwnd) " ---: " ControlGetText(ctrlHwnd) "`n"
 					}
 				}
-				MsgBoxAsGui(text,,,0,,,this.gui.hwnd,true)
+				MsgBoxAsGui.fromConfig({
+					text: text, defaultButton: 0, owner: this.gui.hwnd, addCopyButton: true
+				})
 			case "Change Window Transparency":
 				this.transparencyGUI(wHandles)
 			; this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
@@ -620,7 +622,15 @@ class WindowManager {
 		; 	""
 		; ]
 		resetSettings(*) {
-			if (MsgBoxAsGui("Are you sure? This will reset all settings to their default values.", "Reset Settings", 0x1, 2, true,, sGui.Hwnd) == "Cancel")
+			res := MsgBoxAsGui.fromConfig({
+				text: "Are you sure? This will reset all settings to their default values.", 
+				title: "Reset Settings", 
+				buttonStyle: 0x1, 
+				defaultButton: 2, 
+				wait: true,
+				owner: sGui.Hwnd
+			})
+			if (res == "Cancel")
 				return
 			useConfig := this.config.useConfig
 			this.config := this.defaultConfig
