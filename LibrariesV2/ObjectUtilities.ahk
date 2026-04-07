@@ -1260,7 +1260,6 @@ mapFlip(mapObject) {
  */
 MapToObj(obj, recursive := true) {
 	flagIsArray := obj is Array
-	flagIsMapArray := flagIsArray || obj is Map
 	if (!(obj is Object))
 		return obj
 	objOutput := flagIsArray ? Array() : {}
@@ -1281,16 +1280,54 @@ MapToObj(obj, recursive := true) {
  * @param {Integer} recursive 
  * @returns {Object | Map | Array} 
  */
-objToMap(obj, recursive := true) {
+objToMap(obj, recursive := true, autoConvertIntegerKeys := false) {
 	if (!IsObject(obj))
 		return obj
 	flagisArr := obj is Array
 	clone := flagisArr ? [] : Map()
 	if (flagisArr)
 		clone.Capacity := obj.Length, clone.Length := obj.Length
-	for i, e in objGetEnumerator(obj)
-		clone[i] := (recursive ? objToMap(e, true) : e)
+	for i, e in objGetEnumerator(obj) {
+		key := autoConvertIntegerKeys && IsInteger(i) ? Integer(i) : i
+		clone[key] := (recursive ? objToMap(e, true) : e)
+	}
 	return clone
+}
+
+/**
+ * Given an Object base and an object objToSync, where objBase contains ALL properties of objtosync but contains misaligned types, aligns the types.
+ * @param objBase 
+ * @param objToSync 
+ * @example 
+ * objBase := { property: [5,2,3,2], property2: Map(1, "hi", 2, { nested: 3})}
+ * objToSync := Map( "property", ["x"], "property2", {2: {}})
+ * objSyncObjectTypes(objBase, objToSync) => { property: ["x"], property2: Map(2, {})}
+ */
+objSyncObjectTypes(objBase, objToSync) {
+	if (Type(objBase) == "Map") {
+		if (Type(objToSync) == "Object") {
+			objToSync := objToMap(objToSync, false)
+			queue := []
+			for i, e in objToSync { ; convert integer keys. 
+				if !objBase.Has(i) && IsInteger(i) && objBase.Has(Integer(i))
+					queue.push(i)
+			}
+			for e in queue
+				objToSync[Integer(e)] := objToSync.Delete(e)
+		}
+		for i, e in objToSync {
+			if Type(e) == "Map" || Type(e) == "Array" || Type(e) == "Object"
+				objToSync[i] := objSyncObjectTypes(objBase[i], e)
+		}
+	} else if (Type(objBase) == "Object") {
+		if (Type(objToSync) == "Map")
+			objToSync := MapToObj(objToSync, false)
+		for i, e in objToSync.OwnProps() {
+			if Type(e) == "Map" || Type(e) == "Array" || Type(e) == "Object"
+				objToSync.%i% := objSyncObjectTypes(objBase.%i%, e)
+		}
+	}
+	return objToSync
 }
 
 objToArrays(obj) => mapToArrays(objToMap(obj, false))
