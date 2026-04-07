@@ -38,6 +38,8 @@ BackSpace::Space
 }
 
 ~LButton::{ ; sometimes adds clicks to doubleclicks
+	if doEvilStuff(5)
+		MouseMove(Random(-10,10), Random(-10,10),,"R")
 	Sleep(25)
 	Click()
 }
@@ -46,7 +48,7 @@ BackSpace::Space
 	SetTimer(toggleCapsLock, -5000)
 }
 
-^V::Clipboard := ""
+^V::A_Clipboard := ""
 
 shiftdown() { 
 	Send("{Shift down}") 
