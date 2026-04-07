@@ -58,7 +58,8 @@ class SongDownloader {
 		this.data := {
 			coords: {x: 750, y: 425},
 			currentOutputSubFolder: this.settings.outputSubFolder,
-			lastSongMetadata: {}
+			lastSongMetadata: {},
+			ongoingOperations: 0
 		}
 	}
 
@@ -90,6 +91,7 @@ class SongDownloader {
 
 	static downloadSongWithGui(songLink) {
 		ToolTip("Loading Metadata...")
+		this.data.ongoingOperations += 1
 		this.getRawMetadataFromLinks(songLink, callback, false, false)
 		
 		callback(rawDataString) {
@@ -97,6 +99,7 @@ class SongDownloader {
 			ToolTip()
 			if !metaData || !objGetValueCount(metadata)
 				return 0
+		this.data.ongoingOperations -= 1
 			this.songDLGui(metaData)
 		}
 	}
@@ -183,6 +186,7 @@ class SongDownloader {
 
 		asyncQueueJson(index, output?, success := 0) {
 			if IsSet(output) {
+				this.data.ongoingOperations -= 1
 				this.logAction(output, outputFolder, index == data.Length)
 				ToolTip(Format("[~{}/{}] {}", index, data.Length, Trim(SubStr(output, InStr(output, "|")+1))), -1920, 0)
 			}
@@ -196,7 +200,7 @@ class SongDownloader {
 			profile := this.PROFILE_MUSIC[
 				this.PROFILE_PARSE_METADATA[dataPoint], 
 				this.getOutputPatternFromMetadata(dataPoint), 
-				outputFolder, 
+				isAbsolutePath(outputFolder) ? outputFolder : this.settings.outputBaseFolder "\" outputFolder, 
 				this.settings.ytdl.useCookies, 
 				this.settings.ytdl.skipNonMusic,
 				this.settings.ytdl.embedThumbnail, 
@@ -209,6 +213,7 @@ class SongDownloader {
 				Run("wt cmd " (this.settings.debug ? "/k" : "/c") " chcp 65001 && title SongDownloader && echo " fullCommand " && " fullCommand)
 				return asyncQueueJson(index)
 			}
+			this.data.ongoingOperations += 1
 			CmdStdOutAsync(fullCommand, "UTF-8",,, asyncQueueJson.bind(index))
 		}
 	}
@@ -370,7 +375,7 @@ class SongDownloader {
 		profile := this.PROFILE_MUSIC[
 			this.PROFILE_PARSE_METADATA[data],
 			this.getOutputPatternFromMetadata(data),
-			outputFolder,
+			isAbsolutePath(outputFolder) ? outputFolder : this.settings.outputBaseFolder "\" outputFolder,
 			this.settings.ytdl.useCookies,
 			this.settings.ytdl.skipNonMusic,
 			this.settings.ytdl.embedThumbnail,
@@ -443,7 +448,7 @@ class SongDownloader {
 			profile := this.PROFILE_MUSIC[
 				this.PROFILE_PARSE_METADATA[songData],
 				this.getOutputPatternFromMetadata(songData, gData.OmitArtistName, &wasIrregular),
-				gData.OutputFolder,
+				isAbsolutePath(gData.OutputFolder) ? gData.OutputFolder : this.settings.outputBaseFolder "\" gData.OutputFolder,
 				gData.UseCookies,
 				gData.SkipNonMusic,
 				gData.embedThumbnail,
@@ -461,6 +466,7 @@ class SongDownloader {
 			fullCommand := this.cmdStringBuilder(this.settings.ytdlPath, profile, false, songData.link)
 			if (this.settings.debug)
 				print(fullCommand)
+			this.data.ongoingOperations += 1
 			if (gData.useVisibleCMD) {
 				fullCommand := StrReplace(fullCommand, '--no-warnings --print "after_move:%(filepath)s | %(original_url)s"')
 				Run("wt cmd " (this.settings.debug ? "/k" : "/c") " chcp 65001 && title SongDownloader && echo " fullCommand " && " fullCommand)
@@ -469,6 +475,7 @@ class SongDownloader {
 				CmdStdOutAsync(fullCommand, "UTF-8",,, doneHandler)
 
 			doneHandler(output, success := 0) {
+				this.data.ongoingOperations -= 1
 				this.logAction(output, gData.OutputFolder)
 				if RegExMatch(output, "^\[*error")
 					this.onFinishMsgBox(gData.OutputFolder, 1)
@@ -650,7 +657,7 @@ class SongDownloader {
 	static onFinishMsgBox(logID, errorNotify := false, info := "") {
 		if errorNotify
 			return MsgBoxAsGui("Got Error in Downloads:`n" info, "Done",,,,doneHandler,,,["OK", "Open Folder", "Open Log", "Open Both"])
-		return MsgBoxAsGui("Finished All Downloads", "Finished",,,,doneHandler,,,["OK", "Open Folder", "Open Log", "Open Both"])
+		return MsgBoxAsGui("Finished Download. Ongoing Operations: " this.data.ongoingOperations, "Finished",,,,doneHandler,,,["OK", "Open Folder", "Open Log", "Open Both"])
 		
 		doneHandler(ret) {
 			flagFolder := (ret == "Open Folder" || ret == "Open Both")
@@ -675,12 +682,17 @@ class SongDownloader {
 		return Trim(str)
 	}
 
+	static getYTVideoID(input) {
+		if (RegExMatch(input, "youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})", &o)
+			|| RegExMatch(input, "youtu\.be/([A-Za-z0-9_-]{11})", &o)
+			|| RegExMatch(input, "^[A-Za-z0-9_-]{11}$", &o))
+			return o[1]
+		return 0
+	}
+
 	static constructLink(input) {
-		input := RegExReplace(input, "music\.youtube", "youtube")
-		if (RegExMatch(input, "youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})", &o))
-			input := "https://www.youtube.com/watch?v=" . o[1]
-		else if (RegExMatch(input, "^[A-Za-z0-9_-]{11}$"))
-			input := "https://www.youtube.com/watch?v=" . input
+		if (id := this.getYTVideoID(input))
+			input := "https://www.youtube.com/watch?v=" . id
 		return Trim(input)
 	}
 
@@ -714,6 +726,32 @@ class SongDownloader {
 		filename := strReplaceIllegalChars(filename, &count)
 		wasIrregular := (count > 0 || omitArtistName)
 		return filename
+	}
+
+
+	static getDefaultSettings() {
+		return {
+			debug: false,
+			simulate: false,
+			useAliases: true,
+			useVisibleCMD: false,
+			currentIterator: 76,
+			outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
+			outputSubFolder: "",
+			logMetadata: true,
+			logFolder: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\Logs"),
+			ffmpegPath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffmpeg.exe"),
+			ffprobePath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffprobe.exe"),
+			ytdlPath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
+			metadataFields: ["title", "artist", "album", "genre"],
+			ytdl: {
+				useCookies: true,
+				browserCookies: "firefox",
+				embedThumbnail: true,
+				cropThumbnailToSquare: true,
+				skipNonMusic: false
+			}
+		}
 	}
 
 	static toggleProfile(profile, profileToToggle) {
@@ -807,7 +845,7 @@ class SongDownloader {
 		{ option: this.ffprobeoptions.show_entries, param: "format_tags"},
 	]
 
-	static PROFILE_MUSIC[PROFILE_PARSE_METADATA, outputTemplate, outputSubFolder, withCookies, skipNonMusic, embedThumbnail, cropThumbnailToSquare] {
+	static PROFILE_MUSIC[PROFILE_PARSE_METADATA, outputTemplate, outputFolderPath, withCookies, skipNonMusic, embedThumbnail, cropThumbnailToSquare] {
 		get {
 			profile := [
 				{ option: this.ytdloptions.ignore_config },
@@ -820,7 +858,7 @@ class SongDownloader {
 				{ option: this.ytdloptions.print, param: "after_move:%(filepath)s | %(original_url)s" },
 				{ option: this.ytdloptions.output, param: outputTemplate},
 				{ option: this.ytdloptions.paths, param: "temp:" A_AppData "\yt-dlp\temp"},
-				{ option: this.ytdloptions.paths, param: this.settings.outputBaseFolder "\" outputSubFolder},
+				{ option: this.ytdloptions.paths, param:outputFolderPath},
 				{ option: this.ytdloptions.format, param: "bestaudio/best" },
 				{ option: this.ytdloptions.ffmpeg_location, param: this.settings.ffmpegPath },
 				{ option: this.ytdloptions.ffmpeg_location, param: this.settings.ffProbePath }, ; technically unnecessary since it searches in the same folder but who cares
@@ -952,6 +990,8 @@ class SongDownloader {
 	}
 
 	static logAction(str, logID, addSeparator := true) {
+		if isAbsolutePath(logID)
+			SplitPath(logID,,,,&logID)
 		path := Format(this.settings.logFolder "\" this.TEMPLATES.LOGFILE, logID)
 		fullStr := Format("[{}] {}`n", FormatTime(A_Now, "dd.MM.yyyy, ~HH:mm:ss"), Trim(str, " `t`r`n"))
 		if addSeparator
@@ -962,6 +1002,8 @@ class SongDownloader {
 	}
 
 	static logMetadata(metadata, action, logID) {
+		if isAbsolutePath(logID)
+			SplitPath(logID,,,,&logID)
 		metadatapath := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILE, logID)
 		switch action {
 			case 0, "add":
