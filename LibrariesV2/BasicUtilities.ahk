@@ -443,7 +443,8 @@ timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 ; 	*/
 ; }
 
-MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := 0, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {
+class MsgBoxAsGui {
+
 	; button choices
 	static MB_BUTTON_TEXT := [
 		["OK"],
@@ -462,10 +463,10 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 		"i", 0x4D, "MB_ICONASTERISKINFO", 0x4D
 	)
 	static ICON_SOUNDS := Map(
-		DEFAULT_ICONS["MB_ICONHANDERROR"], "*16",
-		DEFAULT_ICONS["MB_ICONQUESTION"], "*32",
-		DEFAULT_ICONS["MB_ICONEXCLAMATION"], "*48",
-		DEFAULT_ICONS["MB_ICONASTERISKINFO"], "*64"
+		this.DEFAULT_ICONS["MB_ICONHANDERROR"], "*16",
+		this.DEFAULT_ICONS["MB_ICONQUESTION"], "*32",
+		this.DEFAULT_ICONS["MB_ICONEXCLAMATION"], "*48",
+		this.DEFAULT_ICONS["MB_ICONASTERISKINFO"], "*64"
 	)
 	static BUTTON_STYLE_ALIASES := Map(
 		'OK', 						0, 'O',		0,
@@ -476,8 +477,8 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 		'RetryCancel', 				5, 'R/C', 	5, 'RC', 5,
 		'CancelTryAgainContinue', 	6, 'C/T/C', 6, 'CTC', 6,
 	)
-	static MB_FONTNAME, MB_FONTSIZE, MB_FONTWEIGHT, MB_FONTISITALIC
-	static MB_HASFONTINFORMATION := getMsgBoxFontInfo(&MB_FONTNAME, &MB_FONTSIZE, &MB_FONTWEIGHT, &MB_FONTISITALIC)
+	static MB_FONTNAME := 0, MB_FONTSIZE := 0, MB_FONTWEIGHT := 0, MB_FONTISITALIC := 0
+	static MB_HASFONTINFORMATION := this.getMsgBoxFontInfo(&MB_FONTNAME, &MB_FONTSIZE, &MB_FONTWEIGHT, &MB_FONTISITALIC)
 
 	static gap := 26			; Spacing above and below text in top area of the Gui
 	static buttonMargin := 12	; Left Gui margin
@@ -485,7 +486,7 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	static buttonWidth := 88	; Width of OK button
 	static buttonHeight := 26	; Height of OK button
 	static buttonOffset := 30	; Offset between the right side of text and right edge of button
-	static buttonSpace := buttonWidth + rightMargin
+	static buttonSpace := this.buttonWidth + this.rightMargin
 	static leftMargin := 20
 	static minGuiWidth := 138	; Minimum width of Gui
 	static minTextWidth := 400
@@ -496,147 +497,190 @@ MsgBoxAsGui(text := "Press OK to continue", title := A_ScriptName, buttonStyle :
 	static WM_KEYDOWN := 0x0100
 	static WM_RBUTTONDOWN := 0x0204
 	
-	if BUTTON_STYLE_ALIASES.Has(buttonStyle)
-		buttonStyle := BUTTON_STYLE_ALIASES[buttonStyle]
-	if (buttonNames.Length == 0) {
-		if !(MB_BUTTON_TEXT.Has(buttonStyle + 1)) ; offset since this is not 0-indexed
-			throw Error("Invalid button Style")
-		buttonNames := MB_BUTTON_TEXT[buttonStyle + 1]
-	}
-	retValue := ""
-	totalButtonWidth := buttonSpace * (buttonNames.Length + (addCopyButton ? 1 : 0))
-	ownerStr := IsSet(owner) ? "+Owner" owner : ''
-	guiFontOptions := MB_HASFONTINFORMATION ? "S" MB_FONTSIZE " W" MB_FONTWEIGHT (MB_FONTISITALIC ? " italic" : "") : ""
-	mbGui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " ownerStr, title)
-	mbGui.OnEvent("Close", finalEvent.bind(0))
-	mbGui.Opt("+" Format("0x{:X}", NecessaryStyle))
-	mbGui.Opt("-ToolWindow")
-	if (buttonStyle == 2 || buttonStyle == 4) ; if cancel is not present in option, close and escape have no effect. user must select an option.
-		mbGui.Opt("-SysMenu")
-	mbGui.SetFont(guiFontOptions, MB_FONTNAME)
-	if IsObject(text)
-		text := toString(text, 0, 0, true)
-	if !IsSet(maxTextWidth) {
-		maxTextWidth := Max(minTextWidth, totalButtonWidth)
-		lens := strGetSplitLen(IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text, "`n")
-		minim := min(lens*), maxim := max(lens*), avg := objGetAverage(lens)
-		if (2 * avg > maxim && maxim < 1500)
-			maxTextWidth := Max(minTextWidth, maxim)
-		if StrLen(text) > 10000 && !IsSet(maxCharsVisible)
-			maxTextWidth := 1500
-	}
-	ctrlText := textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(text, 1, maxCharsVisible) : text,, guiFontOptions, MB_FONTNAME)
-	mbGui.AddText("x0 y0 vWhiteBoxTop " SS_WHITERECT, ctrlText)
-	if (IsSet(icon)) {
-		iconPath := icon is Array ? icon[2] : "imageres.dll"
-		icon := (icon is Array ? icon[1] : icon)
-		icon := DEFAULT_ICONS.Has(icon) ? DEFAULT_ICONS[icon] : icon
-		mbGui.AddPicture(Format("x{} y{} w{} h{} Icon{} BackgroundTrans", leftMargin, gap-9, 32, 32, icon), iconPath)
-		ICON_SOUNDS.Has(icon) ? SoundPlay(ICON_SOUNDS[icon], 0) : 0
-	}
-	mbGui.AddText("x" leftMargin + (IsSet(icon) ? 32 + buttonMargin : 0) " y" gap " BackgroundTrans " SS_NOPREFIX " vTextBox", ctrlText)
-	mbGui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
-	guiWidth := buttonMargin + buttonOffset + Max(TBw, totalButtonWidth) + 1
-	guiWidth := Max(guiWidth, minGuiWidth)
-	whiteBoxHeight := TBy + TBh + gap
-	mbGui["WhiteBoxTop"].Move(0, 0, guiWidth, whiteBoxHeight)
-	buttonX := guiWidth - totalButtonWidth ; the buttons are right-aligned
-	buttonY := whiteBoxHeight + buttonMargin
-	for i, e in buttonNames
-		btn := mbGui.AddButton(Format("vButton{} x{} y{} w{} h{}", i, buttonX + (i-1) * buttonSpace, buttonY, buttonWidth, buttonHeight), e).OnEvent("Click", finalEvent.bind(i))
-	if (addCopyButton)
-		btn := mbGui.AddButton(Format("vButton0 x{} y{} w{} h{}", buttonX + buttonNames.Length * buttonSpace, buttonY, buttonWidth, buttonHeight), "Copy").OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := text))
-	defaultButton := defaultButton == "Copy" ? 0 : defaultButton
-	mbGui["Button" defaultButton].Focus()
-	guiHeight := whiteBoxHeight + buttonHeight + 2 * buttonMargin
-	if (buttonStyle != 2 && buttonStyle != 4)
-		mbGui.OnEvent("Escape", finalEvent.bind(0))
-	mbGui.OnEvent("Close", finalEvent.bind(0))
-	OnMessage(WM_KEYDOWN, guiNotify)
-	OnMessage(WM_RBUTTONDOWN, guiNotify)
-	mbGui.Show("Center w" guiWidth " h" guiHeight)
-	if IsSet(timeout)
-		SetTimer(timeoutFObj := finalEvent.bind(-1), -1000 * timeout)
-	if (wait) {
-		WinWait(hwnd := mbGui.hwnd)
-		WinWaitClose(hwnd)
-		mbGui := 0
-		OnMessage(WM_KEYDOWN, guiNotify, 0) ; unregister
-		OnMessage(WM_RBUTTONDOWN, guiNotify, 0)
-		return retValue
-	}
-	return mbGui
+	static INSTANCES := Map()
 
+	__New(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := 0, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {	
+		if MsgBoxAsGui.BUTTON_STYLE_ALIASES.Has(buttonStyle)
+			buttonStyle := MsgBoxAsGui.BUTTON_STYLE_ALIASES[buttonStyle]
+		if (buttonNames.Length == 0) {
+			if !(MsgBoxAsGui.MB_BUTTON_TEXT.Has(buttonStyle + 1)) ; offset since this is not 0-indexed
+				throw Error("Invalid button Style")
+			this.buttonNames := MsgBoxAsGui.MB_BUTTON_TEXT[buttonStyle + 1]
+		} else {
+			this.buttonNames := buttonNames
+		}
+		this.retValue := ""
+		this.text := text
+		this.funcObj := funcObj ?? 0
+		this.owner := owner ?? 0
+		this.timeout := timeout ?? 0
+		totalButtonWidth := MsgBoxAsGui.buttonSpace * (this.buttonNames.Length + (addCopyButton ? 1 : 0))
+		ownerStr := IsSet(owner) ? "+Owner" owner : ''
+		this.guiFontOptions := MsgBoxAsGui.MB_HASFONTINFORMATION ? "S" MsgBoxAsGui.MB_FONTSIZE " W" MsgBoxAsGui.MB_FONTWEIGHT (MsgBoxAsGui.MB_FONTISITALIC ? " italic" : "") : ""
+		this.gui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " ownerStr, title)
+		this.hwnd := this.gui.Hwnd
+		MsgBoxAsGui.INSTANCES[this.hwnd] := this
+		this.gui.OnEvent("Close", this.finalEvent.bind(this, 0))
+		this.gui.Opt("+" Format("0x{:X}", MsgBoxAsGui.NecessaryStyle))
+		this.gui.Opt("-ToolWindow")
+		if (buttonStyle == 2 || buttonStyle == 4) ; if cancel is not present in option, close and escape have no effect. user must select an option.
+			this.gui.Opt("-SysMenu")
+		this.gui.SetFont(this.guiFontOptions, MsgBoxAsGui.MB_FONTNAME)
+		if IsObject(this.text)
+			this.text := toString(this.text, 0, 0, true)
+		if !IsSet(maxTextWidth) {
+			maxTextWidth := Max(MsgBoxAsGui.minTextWidth, totalButtonWidth)
+			lens := strGetSplitLen(IsSet(maxCharsVisible) ? SubStr(this.text, 1, maxCharsVisible) : this.text, "`n")
+			minim := min(lens*), maxim := max(lens*), avg := objGetAverage(lens)
+			if (2 * avg > maxim && maxim < 1500)
+				maxTextWidth := Max(MsgBoxAsGui.minTextWidth, maxim)
+			if StrLen(this.text) > 10000 && !IsSet(maxCharsVisible)
+				maxTextWidth := 1500
+		}
+		ctrlText := textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(this.text, 1, maxCharsVisible) : this.text,, this.guiFontOptions, MsgBoxAsGui.MB_FONTNAME)
+		this.gui.AddText("x0 y0 vWhiteBoxTop " MsgBoxAsGui.SS_WHITERECT, ctrlText)
+		if (IsSet(icon)) {
+			iconPath := icon is Array ? icon[2] : "imageres.dll"
+			icon := (icon is Array ? icon[1] : icon)
+			icon := MsgBoxAsGui.DEFAULT_ICONS.Has(icon) ? MsgBoxAsGui.DEFAULT_ICONS[icon] : icon
+			this.gui.AddPicture(Format("x{} y{} w{} h{} Icon{} BackgroundTrans", MsgBoxAsGui.leftMargin, MsgBoxAsGui.gap-9, 32, 32, icon), iconPath)
+			MsgBoxAsGui.ICON_SOUNDS.Has(icon) ? SoundPlay(MsgBoxAsGui.ICON_SOUNDS[icon], 0) : 0
+		}
+		this.gui.AddText(Format("x{1} y{2} BackgroundTrans {3} vTextBox",
+			MsgBoxAsGui.leftMargin + (IsSet(icon) ? 32 + MsgBoxAsGui.buttonMargin : 0),
+			MsgBoxAsGui.gap,
+			MsgBoxAsGui.SS_NOPREFIX,
+		), ctrlText)
+		this.gui["TextBox"].GetPos(&TBx, &TBy, &TBw, &TBh)
+		this.guiWidth := MsgBoxAsGui.buttonMargin + MsgBoxAsGui.buttonOffset + Max(TBw, totalButtonWidth) + 1
+		this.guiWidth := Max(this.guiWidth, MsgBoxAsGui.minGuiWidth)
+		this.whiteBoxHeight := TBy + TBh + MsgBoxAsGui.gap
+		this.gui["WhiteBoxTop"].Move(0, 0, this.guiWidth, this.whiteBoxHeight)
+		buttonX := this.guiWidth - totalButtonWidth ; the buttons are right-aligned
+		buttonY := this.whiteBoxHeight + MsgBoxAsGui.buttonMargin
+		for i, name in this.buttonNames
+			btn := this.gui.AddButton(
+				Format("vButton{} x{} y{} w{} h{}", 
+					i, 
+					buttonX + (i-1) * MsgBoxAsGui.buttonSpace, 
+					buttonY, MsgBoxAsGui.buttonWidth, 
+					MsgBoxAsGui.buttonHeight
+				), name
+			).OnEvent("Click", this.finalEvent.bind(this, i))
+		if (addCopyButton)
+			btn := this.gui.AddButton(
+				Format("vButton0 x{} y{} w{} h{}", 
+					buttonX + this.buttonNames.Length * MsgBoxAsGui.buttonSpace, 
+					buttonY, 
+					MsgBoxAsGui.buttonWidth, 
+					MsgBoxAsGui.buttonHeight
+				), "Copy"
+			).OnEvent("Click", (guiCtrl, infoObj) => (A_Clipboard := this.text))
+		defaultButton := defaultButton == "Copy" ? 0 : defaultButton
+		this.gui["Button" defaultButton].Focus()
+		this.guiHeight := this.whiteBoxHeight + MsgBoxAsGui.buttonHeight + 2 * MsgBoxAsGui.buttonMargin
+		if (buttonStyle != 2 && buttonStyle != 4)
+			this.gui.OnEvent("Escape", this.finalEvent.bind(this, 0))
+		this.gui.OnEvent("Close", this.finalEvent.bind(this, 0))
+		this.notifyRegister := this.guiNotify.Bind(this)
+		OnMessage(MsgBoxAsGui.WM_KEYDOWN, this.notifyRegister)
+		OnMessage(MsgBoxAsGui.WM_RBUTTONDOWN, this.notifyRegister)
+		this.gui.Show(Format(
+			"Center w{} h{}", this.guiWidth, this.guiHeight
+		))
+		if this.timeout > 0
+			SetTimer(this.timeoutFObj := this.finalEvent.bind(this, -1), -1000 * this.timeout)
+		if (wait) {
+			WinWait(this.hwnd)
+			WinWaitClose(this.hwnd)
+			this.gui := 0
+			this.cleanup()
+			return this.retValue
+		}
+		return this.gui
+	}
+	
 	finalEvent(buttonNumber, *) {
-		mbGui.Destroy()
-		mbGui := 0
-		OnMessage(WM_KEYDOWN, guiNotify, 0) ; unregister
-		OnMessage(WM_RBUTTONDOWN, guiNotify, 0)
-		if (IsSet(timeout))
-			SetTimer(timeoutFObj, 0)
-		retValue := buttonNumber == -1 ? "Timeout" : buttonNumber == 0 ? "Cancel" : buttonNames[buttonNumber]
-		if (IsSet(funcObj))
-			funcObj(retValue)
+		this.gui.Destroy()
+		this.gui := 0
+		this.cleanup()
+		if (this.timeout > 0)
+			SetTimer(this.timeoutFObj, 0)
+		retValue := buttonNumber == -1 ? "Timeout" : buttonNumber == 0 ? "Cancel" : this.buttonNames[buttonNumber]
+		if (this.funcObj)
+			this.funcObj.Call(retValue)
+	}
+
+	cleanup() {
+		OnMessage(MsgBoxAsGui.WM_KEYDOWN, this.notifyRegister, 0) ; unregister
+		OnMessage(MsgBoxAsGui.WM_RBUTTONDOWN, this.notifyRegister, 0)
+		if MsgBoxAsGui.INSTANCES.Has(this.hwnd) {
+			MsgBoxAsGui.INSTANCES.Delete(this.hwnd)
+		}
 	}
 
 	guiNotify(wParam, lParam, msg, hwnd) {
-		if (!mbGui) {
-			OnMessage(WM_KEYDOWN, guiNotify, 0) ; unregister
-			OnMessage(WM_RBUTTONDOWN, guiNotify, 0)
-		} else if ((ctrl := GuiCtrlFromHwnd(hwnd)) && (ctrl.gui.hwnd == mbGui.hwnd)) || (hwnd == mbGui.hwnd) {
-			if (msg == WM_KEYDOWN) && (wParam == 67) && GetKeyState("Ctrl") {
-				A_Clipboard := text
-				return 0 ; prevents sound
-			} else if !ctrl {
-				m := Menu()
-				m.Add("Select Text", guiContextMenu)
-				m.show()
-			}
+		if (!this.gui)
+			this.cleanup()
+		else if (hwnd == this.hwnd && msg == MsgBoxAsGui.WM_RBUTTONDOWN) {
+			m := Menu()
+			m.Add("Select Text", this.guiContextMenu.Bind(this))
+			m.show()
+		} 
+		else if (
+			(hwnd == this.hwnd || ( (ctrl := GuiCtrlFromHwnd(hwnd)) && ctrl.gui.hwnd == this.hwnd)) 
+			&& msg == MsgBoxAsGui.WM_KEYDOWN && (wParam == 67) && GetKeyState("Ctrl")
+		) {
+			A_Clipboard := this.text
+			return 0 ; prevents sound
 		}
 	}
 
 	guiContextMenu(itemName, itemPos, menuObj) {
-		miniGui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox +Owner" mbGui.hwnd, "Select and Copy")
-		miniGui.Opt("+" Format("0x{:X}", NecessaryStyle))
+		miniGui := Gui(Format(
+			"+ToolWindow -Resize -MinimizeBox -MaximizeBox +Owner{}", this.hwnd
+		), "Select and Copy")
+		miniGui.Opt("+" Format("0x{:X}", MsgBoxAsGui.NecessaryStyle))
 		miniGui.Opt("-ToolWindow")
 		miniGui.OnEvent("Escape", (*) => miniGui.destroy())
 		miniGui.OnEvent("Close", (*) => miniGui.destroy())
 		miniGui.MarginX := miniGui.MarginY := 2
-		miniGui.SetFont(guiFontOptions, MB_FONTNAME)
-		miniGui.AddEdit("-E0x200 ReadOnly w" guiWidth " h" whiteBoxHeight, text)
+		miniGui.SetFont(this.guiFontOptions, MsgBoxAsGui.MB_FONTNAME)
+		miniGui.AddEdit(Format(
+			"-E0x200 ReadOnly w{} h{}", this.guiWidth, this.whiteBoxHeight
+		), this.text)
 		miniGui.show()
 	}
-}
 
+	
+	static getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
+		; SystemParametersInfo constant for retrieving the metrics associated with the nonclient area of nonminimized windows
+		static SPI_GETNONCLIENTMETRICS := 0x0029
 
+		static NCM_Size        := 40 + 5 * 92   ; Size of NONCLIENTMETRICS structure (not including iPaddedBorderWidth)
+		static MsgFont_Offset  := 40 + 4 * 92   ; Offset for lfMessageFont in NONCLIENTMETRICS structure
+		static Size_Offset     := 0    ; Offset for cbSize in NONCLIENTMETRICS structure
 
-getMsgBoxFontInfo(&name := "", &size := 0, &weight := 0, &isItalic := 0) {
-	; SystemParametersInfo constant for retrieving the metrics associated with the nonclient area of nonminimized windows
-	static SPI_GETNONCLIENTMETRICS := 0x0029
+		static Height_Offset   := 0    ; Offset for lfHeight in LOGFONT structure
+		static Weight_Offset   := 16   ; Offset for lfWeight in LOGFONT structure
+		static Italic_Offset   := 20   ; Offset for lfItalic in LOGFONT structure
+		static FaceName_Offset := 28   ; Offset for lfFaceName in LOGFONT structure
+		static FACESIZE        := 32   ; Size of lfFaceName array in LOGFONT structure
+		; Maximum number of characters in font name string
 
-	static NCM_Size        := 40 + 5 * 92   ; Size of NONCLIENTMETRICS structure (not including iPaddedBorderWidth)
-	static MsgFont_Offset  := 40 + 4 * 92   ; Offset for lfMessageFont in NONCLIENTMETRICS structure
-	static Size_Offset     := 0    ; Offset for cbSize in NONCLIENTMETRICS structure
-
-	static Height_Offset   := 0    ; Offset for lfHeight in LOGFONT structure
-	static Weight_Offset   := 16   ; Offset for lfWeight in LOGFONT structure
-	static Italic_Offset   := 20   ; Offset for lfItalic in LOGFONT structure
-	static FaceName_Offset := 28   ; Offset for lfFaceName in LOGFONT structure
-	static FACESIZE        := 32   ; Size of lfFaceName array in LOGFONT structure
-	; Maximum number of characters in font name string
-
-	NCM := Buffer(NCM_Size, 0)
-	NumPut("UInt", NCM_Size, NCM, Size_Offset)   ; Set the cbSize element of the NCM structure
-	; Get the system parameters and store them in the NONCLIENTMETRICS structure (NCM)
-	if !DllCall("SystemParametersInfo", "UInt", SPI_GETNONCLIENTMETRICS, "UInt", NCM_Size, "Ptr", NCM.Ptr, "UInt", 0)                        ; Don't update the user profile
-		return false                               ; Return false
-	name   := StrGet(NCM.Ptr + MsgFont_Offset + FaceName_Offset, FACESIZE)          ; Get the font name
-	height := NumGet(NCM.Ptr + MsgFont_Offset + Height_Offset, "Int")               ; Get the font height
-	size   := DllCall("MulDiv", "Int", -Height, "Int", 72, "Int", A_ScreenDPI)   ; Convert the font height to the font size in points
-	; Reference: http://stackoverflow.com/questions/2944149/converting-logfont-height-to-font-size-in-points
-	weight   := NumGet(NCM.Ptr + MsgFont_Offset + Weight_Offset, "Int")             ; Get the font weight (400 is normal and 700 is bold)
-	isItalic := NumGet(NCM.Ptr + MsgFont_Offset + Italic_Offset, "UChar")           ; Get the italic state of the font
-	return true
+		NCM := Buffer(NCM_Size, 0)
+		NumPut("UInt", NCM_Size, NCM, Size_Offset)   ; Set the cbSize element of the NCM structure
+		; Get the system parameters and store them in the NONCLIENTMETRICS structure (NCM)
+		if !DllCall("SystemParametersInfo", "UInt", SPI_GETNONCLIENTMETRICS, "UInt", NCM_Size, "Ptr", NCM.Ptr, "UInt", 0)                        ; Don't update the user profile
+			return false                               ; Return false
+		name   := StrGet(NCM.Ptr + MsgFont_Offset + FaceName_Offset, FACESIZE)          ; Get the font name
+		height := NumGet(NCM.Ptr + MsgFont_Offset + Height_Offset, "Int")               ; Get the font height
+		size   := DllCall("MulDiv", "Int", -Height, "Int", 72, "Int", A_ScreenDPI)   ; Convert the font height to the font size in points
+		; Reference: http://stackoverflow.com/questions/2944149/converting-logfont-height-to-font-size-in-points
+		weight   := NumGet(NCM.Ptr + MsgFont_Offset + Weight_Offset, "Int")             ; Get the font weight (400 is normal and 700 is bold)
+		isItalic := NumGet(NCM.Ptr + MsgFont_Offset + Italic_Offset, "UChar")           ; Get the italic state of the font
+		return true
+	}
 }
 
 
@@ -786,9 +830,9 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 				whr.setRequestHeader(i, e)
 		whr.OnReadyStateChange := callBackFuncObj
 		whr.Send()
+		return whr
 	}
-	else
-		whr := ComObject("WinHttp.WinHttpRequest.5.1")
+	whr := ComObject("WinHttp.WinHttpRequest.5.1")
 	whr.Open(method, url, true)
 	for i, e in defaultHeaders
 		whr.setRequestHeader(i, e)
@@ -847,7 +891,7 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 	catch Error 
 		if fallbackMsgbox
 			MsgBoxAsGui(value,,,,,,,1)
-	return value . finalChar
+	return value
 }
 
 /**
