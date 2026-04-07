@@ -31,7 +31,12 @@ class WindowManager {
 			if (mode == "O")
 				WinActivate(this.gui.hwnd)
 			else {
-				this.data.coords := WinUtilities.getWindowPlacement(this.gui.hwnd, true)
+				coords := WinUtilities.getWindowPlacement(this.gui.hwnd, true)
+				if (coords.cw == 0 || coords.ch == 0) {
+					coords.cw := this.data.coords.cw
+					coords.ch := this.data.coords.ch
+				}
+				this.data.coords := coords
 				this.gui.destroy()
 				this.gui := 0
 			}
