@@ -186,6 +186,32 @@ objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) =>
 }
 
 /**
+ * Returns a shallow clone of an object with all but the in filterValues specified keys
+ * @param obj 
+ * @param {Array} filterValues 
+ * @returns {Any} 
+ */
+objFilterValues(obj, filterValues := []) {
+	isMap := (obj is Map)
+	if (obj is Array || !(isMap || IsObject(obj)))
+		throw(TypeError("objFilterValues does not handle type " . Type(obj)))
+	tMap := Map()
+	for i, e in filterValues
+		tMap[e] := true
+	clone := %Type(obj)%()
+	if isMap {
+		for i, e in obj
+			if !tMap.Has(i)
+				clone[i] := e
+	} else {
+		for i, e in ObjOwnProps(obj)
+			if !tMap.Has(i)
+				clone.%i% := e
+	}
+	return clone
+}
+
+/**
  * Creates a new object containing only values matching filter.
  * @param obj 
  * @param {(k, v) => Boolean} filter 

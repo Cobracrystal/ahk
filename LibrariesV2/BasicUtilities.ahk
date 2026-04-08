@@ -536,7 +536,8 @@ class MsgBoxAsGui {
 		)
 	}
 
-	__New(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := false, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {
+	static Call(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := false, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {
+		this := super()
 		if MsgBoxAsGui.BUTTON_STYLE_ALIASES.Has(buttonStyle)
 			buttonStyle := MsgBoxAsGui.BUTTON_STYLE_ALIASES[buttonStyle]
 		if (buttonNames.Length == 0) {
@@ -546,7 +547,7 @@ class MsgBoxAsGui {
 		} else {
 			this.buttonNames := buttonNames
 		}
-		this.retValue := ""
+		this.result := ""
 		this.text := text
 		this.funcObj := funcObj ?? 0
 		this.timeout := timeout ?? -1
@@ -573,7 +574,7 @@ class MsgBoxAsGui {
 			if StrLen(this.text) > 10000 && !IsSet(maxCharsVisible)
 				maxTextWidth := 1500
 		}
-		ctrlText := textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(this.text, 1, maxCharsVisible) : this.text,, this.guiFontOptions, MsgBoxAsGui.MB_FONTNAME)
+		ctrlText := MsgBoxAsGui.textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(this.text, 1, maxCharsVisible) : this.text,, this.guiFontOptions, MsgBoxAsGui.MB_FONTNAME)
 		this.gui.AddText("x0 y0 vWhiteBoxTop " MsgBoxAsGui.SS_WHITERECT, ctrlText)
 		if (IsSet(icon)) {
 			iconPath := icon is Array ? icon[2] : "imageres.dll"
@@ -631,20 +632,20 @@ class MsgBoxAsGui {
 			WinWaitClose(this.hwnd)
 			this.gui := 0
 			this.cleanup()
-			return this.retValue
+			return this.result
 		}
-		return this.gui
+		return this
 	}
 	
 	finalEvent(buttonNumber, *) {
 		this.gui.Destroy()
 		this.gui := 0
-		this.cleanup()
 		if (this.timeout > 0)
 			SetTimer(this.timeoutFObj, 0)
-		retValue := buttonNumber == -1 ? "Timeout" : buttonNumber == 0 ? "Cancel" : this.buttonNames[buttonNumber]
+		this.cleanup()
+		this.result := buttonNumber == -1 ? "Timeout" : buttonNumber == 0 ? "Cancel" : this.buttonNames[buttonNumber]
 		if (this.funcObj)
-			this.funcObj.Call(retValue)
+			this.funcObj.Call(this.result)
 	}
 
 	cleanup() {
@@ -761,73 +762,94 @@ class MsgBoxAsGui {
 		isItalic := NumGet(NCM.Ptr + MsgFont_Offset + Italic_Offset, "UChar")           ; Get the italic state of the font
 		return true
 	}
-}
-
-
-textCtrlAdjustSize(width, textCtrl?, str?, onlyCalculate := false, fontOptions?, fontName?) {
-	if (!IsSet(textCtrl) && !IsSet(str))
-		throw Error("Both textCtrl and str were not set")
-	if (!IsSet(str))
-		str := textCtrl.Value
-	else if (!IsSet(textCtrl)) {
-		local temp := Gui()
-		temp.SetFont(fontOptions ?? unset, fontName ?? unset)
-		textCtrl := temp.AddText()
-		onlyCalculate := true
-	}
-	fixedWidthStr := ""
-	loop parse str, "`n", "`r" {
-		fixedWidthLine := ""
-		fullLine := A_LoopField
-		pos := 0
-		loop parse fullLine, " `t" {
-			line := A_LoopField
-			lLen := StrLen(A_LoopField)
-			pos += lLen + 1
-			strWidth := guiGetTextSize(textCtrl, fixedWidthLine . line)
-			if (pos > 65535)
-				break
-			if (strWidth[1] <= width)
-				fixedWidthLine .= line . substr(fullLine, pos, 1)
-			else { ; reached max width, begin new line
-				fixedWidthStr .= (fixedWidthStr ? '`n' : '') . fixedWidthLine
-				if (guiGetTextSize(textCtrl, line)[1] <= width) {
-					fixedWidthLine := line . substr(fullLine, pos, 1)
-				} else { ; A_Loopfield is by itself wider than width
-					fixedWidthLine := fixedWidthWord := linePart := ""
-					loop parse line { ; thus iterate char by char
-						curWidth := guiGetTextSize(textCtrl, linePart . A_LoopField)
-						if (curWidth[1] <= width) ; reached max width, begin new line
-							linePart .= A_LoopField
-						else {
-							fixedWidthWord .= '`n' linePart
-							linePart := A_LoopField
+	
+	static textCtrlAdjustSize(width, textCtrl?, str?, onlyCalculate := false, fontOptions?, fontName?) {
+		if (!IsSet(textCtrl) && !IsSet(str))
+			throw Error("Both textCtrl and str were not set")
+		if (!IsSet(str))
+			str := textCtrl.Value
+		else if (!IsSet(textCtrl)) {
+			local temp := Gui()
+			temp.SetFont(fontOptions ?? unset, fontName ?? unset)
+			textCtrl := temp.AddText()
+			onlyCalculate := true
+		}
+		fixedWidthStr := ""
+		loop parse str, "`n", "`r" {
+			fixedWidthLine := ""
+			fullLine := A_LoopField
+			pos := 0
+			loop parse fullLine, " `t" {
+				line := A_LoopField
+				lLen := StrLen(A_LoopField)
+				pos += lLen + 1
+				strWidth := this.guiGetTextSize(textCtrl, fixedWidthLine . line)
+				if (pos > 65535)
+					break
+				if (strWidth[1] <= width)
+					fixedWidthLine .= line . substr(fullLine, pos, 1)
+				else { ; reached max width, begin new line
+					fixedWidthStr .= (fixedWidthStr ? '`n' : '') . fixedWidthLine
+					if (this.guiGetTextSize(textCtrl, line)[1] <= width) {
+						fixedWidthLine := line . substr(fullLine, pos, 1)
+					} else { ; A_Loopfield is by itself wider than width
+						fixedWidthLine := fixedWidthWord := linePart := ""
+						loop parse line { ; thus iterate char by char
+							curWidth := this.guiGetTextSize(textCtrl, linePart . A_LoopField)
+							if (curWidth[1] <= width) ; reached max width, begin new line
+								linePart .= A_LoopField
+							else {
+								fixedWidthWord .= '`n' linePart
+								linePart := A_LoopField
+							}
 						}
+						fixedWidthStr .= (fixedWidthStr == "" ? SubStr(fixedWidthWord, 2) : fixedWidthWord) . (linePart == "" ? '' : '`n' linePart)
 					}
-					fixedWidthStr .= (fixedWidthStr == "" ? SubStr(fixedWidthWord, 2) : fixedWidthWord) . (linePart == "" ? '' : '`n' linePart)
 				}
 			}
+			fixedWidthStr .= (fixedWidthStr ? '`n' : '') fixedWidthLine . substr(fullLine, pos, 1)
 		}
-		fixedWidthStr .= (fixedWidthStr ? '`n' : '') fixedWidthLine . substr(fullLine, pos, 1)
+		if (!onlyCalculate) {
+			textCtrl.Move(,,this.guiGetTextSize(textCtrl, fixedWidthStr)*)
+			textCtrl.Value := fixedWidthStr
+		}
+		return fixedWidthStr
 	}
-	if (!onlyCalculate) {
-		textCtrl.Move(,,guiGetTextSize(textCtrl, fixedWidthStr)*)
-		textCtrl.Value := fixedWidthStr
-	}
-	return fixedWidthStr
-}
 
-guiGetTextSize(txtCtrlObj, str) {
-	static WM_GETFONT := 0x0031
-	static DT_CALCRECT := 0x400
-	DC := DllCall("GetDC", "Ptr", txtCtrlObj.Hwnd, "Ptr")
-	hFont := SendMessage(WM_GETFONT,,, txtCtrlObj)
-	hOldObj := DllCall("SelectObject", "Ptr", DC, "Ptr", hFont, "Ptr")
-	height := DllCall("DrawText", "Ptr", DC, "Str", str, "Int", -1, "Ptr", rect := Buffer(16, 0), "UInt", DT_CALCRECT)
-	width := NumGet(rect, 8, "Int") - NumGet(rect, "Int")
-	DllCall("SelectObject", "Ptr", DC, "Ptr", hOldObj, "Ptr")
-	DllCall("ReleaseDC", "Ptr", txtCtrlObj.Hwnd, "Ptr", DC)
-	return [width, height]
+	static guiGetTextSize(txtCtrlObj, str) {
+		static WM_GETFONT := 0x0031
+		static DT_CALCRECT := 0x400
+		DC := DllCall("GetDC", "Ptr", txtCtrlObj.Hwnd, "Ptr")
+		hFont := SendMessage(WM_GETFONT,,, txtCtrlObj)
+		hOldObj := DllCall("SelectObject", "Ptr", DC, "Ptr", hFont, "Ptr")
+		height := DllCall("DrawText", "Ptr", DC, "Str", str, "Int", -1, "Ptr", rect := Buffer(16, 0), "UInt", DT_CALCRECT)
+		width := NumGet(rect, 8, "Int") - NumGet(rect, "Int")
+		DllCall("SelectObject", "Ptr", DC, "Ptr", hOldObj, "Ptr")
+		DllCall("ReleaseDC", "Ptr", txtCtrlObj.Hwnd, "Ptr", DC)
+		return [width, height]
+	}
+
+	; this is completely useless, just here to shut up the lexer. In fact the nonstatic ones don't even do anything since __New() is overwritten
+	static guiNotify := 0
+	static finalEvent := 0
+	static cleanup := 0
+	static timeout := 0
+	static timeoutFObj := 0
+	static buttonNames := 0
+	static funcObj := 0
+	static notifyRegister := 0
+	static hwnd := 0
+	result := ""
+	text := ""
+	funcObj := 0
+	timeout := -1
+	timeoutFObj := 0
+	hwnd := 0
+	notifyRegister := 0
+	buttonNames := []
+	guiWidth := -1
+	guiFontOptions := ""
+	whiteBoxHeight := -1
 }
 
 scrollbarGetPosition(ctrlHwnd) {

@@ -2,6 +2,7 @@
 ; todo:
 ; custom functions -> text body of function that you write just gets saved in file, timer is set to run that file
 ; add function like .resume() or something that imports reminders from the cache of functions
+#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\TimeUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
 #Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
@@ -140,7 +141,7 @@ class Scheduler {
 			period: period, 
 			periodUnit: periodUnit,
 			timer: timerObj,
-			occurenceTimestamp: timestamp
+			occurenceTimestamp: nextTime
 		}
 		if fparams.length > 0
 			reminderObj.fparams := fparams
@@ -254,7 +255,8 @@ class Scheduler {
 				variables: {
 					reminderIn: { message: "rem1Message", seconds: "rem1S", minutes: "rem1M", hours: "rem1H"},
 					reminderOn: { message: "rem2Message", seconds: "rem2S", minutes: "rem2M", hours: "rem2H", days: "rem2D", months: "rem2Mo"},
-					multiReminderOn: { message: "rem3Message", seconds: "rem3S", minutes: "rem3M", hours: "rem3H", days: "rem3D", months: "rem3Mo", period: "rem3P", periodUnit: "rem3PU" }
+					multiReminderOn: { message: "rem3Message", seconds: "rem3S", minutes: "rem3M", hours: "rem3H", days: "rem3D", months: "rem3Mo", period: "rem3P", periodUnit: "rem3PU" },
+					multiReminderAt: { message: "rem4Message", seconds: "rem4S", minutes: "rem4M", hours: "rem4H", days: "rem4D", months: "rem4Mo", period: "rem4P", periodUnit: "rem4PU" }
 				} 
 			}
 			this.core := Scheduler
@@ -323,6 +325,7 @@ class Scheduler {
 			this.current.AddEdit("ys+47 xs+10 r2 w375").Name := this.data.variables.reminderOn.message
 			this.current.AddButton("ys+5 h85 w80", "Add Reminder").OnEvent("Click", (*) => setReminderOn())
 			this.LV := this.current.AddListView("xs R10 w575 -Multi Sort", ["Next Occurence", "Period", "Parameters", "Function", "Index"])
+			this.LV.OnEvent("DoubleClick", onDoubleClick)
 			this.LV.OnEvent("ContextMenu", onContextMenu)
 			this.LV.OnNotify(LVN_KEYDOWN, onKeyPress)
 			createListView()
@@ -404,8 +407,61 @@ class Scheduler {
 				createListView()
 			}
 
+			onDoubleClick(ctrlObj, rowN) {
+				if !rowN
+					return
+				key := this.LV.GetText(rowN, 5)
+				reminderObj := objFilterValues(this.core.timerList[key], [ "timer" ])
+				MsgBoxAsGui.fromConfig({
+					text: reminderObj,
+					title: "Reminder Object",
+					addCopyButton: true,
+					owner: this.current.hwnd
+				})
+			}
+
 			onContextMenu(ctrlObj, rowN, isRightclick, x, y) {
-				return ; todo
+				m := Menu()
+				m.Add("Copy Parameters", menuHandler)
+				m.Add("Show Config", menuHandler)
+				m.Add("Edit Message", menuHandler)
+				m.Add("Edit Reminder", menuHandler)
+				m.Add("Delete Reminder", menuHandler)
+				m.Show()
+
+				menuHandler(itemName, itemPos?, menuObj?) {
+					if ((rowN := this.LV.GetNext()) == 0)
+						return
+					key := this.LV.GetText(rowN, 5)
+					rmObj := this.core.timerList[key]
+					switch itemName {
+						case "Copy Parameters":
+							A_Clipboard := this.LV.GetText(rowN, 3)
+						case "Show Config":
+							onDoubleClick(ctrlObj, rowN)
+						case "Edit Message":
+							MsgBoxAsGui("not yet implemented lol")
+						case "Edit Reminder":
+							MsgBoxAsGui("not yet implemented lol")
+						case "Delete Reminder":
+							config := {
+								text: "Turn off this timer?",
+								title: "Confirmation Prompt",
+								defaultButton: rmObj.multi ? 3 : 2,
+								buttonNames: rmObj.multi ? ["Only this time", "Remove Permanently", "Cancel"] : ["Remove Permanently", "Cancel"], 
+								wait: true
+							}
+							switch MsgBoxAsGui.fromConfig(config) {
+								case "Remove Permanently":
+									this.core.timerList.Delete(key)
+									this.core.exportReminders(this.core.settings.defaultCachePath)
+								case "Cancel":
+									return
+							}
+							try SetTimer(rmObj.timer, 0)
+							this.LV.delete(rowN)
+					}
+				}
 			}
 
 			onKeyPress(ctrlObj, lParam) {
@@ -415,9 +471,22 @@ class Scheduler {
 						if ((rowN := this.LV.GetNext()) == 0)
 							return
 						key := this.LV.GetText(rowN, 5)
-						try SetTimer(this.core.timerList[key].timer, 0)
-						if !this.core.timerList[key].multi
-							this.core.timerList.Delete(key)
+						rmObj := this.core.timerList[key]
+						config := {
+							text: "Turn off this timer?",
+							title: "Confirmation Prompt",
+							defaultButton: rmObj.multi ? 3 : 2,
+							buttonNames: rmObj.multi ? ["Only this time", "Remove Permanently", "Cancel"] : ["Remove Permanently", "Cancel"], 
+							wait: true
+						}
+						switch MsgBoxAsGui.fromConfig(config) {
+							case "Remove Permanently":
+								this.core.timerList.Delete(key)
+								this.core.exportReminders(this.core.settings.defaultCachePath)
+							case "Cancel":
+								return
+						}
+						try SetTimer(rmObj.timer, 0)
 						this.LV.delete(rowN)
 					case "116":	;// F5 Key -> Reload
 						createListView()
@@ -427,35 +496,55 @@ class Scheduler {
 			}
 
 			settingsGui(*) {
-				return
+				MsgBoxAsGui(FileRead(this.core.settings.defaultCachePath, "UTF-8"))
 			}
 
 			recurringReminderGui(*) {
 				multiRemGui := Gui("+Border", "Recurring Reminder Creator")
 				multiRemGui.OnEvent("Escape", (*) => multiRemGui.Destroy())
 				multiRemGui.OnEvent("Close", (*) => multiRemGui.Destroy())
-				multiRemGui.AddGroupBox("Section w400 h125", "Add Recurring Reminder")
+				multiRemGui.AddGroupBox("Section w400 h125", "Add Recurring Reminder (GIVEN TIME MUST BE SMALLER THAN PERIOD)")
 				multiRemGui.SetFont("s9")
 				multiRemGui.AddText("Center R1.45 ys+22 xs+10", "Remind me on")
-				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.days
+				curNames := this.data.variables.multiReminderOn
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.days
 				multiRemGui.AddText("Center R1.45 ys+22 x+5", ".")
-				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.months
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.months
 				multiRemGui.AddText("Center R1.45 ys+22 x+5", " at")
-				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.hours
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.hours
 				multiRemGui.AddText("Center R1.45 ys+22 x+5", ":")
-				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.minutes
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.minutes
 				multiRemGui.AddText("Center R1.45 ys+22 x+5", ":")
-				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := this.data.variables.multiReminderOn.seconds
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.seconds
 				multiRemGui.AddText("Center R1.45 ys+50 xs+10", "and then every")
-				multiRemGui.AddEdit("ys+47 x+5 r1 w30", '1').Name := this.data.variables.multiReminderOn.period
-				multiRemGui.AddDDL("ys+47 x+5 r7 w65 Choose1", ["Years", "Months", "Weeks", "Days", "Hours", "Minutes", "Seconds"]).Name := this.data.variables.multiReminderOn.periodUnit
+				multiRemGui.AddEdit("ys+47 x+5 r1 w30", '1').Name := curNames.period
+				multiRemGui.AddDDL("ys+47 x+5 r7 w65 Choose1", ["Years", "Months", "Weeks", "Days", "Hours", "Minutes", "Seconds"]).Name := curNames.periodUnit
 				multiRemGui.AddText("Center R1.45 ys+50 x+5", "with the message:")
-				multiRemGui.AddEdit("ys+74 xs+10 r2 w375").Name := this.data.variables.multiReminderOn.message
-				multiRemGui.AddButton("ys+5 h85 w80", "Add Reminder").OnEvent("Click", (*) => setRecurringReminderOn())
+				multiRemGui.AddEdit("ys+74 xs+10 r2 w375").Name := curNames.message
+				multiRemGui.AddButton("ys+5 h85 w80", "Add Reminder").OnEvent("Click", (*) => setRecurringReminderOn(0))
+				multiRemGui.AddGroupBox("Section w400 h125 xs", "Add Recurring Reminder (uses nextTime and will then use Missed Reminders)")
+				multiRemGui.SetFont("s9")
+				multiRemGui.AddText("Center R1.45 ys+22 xs+10", "Remind me on")
+				curNames := this.data.variables.multiReminderAt
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.days
+				multiRemGui.AddText("Center R1.45 ys+22 x+5", ".")
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.months
+				multiRemGui.AddText("Center R1.45 ys+22 x+5", " at")
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.hours
+				multiRemGui.AddText("Center R1.45 ys+22 x+5", ":")
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.minutes
+				multiRemGui.AddText("Center R1.45 ys+22 x+5", ":")
+				multiRemGui.AddEdit("ys+20 x+5 r1 w30", '/').Name := curNames.seconds
+				multiRemGui.AddText("Center R1.45 ys+50 xs+10", "and then every")
+				multiRemGui.AddEdit("ys+47 x+5 r1 w30", '1').Name := curNames.period
+				multiRemGui.AddDDL("ys+47 x+5 r7 w65 Choose1", ["Years", "Months", "Weeks", "Days", "Hours", "Minutes", "Seconds"]).Name := curNames.periodUnit
+				multiRemGui.AddText("Center R1.45 ys+50 x+5", "with the message:")
+				multiRemGui.AddEdit("ys+74 xs+10 r2 w375").Name := curNames.message
+				multiRemGui.AddButton("ys+5 h85 w80", "Add Reminder").OnEvent("Click", (*) => setRecurringReminderOn(1))
 				multiRemGui.Show("Autosize")
 
-				setRecurringReminderOn() {
-					static names := this.data.variables.multiReminderOn
+				setRecurringReminderOn(useFlatTimestamp := false) {
+					names := useFlatTimestamp ? this.data.variables.multiReminderAt : this.data.variables.multiReminderOn
 					vars := multiRemGui.Submit(false)
 					message := vars.%names.message%
 					period := vars.%names.period%
@@ -470,7 +559,48 @@ class Scheduler {
 							minutes: IsInteger(vars.%names.minutes%) ? vars.%names.minutes% : unset,
 							seconds: IsInteger(vars.%names.seconds%) ? vars.%names.seconds% : unset
 						}
-						this.core.setOnAndRepeat(units, period, periodUnit,, message)
+						if (useFlatTimestamp) {
+							timestamp := nextMatchingTime(flattenTimeVariableObject(units)*)
+							this.core.setOnAndRepeat(timestamp, period, periodUnit,, message)
+						} else {
+							this.core.setOnAndRepeat(units, period, periodUnit,, message)
+						}
+					}
+					catch Error {
+						MsgBox("Invalid Time specified.")
+						return 0
+					}
+					this.core.exportReminders(this.core.settings.defaultCachePath)
+					timedTooltip("Success!", 1000)
+					multiRemGui[names.message].Value := ""
+					multiRemGui[names.months].Value := '/'
+					multiRemGui[names.days].Value := '/'
+					multiRemGui[names.hours].Value := '/'
+					multiRemGui[names.minutes].Value := '/'
+					multiRemGui[names.seconds].Value := '/'
+					multiRemGui[names.period].Value := '/'
+					multiRemGui[names.periodUnit].Choose(1)
+					createListView()
+				}
+
+				setRecurringReminderAt() {
+					static names := this.data.variables.multiReminderAt
+					vars := multiRemGui.Submit(false)
+					message := vars.%names.message%
+					period := vars.%names.period%
+					periodUnit := vars.%names.periodUnit%
+					if !(message) || !(period)
+						return MsgBoxAsGui("You have not set a reminder message or have entered an invalid period. You must set both before setting a multireminder.", "Reminder")
+					try {
+						units := {
+							months: IsInteger(vars.%names.months%) ? vars.%names.months% : unset,
+							days: IsInteger(vars.%names.days%) ? vars.%names.days% : unset,
+							hours: IsInteger(vars.%names.hours%) ? vars.%names.hours% : unset,
+							minutes: IsInteger(vars.%names.minutes%) ? vars.%names.minutes% : unset,
+							seconds: IsInteger(vars.%names.seconds%) ? vars.%names.seconds% : unset
+						}
+						timestamp := nextMatchingTime(flattenTimeVariableObject(units)*)
+						this.core.setOnAndRepeat(timestamp, period, periodUnit,, message)
 					}
 					catch Error {
 						MsgBox("Invalid Time specified.")
@@ -603,7 +733,7 @@ class Scheduler {
 		tf(n) => Format("{:02}", n)
 	}
 
-	static exportReminders(filepath := "") {
+	static exportReminders(filepath) {
 		arr := []
 		for i, e in this.timerList
 			arr.push(e)
