@@ -137,7 +137,7 @@ class WinUtilities {
 		triedCommandline := false
 		if (this.windowCache.Has(hwnd)) {
 			if getCommandLine && !this.windowCache[hwnd].triedCommandline {
-				if A_IsAdmin >= this.windowCache[hwnd].isElevated
+				if this.windowCache[hwnd].isElevated != -1 && A_IsAdmin >= this.windowCache[hwnd].isElevated
 					try this.windowCache[hwnd].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[hwnd].pid)[1]
 				this.windowCache[hwnd].triedCommandline := true
 			}
@@ -151,7 +151,8 @@ class WinUtilities {
 			try minW := minMax.minW, minH := minMax.minH, maxW := minMax.maxW, maxH := minMax.maxH
 			try isElevated := WinUtilities.isElevated(hwnd)
 			if (getCommandLine) {
-				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
+				if isElevated != -1 && A_IsAdmin >= isElevated
+					try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
 				triedCommandline := true
 			}
 			this.windowCache[hwnd] := {
