@@ -29,7 +29,7 @@ class FolderSwitch {
 				}
 			case 1:
 				curPath := ShellWrapper.getExplorerSelfPath(ShellWrapper.getExplorerIEObject(hwnd))
-				fn := this.selector.bind(this, ShellWrapper.navigateExplorer.bind(ShellWrapper, hwnd))
+				fn := this.selector.bind(this, ObjBindMethod(ShellWrapper, "navigateExplorer", hwnd))
 			case 2:
 				fn := this.selector.bind(this, this.selectOrLaunch.bind(this))
 		}
@@ -61,7 +61,7 @@ class FolderSwitch {
 			path := this.paths[menuItemPos]
 		else
 			path := this.dataPath
-		fn(path)
+		try fn(path)
 	}
 
 	static selectOrLaunch(path) {
