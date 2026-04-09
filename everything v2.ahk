@@ -320,6 +320,7 @@ Alt & Capslock::{	; Switch to specified window
 }
 
 ^+!L:: { ; save / restore desktop state
+	timedTooltip("Attempting to restore Desktop state...")
 	WindowManager.DesktopState.restore()
 }
 
