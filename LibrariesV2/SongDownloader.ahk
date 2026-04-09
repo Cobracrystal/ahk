@@ -1031,6 +1031,9 @@ class SongDownloader {
 		if isAbsolutePath(logID)
 			SplitPath(logID,,,,&logID)
 		path := Format(this.settings.logFolder "\" this.TEMPLATES.LOGFILE, logID)
+		SplitPath(path, &name, &dir)
+		if !DirExist(dir)
+			DirCreate(dir)
 		fullStr := Format("[{}] {}`n", FormatTime(A_Now, "dd.MM.yyyy, ~HH:mm:ss"), Trim(str, " `t`r`n"))
 		if addSeparator
 			fullStr .= strMultiply("=", 22) "`n"
@@ -1050,8 +1053,11 @@ class SongDownloader {
 				doNothing()
 		}
 		dataArr := []
+		SplitPath(metadatapath, &name, &dir)
 		if FileExist(metadatapath)
 			dataArr := jsongo.parse(FileRead(metadatapath, "UTF-8"))
+		if !DirExist(dir)
+			DirCreate(dir)
 		dataArr.push(metadata)
 		f := FileOpen(metadatapath, "w", "UTF-8")
 		f.Write(toString(dataArr,false,false,true))
