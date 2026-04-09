@@ -148,8 +148,9 @@ getFileDuplicates(folders, comparisonKeys := ["name", "ext"], recursive := true,
 
 	comparator(keys, transformer, v) {
 		s := ""
+		t := transformer(v)
 		for key in keys
-			s .= v.%key%
+			s .= t.%key%
 		return s
 	}
 }
