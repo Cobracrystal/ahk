@@ -226,6 +226,7 @@ class WindowManager {
 			"class",		["class", "ahk_class"],
 			"pid",			["pid", "processID", "ahk_pid"],
 			"processPath",	["processPath", "path", "ahk_exe"],
+			"isElevated",	["isElevated", "isAdmin", "ahk_elevated"],
 			"commandLine",	["command", "cmdl", "cmd", "commandLine", "ahk_cmd"]
 		)
 		static tagMap := Map()
@@ -879,6 +880,7 @@ class WindowManager {
 		flags: 			{isInteger: 0, key: "flags", 		name: "flags"},
 		pid: 			{isInteger: 1, key: "pid", 			name: "PID"},
 		processPath:	{isInteger: 0, key: "processPath", 	name: "Process Path"},
+		isElevated:		{isInteger: 1, key: "isElevated", 	name: "Is Elevated"},
 		commandLine:	{isInteger: 0, key: "commandLine", 	name: "Command Line"}
 	}
 
@@ -912,6 +914,7 @@ class WindowManager {
 		this.columns.pid,
 		this.columns.flags,
 		this.columns.processPath,
+		this.columns.isElevated,
 		this.columns.commandLine
 	]
 	

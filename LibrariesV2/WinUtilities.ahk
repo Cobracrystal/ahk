@@ -56,8 +56,9 @@ class WinUtilities {
 	 * @param {Integer} getCommandline 
 	 * @param {Integer} updateCache 
 	 * @returns {Object | Any} An object of the following form
-	 * @example 
+	 * 
 	 * obj := {
+	 * 
 	 *		hwnd ; window handle (STATIC)
 	 *		title ; window title
 	 *		class ; ahk_class (STATIC)
@@ -71,6 +72,7 @@ class WinUtilities {
 	 *		pid ; process ID (STATIC)
 	 *		process ; process name (STATIC)
 	 *		processPath ; process path (STATIC)
+	 *		isElevated ; whether the process is elevated (STATIC)
 	 *		commandLine ; command line (if requested, otherwise blank) (STATIC)
 	 *		triedCommandline ; whether getWindowInfo tried retrieving the command line. This is relevant for caching.
 	 * }
@@ -135,7 +137,8 @@ class WinUtilities {
 		triedCommandline := false
 		if (this.windowCache.Has(hwnd)) {
 			if getCommandLine && !this.windowCache[hwnd].triedCommandline {
-				try this.windowCache[hwnd].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[hwnd].pid)[1]
+				if A_IsAdmin >= this.windowCache[hwnd].isElevated
+					try this.windowCache[hwnd].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[hwnd].pid)[1]
 				this.windowCache[hwnd].triedCommandline := true
 			}
 		} 
@@ -146,6 +149,7 @@ class WinUtilities {
 			try	pid := WinGetPID(hwnd)
 			try minMax := WinUtilities.getMinMaxResizeCoords(hwnd)
 			try minW := minMax.minW, minH := minMax.minH, maxW := minMax.maxW, maxH := minMax.maxH
+			try isElevated := WinUtilities.isElevated(hwnd)
 			if (getCommandLine) {
 				try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
 				triedCommandline := true
@@ -153,7 +157,7 @@ class WinUtilities {
 			this.windowCache[hwnd] := {
 				hwnd: hwnd, class: winClass, process: processName, processPath: processPath, 
 				pid: pid, minW: minW, minH: minH, maxW: maxW, maxH: MaxH,
-				commandLine: cmdLine, triedCommandline: triedCommandline
+				isElevated: isElevated, commandLine: cmdLine, triedCommandline: triedCommandline
 			}
 		}
 		return this.windowCache[hwnd]
@@ -164,6 +168,26 @@ class WinUtilities {
 		for i in ComObjGet(m).ExecQuery("Select " . (selector ?? "*") . " from " . d . (IsSet(selection) ? " " . selection : ""))
 			s.push(i.%selector%)
 		return (s.length > 0 ? s : [""])
+	}
+
+	/**
+	 * This evaluates the process attached to hwnd and returns 1 if it is elevated, 0 if it is not, -1 on failure.
+	 */
+	static isElevated(hwnd) {
+		static PROCESS_QUERY_LIMITED_INFORMATION := 0x1000
+		static TOKEN_QUERY := 0x0008
+		static TokenElevation := 20
+		pid := WinGetPID(hwnd)
+		if !(hProcess := DllCall("OpenProcess", "uint", PROCESS_QUERY_LIMITED_INFORMATION, "int", 0, "uint", pid, "ptr"))
+			return -1
+		if !(DllCall("advapi32\OpenProcessToken", "ptr", hProcess, "uint", TOKEN_QUERY, "ptr*", &hToken := 0)) {
+			DllCall("CloseHandle", "ptr", hProcess) 
+			return -1
+		}
+		success := DllCall("advapi32\GetTokenInformation", "ptr", hToken, "int", TokenElevation, "uint*", &IsElevated := 0, "uint", 4, "uint*", &size := 0)
+		DllCall("CloseHandle", "ptr", hToken)
+		DllCall("CloseHandle", "ptr", hProcess)
+		return success ? isElevated : -1
 	}
 
 	static isVisible(wHandle) {
