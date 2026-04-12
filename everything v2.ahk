@@ -77,7 +77,7 @@ AltDrag.addBlacklist([
 ; Start Loop to close winrar popups
 SetTimer(closeWinRarNotification, -100, -1000) ; priority -100k so it doesn't interrupt
 ; Initialize Internet Logging Script
-internetConnectionLogger("Init")
+; internetConnectionLogger("Init")
 ; Load LaTeX Hotstrings
 ; TODO: ADD WINDOW OPTION FOR HOTSTRINGLOADER. IE GIVEN AHK CRITERIA IT ADDS HOTIF BEFORE REGISTERING THEM (makes editing harder tho)
 try HotstringLoader.load(A_WorkingDir "\everything\LatexHotstrings.json", "LaTeX",,,false)
@@ -148,9 +148,9 @@ Launch_App2:: ; Show Folderswitch Menu
 	WindowManager.windowManager("T") ; this is actually decorative and only for hotkeymanager
 }
 
-^F9:: {	; Shows Internet Connection
-	internetConnectionLogger("T")
-}
+; ^F9:: {	; Shows Internet Connection
+; 	internetConnectionLogger("T")
+; }
 
 ^F8:: {	; Shows Reminder GUI
 	Scheduler.Gui.Toggle()
