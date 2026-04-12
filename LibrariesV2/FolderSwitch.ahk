@@ -6,6 +6,7 @@ class FolderSwitch {
 
 	static __New() {
 		this.dataPath := A_WorkingDir "\FolderDialogSwitch\paths.txt"
+		this.recentPaths := []
 	}
 
 	static showMenu() {
@@ -33,27 +34,32 @@ class FolderSwitch {
 			case 2:
 				fn := this.selector.bind(this, this.selectOrLaunch.bind(this))
 		}
-		m := Menu()
+		switchMenu := Menu()
 		if (!FileExist(this.dataPath))
 			FileAppend("// Add Paths here, one per line`n" A_WorkingDir, this.dataPath, "UTF-8")
+		savedPaths := []
 		f := Trim(FileRead(this.dataPath, "UTF-8"), "`n`r`t ")
-		this.savedpaths := []
 		loop parse f, "`n", "`r"
 			if (A_LoopField != "" && !RegExMatch(A_LoopField, "^\s*(;|\/\/)"))
-				this.savedpaths.push(Trim(A_LoopField))
-		objs := ShellWrapper.getExplorerIEObjects()
-		this.openedPaths := objDoForEach(objs, e => ShellWrapper.getExplorerSelfPath(e))
-		if this.savedpaths[-1] == this.dataPath
-			this.savedpaths.pop()
-		this.paths := objGetUniques(arrayMerge(this.savedpaths, [""], this.openedPaths), , false)
-		if this.paths[-1] == ""
-			this.paths.pop()
+				savedPaths.push(Trim(A_LoopField))
+		openedPaths := objDoForEach(ShellWrapper.getExplorerIEObjects(), e => ShellWrapper.getExplorerSelfPath(e))
+		paths := objGetUniques(arrayMerge(savedPaths, openedPaths), , false)
+		if paths.Length > savedPaths.Length ; if at least one openedPaths entry was unique, add separator
+			paths.InsertAt(savedPaths.Length + 1, "")
+		this.paths := objGetUniques(arrayMerge(paths, this.recentPaths), , false)
+		if this.paths.Length > paths.Length ; same as above
+			this.paths.InsertAt(paths.Length + 1, "")
+		; update recentPaths
+		this.recentPaths.InsertAt(1, openedPaths*)
+		cutOff := this.recentPaths.Length - 10
+		if cutOff > 0 ; keep only 10 maximum recent paths
+			this.recentPaths.RemoveAt(-cutOff, cutOff)
 		c := 1
 		for e in this.paths
-			m.add(e == "" ? unset : "&" c++ " " e, e == "" ? unset : fn)
-		m.add()
-		m.add("&s " this.dataPath, this.selector.bind(this, (path) => Run(path)))
-		m.show()
+			switchMenu.add(e == "" ? unset : "&" c++ " " e, e == "" ? unset : fn)
+		switchMenu.add()
+		switchMenu.add("&s " this.dataPath, this.selector.bind(this, (path) => Run(path)))
+		switchMenu.show()
 	}
 
 	static selector(fn, menuItemName, menuItemPos, menuObj) {
