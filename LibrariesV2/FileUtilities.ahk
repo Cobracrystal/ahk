@@ -376,6 +376,17 @@ isAbsolutePath(path) {
 	return (drive != "")
 }
 
+PathGetSplit(path) {
+	SplitPath(path, &name, &dir, &ext, &nameNoExt, &drive)
+	return { path: path, name: name, dir: dir, ext: ext, nameNoExt: nameNoExt, drive: drive }
+}
+
+PathGetFileName(path) 	=> (SplitPath(path, &name), name)
+PathGetDir(path) 		=> (SplitPath(path,, &dir), dir)
+PathGetExt(path) 		=> (SplitPath(path,,, &ext), ext)
+PathGetNameNoExt(path) 	=> (SplitPath(path,,,, &nameNoExt), nameNoExt)
+PathGetDrive(path) 		=> (SplitPath(path,,,,, &drive), drive)
+
 /**
  * Given a path, removes any backtracking of paths through \..\ to create a unique absolute path.
  * @param path The absolute path to normalize. While a relative path may be given, there is no guarantee it can be resolved (eg \folder\..\..\otherstuff\file.txt will backtrack outside of the scope of the path)
