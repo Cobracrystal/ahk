@@ -21,7 +21,7 @@ class Scheduler {
 		this.settings := { 
 			debug: 0, 
 			token: 0, 
-			notifyOnMissedRemindersThreshold: 86400, 
+			notifyOnMissedRemindersThreshold: 602400, 
 			omitBlankValuesOnSave: 1, 
 			logReminders: true,
 			defaultCachePath: "Reminders\reminders.json", 
