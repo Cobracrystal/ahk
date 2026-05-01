@@ -12,6 +12,20 @@ class FolderSwitch {
 	static showMenu() {
 		hwnd := WinActive("A")
 		wClass := WinGetClass(hwnd)
+		try {
+			if attr := FileExist(A_Clipboard) {
+				if InStr(attr, "D")
+					clipboardPaths := [A_Clipboard]
+				else {
+					SplitPath(A_Clipboard, &name, &dir)
+					clipboardPaths := [dir]
+				}
+			} else {
+				clipboardPaths := []
+			}
+		}
+		catch
+			clipboardPaths := []
 		if (wClass == "#32770" && fileDialogFunc := this.getFileDialog(hwnd, &editId))
 			flagContext := 0
 		else { ; check if we are in explorer
@@ -37,21 +51,26 @@ class FolderSwitch {
 		switchMenu := Menu()
 		if (!FileExist(this.dataPath))
 			FileAppend("// Add Paths here, one per line`n" A_WorkingDir, this.dataPath, "UTF-8")
-		savedPaths := []
+		paths_saved := []
 		f := Trim(FileRead(this.dataPath, "UTF-8"), "`n`r`t ")
 		loop parse f, "`n", "`r"
 			if (A_LoopField != "" && !RegExMatch(A_LoopField, "^\s*(;|\/\/)"))
-				savedPaths.push(Trim(A_LoopField))
-		openedPaths := objDoForEach(ShellWrapper.getExplorerIEObjects(), e => ShellWrapper.getExplorerSelfPath(e))
-		paths := objGetUniques(arrayMerge(savedPaths, openedPaths), , false)
-		if paths.Length > savedPaths.Length ; if at least one openedPaths entry was unique, add separator
-			paths.InsertAt(savedPaths.Length + 1, "")
-		this.paths := objGetUniques(arrayMerge(paths, this.recentPaths), , false)
-		if this.paths.Length > paths.Length ; same as above
-			this.paths.InsertAt(paths.Length + 1, "")
+				paths_saved.push(Trim(A_LoopField))
+		paths_open := objDoForEach(ShellWrapper.getExplorerIEObjects(), e => ShellWrapper.getExplorerSelfPath(e))
+		separatorIndices := []
+		menuPaths := paths_saved ; init 
+		for i, pathArr in [paths_open, this.recentPaths, clipboardPaths] {
+			uniquePaths := objGetUniques(arrayMerge(menuPaths, pathArr), , false)
+			if uniquePaths.Length > menuPaths.Length ; same as above
+				separatorIndices.push(menuPaths.Length)
+			menuPaths := uniquePaths
+		}
+		for i, index in separatorIndices
+			menuPaths.InsertAt(index + i, "")
+		this.paths := menuPaths
 		; update recentPaths
-		this.recentPaths.InsertAt(1, openedPaths*)
-		cutOff := this.recentPaths.Length - 10
+		this.recentPaths := objGetUniques(arrayMerge(this.recentPaths, paths_open, clipboardPaths))
+		cutOff := this.recentPaths.Length - 15
 		if cutOff > 0 ; keep only 10 maximum recent paths
 			this.recentPaths.RemoveAt(-cutOff, cutOff)
 		c := 1
