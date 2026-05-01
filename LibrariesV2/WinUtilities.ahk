@@ -111,7 +111,7 @@ class WinUtilities {
 		if !updateCache
 			cacheObj := info
 		else {
-			cacheObj := this.updateSingleCache(hwnd, getCommandline)
+			cacheObj := this.getStaticWindowInfo(hwnd, getCommandline, updateCache)
 			for key, val in info.OwnProps()
 				cacheObj.%key% := val
 		}
@@ -126,21 +126,22 @@ class WinUtilities {
 			for e in blacklist
 				if ((e != "" && WinExist(e " ahk_id " wHandle)) || (e == "" && WinGetTitle(wHandle) == ""))
 					continue 2
-			this.updateSingleCache(wHandle, getCommandLine)
+			this.getStaticWindowInfo(wHandle, getCommandLine)
 		}
 		DetectHiddenWindows(dHW)
 	}
 
-	static updateSingleCache(hwnd, getCommandLine) {
-		winClass := processName := processPath := pid := cmdLine := ""
+	static getStaticWindowInfo(hwnd, getCommandLine, useCache := true) {
+		winClass := processName := processPath := pid := cmdLine := isElevated := ""
 		minW := minH := maxW := maxH := ""
 		triedCommandline := false
-		if (this.windowCache.Has(hwnd)) {
+		if (this.windowCache.Has(hwnd) && useCache) {
 			if getCommandLine && !this.windowCache[hwnd].triedCommandline {
 				if this.windowCache[hwnd].isElevated != -1 && A_IsAdmin >= this.windowCache[hwnd].isElevated
 					try this.windowCache[hwnd].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[hwnd].pid)[1]
 				this.windowCache[hwnd].triedCommandline := true
 			}
+			return this.windowCache[hwnd]
 		} 
 		else {
 			try	winClass := WinGetClass(hwnd)
@@ -155,13 +156,15 @@ class WinUtilities {
 					try cmdLine := this.winmgmt("CommandLine", "Where ProcessId = " pid)[1]
 				triedCommandline := true
 			}
-			this.windowCache[hwnd] := {
+			staticInfo := {
 				hwnd: hwnd, class: winClass, process: processName, processPath: processPath, 
 				pid: pid, minW: minW, minH: minH, maxW: maxW, maxH: MaxH,
 				isElevated: isElevated, commandLine: cmdLine, triedCommandline: triedCommandline
 			}
+			if useCache
+				this.windowCache[hwnd] := staticInfo
+			return staticInfo
 		}
-		return this.windowCache[hwnd]
 	}
 
 	static winmgmt(selector?, selection?, d := "Win32_Process", m := "winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2") {
@@ -462,7 +465,7 @@ class WinUtilities {
 	static monitorIsPrimary(monitorHandle, useCache := true) => this.monitorGetInfo(monitorHandle, useCache).flag
 
 	/**
-	 * Whether or not the desktop is locked (concretely: we are in lockscreen)
+	 * Whether or not the desktop is locked (concretely: whether we are in the lockscreen)
 	 * @returns {Boolean} 
 	 */
 	static sessionIsLocked() {
