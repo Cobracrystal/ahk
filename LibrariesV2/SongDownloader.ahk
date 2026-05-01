@@ -32,28 +32,7 @@ if (A_LineFile == A_ScriptFullPath) { ; NECESSARY TO WORK WHEN INCLUDING
 class SongDownloader {
 
 	static __New() {
-		this.settings := {
-			debug: false,
-			simulate: false,
-			useAliases: true,
-			useVisibleCMD: false,
-			currentIterator: 76,
-			outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
-			outputSubFolder: "",
-			logMetadata: true,
-			logFolder: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\Logs"),
-			ffmpegPath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffmpeg.exe"),
-			ffprobePath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffprobe.exe"),
-			ytdlPath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
-			metadataFields: ["title", "artist", "album", "genre"],
-			ytdl: {
-				useCookies: true,
-				browserCookies: "firefox",
-				embedThumbnail: true,
-				cropThumbnailToSquare: true,
-				skipNonMusic: true
-			}
-		}
+		this.settings := this.getDefaultSettings()
 		this.settings.outputSubFolder := Format("p{:03}", this.settings.currentIterator)
 		this.data := {
 			coords: {x: 750, y: 425},
@@ -324,7 +303,9 @@ class SongDownloader {
 				else ; of the form Artist - Title feat. Singer (and thus there isn't a bracket) (or they forgot to close the bracket)
 					artist := Trim(match[1] . match[2]) " ft " Trim(match[3])
 			}
-			thumbnails := videoData["thumbnails"]
+			try thumbnails := videoData["thumbnails"]
+			catch 
+				thumbnails := Map()
 			objRemoveValues(videoData, ["formats", "requested_formats", "thumbnails", "subtitles"],,(i,e,v) => (i=v), "MANUALLY REMOVED")
 			metaData.push({
 				link: videoData["webpage_url"],
@@ -721,9 +702,7 @@ class SongDownloader {
 	}
 
 	static getYTVideoID(input) {
-		if (RegExMatch(input, "youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})", &o)
-			|| RegExMatch(input, "youtu\.be/([A-Za-z0-9_-]{11})", &o)
-			|| RegExMatch(input, "^[A-Za-z0-9_-]{11}$", &o))
+		if (RegExMatch(input, "(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})|^([A-Za-z0-9_-]{11})$", &o))
 			return o[1]
 		return 0
 	}
@@ -773,7 +752,7 @@ class SongDownloader {
 			simulate: false,
 			useAliases: true,
 			useVisibleCMD: false,
-			currentIterator: 76,
+			currentIterator: 77,
 			outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
 			outputSubFolder: "",
 			logMetadata: true,
@@ -787,7 +766,7 @@ class SongDownloader {
 				browserCookies: "firefox",
 				embedThumbnail: true,
 				cropThumbnailToSquare: true,
-				skipNonMusic: false
+				skipNonMusic: true
 			}
 		}
 	}
