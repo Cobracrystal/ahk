@@ -943,7 +943,7 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 		for i, e in headers
 			defaultHeaders[i] := e
 	}
-	for i, e in headers
+	for i, e in defaultHeaders
 		whr.setRequestHeader(i, e)
 	whr.Send()
 	whr.WaitForResponse()
