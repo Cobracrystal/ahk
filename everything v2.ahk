@@ -1291,15 +1291,10 @@ class RevoIdle {
 
 #HotIf WinExist("ahk_exe left4dead2.exe")
 ^o::{
-	static cmd := 'C:\Users\Simon\Desktop\programs\other\ProgramUtilities\Left4Dead2SprayChange\set_spray.bat "{}"'
+	static cmd := A_MyDocuments '\..\Downloads\l4d2\sprays\Left4Dead2SprayChange\set_spray.bat "{}"'
 	if !FileExist(A_Clipboard)
 		return
-	cmdRetAsync(Format(cmd, A_Clipboard),,,,tempFunc)
-	
-
-	tempFunc(output, success) {
-		timedTooltip(success ? "Success" : "Failure")
-	}
+	cmdRetAsync(Format(cmd, A_Clipboard),,,,(output, success) => timedTooltip(success ? "Success" : "Failure"))
 }
 #HotIf 
 
@@ -1323,11 +1318,21 @@ class RevoIdle {
 ; 	else
 ; 		timedTooltip("Does not exist yet")
 ; }
-#HotIf WinActive("Revolution Idle")
-^Insert::{	; Automatic Hotkey generated 06.04.2026, 17:05:30
-	MouseGetPos(&x, &y)	
-	MouseClick("L", 1500, 974)
-	Sleep(100)
-	MouseMove(x, y)
+
+
+^!l::{
+	static backupPath := "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine\projects\backup"
+	static defaultPath := "C:\Program Files (x86)\Steam\SteamApps\workshop\content\431960"
+	str := A_Clipboard
+	for i, e in (t := strSplitOnNewLine(str)) {
+		if !RegExMatch(e, "filedetails\/\?id=(\d+)", &o)
+			return
+		if DirExist(backupPath "\" o[1]) || DirExist(defaultPath "\" o[1])
+			MsgBoxAsGui("Path already exists:`n" e)
+		else {
+			Run(e)
+			Sleep(30000)
+		}
+	}
+	MsgBoxAsGui("Opened " t.Length " Links")
 }
-#HotIf
