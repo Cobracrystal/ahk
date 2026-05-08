@@ -169,15 +169,31 @@ getMetadataFolder(folder, metadata := []) {
 	return data
 }
 
-strContainsIllegalChar(str) {
-	static charMap := Map("\", "-", "/", "⧸", ":", "", "*", "＊", "?", ".", '"', "'", "<", "(", ">", ")", "|", "-")
-	for i, e in charMap
-		if InStr(str, i)
+strContainsIllegalCharWinApi(str) {
+	static NO_ACTION_TAKEN := 0
+	static PCS_REPLACEDCHAR := 1
+	static PCS_REMOVEDCHAR := 2
+	static PCS_TRUNCATED := 4
+	static PCS_PATHTOOLONG := 8
+	static PCS_FATAL := 2147483648 ; is always returned together with PCS_PATHTOOLONG
+	StrPut(str, buf := Buffer(StrPut(str,"UTF-16")), "UTF-16")
+	switch DllCall("shell32\PathCleanupSpec", "Ptr", 0, "Ptr", buf, "int") {
+		case NO_ACTION_TAKEN:
+			return 0
+		case PCS_REMOVEDCHAR:
 			return 1
-	return 0
+		case PCS_REPLACEDCHAR:
+			return 2 ; a / is treated differently compared to \:*?"<>|
+		default:
+			return 0
+	}
 }
 
-strReplaceIllegalChars(str, &replaceCount) {
+strContainsIllegalChar(str) {
+	return RegExMatch(str, '\\|\/|:|\*|\?|"|<|>|\|')
+}
+
+strReplaceIllegalChars(str, &replaceCount := 0) {
 	static charMap := Map("\", "-", "/", "⧸", ":", "", "*", "＊", "?", ".", '"', "'", "<", "(", ">", ")", "|", "-")
 	total := 0
 	for i, e in charMap {
@@ -187,6 +203,26 @@ strReplaceIllegalChars(str, &replaceCount) {
 	replaceCount := total
 	return str
 }
+
+
+/**
+ * Replaces illegal chars according to shlobj_core Specifications, which replaces "/" with "-" and removing all other illegal chars.
+ * @param str 
+ * @returns {String} 
+ */
+strRemoveIllegalChars(str) {
+	static NO_ACTION_TAKEN := 0
+	static PCS_REPLACEDCHAR := 1
+	static PCS_REMOVEDCHAR := 2
+	static PCS_TRUNCATED := 4
+	static PCS_PATHTOOLONG := 8
+	static PCS_FATAL := 2147483648 ; is always returned together with PCS_PATHTOOLONG
+	buf := Buffer(StrPut(str,"UTF-16"))
+	StrPut(str, buf, "UTF-16")
+	DllCall("shell32\PathCleanupSpec", "Ptr", 0, "Ptr", buf, "int")
+	return StrGet(buf, "UTF-16")
+}
+
 
 /**
  * Compares items in folders. optionally recursive. returns items present in folder 1 that are not present in folder 2
