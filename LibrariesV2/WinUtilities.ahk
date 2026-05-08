@@ -108,14 +108,10 @@ class WinUtilities {
 			minX: minX, minY: minY,
 			maxX: maxX, maxY: maxY
 		}
-		if !updateCache
-			cacheObj := info
-		else {
-			cacheObj := this.getStaticWindowInfo(hwnd, getCommandline, updateCache)
-			for key, val in info.OwnProps()
-				cacheObj.%key% := val
-		}
-		return cacheObj
+		staticInfo := this.getStaticWindowInfo(hwnd, getCommandline, true, updateCache)
+		for key, val in info.OwnProps()
+			staticInfo.%key% := val
+		return staticInfo
 	}
 
 	static updateCache(getHidden := false, blacklist := this.defaultBlacklist, getCommandLine := false) {
@@ -131,7 +127,7 @@ class WinUtilities {
 		DetectHiddenWindows(dHW)
 	}
 
-	static getStaticWindowInfo(hwnd, getCommandLine, useCache := true) {
+	static getStaticWindowInfo(hwnd, getCommandLine, useCache := true, updateCache := true) {
 		winClass := processName := processPath := pid := cmdLine := isElevated := ""
 		minW := minH := maxW := maxH := ""
 		triedCommandline := false
@@ -161,7 +157,7 @@ class WinUtilities {
 				pid: pid, minW: minW, minH: minH, maxW: maxW, maxH: MaxH,
 				isElevated: isElevated, commandLine: cmdLine, triedCommandline: triedCommandline
 			}
-			if useCache
+			if updateCache
 				this.windowCache[hwnd] := staticInfo
 			return staticInfo
 		}
@@ -384,21 +380,26 @@ class WinUtilities {
 			)
 	}
 
-	static monitorGetAll(cache := true) {
+	static monitorGetAllHandles() {
 		static callback := CallbackCreate(enumProc, 'Fast')
-		monitors := Map()
+		monitors := []
 		if !DllCall("EnumDisplayMonitors", "Ptr", 0, "Ptr", 0, "Ptr", callback, "Ptr", 0)
 			return 0
-		if cache
-			for mHandle, monitor in monitors
-				if !this.monitorCache.Has(mHandle)
-					this.monitorCache[mHandle] := monitor
 		return monitors
 
 		enumProc(monitorHandle, HDC, PRECT, *) {
-			monitors[monitorHandle] := this.monitorGetInfo(monitorHandle, false)
+			monitors.push(monitorHandle)
 			return true
 		}
+	}
+
+	static monitorGetAll(cache := true) {
+		monitors := Map()
+		for mHandle in this.monitorGetAllHandles()
+			monitors[mHandle] := this.monitorGetInfo(mHandle, false)
+		if cache
+			this.monitorCache := monitors
+		return monitors
 	}
 
 	static monitorGetHandleFromWindow(wHandle) => DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
@@ -411,13 +412,12 @@ class WinUtilities {
 	static monitorGetHandleFromPoint(x?, y?) {
 		static MONITOR_DEFAULTTONULL := 0x0
 		point := Buffer(8, 0)
-		if IsSet(x) || !IsSet(y) {
+		if (!IsSet(x) || !IsSet(y))
 			DllCall("GetCursorPos", "Ptr", point)
-			x := x ?? NumGet(point, 0, "Int")
-			y := y ?? NumGet(point, 4, "Int")
-		}
-		NumPut("Int", x, "Int", y, point)
-		return DllCall("MonitorFromPoint", "Ptr", point, "UInt", MONITOR_DEFAULTTONULL, "Ptr")
+		else
+			NumPut("Int", x, "Int", y, point)
+		fakePoint := NumGet(point, "Int64")
+		return DllCall("MonitorFromPoint", "Int64", fakePoint, "UInt", MONITOR_DEFAULTTONULL, "Ptr")
 	}
 
 	static monitorGetInfoFromPoint(x?, y?, cache := true) {
@@ -430,7 +430,7 @@ class WinUtilities {
 		static MONITOR_DEFAULTTONULL := 0x0
 		rect := Buffer(16, 0)
 		NumPut("Int", x, "Int", y, "Int", x+w, "Int", y+h, rect)
-		return DllCall("MonitorFromRect", "Ptr", rect, "UInt", MONITOR_DEFAULTTONULL, "Uptr")
+		return DllCall("MonitorFromRect", "Ptr", rect, "UInt", MONITOR_DEFAULTTONULL, "Ptr")
 	}
 
 	static monitorGetInfoFromRect(x, y, w, h, cache := true) {
