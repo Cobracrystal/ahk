@@ -299,41 +299,46 @@ printCompareFolders(folder1, folder2) {
 	print("Total count: "  comp.Length)
 }
 
-ao3GetBookmarkChapterCount(pages) => objGetSum(ao3GetBookmarks(pages), v => ((p := InStr(v.chapters, "/")) ? SubStr(v.chapters, 1, p-1) : v.chapters))
-ao3GetBookmarkWordcount(pages) => objGetSum(ao3GetBookmarks(pages), v => v.words)
-ao3GetBookmarks(pages) {
-	bigArr := []
-	arr := getBookmarks(pages)
-	; return MapToObj(jsongo.Parse(A_Clipboard))
-	for i, key in arr
-		bigArr.push(ao3parseHtml(key)*)
-	return bigArr
+class AO3 {
+	static ao3GetBookmarkChapterCount(pages) => objGetSum(this.ao3GetBookmarks(pages), v => ((p := InStr(v.chapters, "/")) ? SubStr(v.chapters, 1, p-1) : v.chapters))
+	
+	static ao3GetBookmarkWordcount(pages) => objGetSum(this.ao3GetBookmarks(pages), v => v.words)
+	
+	static ao3GetBookmarks(pages) {
+		bigArr := []
+		arr := this.getBookmarkPageHTML(pages)
+		for i, key in arr
+			bigArr.push(ao3parseHtml(key)*)
+		return bigArr
 
-	ao3parseHtml(str) {
-		pos := 1
-		arr := []
-		len := strlen(str)
-		A_Clipboard := str
-		while (pos <= len) {
-			work := {}
-			pos := InStr(str, '<!--title, author, fandom-->',, pos)
-			if (pos == 0)
-				break
-			RegExMatch(str, '<a href="\/works\/(\d+)">(.*?)<\/a>', &workMatch, pos)
-			posEnd := RegExMatch(str, '<dl class="stats">((?:.|\n)*?)<\/dl>', &workStats, pos)
-			work.id := workMatch[1]
-			work.name := workMatch[2]
-			for key in ["language","words","chapters","comments","kudos","bookmarks","hits"] {
-				if RegExMatch(workstats[1], '<dd class="' key '"[^>]*?>(?:<a[^>]*?>)?([^>]*?)(?:<\/a>[^<>\n]*?)?(?:\s|\n)*\/?<\/dd>', &stat)
-					work.%key% := Trim(StrReplace(stat[1], ","), " `t`n`r\/")
+		ao3parseHtml(str) {
+			pos := 1
+			arr := []
+			len := strlen(str)
+			A_Clipboard := str
+			while (pos <= len) {
+				work := {}
+				pos := InStr(str, '<!--title, author, fandom-->',, pos)
+				if (pos == 0)
+					break
+				RegExMatch(str, '<a href="\/works\/(\d+)">(.*?)<\/a>', &workMatch, pos)
+				posEnd := RegExMatch(str, '<dl class="stats">((?:.|\n)*?)<\/dl>', &workStats, pos)
+				work.id := workMatch[1]
+				work.name := workMatch[2]
+				for key in ["language","words","chapters","comments","kudos","bookmarks","hits"] {
+					if RegExMatch(workstats[1], '<dd class="' key '"[^>]*?>(?:<a[^>]*?>)?([^>]*?)(?:<\/a>[^<>\n]*?)?(?:\s|\n)*\/?<\/dd>', &stat)
+						work.%key% := Trim(StrReplace(stat[1], ","), " `t`n`r\/")
+				}
+				pos := posEnd + StrLen(workStats[0])
+				arr.push(work)
 			}
-			pos := posEnd + StrLen(workStats[0])
-			arr.push(work)
+			return arr
 		}
-		return arr
+
+		
 	}
 
-	getBookmarks(pages) {
+	static getBookmarkPageHTML(pages) {
 		static baseURL := "https://archiveofourown.org/users/Cobracrystal/bookmarks"
 		htmlArr := []
 		Loop (pages) {
@@ -344,66 +349,85 @@ ao3GetBookmarks(pages) {
 	}
 }
 
-sessionBuddyGetObjectFromOneTabHTML(path) {
-	; path := "C:\Users\Simon\Downloads\website.htm"
-	html := FileRead(path, "UTF-8")
-	output := ""
-	previous := ""
-	collectionsArray := []
-	collection := {}
-	url := {}
-	loop parse html, "`n", "`r" {
-		line := A_LoopField
-		if (InStr(line, 'class="tabGroup"')) {
-			if (ObjOwnPropCount(collection) > 0)
-				collectionsArray.push(collection)
-			collection := {title: "", links: []}
-		}
-		else if (InStr(line, 'class="tabGroupLabel"')) {
-			RegexMatch(line, '<div class="tabGroupLabel">(.*)</div>', &o)
-			collection.title := htmlDecode(o[1])
-		} else if (InStr(line, '<div class="tab">')) {
-			if (ObjOwnPropCount(url) > 0)
-				collection.links.push(url)
-			url := {}
-		} else if (InStr(line, 'class="favIconImg"')) {
-			RegExMatch(line, '<img class="favIconImg" src="(.*)">', &o)
-			url.favIconUrl := htmlDecode(o[1])
-		} else if (InStr(line, 'class="tabLink"')) {
-			RegExMatch(line, '<a class="tabLink" rel="ugc" href="(.*)">(.*)</a>', &o)
-			url.url := htmlDecode(o[1])
-			url.title := htmlDecode(o[2])
-		}
-	}
-	collection.links.push(url)
-	collectionsArray.Push(collection)
-	return jsongo.Stringify(collectionsArray)
-}
 
-sessionBuddyTransformSpecificCollectionsWithReadInName(text) {
-	; text := FileRead("C:\Users\Simon\Desktop\programs\programming\ahk\oneTabJson.json", "UTF-8")
-	obj := jsongo.parse(text)
-	collectionRead := {title:"read", folders:[]}
-	collectionTodo := {title:"Todo", folders:[]}
-	collection3 := {title:"Other", folders:[]}
-	local collectionsArray := [collectionRead, collectionTodo, collection3]
-	for i, e in obj {
-		timestamp := e["created"]
-		e.Delete("created")
-		for j, url in e["links"] {
-			RegExMatch(url["url"], "(https?://[^/]+)", &o)
-			url["favIconUrl"] := o[1] "/favicon.ico"
+class SessionBuddy {
+	
+	static GetObjectFromOneTabHTML(path) {
+		; path := A_Desktop "\..\Downloads\website.htm"
+		html := FileRead(path, "UTF-8")
+		output := ""
+		previous := ""
+		collectionsArray := []
+		collection := {}
+		url := {}
+		loop parse html, "`n", "`r" {
+			line := A_LoopField
+			if (InStr(line, 'class="tabGroup"')) {
+				if (ObjOwnPropCount(collection) > 0)
+					collectionsArray.push(collection)
+				collection := {title: "", links: []}
+			}
+			else if (InStr(line, 'class="tabGroupLabel"')) {
+				RegexMatch(line, '<div class="tabGroupLabel">(.*)</div>', &o)
+				collection.title := htmlDecode(o[1])
+			} else if (InStr(line, '<div class="tab">')) {
+				if (ObjOwnPropCount(url) > 0)
+					collection.links.push(url)
+				url := {}
+			} else if (InStr(line, 'class="favIconImg"')) {
+				RegExMatch(line, '<img class="favIconImg" src="(.*)">', &o)
+				url.favIconUrl := htmlDecode(o[1])
+			} else if (InStr(line, 'class="tabLink"')) {
+				RegExMatch(line, '<a class="tabLink" rel="ugc" href="(.*)">(.*)</a>', &o)
+				url.url := htmlDecode(o[1])
+				url.title := htmlDecode(o[2])
+			}
 		}
-		if (InStr(e["title"], "read")) {
-				e["title"] := DateAddW("19700101000000", timestamp / 1000, "S")
-				collectionRead.folders.push(e)
-		} else if (InStr(e["title"], "todo"))
-			collectionTodo.folders.Push(e)
-		else
-			collection3.folders.Push(e)
-		
+		collection.links.push(url)
+		collectionsArray.Push(collection)
+		return jsongo.Stringify(collectionsArray)
 	}
-	return jsongo.Stringify(collectionsArray)
+
+	static TransformSpecificCollectionsWithReadInName(text) {
+		; text := FileRead(A_Desktop "\programs\programming\ahk\oneTabJson.json", "UTF-8")
+		obj := jsongo.parse(text)
+		collectionRead := {title:"read", folders:[]}
+		collectionTodo := {title:"Todo", folders:[]}
+		collection3 := {title:"Other", folders:[]}
+		local collectionsArray := [collectionRead, collectionTodo, collection3]
+		for i, e in obj {
+			timestamp := e["created"]
+			e.Delete("created")
+			for j, url in e["links"] {
+				RegExMatch(url["url"], "(https?://[^/]+)", &o)
+				url["favIconUrl"] := o[1] "/favicon.ico"
+			}
+			if (InStr(e["title"], "read")) {
+					e["title"] := DateAddW("19700101000000", timestamp / 1000, "S")
+					collectionRead.folders.push(e)
+			} else if (InStr(e["title"], "todo"))
+				collectionTodo.folders.Push(e)
+			else
+				collection3.folders.Push(e)
+			
+		}
+		return jsongo.Stringify(collectionsArray)
+	}
+
+	static collectionTransformToFoldersAndFaviconLinks() {
+		text := FileRead(A_Desktop "\programs\programming\ahk\oneTabJson.json", "UTF-8")
+		obj := jsongo.parse(text)
+		local collectionsArray := []
+		for i, e in obj {
+			for j, url in e["links"] {
+				RegExMatch(url["url"], "(https?://[^/]+)", &o)
+				url["favIconUrl"] := o[1] "/favicon.ico"
+			}
+			e["folders"] := [{links:e["links"]}]
+			e.delete("links")
+		}
+		A_Clipboard := jsongo.Stringify(obj)
+	}
 }
 
 calculateCompatibilityData() {
@@ -557,20 +581,6 @@ getRandomDataDistributionHoloMemsGuessr() {
 	return s
 }
 
-sessionBuddyCollectionTransformToFoldersAndFaviconLinks() {
-	text := FileRead("C:\Users\Simon\Desktop\programs\programming\ahk\oneTabJson.json", "UTF-8")
-	obj := jsongo.parse(text)
-	local collectionsArray := []
-	for i, e in obj {
-		for j, url in e["links"] {
-			RegExMatch(url["url"], "(https?://[^/]+)", &o)
-			url["favIconUrl"] := o[1] "/favicon.ico"
-		}
-		e["folders"] := [{links:e["links"]}]
-		e.delete("links")
-	}
-	A_Clipboard := jsongo.Stringify(obj)
-}
 
 sortYoutubePlaylistLinksByIndex() {
 	str := A_Clipboard
