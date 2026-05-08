@@ -59,10 +59,10 @@ Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReload
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", remInst.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
-if (StrCompare(A_OSVersion, "10.0.22000") < 0) {
-	TransparentTaskbar.setMode(4, 2, 50)
-	TransparentTaskbar.setTimer(1)
-}
+; if (StrCompare(A_OSVersion, "10.0.22000") < 0) {
+; 	TransparentTaskbar.setMode(4, 2, 50)
+; 	TransparentTaskbar.setTimer(1)
+; }
 ; Start keeping track of desktop window changes
 WindowManager.DesktopState.enable(60000)
 ; import custom blacklist into AltDrag
@@ -410,32 +410,39 @@ showcoords() {
 	}
 }
 
-winSlowMove(hwnd, endX := "", endY := "", endW := "", endH := "", speed := 1) {
-	WinDelay := A_WinDelay
-	SetWinDelay(-1)
+winSlowMove(hwnd, x?, y?, w?, h?, speed := 1, restore := false) {
+	static PI := 3.1415926
+	pWinDelay := SetWinDelay(-1)
 	mmx := WinGetMinMax(hwnd)
-	if (mmx == 1 || mmx == -1)
-		return
-	if (endX == "" && endY == "" && endW == "" && endH == "")
-		return
-	WinGetPos(&iniX, &iniY, &iniW, &iniH, hwnd)
+	if (mmx == 1 || mmx == -1) {
+		if !restore
+			return
+		WinRestore(hwnd)
+	}
+	WinGetPos(&cx, &cy, &cw, &ch, hwnd)
 	if (speed == 0) {
-		WinMove(endX, endY, endW, endH, hwnd)
+		WinUtilities.setWindowPlacement(hwnd, x?, y?, w?, h?)
 	} else {
-		iter := Ceil(((endX != "" ? Abs(iniX - endX) : 0) + (endY != "" ? Abs(iniY - endY) : 0) + (endW != "" ? Abs(iniW - endW) : 0) + (endH != "" ? Abs(iniH - endH) : 0)) / (speed))
-		tX := (endX != "" ? (endX - iniX) : 0)
-		tY := (endY != "" ? (endY - iniY) : 0)
-		tW := (endW != "" ? (endW - iniW) : 0)
-		tH := (endH != "" ? (endH - iniH) : 0)
+		iter := Ceil(
+			(
+				(IsSet(x) ? Abs(cx - x) : 0) +
+				(IsSet(y) ? Abs(cy - y) : 0) +
+				(IsSet(w) ? Abs(cw - w) : 0) +
+				(IsSet(h) ? Abs(ch - h) : 0)
+			) / (speed))
+		tX := IsSet(x) ? cx - x : 0 
+		tY := IsSet(y) ? cy - y : 0 
+		tW := IsSet(w) ? cw - w : 0 
+		tH := IsSet(h) ? ch - h : 0
 		Loop (iter)
 		{
-			sT := (1 - cos(A_Index / iter * 3.1415926)) / 2
-			try WinMove(iniX + tX * sT, iniY + tY * sT, iniW + tW * sT, iniH + tH * sT, hwnd)
+			sT := (1 - cos(A_Index / iter * PI)) / 2
+			try WinMove(cx + tX * sT, cy + tY * sT, cw + tW * sT, ch + tH * sT, hwnd)
 			catch
 				break
 		}
 	}
-	SetWinDelay(WinDelay)
+	SetWinDelay(pWinDelay)
 }
 
 slowClose(wHandle, HeightStep := 100, WidthStep := 100) {
@@ -740,9 +747,11 @@ customExit(ExitReason, ExitCode) {
 
 #f:: ; Open Everything Search Window
 *^LWin Up:: { ; Open Everything Search Window
-	static everythingWinIdentifier := "Everything ahk_exe Everything.exe ahk_class EVERYTHING"
+	static everythingWinIdentifier := "Everything (1.5a) ahk_exe Everything.exe ahk_class EVERYTHING_(1.5a)"
 	static currentTimer := 0
 	static currentWin := 0
+	static monPos := WinUtilities.monitorGetPrimaryInfo()
+	static wantX := 40, wantW := 785, wantH := 650, wantY := monPos.wBottom - wantH + 7 ; 7 bullshit margin pixel
 	if (currentTimer) { ; timer is running -> window is open and volatile. thus disable timer
 		SetTimer(currentTimer, 0)
 		currentTimer := 0
@@ -754,8 +763,8 @@ customExit(ExitReason, ExitCode) {
 		return
 	}
 	list := WinGetList(everythingWinIdentifier) ; get potentially existing current windows
-	Run('"C:\Program Files\Everything\Everything.exe" -newwindow -minimized')
-	while ((newList := WinGetList(everythingWinIdentifier)).Length == list.Length) ; wait until window exists
+	Run('"C:\Program Files\Everything 1.5a\Everything.exe" -newwindow -minimized')
+	while ((newList := WinGetList(everythingWinIdentifier)).Length == list.Length) ; wait until window exists. can't use winwait since it might be multiple windows.
 		Sleep(50)
 	for i, e in newList {
 		if (!objContainsValue(list, e)) {
@@ -765,12 +774,17 @@ customExit(ExitReason, ExitCode) {
 	}
 	if !IsSet(hwnd)
 		return 0 ; window didn't launch correctly or user interfered
+	if searchApp := WinActive("ahk_class Windows.UI.Core.CoreWindow")
+		WinClose(searchApp)
+	WinWaitClose(searchApp)
 	currentWin := hwnd
 	pos := WinUtilities.getWindowPlacement(hwnd)
-	if !(pos.x == 40 && pos.y == 400 && pos.w == 784 && pos.h == 648)
-		WinUtilities.setWindowPlacement(hwnd, 40, 400, 784, 648)
-	if WinGetMinMax(hwnd) != 0
+	if !(pos.x == wantX && pos.y == wantY && pos.w == wantW && pos.h == wantH)
+		WinUtilities.setWindowPlacement(hwnd, wantX, wantY, wantW, wantH)
+	if WinGetMinMax(hwnd) != 0 ; should never happen. Is necessary if winSlowMove is used though.
 		WinRestore(hwnd)
+	; if !(pos.x == wantX && pos.y == wantY && pos.w == wantW && pos.h == wantH)
+	; 	winSlowMove(hwnd, wantX, wantY, wantW, wantH, 1)
 	WinActivate(hwnd)
 	WinMoveTop(hwnd)
 	currentTimer := closeIfNotActive.bind(hwnd)
