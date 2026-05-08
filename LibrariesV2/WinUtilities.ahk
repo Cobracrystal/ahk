@@ -402,6 +402,16 @@ class WinUtilities {
 		return monitors
 	}
 
+	static monitorGetPrimaryHandle(cache := true) {
+		for i, e in this.monitorGetAll(cache)
+			if e.primary
+				return i
+	}
+
+	static monitorGetPrimaryInfo(cache := true) {
+		return this.monitorGetInfo(this.monitorGetPrimaryHandle(cache), cache)
+	}
+
 	static monitorGetHandleFromWindow(wHandle) => DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
 
 	static monitorGetInfoFromWindow(wHandle, cache := true) {
@@ -462,7 +472,7 @@ class WinUtilities {
 		return monitor
 	}
 
-	static monitorIsPrimary(monitorHandle, useCache := true) => this.monitorGetInfo(monitorHandle, useCache).flag
+	static monitorIsPrimary(monitorHandle, useCache := true) => this.monitorGetInfo(monitorHandle, useCache).primary
 
 	/**
 	 * Whether or not the desktop is locked (concretely: whether we are in the lockscreen)
