@@ -27,6 +27,38 @@ updateScript() {
 		Download(url, A_LineFile)
 }
 
+class TTS {
+
+	static speak(text := "Hello, " A_UserName, voice := TTS.Voices.Haruka) {
+		module := ComObject("SAPI.SpVoice")
+		for v in module.GetVoices() {
+			if (v.getAttribute("Name") ~= voice) {
+				module.Voice := v
+				module.speak(text)
+			}
+		}
+	}
+
+	static getVoices() {
+		voice := ComObject("SAPI.SpVoice")
+		return voice.GetVoices()
+	}
+
+	static getVoiceNames() {
+		arr := []
+		for v in this.getVoices()
+			arr.push(v.getAttribute("Name"))
+		return arr
+	}
+	
+	class Voices {
+		static Hedda := "Microsoft Hedda Desktop"
+		static David := "Microsoft David Desktop"
+		static Zira := "Microsoft Zira Desktop"
+		static Haruka := "Microsoft Haruka Desktop"
+	}
+}
+
 class Demonstrator {
 
 	static demonstratePropertyDistribution() {
