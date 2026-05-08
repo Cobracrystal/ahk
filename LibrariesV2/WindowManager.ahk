@@ -354,8 +354,18 @@ class WindowManager {
 									str .= this.LV.GetText(rowN, 3) "`n"
 								A_Clipboard := Trim(str, "`n")
 							case GetKeyState("Ctrl"): ; ctrl C to get identifier
-								for rowN in rowNums
-									str .= this.LV.GetText(rowN, 3) " ahk_exe " this.LV.GetText(rowN, 4) " ahk_class " this.LV.GetText(rowN, 10) . "`n"
+								for i, e in this.config.columnsProfile {
+									switch e.key {
+										case "class":
+											indexClass := i
+										case "title":
+											indexTitle := i
+										case "process":
+											indexProcess := i
+									}
+								}
+								for rowN in rowNums 
+									str .= this.LV.GetText(rowN, indexTitle) " ahk_exe " this.LV.GetText(rowN, indexProcess) " ahk_class " this.LV.GetText(rowN, indexClass) . "`n"
 								A_Clipboard := Trim(str, "`n")
 						}
 					case "77":
