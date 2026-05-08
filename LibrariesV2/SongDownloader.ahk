@@ -411,7 +411,8 @@ class SongDownloader {
 					profile := this.addRemoveProfile(profile, rem, add, true, true)
 					profile := this.addRemoveProfile(profile, rem2, add2, true, true)
 				case "Link":
-					data.link := val
+					data.link := this.constructLink(val)
+					guiCtrlObj.Value := data.link
 				case "OutputFolder":
 					rem := [{ option: this.ytdloptions.paths, param: this.settings.outputBaseFolder "\" outputFolder }]
 					add := [{ option: this.ytdloptions.paths, param: this.settings.outputBaseFolder "\" val }]
