@@ -127,8 +127,9 @@ tryCatchBinarySearch(fn, lower := 1, upper := 100000) {
 
 ExecHelperScript(expression, wait := true, void := false) {
 	input := '#Warn All, Off`n'
-	input .= '#Include "*i ' A_LineFile '"`n'
-	input .= '#Include "*i ' A_LineFile '\..\..\LibrariesV2\MathUtilities.ahk"`n'
+	input .= '#Include "' A_LineFile '\.."`n'
+	input .= '#Include "*i BasicUtilities.ahk"`n'
+	input .= '#Include "*i MathUtilities.ahk"`n'
 	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print(?:\(.*\)|\s+.*)') || RegexMatch(expression, 'i)\.Show\(.*\)'))
 		input .= expression
 	else
