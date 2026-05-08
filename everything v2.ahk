@@ -391,12 +391,22 @@ closeWinRarNotification() {
 }
 
 showcoords() {
+	static str := ""
 	CoordMode("Mouse", "Screen")
 	try {
 		MouseGetPos(&ttx, &tty, &ttWin)
 		ttc := PixelGetColor(ttx, tty)
-		ttWinT := WinGetTitle(ttWin)
-		Tooltip(ttx ", " tty ", " ttc "`n" ttWinT)
+		underMouse := WinUtilities.getWindowInfo(ttWin)
+		active := WinUtilities.getWindowInfo(WinExist("A"))
+		new := Format("Mouse: x{} y{}, Color: {}`nCursor Win: {}, class {}, exe {}`nActive Win: {}, class {}, exe {}",
+			ttx, tty, ttc,
+			underMouse.title, underMouse.class, undermouse.process,
+			active.title, active.class, active.process
+		)
+		if (new == str)
+			return
+		str := new
+		Tooltip(str)
 	}
 }
 
