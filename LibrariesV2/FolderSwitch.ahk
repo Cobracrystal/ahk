@@ -12,20 +12,14 @@ class FolderSwitch {
 	static showMenu() {
 		hwnd := WinActive("A")
 		wClass := WinGetClass(hwnd)
-		try {
-			if attr := FileExist(A_Clipboard) {
-				if InStr(attr, "D")
-					clipboardPaths := [A_Clipboard]
-				else {
-					SplitPath(A_Clipboard, &name, &dir)
-					clipboardPaths := [dir]
-				}
-			} else {
-				clipboardPaths := []
-			}
-		}
-		catch
+		if !(attr := FileExist(A_Clipboard))
 			clipboardPaths := []
+		else if InStr(attr, "D")
+			clipboardPaths := [A_Clipboard]
+		else {
+			SplitPath(A_Clipboard, &name, &dir)
+			clipboardPaths := [dir]
+		}
 		if (wClass == "#32770" && fileDialogFunc := this.getFileDialog(hwnd, &editId))
 			flagContext := 0
 		else { ; check if we are in explorer
