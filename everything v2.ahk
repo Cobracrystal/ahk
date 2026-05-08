@@ -1296,17 +1296,58 @@ class RevoIdle {
 	MsgBoxAsGui(res)
 }
 
-
-
-
 #HotIf WinExist("ahk_exe left4dead2.exe")
 ^o::{
-	static cmd := A_MyDocuments '\..\Downloads\l4d2\sprays\Left4Dead2SprayChange\set_spray.bat "{}"'
-	if !FileExist(A_Clipboard)
-		return
-	cmdRetAsync(Format(cmd, A_Clipboard),,,,(output, success) => timedTooltip(success ? "Success" : "Failure"))
+	switch PathGetExt(A_Clipboard) {
+		case "gif":
+			l4d2_convertGifToVTF(A_Clipboard)
+		case "png", "jpeg", "jpg":
+			l4d2_convertImgToVTF(A_Clipboard)
+		default:
+			return
+	}
 }
 #HotIf 
+
+l4d2_convertImgToVTF(path) {
+	static outputBase := A_MyDocuments "\..\Downloads\l4d2\sprays\todo"
+	static steamPath := "C:\Program Files (x86)\Steam\SteamApps\common\Left 4 Dead 2\left4dead2\materials\vgui\logos\custom\dynamic.vtf"
+	static spraySetPath := A_MyDocuments '\..\Downloads\l4d2\sprays\Left4Dead2SprayChange\set_spray.bat'
+	if !FileExist(path)
+		return
+	pathInfo := PathGetSplit(path)
+	output := cmdRet(Format('"{}" "{}"', spraySetPath, path))
+	if (InStr(output, "error"))
+		return timedTooltip("Failure")
+	timedTooltip("Success")
+	if !FileExist(outputBase "\" pathInfo.name)
+		FileCopy(path, outputBase "\" pathInfo.name)
+	if !FileExist(outputBase "\" pathInfo.nameNoExt ".vtf")
+		FileCopy(steamPath, outputBase "\" pathInfo.nameNoExt ".vtf")
+}
+
+l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
+	static outputBase := A_MyDocuments "\..\Downloads\l4d2\sprays\todo"
+	static sprayCompilerPath := A_MyDocuments "\..\Downloads\l4d2\sprays\Left4Dead2SprayChange v4\spray_compiler_rs.exe"
+	static steamPath := "C:\Program Files (x86)\Steam\SteamApps\common\Left 4 Dead 2\left4dead2\materials\vgui\logos\custom\dynamic.vtf"
+	if !FileExist(path)
+		return
+	filename := PathGetNameNoExt(path)
+	framePath := outputBase . "\frames\" . filename
+	DirCreate(framePath)
+	Sleep(100)
+	output := cmdRet(print(Format('ffmpeg -hide_banner -i {} -r 1/{} -start_number 0 {}\frame%03d.png', path, frameDelayMS/1000, framePath)))
+	if InStr(output, "error")
+		return MsgBoxAsGui(output)
+	Sleep(100)
+	MsgBoxAsGui(cmdRet(Format('"{}" compile "{}" "{}"', sprayCompilerPath, framePath, outputBase "\" filename ".vtf")))
+	if !FileExist(outputBase "\" filename ".gif")
+		FileCopy(path, outputBase "\" filename ".gif")
+	if setInGame
+		FileCopy(outputBase "\" filename ".vtf", steamPath, 1)
+	else
+		A_Clipboard := outputBase "\" filename ".vtf"
+}
 
 
 ; ^r::{
