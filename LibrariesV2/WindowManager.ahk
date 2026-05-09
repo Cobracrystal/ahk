@@ -939,7 +939,8 @@ class WindowManager {
 	class DesktopState {
 		static __New() {
 			this.timer := this.save.bind(this)
-			this.prevState := []
+			this.prevState := { name: "Previous", timestamp: 0, info: [] }
+			this.prevStateTimestamp := 0
 			this.listLines := 0
 			this.customStates := Map()
 		}
@@ -956,14 +957,26 @@ class WindowManager {
 
 		static save(custom?) {
 			ListLines(this.listLines)
-			if (IsSet(custom))
-				this.customStates[custom] := WinUtilities.getAllWindowInfo()
-			else
-				this.prevState := WinUtilities.getAllWindowInfo()
+			if (IsSet(custom)) {
+				return this.customStates[custom] := {
+					timestamp: A_Now,
+					name: custom,
+					info: WinUtilities.getAllWindowInfo()
+				}
+			}
+			else {
+				return this.prevState := {
+					timestamp: A_Now,
+					name: "Previous",
+					info: WinUtilities.getAllWindowInfo()
+				}
+			}
 		}
 
 		static restore(custom?) {
-			for i, e in (IsSet(custom) ? this.customStates[custom] : this.prevState) {
+			logString := ""
+			state := IsSet(custom) ? this.customStates[custom] : this.prevState
+			for i, e in state.info {
 				if (!WinExist(e.hwnd))
 					continue
 				try {
@@ -971,15 +984,17 @@ class WindowManager {
 						WinMinimize(e.hwnd)
 					else if (e.state == 1)
 						WinMaximize(e.hwnd)
-					else
+					else {
+						if WinGetMinMax(e.hwnd)
+							WinRestore(e.hwnd)
 						WinMove(e.xpos, e.ypos, e.width, e.height, e.hwnd)
+					}
 				}
 				catch OSError as err {
 					logString .= "Failed updating hwnd " e.hwnd ": " WinGetTitle(e.hwnd) . " with reason `"" err.Message "`" in function " err.What "`n"
 				}
 			}
-			if (IsSet(logString))
-				MsgBoxAsGui(logString)
+			MsgBoxAsGui(Format("Restored state {} from {}.", state.name, state.timestamp, logString ? "`nLog: " logString : ""))
 		}
 	}
 }

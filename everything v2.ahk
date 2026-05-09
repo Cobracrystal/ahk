@@ -320,8 +320,54 @@ Alt & Capslock::{	; Switch to specified window
 }
 
 ^+!L:: { ; save / restore desktop state
-	timedTooltip("Attempting to restore Desktop state...")
-	WindowManager.DesktopState.restore()
+	WindowManager.DesktopState.disable()
+	g := Gui("AlwaysOnTop", "DesktopState Manager")
+	g.OnEvent("Close", close)
+	g.OnEvent("Escape", close)
+	g.AddEdit("Section -Multi R1 w200 vName", A_Now)
+	g.AddButton("Center R1 w200 yp", "Save State").OnEvent("Click", saveState)
+	lv := g.AddListView("xs -Multi w500 R10", ["Name", "Timestamp", "Window Count"])
+	state := WindowManager.DesktopState.prevState
+	lv.add("+Focus +Select", state.name, state.timestamp, state.info.Length)
+	for i, state in WindowManager.DesktopState.customStates
+		lv.add("+Focus +Select", state.name, state.timestamp, state.info.Length)
+	Loop(3)
+		lv.ModifyCol(A_Index, "AutoHdr")
+	lv.OnEvent("DoubleClick", restoreState)
+	g.AddButton("Center R1 w200", "Restore State").OnEvent("Click", restoreState)
+	g.Show("AutoSize")
+
+	saveState(ctrl, info) {
+		name := g["Name"].Value
+		if name == "" || WindowManager.DesktopState.customStates.Has(name) {
+			res := MsgBoxAsGui.fromConfig({text: "No Valid name set. Store as current timestamp?", title: "Invalid name", buttonStyle: 1, defaultButton: 2, wait:true, owner: g.hwnd})
+			if res == "Cancel"
+				return
+			name := WindowManager.DesktopState.customStates.Has(A_Now) ? A_Now "." A_TickCount : A_Now
+		}
+		state := WindowManager.DesktopState.save(name)
+		lv.add("+Focus +Select", state.name, state.timestamp, state.info.Length)
+	}
+
+	restoreState(ctrl, info) {
+		if ctrl is Gui.ListView
+			rowN := info
+		else
+			rowN := lv.GetNext(,"F")
+		if rowN == 0
+			return
+		timedTooltip("Attempting to restore Desktop state...")
+		name := lv.GetText(rowN, 1)
+		if name == "Previous"
+			WindowManager.DesktopState.restore()
+		else
+			WindowManager.DesktopState.restore(name)
+	}
+
+	close(*) {
+		g.Destroy()
+		WindowManager.DesktopState.enable(60000)
+	}
 }
 
 
