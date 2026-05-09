@@ -394,18 +394,25 @@ class WinUtilities {
 	}
 
 	static monitorGetAll(cache := true) {
+		static callback := CallbackCreate(enumProc, 'Fast')
 		monitors := Map()
-		for mHandle in this.monitorGetAllHandles()
-			monitors[mHandle] := this.monitorGetInfo(mHandle, false)
+		if !DllCall("EnumDisplayMonitors", "Ptr", 0, "Ptr", 0, "Ptr", callback, "Ptr", 0)
+			return 0
 		if cache
 			this.monitorCache := monitors
 		return monitors
+
+		enumProc(monitorHandle, HDC, PRECT, *) {
+			monitors[monitorHandle] := this.monitorGetInfo(monitorHandle, false)
+			return true
+		}
 	}
 
 	static monitorGetPrimaryHandle(cache := true) {
 		for i, e in this.monitorGetAll(cache)
 			if e.primary
 				return i
+		throw Error("No Primary Monitor?")
 	}
 
 	static monitorGetPrimaryInfo(cache := true) {
