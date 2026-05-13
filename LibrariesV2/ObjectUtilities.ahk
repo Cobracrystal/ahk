@@ -24,13 +24,13 @@ objCountValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = setVal
  * @param {Func} comparator 
  * @returns {Integer} 
  */
-objContainsValue(obj, value, fn := (v => v)) {
+objContainsValue(obj, value, fn := (v => v), returnValue := false) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
 	for i, v in objGetEnumerator(obj)
 		if fn(v) == value
-			return i
+			return returnValue ? v : i
 	return 0
 }
 
@@ -283,11 +283,11 @@ objGetAverage(obj, fn := a => a) => objGetSum(obj, fn) / objGetValueCount(obj)
 objGetProd(obj, fn := a => a) => objCollect(obj, (a,b) => a*b, fn)
 objCollectString(obj, separator := ",", fn := a => toString(a)) => objCollect(obj, (a,b) => (a separator b), fn)
 
-objDoForEachRecursive(obj, fn := v => v, conditional := (itKey?, itVal?) => true, useKeys := false) {
-	return recurse(obj)
+objRecurseAndDo(obj, operation := v => v, recurseIf := v => IsObject(v), recTransformer := v => v, operationConditional := (itKey?, itVal?) => true, useKeys := false) {
+	return objDoForEach(obj, recurse, operationConditional, useKeys)
 
 	recurse(q) {
-		return IsObject(q) ? objDoForEach(q, recurse, conditional, useKeys) : fn(q)
+		return recurseIf(q) ? objDoForEach(recTransformer(q), recurse, operationConditional, useKeys) : operation(q)
 	}
 }
 
@@ -830,10 +830,10 @@ rangeAsArr(startEnd, end?, step?, inclusive := true) {
 /**
  * Iterators over array that contains any number of nested arrays, with values in any point. Cycles over all arrays, independently iterating forwards.
  * @param arr 
- * @example iterateNestedArrays([["a", "b"], "2", ["c", ["x", "y"]], "4"]) =>
+ * @example cycleNestedArrays([["a", "b"], "2", ["c", ["x", "y"]], "4"]) =>
  * a, 2, c, 4, b, 2, x, 4, a, 2, c, 4, b, 2, y, 4
  */
-iterateNestedArrays(arr) {
+cycleNestedArrays(arr) {
 	static q := { dummy: 1 }
 	static uniqueId := ObjPtr(q)
 	iterators := getIterators(arr)
@@ -869,6 +869,42 @@ iterateNestedArrays(arr) {
 		return its
 	}
 }
+
+; /**
+;  * Iterators over nested
+;  * @param arr 
+;  * @example iteratedNestedObj([["a", "b"], "2", ["c", ["x", "y"]], "4"]) =>
+;  * "a", "b", ["a", "b"], "2", "c", "x", "y", ["x", "y"], ["c", ["x", "y"]], "4"
+;  */
+; iterateNestedObj(obj) {
+; 	static q := { dummy: 1 }
+; 	static uniqueId := ObjPtr(q)
+; 	iterators := Map()
+; 	totalIndex := 1
+; 	return enum
+
+; 	enum(&i, &e := uniqueId) {
+; 		it := iterators
+; 		cur := obj
+; 		while (true) {
+; 			if cur.HasMethod("__Enum")
+; 				it[] := objGetEnumerator(cur)
+; 			curIndex := it.iterator
+; 			it.iterator := mod(it.iterator, cur.Length) + 1
+; 			cur := cur[curIndex]
+; 			if !(cur is Object)
+; 				break
+; 			it := it[curIndex]
+; 		}
+; 		if IsSet(e) && e == uniqueId
+; 			i := cur
+; 		else {
+; 			i := totalIndex++
+; 			e := cur
+; 		}
+; 		return 1
+; 	}
+; }
 
 arrayMerge(arrs*) {
 	ret := []
