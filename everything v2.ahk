@@ -1397,17 +1397,24 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 	framePath := outputBase . "\frames\" . filename
 	DirCreate(framePath)
 	Sleep(100)
-	output := cmdRet(print(Format('ffmpeg -hide_banner -i {} -r 1/{} -start_number 0 {}\frame%03d.png', path, frameDelayMS/1000, framePath)))
+	output := cmdRet(Format('ffmpeg -hide_banner -i {} -r 1/{} -start_number 0 {}\frame%03d.png', path, frameDelayMS/1000, framePath))
 	if InStr(output, "error")
 		return MsgBoxAsGui(output)
 	Sleep(100)
-	MsgBoxAsGui(cmdRet(Format('"{}" compile "{}" "{}"', sprayCompilerPath, framePath, outputBase "\" filename ".vtf")))
-	if !FileExist(outputBase "\" filename ".gif")
-		FileCopy(path, outputBase "\" filename ".gif")
-	if setInGame
-		FileCopy(outputBase "\" filename ".vtf", steamPath, 1)
-	else
-		A_Clipboard := outputBase "\" filename ".vtf"
+	compileCMD := Format('"{}" compile "{}" "{}"', sprayCompilerPath, framePath, outputBase "\" filename ".vtf")
+	compileOutput := CmdStdOutAsync(compileCMD, ,,, final)
+	
+	final(str, code) {
+		if code != 0
+			MsgBoxAsGui(Format("Status Code: {}`n {}", code, str))
+		timedTooltip("Success : " str)
+		if !FileExist(outputBase "\" filename ".gif")
+			FileCopy(path, outputBase "\" filename ".gif")
+		if setInGame
+			FileCopy(outputBase "\" filename ".vtf", steamPath, 1)
+		else
+			A_Clipboard := outputBase "\" filename ".vtf"
+	}
 }
 
 
@@ -1432,19 +1439,19 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 ; }
 
 
-^!l::{
-	static backupPath := "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine\projects\backup"
-	static defaultPath := "C:\Program Files (x86)\Steam\SteamApps\workshop\content\431960"
-	str := A_Clipboard
-	for i, e in (t := strSplitOnNewLine(str)) {
-		if !RegExMatch(e, "filedetails\/\?id=(\d+)", &o)
-			return
-		if DirExist(backupPath "\" o[1]) || DirExist(defaultPath "\" o[1])
-			MsgBoxAsGui("Path already exists:`n" e)
-		else {
-			Run(e)
-			Sleep(30000)
-		}
-	}
-	MsgBoxAsGui("Opened " t.Length " Links")
-}
+; ^!l::{
+; 	static backupPath := "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine\projects\backup"
+; 	static defaultPath := "C:\Program Files (x86)\Steam\SteamApps\workshop\content\431960"
+; 	str := A_Clipboard
+; 	for i, e in (t := strSplitOnNewLine(str)) {
+; 		if !RegExMatch(e, "filedetails\/\?id=(\d+)", &o)
+; 			return
+; 		if DirExist(backupPath "\" o[1]) || DirExist(defaultPath "\" o[1])
+; 			MsgBoxAsGui("Path already exists:`n" e)
+; 		else {
+; 			Run(e)
+; 			Sleep(30000)
+; 		}
+; 	}
+; 	MsgBoxAsGui("Opened " t.Length " Links")
+; }
