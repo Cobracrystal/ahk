@@ -575,8 +575,13 @@ class MsgBoxAsGui {
 			if StrLen(this.text) > 10000 && !IsSet(maxCharsVisible)
 				maxTextWidth := 1500
 		}
+		if (StrLen(this.text) > 32768 && (!IsSet(maxCharsVisible) || (IsSet(maxCharsVisible) && maxCharsVisible > 32768)))
+			maxCharsVisible := 32768
 		ctrlText := MsgBoxAsGui.textCtrlAdjustSize(maxTextWidth,, IsSet(maxCharsVisible) ? SubStr(this.text, 1, maxCharsVisible) : this.text,, this.guiFontOptions, MsgBoxAsGui.MB_FONTNAME)
-		this.gui.AddText("x0 y0 vWhiteBoxTop " MsgBoxAsGui.SS_WHITERECT, ctrlText)
+		
+		try this.gui.AddText("x0 y0 vWhiteBoxTop " MsgBoxAsGui.SS_WHITERECT, ctrlText)
+		catch as e
+		msgbox(strlen(ctrltext)) 
 		if (IsSet(icon)) {
 			iconPath := icon is Array ? icon[2] : "imageres.dll"
 			icon := (icon is Array ? icon[1] : icon)
