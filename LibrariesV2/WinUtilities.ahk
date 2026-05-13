@@ -382,34 +382,39 @@ class WinUtilities {
 
 	static monitorGetAllHandles() {
 		static callback := CallbackCreate(enumProc, 'Fast')
-		monitors := []
+		this.tempcallbackObject287346 := []
 		if !DllCall("EnumDisplayMonitors", "Ptr", 0, "Ptr", 0, "Ptr", callback, "Ptr", 0)
 			return 0
+		monitors := this.tempcallbackObject287346
+		this.DeleteProp("tempcallbackObject287346")
 		return monitors
 
 		enumProc(monitorHandle, HDC, PRECT, *) {
-			monitors.push(monitorHandle)
+			this.tempcallbackObject287346.push(monitorHandle)
 			return true
 		}
 	}
 
 	static monitorGetAll(cache := true) {
 		static callback := CallbackCreate(enumProc, 'Fast')
-		monitors := Map()
+		this.tempcallbackObject238947 := Map() ; as the callback is static we can't bind to enumProc and the variable reference doesn't always carry over (ahk bug!)
 		if !DllCall("EnumDisplayMonitors", "Ptr", 0, "Ptr", 0, "Ptr", callback, "Ptr", 0)
 			return 0
+		monitors := this.tempcallbackObject238947 
 		if cache
 			this.monitorCache := monitors
+		this.DeleteProp("tempcallbackObject238947")
 		return monitors
 
 		enumProc(monitorHandle, HDC, PRECT, *) {
-			monitors[monitorHandle] := this.monitorGetInfo(monitorHandle, false)
+			this.tempcallbackObject238947[monitorHandle] := this.monitorGetInfo(monitorHandle, false)
 			return true
 		}
 	}
 
 	static monitorGetPrimaryHandle(cache := true) {
-		for i, e in this.monitorGetAll(cache)
+		t := this.monitorGetAll(cache)
+		for i, e in t
 			if e.primary
 				return i
 		throw Error("No Primary Monitor?")
