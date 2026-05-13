@@ -132,13 +132,15 @@ primefactor(n) {
 	local factors := []
 	n := Abs(n)
 	divisor := 2
+	limit := Ceil(sqrt(n))
 	while (n != 1) {
-		if (divisor > Ceil(sqrt(n))) {
+		if (divisor > limit) {
 			factors.push(n)
 			break
 		}
 		if (Mod(n, divisor) == 0) {
 			n //= divisor
+			limit := Ceil(sqrt(n))
 			factors.push(divisor)
 			continue
 		}
@@ -405,9 +407,10 @@ primetest(n) {
 	if (n == 2)
 		return true
 	i := 2
-	while (i <= Ceil(sqrt(n))) {
+	limit := Ceil(sqrt(n))
+	while (i <= limit) {
 		if (Mod(n, i) == 0)
-			return false
+			return 0
 		i++
 	}
 	return true
