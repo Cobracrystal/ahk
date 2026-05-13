@@ -5,6 +5,12 @@
  * @version 1.0.0
  ***********************************************************************/
 
+
+; TODO: PRIMALITY TESTS
+; TODO: EFFICIENT FACTORIZATION
+; TODO: COMPARISON WITH FLOATS
+; TODO: MORE EFFICIENT LOGARITHM CALCULATION
+
 /**
  * METHODS
  * @example
@@ -18,6 +24,7 @@
  * .toStringApprox(radix)
  * .getFirstNDigits(radix, digits)
  * .Length(radix)
+ * .Log(radix)
  * ; Arithmetic
  * .abs()
  * .negate()
@@ -323,6 +330,30 @@ class BigInteger {
 		hatL += delta
 		digitCandidate := Floor(hatL + 1e-18) + 1 ; minimal correction if we are 1 epsilon off
 		return digitCandidate
+	}
+
+	/**
+	 * Returns the log in the specified radix/base.
+	 * @param {Integer} base
+	 * @returns {Integer} 
+	 */
+	Log(base := 10) {
+		static log10ofBase := Log(BigInteger.INT32)
+		; let this = p * 16^n where p >= 1, p < 16. Then 
+		; logC(this)	= logC(p) + logC( 16^n ) 
+		; 				= log16(p)/log16(C) + log16(16^n)/log16(C) 
+		; 				= log16(p)/log16(C) + log16((2^4)^n)/log16(C) 
+		; 				= log16(p)/log16(C) + log2(2^4n)/log2(16)/log16(C) 
+		; 				= log16(p)/log16(C) + log2(2^4n)/4log16(C) 
+		; 				= log16(p)/log16(C) + (bitlen-1)/4log16(C) 
+		; 				= log10(p)/log10(C) + (bitlen-1)/4log16(C) 
+		; 				= log(p)/log(C) + (bitlen-1)/4 * log(16) / log(C) 
+		; 
+		logBase16 := (this.getBitLength() - 1) // 4
+		first10HexDigits := Integer("0x" this.getFirstNDigits(16, 10)) ; this is obviously inefficient and we should be getting it by directly parsing the first two or three magnitudes and cutting that off.
+		p := first10HexDigits / 16**Floor(log(first10HexDigits) / log(16))
+		t := log(p) / log(base) + logBase16 * log(16) / log(base)
+		return t
 	}
 
 	/**
@@ -641,7 +672,7 @@ class BigInteger {
 
 	/**
 	 * Calculates the integer square root of (this), ie. the largest integer i such that i*i <= (this)
-	 * @param {&BigInteger?} remainder The remainder of the operation, ie. i*i+remainder == (this)
+	 * @param {BigInteger} remainder The remainder of the operation, ie. i*i+remainder == (this)
 	 * @returns {BigInteger} The integer square root of (this).
 	 * @example
 	 * BigInteger(10000000).sqrt(&remainder).toString() => 3162
