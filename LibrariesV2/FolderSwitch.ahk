@@ -12,12 +12,13 @@ class FolderSwitch {
 	static showMenu() {
 		hwnd := WinActive("A")
 		wClass := WinGetClass(hwnd)
-		if !(attr := FileExist(A_Clipboard))
+		clipboard := Trim(A_Clipboard, "`n`r`t '`"")
+		if !(attr := FileExist(clipboard))
 			clipboardPaths := []
 		else if InStr(attr, "D")
-			clipboardPaths := [A_Clipboard]
+			clipboardPaths := [clipboard]
 		else {
-			SplitPath(A_Clipboard, &name, &dir)
+			SplitPath(clipboard, &name, &dir)
 			clipboardPaths := [dir]
 		}
 		if (wClass == "#32770" && fileDialogFunc := this.getFileDialog(hwnd, &editId))
