@@ -54,6 +54,58 @@ getFilesAsArr(filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name
 	return sorted
 }
 
+getFolderAsTree(folder, filePattern := "*", sortedBy := "name", omitAllButName := false) {
+	tree := _getChildren(folder, filePattern, sortedBy)
+	if !omitAllButName
+		return tree
+	minTree := Map()
+
+
+	_getChildren(folder, filePattern, sortedBy) {
+		arr := []
+		for i, e in getFolderAsArr(folder, filePattern, 'FD', 0, sortedBy) {
+			if InStr(e.attrib, 'D')
+				e.children := _getChildren(e.path, filePattern, sortedBy)
+			arr.push(e)
+		}
+		return arr
+	}
+
+}
+
+getFolderAsMapTree(folder, filePattern := "*", getMode := 3, sortedBy := "name") {
+	minTree := _getChildren(folder, filePattern, sortedBy)
+	return minTree
+
+	_getChildren(folder, filePattern, sortedBy) {
+		branch := Map()
+		for i, e in getFolderAsArr(folder, filePattern, 'FD', 0, sortedBy) {
+			if (InStr(e.attrib, "D"))
+				branch[e.name] := _getChildren(e.path, filePattern, sortedBy)
+			else
+				branch[e.name] := Map()
+			setProperties(branch[e.name], e, getMode)
+		}
+		return branch
+	}
+
+	setProperties(dest, source, getMode := 3) {
+		switch getMode {
+			case 0:
+				for i, e in ["name", "nameNoExt", "ext", "path", "shortPath", "shortName", "dir", "attrib", "size", "sizeKB", "sizeMB", "timeModified", "timeCreated", "timeAccessed"]
+					dest.%e% := source.%e%
+			case 1:
+				dest.name := source.name
+			case 2:
+				dest.path := source.path
+			case 3:
+				for i, e in ["name", "dir", "ext", "nameNoExt", "size"]
+					dest.%e% := source.%e%
+		}
+	}
+
+}
+
 getFileInfo(filePath, getMode := 0) {
 	path := filePath,
 	size := FileGetSize(filePath)
@@ -230,7 +282,28 @@ strRemoveIllegalChars(str) {
  * @param folder2 
  * @returns {Map} 
  */
-compareFolders(folder1, folder2, recursive := true) {
+folderGetDiffs(folder1, folder2, recursive := true) {
+	arr := []
+	if !InStr(folder1, ":") || !InStr(folder2, ":")
+		throw(Error("Must be absolute paths"))
+	folder1 := RTrim(folder1, "\/")
+	folder2 := RTrim(folder2, "\/")
+	files1 := getFolderAsArr(folder1,, recursive ? 'FDR' : 'FD',0)
+	for i, fl in files1 {
+		otherPath := StrReplace(fl.path, folder1, folder2)
+		if InStr(fl.attrib, "D") {
+			if DirExist(otherPath)
+				continue
+		} else {
+			if (FileExist(otherPath) && fl.size == FileGetSize(otherPath))
+				continue
+		}
+		arr.push(fl)
+	}
+	return arr
+}
+
+folderGetDupes(folder1, folder2, recursive := true) {
 	arr := []
 	if !InStr(folder1, ":") || !InStr(folder2, ":")
 		throw(Error("Must be absolute paths"))
@@ -241,12 +314,9 @@ compareFolders(folder1, folder2, recursive := true) {
 		relPath := StrReplace(fl.path, folder1)
 		if InStr(fl.attrib, "D") {
 			if DirExist(folder2 . relPath)
-				continue
-		} else {
-			if (FileExist(folder2 . relPath) && fl.size == FileGetSize(folder2 . relPath))
-				continue
-		}
-		arr.push(fl)
+				arr.push(fl)
+		} else if (FileExist(folder2 . relPath) && fl.size == FileGetSize(folder2 . relPath))
+			arr.push(fl)
 	}
 	return arr
 }
