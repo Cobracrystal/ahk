@@ -373,8 +373,8 @@ Alt & Capslock::{	; Switch to specified window
 
 ^+!I:: { ; Center & Adjust Active Window
 	if WinActive("ahk_group cornerMusicPlayers")
-		WinMove(-600, 550, 515, 550)
-	else if WinActive("Discord ahk_exe Discord.exe")
+		WinMove(-600, 775, 515, 550)
+	else if WinActive("Discord ahk_exe vesktop.exe")
 		WinMove(-1497, 129, 1292, 769)
 	else
 		WinUtilities.resetWindowPosition(,5/7)
@@ -1388,7 +1388,8 @@ l4d2_convertImgToVTF(path) {
 
 l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 	static outputBase := A_MyDocuments "\..\Downloads\l4d2\sprays\todo"
-	static sprayCompilerPath := A_MyDocuments "\..\Downloads\l4d2\sprays\Left4Dead2SprayChange v4\spray_compiler_rs.exe"
+	static sprayCompilerPath := A_MyDocuments "\..\Downloads\l4d2\sprays\Left4Dead2SprayChange v4\source-spray-compiler-cli.exe"
+	; static sprayCompilerPath := A_MyDocuments "\..\Downloads\l4d2\sprays\Left4Dead2SprayChange v4\spray_compiler_rs.exe"
 	static steamPath := "C:\Program Files (x86)\Steam\SteamApps\common\Left 4 Dead 2\left4dead2\materials\vgui\logos\custom\dynamic.vtf"
 	if !FileExist(path)
 		return
