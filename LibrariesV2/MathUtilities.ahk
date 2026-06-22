@@ -553,6 +553,20 @@ perfectPowers(n) {
 	return arr
 }
 
+pascalsTriangle(nRows) {
+	rows := []
+	rows.push([1])
+	Loop(nRows - 1) {
+		p := rows[A_Index]
+		nextRow := [1]
+		Loop(p.Length - 1)
+			nextRow.push(p[A_Index] + p[A_Index + 1])
+		nextRow.push(1)
+		rows.push(nextRow)
+	}
+	return rows
+}
+
 streetInDice(streetLen, diceAmount) {
 	strDice := ""
 	nums := 6**diceAmount
