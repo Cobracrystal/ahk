@@ -397,18 +397,6 @@ format_argb(color, reverse := true, alpha?) {
 	return (clrAlpha << 24 | color)
 }
 
-; 0xFF00F9
-colorPreviewGUI(color) {
-	if (!RegexMatch(color, "(?:0x)?[[:xdigit:]]{1,6}"))
-		return
-	CoordMode("Mouse")
-	MouseGetPos(&x, &y)
-	colorPreview := Gui("+AlwaysOnTop +LastFound +ToolWindow -Caption")
-	colorPreview.BackColor := color
-	colorPreview.Show("x" . x-30 . " y" . y-30 . "w50 h50 NoActivate")
-	SetTimer((*) => colorPreview.Destroy(), -1500)
-}
-
 timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 	ToolTip(text, x?, y?, whichTooltip?)
 	SetTimer(IsSet(whichTooltip) ? stopTooltip.bind(whichTooltip) : stopTooltip, -durationMS)

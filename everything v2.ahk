@@ -131,7 +131,15 @@ Launch_App2:: ; Show Folderswitch Menu
 #HotIf 
 
 ^!I:: {	; Show Hex code as Color
-	colorPreviewGUI(fastCopy())
+	color := fastCopy()
+	if (!RegexMatch(color, "(?:0x)?[[:xdigit:]]{1,6}"))
+		return
+	CoordMode("Mouse")
+	MouseGetPos(&x, &y)
+	colorPreview := Gui("+AlwaysOnTop +LastFound +ToolWindow -Caption")
+	colorPreview.BackColor := color
+	colorPreview.Show("x" . x-30 . " y" . y-30 . "w50 h50 NoActivate")
+	SetTimer((*) => colorPreview.Destroy(), -1500)
 }
 
 ^+!NumpadSub:: {	; Record Macro
