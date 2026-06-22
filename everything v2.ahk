@@ -1377,11 +1377,20 @@ class RevoIdle {
 			l4d2_convertGifToVTF(A_Clipboard)
 		case "png", "jpeg", "jpg":
 			l4d2_convertImgToVTF(A_Clipboard)
+		case "vtf":
+			l4d2_CopyVtf(A_Clipboard)
 		default:
 			return
 	}
 }
 #HotIf 
+l4d2_copyVtf(path) {
+	static outputBase := A_MyDocuments "\..\Downloads\l4d2\sprays\todo"
+	static steamPath := "C:\Program Files (x86)\Steam\SteamApps\common\Left 4 Dead 2\left4dead2\materials\vgui\logos\custom\dynamic.vtf"
+	if !FileExist(path)
+		return
+	FileCopy(path, steamPath, 1)
+}
 
 l4d2_convertImgToVTF(path) {
 	static outputBase := A_MyDocuments "\..\Downloads\l4d2\sprays\todo"
@@ -1389,7 +1398,7 @@ l4d2_convertImgToVTF(path) {
 	static spraySetPath := A_MyDocuments '\..\Downloads\l4d2\sprays\Left4Dead2SprayChange\set_spray.bat'
 	if !FileExist(path)
 		return
-	pathInfo := PathGetSplit(path)
+	pathInfo := getSplitPath(path)
 	output := cmdRet(Format('"{}" "{}"', spraySetPath, path))
 	if (InStr(output, "error"))
 		return timedTooltip("Failure")
