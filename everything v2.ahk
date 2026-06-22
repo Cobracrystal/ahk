@@ -37,6 +37,7 @@ A_TrayMenu.Delete()
 #Include "HotstringLoader.ahk"
 #Include "TableFilter v2.ahk"
 #Include "DiscordClient.ahk"
+#Include "WallpaperEngineWorkshopManager.ahk"
 ; #Include "%A_ScriptDir%\not_mine_or_examples\AquaHotkey\AquaHotkey.ahk"
 ; #Include "External\jsongo.ahk"
 ; for windows in which ctrl+ should replace scrolling
@@ -1440,41 +1441,8 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 	}
 }
 
-
-; ^r::{
-; 	try Run("steam://openurl/" . A_Clipboard)
-; }
-
-; ^e::{
-; 	static backupPath := "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine\projects\backup"
-; 	static defaultPath := "C:\Program Files (x86)\Steam\SteamApps\workshop\content\431960"
-; 	Send("{F6}")
-; 	Sleep(75)
-; 	Send("^c")
-; 	Sleep(75)
-; 	str := A_Clipboard
-; 	if !RegExMatch(str, "filedetails\/\?id=(\d+)", &o)
-; 		return
-; 	if DirExist(backupPath "\" o[1]) || DirExist(defaultPath "\" o[1])
-; 		MsgBoxAsGui("Already exists")
-; 	else
-; 		timedTooltip("Does not exist yet")
-; }
-
-
-; ^!l::{
-; 	static backupPath := "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine\projects\backup"
-; 	static defaultPath := "C:\Program Files (x86)\Steam\SteamApps\workshop\content\431960"
-; 	str := A_Clipboard
-; 	for i, e in (t := strSplitOnNewLine(str)) {
-; 		if !RegExMatch(e, "filedetails\/\?id=(\d+)", &o)
-; 			return
-; 		if DirExist(backupPath "\" o[1]) || DirExist(defaultPath "\" o[1])
-; 			MsgBoxAsGui("Path already exists:`n" e)
-; 		else {
-; 			Run(e)
-; 			Sleep(30000)
-; 		}
-; 	}
-; 	MsgBoxAsGui("Opened " t.Length " Links")
-; }
+#HotIf WinActive("Steam ahk_exe vivaldi.exe")
+^e::{
+	wpEngineHelpers.checkIfExist()
+}
+#HotIf 
