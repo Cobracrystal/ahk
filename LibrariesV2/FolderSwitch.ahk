@@ -11,7 +11,9 @@ class FolderSwitch {
 
 	static showMenu() {
 		hwnd := WinActive("A")
-		wClass := WinGetClass(hwnd)
+		try wClass := WinGetClass(hwnd)
+		catch as e
+			return
 		clipboard := Trim(A_Clipboard, "`n`r`t '`"")
 		if !(attr := FileExist(clipboard))
 			clipboardPaths := []
