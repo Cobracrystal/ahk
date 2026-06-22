@@ -70,8 +70,11 @@ class DiscordClient {
 		return this.callApi("GET", "/guilds/" serverID "/channels")
 	}
 
-	getGuildRoles(serverID) {
-		return this.callApi("GET", "/guilds/" serverID "/roles")
+	getGuildRoles(serverID, sortedBy?) {
+		roles := this.callAPI("GET", "/guilds/" serverID . "/roles")
+		if IsSet(sortedBy)
+			return objSort(roles, a => a[sortedBy], sortedBy == "position" ? "N R" : "")
+		return roles
 	}
 	
 	getMembers(serverID, limit := "1", after := "0") {
@@ -90,13 +93,6 @@ class DiscordClient {
 		return this.callApi("GET", "/users/@me/guilds")
 	}
 	
-	getRoles(serverID, sortedBy?) {
-		roles := this.callAPI("GET", "/guilds/" serverID . "/roles")
-		if IsSet(sortedBy)
-			return objSort(roles, a => a[sortedBy], sortedBy == "position" ? "N R" : "")
-		return roles
-	}
-
 	modifyGuildRole(serverID, roleID, content) {
 		return this.callApi("PATCH", "/guilds/" serverID "/roles/" roleID, content)
 	}
