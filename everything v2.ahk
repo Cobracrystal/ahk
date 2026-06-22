@@ -825,8 +825,14 @@ customExit(ExitReason, ExitCode) {
 	WinWaitClose(searchApp)
 	currentWin := hwnd
 	pos := WinUtilities.getWindowPlacement(hwnd)
-	if !(pos.x == wantX && pos.y == wantY && pos.w == wantW && pos.h == wantH)
-		WinUtilities.setWindowPlacement(hwnd, wantX, wantY, wantW, wantH)
+	if !(pos.x == wantX && pos.y == wantY && pos.w == wantW && pos.h == wantH) {
+		WinMove(wantX, wantY, wantW, wantH, hwnd)
+		; USE WINMOVE BECAUSE IT SENDS WM_SIZE OR WHATEVER TO THE WINDOW. EVERYTHING DOESN'T REACT OTHERWISE.
+		Sleep(25)
+		pos := WinUtilities.getWindowPlacement(hwnd)
+		if !(pos.x == wantX && pos.y == wantY && pos.w == wantW && pos.h == wantH)
+			WinUtilities.setWindowPlacement(hwnd, wantX, wantY, wantW, wantH)
+	}
 	if WinGetMinMax(hwnd) != 0 ; should never happen. Is necessary if winSlowMove is used though.
 		WinRestore(hwnd)
 	; if !(pos.x == wantX && pos.y == wantY && pos.w == wantW && pos.h == wantH)
