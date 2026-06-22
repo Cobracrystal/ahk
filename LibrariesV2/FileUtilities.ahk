@@ -41,6 +41,7 @@ getFilesAsArr(filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name
 				SplitPath(A_LoopFileFullPath,,,, &nameNoExt)
 				files.push({
 					name: A_LoopFileName,
+					path: A_LoopFileFullPath,
 					dir: A_LoopFileDir,
 					ext: A_LoopFileExt,
 					nameNoExt: nameNoExt,
@@ -99,7 +100,7 @@ getFolderAsMapTree(folder, filePattern := "*", getMode := 3, sortedBy := "name")
 			case 2:
 				dest.path := source.path
 			case 3:
-				for i, e in ["name", "dir", "ext", "nameNoExt", "size"]
+				for i, e in ["name", "dir", "ext", "nameNoExt", "size", "path"]
 					dest.%e% := source.%e%
 		}
 	}
@@ -482,10 +483,14 @@ isAbsolutePath(path) {
 	return (drive != "")
 }
 
+PathGetFullSplit(path) => StrSplit(path, "\")
+
 PathGetSplit(path) {
 	SplitPath(path, &name, &dir, &ext, &nameNoExt, &drive)
 	return { path: path, name: name, dir: dir, ext: ext, nameNoExt: nameNoExt, drive: drive }
 }
+getSplitPath(path) => PathGetSplit(path)
+getSplitPathFull(path) => PathGetFullSplit(path)
 
 PathGetFileName(path) 	=> (SplitPath(path, &name), name)
 PathGetDir(path) 		=> (SplitPath(path,, &dir), dir)
