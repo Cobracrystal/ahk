@@ -377,7 +377,7 @@ class YoutubeDLGui {
 		youtubeDLOptions["retries"] := { alias: "-R", param: 1 }
 		youtubeDLOptions["restrict-filenames"] := {}
 		youtubeDLOptions["limit-rate"] := { alias: "-r", param: "5M" }
-		youtubeDLOptions["format"] := { alias: "-f", param: "bestvideo[height<=1080]+bestaudio/best" }
+		youtubeDLOptions["format"] := { alias: "-f", param: "bestvideo[height<=1440]+bestaudio/best" }
 		; Extra Data Options
 		youtubeDLOptions["skip-download"] := {}
 		youtubeDLOptions["write-description"] := {}
