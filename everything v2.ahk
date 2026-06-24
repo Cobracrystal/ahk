@@ -1443,6 +1443,7 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 
 #HotIf WinActive("Steam ahk_exe vivaldi.exe")
 ^e::{
-	wpEngineHelpers.checkIfExist()
+	A_Clipboard := wpEngineHelpers.filterLinkList()
+	timedTooltip("Transformed to CSV")
 }
 #HotIf 

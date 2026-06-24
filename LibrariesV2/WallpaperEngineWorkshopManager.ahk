@@ -245,14 +245,24 @@ class wpEngineHelpers {
 		MsgBoxAsGui("Opened " list.Length " Links")
 	}
 
-	static checkIfExist(str := A_Clipboard) {
+	static filterLinkList(str := A_Clipboard) {
+		t := []
+		for i, e in strsplit(str, ["`n", ","]) {
+			if (id := this.checkIfExist(e)) {
+				t.push(id)
+			}
+		}
+		return objCollectString(t)
+	}
+
+	static checkIfExist(str := A_Clipboard, notifyOnOK := false) {
 		static mapper := Map(1, "Workshop", 2, "Backup", 3, "Downloads")
 		if !RegExMatch(str, "filedetails\/\?id=(\d+)", &o) && !RegExMatch(str, "^\s*(\d+)\s*$", &o)
 			return 0
 		if (i := objContainsMatch(wpEngine.allPaths, (k, v) => (DirExist(v "\" o[1])))) {
 			MsgBoxAsGui(Format("[{}] ID already exists in {}", o[1], mapper[i]))
 			return 0
-		} else
+		} else if notifyOnOK
 			timedTooltip("Does not exist yet")
 		return o[1]
 	}
@@ -261,8 +271,8 @@ class wpEngineHelpers {
 ; NOTE: OPTION B:
 /*
 JS:
-const id_array = [];
-const appid = 431960;
+var id_array = [];
+var appid = 431960;
 id_array.forEach((id, index) => {
 	setTimeout(() => {
 		try {
