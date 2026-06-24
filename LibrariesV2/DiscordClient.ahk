@@ -36,14 +36,15 @@ class DiscordClient {
 		return this.callApi("POST", "/channels/" channelID . "/messages", content)
 	}
 	
-	; THIS SHOULD FILTER FOR MULTIPLE mTypeS AND NOT JUST ONE. ?limit=100&after=ID&before=ID IS POSSIBLE AHHHHHH
-	getMessages(channelID, limit := 100, mType := "", mID := 0) {
-		switch mType {
-			case "","after","before","around":
-			default:
-				throw(Error('Bad Message Request: Requested Message with Query Type"' . mType . '"'))
-		}
-		return this.callApi("GET", "/channels/" channelID . "/messages?limit=" limit . (mType ? "&" mType . "=" mID : ""))
+	getMessages(channelID, limit := 100, mTypes := Map()) {
+		queries := "limit=" limit
+		if mTypes.Has("after")
+			queries .= "&after=" mTypes["after"]
+		if mTypes.Has("before")
+			queries .= "&before=" mTypes["before"]
+		if mTypes.Has("around")
+			queries .= "&around=" mTypes["around"]
+		return this.callApi("GET", "/channels/" channelID . "/messages?" queries)
 	}
 	
 	getMessage(channelID, messageID) {
@@ -63,7 +64,7 @@ class DiscordClient {
 	}
 	
 	getGuild(serverID, member_count := false) {
-		return this.callAPI("GET", "/guilds/" serverID . (member_count ? "&with_counts=true" : ""))
+		return this.callAPI("GET", "/guilds/" serverID . (member_count ? "?with_counts=true" : ""))
 	}
 
 	getGuildChannels(serverID) {
@@ -182,7 +183,13 @@ class DiscordClient {
 			break ; only loop if rate limit, else directly continue
 		}
 		if (http.status != 200 && http.status != 204)
-			throw(Error("Request failed`nStatus: " http.status "`nResponse: " jsongo.Stringify(jsongo.parse(http.responseText),,"`t") "`nendPoint: " . endPoint . "`nContent: `n" . jsongo.Stringify(content)))
+			throw(Error(
+				Format("Request failed`nStatus: {}`nResponse: {}`nendPoint: {}`nContent: {}", 
+						http.Status, 
+						jsongo.Stringify(jsongo.parse(http.responseText),,"`t"), 
+						endPoint, 
+						IsSet(content) ? jsongo.Stringify(content) : ""
+			)))
 		return jsongo.Parse(http.ResponseText)
 	}
 
