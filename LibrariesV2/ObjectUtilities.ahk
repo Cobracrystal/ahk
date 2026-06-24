@@ -242,7 +242,7 @@ objFilter(obj, filter := (k, v) => (true)) {
 	return clone
 }
 
-objDoForEachVoid(obj, fn := (v => toString(v)), conditional := (itKey?, itVal?) => true) {
+objDoForEachVoid(obj, transformer := (v => toString(v)), conditional := (itKey?, itVal?) => true) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || IsObject(obj))
@@ -251,14 +251,15 @@ objDoForEachVoid(obj, fn := (v => toString(v)), conditional := (itKey?, itVal?) 
 		if !conditional(i, e?)
 			continue
 		if IsSet(e) && IsObject(e)
-			fn(e?)
+			transformer(e?)
 		else
-			isArrLike ? obj[i] := fn(e?) : obj.%i% := fn(e?)
+			isArrLike ? obj[i] := transformer(e?) : obj.%i% := transformer(e?)
 	}
 	return obj
 }
 
-objDoForEach(obj, fn := (v => toString(v)), conditional := (itKey?, itVal?) => true, useKeys := false) {
+objPer(obj, transformer := (v => toString(v)), conditional := (itKey?, itVal?) => true, useKeys := false) => objDoForEach(obj, transformer, conditional, useKeys)
+objDoForEach(obj, transformer := (v => toString(v)), conditional := (itKey?, itVal?) => true, useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || IsObject(obj))
@@ -268,7 +269,7 @@ objDoForEach(obj, fn := (v => toString(v)), conditional := (itKey?, itVal?) => t
 		clone.Length := clone.Capacity := obj.Length
 	for i, e in objGetEnumerator(obj) {
 		t := useKeys ? i : e
-		v := conditional(i, e?) ? fn(t?) : t
+		v := conditional(i, e?) ? transformer(t?) : t
 		if useKeys
 			isArrLike ? clone[v] := e : clone.%v% := e
 		else
@@ -508,6 +509,44 @@ objEnumIf(obj, conditional := (e?) => IsSet(e?)) {
 		}
 		return flagNotAtEnd
 	}
+}
+
+objBiCollect(obj1, obj2, collector := objCollect, keyPicker := (keys => keys[1]), useKeys := false) => objCollectForEach([obj1, obj2], collector, keyPicker, useKeys)
+/**
+ * This takes in any amount of objects in an array [objects], and iterates over all of them at the same time, passing an array 
+ * @param {Array} obj An array of objects of the same type and length, of length n.
+ * @param {Func} collector function responsible for collecting objects. This receives the base value as well as an array of length n containing the transformed output of [transformer]
+ * @param {Func} transformer function responsible for transforming iterated elements into usable parameters for collector. Note that elements are not transformed when given to conditional. This receives an array of length n and returns an array of length n. May optionally receive index.
+ * @param {Any} initialBase Initial value of the base on which fn operates. If not given, first element in object becomes base. Set this if fn operators onto properties or items of enumerable values.
+ * @param {Any} value Optional Value to check conditional upon
+ * @param {Func} conditional Optional Comparator to determine which values to include in collection.
+ * @param {Boolean} useKeys if checked true, transformer will receive key and value from the iteration, ie (k, v) => (k . ": " . v)
+ * @returns {Any} Collected Value
+ */
+objCollectForEach(objects, collector := objCollect, keyPicker := (keys => keys[1]), useKeys := false) {
+	sample := objects[1]
+	sType := Type(sample)
+	sCount := objGetValueCount(sample)
+	for i, o in objects
+		if sType != Type(o) || sCount != objGetValueCount(o)
+			throw(Error("All objects must be of same type and length")) 
+	isArrLike := (sample is Array || sample is Map)
+	isMap := sample is Map
+	if !(isArrLike || IsObject(sample))
+		throw(TypeError("objcollect does not handle type " . Type(sample)))
+	
+	collection := %Type(sample)%()
+	if (isArrLike && !isMap)
+		collection.Length := collection.Capacity := sample.Length
+	for index, keys, values in objZipAsArray(objects*) {
+		key := keyPicker(keys)
+		transformed := useKeys ? collector(keys, values) : collector(values)
+		if isArrLike
+			collection[key] := transformed
+		else
+			collection.%key% := transformed
+	}
+	return collection
 }
 
 /**
