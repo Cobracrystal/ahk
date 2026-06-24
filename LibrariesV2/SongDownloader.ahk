@@ -15,16 +15,23 @@
 ; todo verify: func that directly overrides metadata from file
 ; todo verify: warning/note if filename property is unnecessary
 ; todo verify: func that verifies that metadata file matches folder, and add option to overwrite if it doesn't (ie continued messageboxes (in both directions))
+; todo: all parameter options should specify whether they are unique or not. This makes merging easier and allows for immediate error throws.
+
+; TODO: Big idea: only some methods in this should be static. Instead, when selecting a config, it creates a new instance based on that config. 
+; Ie you select yt-dlp-rplay and you get an instance back, and on that instance you run .download etc. 
+; every instance just uses its own this.config variable which is set on construction to the selecter config.
+; this avoids specifying everything all the time and allows all settings to be altered by a config
+; when you do this, MAKE IT IN A NEW FILE AND COPY EVERYTHING OVER TO AVOID PERMABREAKING SOMETHING.
+; this would also allow eg. a debug instance
+
 if (A_LineFile == A_ScriptFullPath) { ; NECESSARY TO WORK WHEN INCLUDING
-	SetWorkingDir(A_ScriptDir "\..\script_files\SongDownloader")
+	SetWorkingDir(A_ScriptDir "\..\script_files")
 	SongDownloader.download(A_Clipboard)
 	; usage options
 	; SongDownloader.downloadSong("https://www.youtube.com/watch?v=MzsBwcXkghQ")
 	; SongDownloader.downloadSong("Never Gonna Give You Up")
 	; playlistdata := SongDownloader.getMetadataJson("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=WL&index=3&pp=gAQBiAQB", false, true)
 	; usage 
-	; SongDownloader.settings.ytdl.browserCookies := "firefox"
-	; SongDownloader.settings.ytdl.useCookies := true
 	; jsonStr := SongDownloader.getMetadataJson("https://www.youtube.com/playlist?list=WL")
 	; SongDownloader.downloadFromJson(jsonStr)
 }
@@ -32,8 +39,7 @@ if (A_LineFile == A_ScriptFullPath) { ; NECESSARY TO WORK WHEN INCLUDING
 class SongDownloader {
 
 	static __New() {
-		this.settings := this.getDefaultSettings()
-		this.settings.outputSubFolder := Format("p{:03}", this.settings.currentIterator)
+		this.settings := this.defaultSettings
 		this.data := {
 			coords: {x: 750, y: 425},
 			currentOutputSubFolder: this.settings.outputSubFolder,
@@ -84,14 +90,14 @@ class SongDownloader {
 	static downloadSongWithGui(songLink) {
 		ToolTip("Loading Metadata...")
 		this.data.ongoingOperations += 1
-		this.getRawMetadataFromLinks(songLink, callback, false, false)
+		this.getRawMetadataFromLinks(songLink, callback, false)
 		
 		callback(rawDataString) {
 			metaData := this.parseMetadata(rawDataString, true)
 			ToolTip()
 			if !metaData || !objGetValueCount(metadata)
 				return 0
-		this.data.ongoingOperations -= 1
+			this.data.ongoingOperations -= 1
 			this.songDLGui(metaData)
 		}
 	}
@@ -101,7 +107,7 @@ class SongDownloader {
 	}
 
 	static getMetadataFromFile(filePath, returnCallback) {
-		cmd := this.cmdStringBuilder(this.settings.ffprobePath, this.PROFILE_GETMETADATAFROMFILE,, filePath)
+		cmd := this.cmdStringBuilder(this.configs.ffprobe, this.PROFILE_GETMETADATAFROMFILE,, filePath)
 		if this.settings.debug
 			print(cmd)
 		CmdStdOutAsync(cmd, 'UTF-8',,, callback)
@@ -169,7 +175,7 @@ class SongDownloader {
 
 	; note: if jsonAsStr defines a file with title/artist containing illegal chars, the file will save correctly, but will obviously not match the json provided.
 	; maybe use an onfinish handler to take the file name outputted and write it (if it did contain illegal chars). This would require a path to a json being given though.
-	static downloadFromJson(jsonAsStr, outputFolder := this.settings.outputSubFolder) {
+	static downloadFromJson(jsonAsStr, outputFolder := this.settings.outputSubFolder, config := this.configs.ytdl.ytdl_cookies) {
 		data := MapToObj(jsongo.Parse(jsonAsStr))
 		if !(data is Array)
 			data := [data]
@@ -189,16 +195,16 @@ class SongDownloader {
 			}
 			index++
 			dataPoint := data[index]
-			profile := this.PROFILE_MUSIC[
+			profile := this.PROFILE_DOWNLOAD_MEDIA[
 				this.PROFILE_PARSE_METADATA[dataPoint], 
+				this.PROFILE_AUDIO_FORMAT,
 				this.getOutputPatternFromMetadata(dataPoint), 
 				isAbsolutePath(outputFolder) ? outputFolder : this.settings.outputBaseFolder "\" outputFolder, 
-				this.settings.ytdl.useCookies, 
-				this.settings.ytdl.skipNonMusic,
+				this.settings.ytdl.skipOfftopic,
 				this.settings.ytdl.embedThumbnail, 
 				this.settings.ytdl.cropThumbnailToSquare
 			]
-			fullCommand := this.cmdStringBuilder(this.settings.ytdlPath, profile, 0, dataPoint.link)
+			fullCommand := this.cmdStringBuilder(config, profile, 0, dataPoint.link)
 			if (this.settings.debug)
 				print(fullCommand)
 			if this.settings.useVisibleCMD {
@@ -210,22 +216,30 @@ class SongDownloader {
 		}
 	}
 	
-	static getMetadataFromLinks(songLinks, callback, allData := false, withPlaylist := false, printIntermediateSteps := false) {
-		this.getRawMetadataFromLinks(songLinks, rawDataString => callback(this.parseMetadata(rawDataString, allData)), printIntermediateSteps, withPlaylist)
+	static getMetadataFromLinks(songLinks, callback, allData := false, withPlaylist := false) {
+		this.getRawMetadataFromLinks(songLinks, rawDataString => callback(this.parseMetadata(rawDataString, allData)), withPlaylist)
 	}
 
-	static getRawMetadataFromLinks(songLinks, returnCallback, printIntermediateSteps := false, withPlaylist := false) {
+	static getRawMetadataFromLinks(songLinks, returnCallback, withPlaylist := false) {
 		if !(songLinks is Array)
 			songLinks := StrSplit(Trim(songLinks, "`n`r"), "`n", "`r")
 		songLinks := objDoForEach(songLinks, (e => this.constructLink(e)))
-		command := this.cmdStringBuilder(this.settings.ytdlPath, this.PROFILE_GETMETADATA[printIntermediateSteps, withPlaylist, true],,songLinks*)
+		configs := objDoForEach(songLinks, (e => this.chooseConfigFromLink(e)))
+		; NOTE: choosing configs[1] here only works if all links are of the same type, ie don't require different configs. 
+		command := this.cmdStringBuilder(configs[1], this.PROFILE_GETMETADATA[withPlaylist, true],,songLinks*)
+		if this.settings.debug
+			print(command)
 		CmdStdOutAsync(command, 'UTF-8', callback)
 
 		callback(output, success := 0) {
 			static fullOutput := ""
 			fullOutput .= output
-			if RegExMatch(SubStr(output, 1, 20), "^\[[[:alnum:]]+\]")
-				Tooltip(SubStr(output, 1, 40))
+			if RegExMatch(SubStr(output, 1, 20), "^\[[[:alnum:]]+\]") {
+				if (this.settings.debug)
+					print(output)
+				else
+					Tooltip(SubStr(output, 1, 40))
+			}
 			if success {
 				tOutput := fullOutput
 				fullOutput := ""
@@ -269,6 +283,16 @@ class SongDownloader {
 					title := RegExReplace(title, "\(\s*Nightcore\s*\)")
 				genre := "Nightcore"
 				album := "Nightcore"
+			}
+			if (InStr(title, "ASMR")) {
+				if RegExMatch(title, "i)(\S)\s*ASMR\s*(\S)", &br) { ; theorethically, this should search for brackets before and after eg. (silent ASMR m4f)
+					if unicodeData.getIntPropertyValue(br[1], unicodeData.UProperty.UCHAR_BIDI_PAIRED_BRACKET_TYPE) != unicodeData.UBidiPairedBracketType.U_BPT_NONE && unicodeData.getBidiPairedBracket(br[1]) == br[2]
+						title := RegExReplace(title, "i)(\S)\s*ASMR\s*(\S)")
+				}
+				else
+					title := Trim(RegExReplace(title, "\s*Nightcore"))
+				genre := "ASMR"
+				album := "ASMR"
 			}
 			if RegExMatch(title, "i)(.)\s*\b(?:Official|Lyric)\s.*(?:Video|Audio)", &char) { ; clean (Official Lyric Video) and similar from title.
 				open := char[1]
@@ -318,13 +342,9 @@ class SongDownloader {
 				thumbnails: MapToObj(thumbnails)
 			})
 		}
-		if receivedBadInfo.Length > 0 {
+		if (receivedBadInfo.Length > 0 && !this.settings.debug) { ; if debug = true => verbose is always on when getting metadata
 			str := objCollectString(receivedBadInfo, '`n')
-			MsgBoxAsGui.fromConfig({
-				text: "Received issues while parsing Metadata. Received`n`n" str,
-				addCopyButton: true,
-				maxCharsVisible: 2000
-			})
+			print("Received issues while parsing Metadata. Received`n`n" str)
 		}
 		if (metaData.Length == 1)
 			metaData := metaData[1]
@@ -367,25 +387,28 @@ class SongDownloader {
 		g.AddEdit("xs w250 vGenre", metadataVar.genre).OnEvent("Change", guiHandler)
 		g["Title"].Focus()
 		g.AddCheckbox("xs vEmbedThumbnail Checked" this.settings.ytdl.embedThumbnail, "Embed Thumbnail").OnEvent("Click", guiHandler)
-		g.AddCheckbox("xs+125 yp vUseVisibleCMD Checked" this.settings.useVisibleCMD, "Visble CMD")
-		g.AddCheckbox("xs vUseCookies Checked" this.settings.ytdl.useCookies, "Use Cookies (" this.settings.ytdl.browserCookies ")").OnEvent("Click", guiHandler)
-		g.AddCheckbox("xs+125 yp vSkipNonMusic Checked" this.settings.ytdl.skipNonMusic, "Skip Non-Music Parts").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs+125 yp vCropThumbToSquare Checked" this.settings.ytdl.cropThumbnailToSquare, "Crop Thumb To Square").OnEvent("Click", guiHandler)
 		g.AddCheckbox("xs vLogMetadata Checked" this.settings.logMetadata, "Log Metadata")
 		g.AddCheckbox("xs+125 yp vReuseData Checked" false, "Re-Use Data")
 		g.AddCheckbox("xs vOmitArtistName Checked" false, "Omit Artist in Filename").OnEvent("Click", guiHandler)
-		g.AddCheckbox("xs+125 yp vCropThumbToSquare Checked" this.settings.ytdl.cropThumbnailToSquare, "Crop Thumb To Square").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs+125 yp vSkipOfftopic Checked" this.settings.ytdl.skipOfftopic, "Skip Non-Music Parts").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs vUseVisibleCMD Checked" this.settings.useVisibleCMD, "Visible CMD")
+		config := this.chooseConfigFromLink(data.link)
+		availableConfigs := objFlatten(this.configs.ytdl)
+		curConfigIndex := objContainsValue(availableConfigs, config.name, v => v.name)
+		g.AddDropDownList("xs w250 vCurrentConfig Choose" curConfigIndex, objDoForEach(availableConfigs, v => v.name)).OnEvent("Change", guiHandler)
 		g.AddText("xs", "Current Command Line")
-		profile := this.PROFILE_MUSIC[
+		profile := this.PROFILE_DOWNLOAD_MEDIA[
 			this.PROFILE_PARSE_METADATA[data],
+			this.PROFILE_AUDIO_FORMAT,
 			this.getOutputPatternFromMetadata(data),
 			isAbsolutePath(outputFolder) ? outputFolder : this.settings.outputBaseFolder "\" outputFolder,
-			this.settings.ytdl.useCookies,
-			this.settings.ytdl.skipNonMusic,
+			this.settings.ytdl.skipOfftopic,
 			this.settings.ytdl.embedThumbnail,
 			this.settings.ytdl.cropThumbnailToSquare
 		]
 		cropToSquare := this.settings.ytdl.cropThumbnailToSquare ; for use of the checkbox
-		g.AddEdit("vCMD w250 R1 Readonly", this.cmdStringBuilder(this.settings.ytdlPath, profile,, data.link))
+		g.AddEdit("xs vCMD w250 R1 Readonly", this.cmdStringBuilder(config, profile,, data.link))
 		g.AddButton("xs-1 h30 w251", "Launch yt-dlp").OnEvent("Click", finishGui)
 		g.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 
@@ -426,18 +449,17 @@ class SongDownloader {
 					add := this.PROFILE_EMBED_THUMBNAIL[val]
 					cropToSquare := val
 					profile := this.addRemoveProfile(profile, rem, add, true) ; not in-place because arr lengths don't match
-				case "UseCookies": ; might cause issues if this setting changes while in GUI but ehhh
-					toggleProfile := [{option: this.ytdloptions.cookies_from_browser, param: this.settings.ytdl.browserCookies}]
-					profile := this.toggleProfile(profile, toggleProfile)
-				case "SkipNonMusic":
+				case "SkipOfftopic":
 					toggleProfile := [{option: this.ytdloptions.sponsorblock_remove, param: "music_offtopic"}]
 					profile := this.toggleProfile(profile, toggleProfile)
 				case "OmitArtistName":
 					rem := [{ option: this.ytdloptions.output, param: this.getOutputPatternFromMetadata(data)}]
 					add := [{ option: this.ytdloptions.output, param: this.getOutputPatternFromMetadata(data,val)}]
 					profile := this.addRemoveProfile(profile, rem, add, true, true)
+				case "CurrentConfig":
+					config := availableConfigs[val]
 			}
-			g["CMD"].Value := this.cmdStringBuilder(this.settings.ytdlPath, profile,, data.link)
+			g["CMD"].Value := this.cmdStringBuilder(config, profile,, data.link)
 		}
 
 		finishGui(ctrlObj, info?) {
@@ -449,14 +471,15 @@ class SongDownloader {
 				album: gData.Album, genre: gData.Genre,
 				link: gData.Link, description: Trim(data.Description, " `t`r`n")
 			}
-			profile := this.PROFILE_MUSIC[
+			config := availableConfigs[objContainsValue(availableConfigs, gData.CurrentConfig, v => v.name)]
+			profile := this.PROFILE_DOWNLOAD_MEDIA[
 				this.PROFILE_PARSE_METADATA[songData],
+				this.PROFILE_AUDIO_FORMAT,
 				this.getOutputPatternFromMetadata(songData, gData.OmitArtistName, &wasIrregular),
 				isAbsolutePath(gData.OutputFolder) ? gData.OutputFolder : this.settings.outputBaseFolder "\" gData.OutputFolder,
-				gData.UseCookies,
-				gData.SkipNonMusic,
-				gData.embedThumbnail,
-				gData.cropThumbToSquare
+				gData.skipOfftopic,
+				gData.EmbedThumbnail,
+				gData.CropThumbToSquare
 			]
 			if wasIrregular
 				this.getFileNameFromMetadata(songData, gData.OmitArtistName)
@@ -467,20 +490,25 @@ class SongDownloader {
 			if gData.LogMetadata {
 				this.logMetadata(songData, 1, gData.OutputFolder)
 			}
-			fullCommand := this.cmdStringBuilder(this.settings.ytdlPath, profile, false, songData.link)
+			this.data.ongoingOperations += 1
+			if gData.useVisibleCMD {
+				toRemove := [{ option: this.ytdloptions.no_warnings}, { option: this.ytdloptions.print, param: "after_move:%(filepath)s | %(original_url)s"}]
+				profile := this.addRemoveProfile(profile, toRemove)
+				fullCommand := this.cmdStringBuilder(config, profile, false, songData.link)
+			} else {
+				fullCommand := this.cmdStringBuilder(config, profile, false, songData.link)
+			}
 			if (this.settings.debug)
 				print(fullCommand)
-			this.data.ongoingOperations += 1
-			if (gData.useVisibleCMD) {
-				fullCommand := StrReplace(fullCommand, '--no-warnings --print "after_move:%(filepath)s | %(original_url)s"')
+			if (gData.useVisibleCMD)
 				Run("wt cmd " (this.settings.debug ? "/k" : "/c") " chcp 65001 && title SongDownloader && echo " fullCommand " && " fullCommand)
-			}
 			else
 				CmdStdOutAsync(fullCommand, "UTF-8",,, doneHandler)
 
 			doneHandler(output, success := 0) {
 				this.data.ongoingOperations -= 1
-				this.logAction(output, gData.OutputFolder)
+				if !(this.settings.debug && (InStr(output, "[debug]") || RegExMatch(output, "^\[\S+\]")))
+					this.logAction(output, gData.OutputFolder)
 				if RegExMatch(output, "^\[*error")
 					this.onFinishMsgBox(gData.OutputFolder, 1)
 				else 
@@ -569,7 +597,7 @@ class SongDownloader {
 		flagSameFileName := (newFileName = oldNameNoExt) ; with ext. Ignore capitalization since its a filename
 		finalFilePath := dir "\" newFileName "." ext
 		targetFilePath := flagSameFileName ? dir "\" oldNameNoExt "_" Random(1000000, 9999999) "." ext : finalFilePath
-		cmd := this.cmdStringBuilder(this.settings.ffmpegPath, this.PROFILE_EDITMETADATA[metadata, currentFilePath, extraFields*],, targetFilePath)
+		cmd := this.cmdStringBuilder(this.configs.ffmpeg, this.PROFILE_EDITMETADATA[metadata, currentFilePath, extraFields*],, targetFilePath)
 		if this.settings.debug
 			print(cmd)
 		CmdStdOutAsync(cmd, 'UTF-8', , 5000, finishEdit)
@@ -693,10 +721,20 @@ class SongDownloader {
 		}
 	}
 
-	static cmdStringBuilder(path, profile, useAliases := false, additionalParams*) {
-		str := '"' path '"' A_Space
-		for set in profile
-			str .= (useAliases && set.option.has("alias") ? set.option.alias : set.option.name) . A_Space . (set.option.param ?  '"' StrReplace(set.param, '"', '\"') '"' A_Space : '')
+	static cmdStringBuilder(config, profile, useAliases := false, additionalParams*) {
+		str := '"' config.path '"' A_Space
+		profile := this.addRemoveProfile(profile,, config.profile)
+		for option in profile {
+			str .= (useAliases && option.option.has("alias") ? option.option.alias : option.option.name) . A_Space . (option.option.param ?  '"' StrReplace(option.param, '"', '\"') '"' A_Space : '')
+			; if useAliases && option.option.has("alias")
+			; 	optionStr := option.option.alias
+			; else
+			; 	optionStr := option.option.name
+			; optionStr .= A_Space
+			; if option.option.param
+			; 	optionStr .= Format('"{}" ', StrReplace(option.param, '"', '\"'))
+			; str .= optionStr
+		}
 		for param in additionalParams
 			str .= '"' param '"' A_Space
 		return Trim(str)
@@ -712,6 +750,16 @@ class SongDownloader {
 		if (id := this.getYTVideoID(input))
 			input := "https://www.youtube.com/watch?v=" . id
 		return Trim(input)
+	}
+
+	static chooseConfigFromLink(link) {
+		RegExMatch(link, "https:\/\/([^.]+\.[^\/]+)\/(.*)", &o)
+		switch o[1] {
+			case "rplay.live":
+				return this.configs.ytdl.ytdl_rplay
+			default:
+				return this.configs.ytdl.ytdl_cookies
+		}
 	}
 
 	static getFileNameFromMetadata(metadata, omitArtistName := false, ignoreFilenameProp := false, &irregularFilename?) {
@@ -745,33 +793,6 @@ class SongDownloader {
 		wasIrregular := (count > 0 || omitArtistName)
 		return filename
 	}
-
-
-	static getDefaultSettings() {
-		return {
-			debug: false,
-			simulate: false,
-			useAliases: true,
-			useVisibleCMD: false,
-			currentIterator: 78,
-			outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
-			outputSubFolder: "",
-			logMetadata: true,
-			logFolder: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\Logs"),
-			ffmpegPath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffmpeg.exe"),
-			ffprobePath: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffprobe.exe"),
-			ytdlPath: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
-			metadataFields: ["title", "artist", "album", "genre"],
-			ytdl: {
-				useCookies: true,
-				browserCookies: "firefox",
-				embedThumbnail: true,
-				cropThumbnailToSquare: true,
-				skipNonMusic: true
-			}
-		}
-	}
-
 	static toggleProfile(profile, profileToToggle) {
 		nProfile := profile.clone()
 		for o in profileToToggle {
@@ -781,11 +802,12 @@ class SongDownloader {
 		return nProfile
 	}
 
+	; This only updates parameters, pulling new ones from profileToMerge and overwriting the ones in profile
 	static mergeProfile(profile, profileToMerge) {
 		nProfile := profile.clone()
 		for i, e in (profileToMerge) {
 			if !(e.option.param && e.HasOwnProp("param"))
-				throw(ValueError("addRemoveProfile received malformed merge profile"))
+				throw(ValueError("mergeProfile received malformed merge profile"))
 			else if (index := objContainsMatch(nProfile, (k,v) => objcompare(v.option, e.option)))
 				nProfile[index].param := e.param
 		}
@@ -818,36 +840,19 @@ class SongDownloader {
 		return nProfile
 	}
 
-	static PROFILE_GETMETADATA[withIntermediateSteps, withPlaylist, skipJunk] {
-		get {
-			profile := [
-				{ option: this.ytdloptions.ignore_config }, 
-				{ option: this.ytdloptions.default_search, param: "ytsearch" }, 
-				{ option: this.ytdloptions.no_warnings },
-				{ option: this.ytdloptions.skip_download }, 
-				{ option: this.ytdloptions.write_info_json }, 
-				{ option: this.ytdloptions.dump_json }
-			]
-			if (withIntermediateSteps)
-				profile.push({ option: this.ytdloptions.verbose })
-			if !(withPlaylist)
-				profile.push({ option: this.ytdloptions.no_playlist })
-			if this.settings.ytdl.useCookies
-				profile.push({ option: this.ytdloptions.cookies_from_browser, param: this.settings.ytdl.browserCookies})
-			if skipJunk { ; don't remove "thumbnails", "subtitles", we might need those for parsing
-				for field in ["automatic_captions", "heatmap"]
-					profile.push({option: this.ytdloptions.parse_metadata, param: Format(":(?P<{}>)", field)})
-			}
-			return profile
-		}
-	}
+	static PROFILE_GETMETADATAFROMFILE => [
+		{ option: this.ffprobeoptions.v, param: "error"},
+		{ option: this.ffprobeoptions.output_format, param: "json"},
+		{ option: this.ffprobeoptions.show_entries, param: "format_tags"},
+	]
 
 	static PROFILE_EDITMETADATA[metadata, filePath, extraFields*] {
 		get {
 			profile := [
 				{ option: this.ffmpegoptions.i, param: filePath},
 				{ option: this.ffmpegoptions.hide_banner },
-				{ option: this.ffmpegoptions.codec, param: "copy"}
+				{ option: this.ffmpegoptions.codec, param: "copy"},
+				{ option: this.ffmpegoptions.id3v2_version, param: "3"}
 			]
 			for tag in this.settings.metadataFields
 				profile.push( { option: this.ffmpegoptions.metadata, param: tag "=" metadata.%tag%})
@@ -857,40 +862,79 @@ class SongDownloader {
 		}
 	}
 
-	static PROFILE_GETMETADATAFROMFILE => [
-		{ option: this.ffprobeoptions.v, param: "error"},
-		{ option: this.ffprobeoptions.output_format, param: "json"},
-		{ option: this.ffprobeoptions.show_entries, param: "format_tags"},
-	]
-
-	static PROFILE_MUSIC[PROFILE_PARSE_METADATA, outputTemplate, outputFolderPath, withCookies, skipNonMusic, embedThumbnail, cropThumbnailToSquare] {
+	static PROFILE_GENERIC_OPTIONS[outputTemplate, outputFolderPath] {
 		get {
 			profile := [
 				{ option: this.ytdloptions.ignore_config },
 				{ option: this.ytdloptions.retries, param: 1 },
 				{ option: this.ytdloptions.limit_rate, param: "5M" },
-				; { option: this.ytdloptions.no_overwrites },
-				{ option: this.ytdloptions.no_playlist },
-				{ option: this.ytdloptions.no_vid },
-				{ option: this.ytdloptions.no_warnings },
-				{ option: this.ytdloptions.print, param: "after_move:%(filepath)s | %(original_url)s" },
 				{ option: this.ytdloptions.output, param: outputTemplate},
 				{ option: this.ytdloptions.paths, param: "temp:" A_AppData "\yt-dlp\temp"},
-				{ option: this.ytdloptions.paths, param:outputFolderPath},
-				{ option: this.ytdloptions.format, param: "bestaudio/best" },
-				{ option: this.ytdloptions.ffmpeg_location, param: this.settings.ffmpegPath },
-				{ option: this.ytdloptions.ffmpeg_location, param: this.settings.ffProbePath }, ; technically unnecessary since it searches in the same folder but who cares
-				{ option: this.ytdloptions.extract_audio },
-				{ option: this.ytdloptions.audio_quality, param: 0},
-				{ option: this.ytdloptions.audio_format, param: "mp3"},
-				{ option: this.ytdloptions.embed_metadata }
+				{ option: this.ytdloptions.paths, param: outputFolderPath},
+				; { option: this.ytdloptions.no_overwrites },
 			]
+			if this.settings.debug {
+				profile.push({ option: this.ytdloptions.verbose })
+				profile.push({ option: this.ytdloptions.no_quiet })
+			}
+			else
+				profile.push({ option: this.ytdloptions.no_warnings })
+			return profile
+		}
+	}
+	
+	static PROFILE_GETMETADATA[withPlaylist, skipJunk] {
+		get {
+			profile := [
+				{ option: this.ytdloptions.ignore_config }, 
+				{ option: this.ytdloptions.default_search, param: "ytsearch" }, 
+				{ option: this.ytdloptions.no_warnings },
+				{ option: this.ytdloptions.skip_download }, 
+				{ option: this.ytdloptions.write_info_json }, 
+				{ option: this.ytdloptions.dump_json }
+			]
+			if (this.settings.debug)
+				profile.push({ option: this.ytdloptions.verbose })
+			if !(withPlaylist)
+				profile.push({ option: this.ytdloptions.no_playlist })
+			if skipJunk { ; don't remove "thumbnails", "subtitles", we might need those for parsing
+				for field in ["automatic_captions", "heatmap"]
+					profile.push({option: this.ytdloptions.parse_metadata, param: Format(":(?P<{}>)", field)})
+			}
+			return profile
+		}
+	}
+
+	static PROFILE_AUDIO_FORMAT => [
+		{ option: this.ytdloptions.no_playlist },
+		{ option: this.ytdloptions.format, param: "bestaudio/best" },
+		{ option: this.ytdloptions.ffmpeg_location, param: this.configs.ffmpeg.path },
+		{ option: this.ytdloptions.ffmpeg_location, param: this.configs.ffprobe.path },
+		{ option: this.ytdloptions.extract_audio },
+		{ option: this.ytdloptions.audio_quality, param: 0},
+		{ option: this.ytdloptions.audio_format, param: "mp3"},
+		{ option: this.ytdloptions.embed_metadata },
+		{ option: this.ytdloptions.print, param: "after_move:%(filepath)s | %(original_url)s" }
+	]
+	
+	static PROFILE_VIDEO_FORMAT => [
+		{ option: this.ytdloptions.no_playlist },
+		{ option: this.ytdloptions.format, param: "bestvideo[height<=1440]+bestaudio/best" },
+		{ option: this.ytdloptions.ffmpeg_location, param: this.configs.ffmpeg.path },
+		{ option: this.ytdloptions.ffmpeg_location, param: this.configs.ffprobe.path },
+		{ option: this.ytdloptions.embed_metadata },
+		{ option: this.ytdloptions.print, param: "after_move:%(filepath)s | %(original_url)s" },
+		{ option: this.ytdloptions.merge_output_format, param: "mp4" }
+	]
+
+	static PROFILE_DOWNLOAD_MEDIA[PROFILE_PARSE_METADATA, PROFILE_FORMATTING, outputTemplate, outputFolderPath, skipOfftopic, embedThumbnail, cropThumbnailToSquare] {
+		get {
+			profile := this.PROFILE_GENERIC_OPTIONS[outputTemplate, outputFolderPath]
+			profile.push(PROFILE_FORMATTING*)
+			profile.Push(PROFILE_PARSE_METADATA*)
 			if embedThumbnail
 				profile.Push(this.PROFILE_EMBED_THUMBNAIL[cropThumbnailToSquare]*)
-			profile.Push(PROFILE_PARSE_METADATA*)
-			if withCookies
-				profile.push({ option: this.ytdloptions.cookies_from_browser, param: this.settings.ytdl.browserCookies})
-			if skipNonMusic
+			if skipOfftopic
 				profile.push({ option: this.ytdloptions.sponsorblock_remove, param: "music_offtopic"})
 			return profile
 		}
@@ -934,11 +978,25 @@ class SongDownloader {
 		; General and Meta Options
 		ignore_config: { name: "--ignore-config",  alias: "--no-config", param: false },
 		update: { name: "--update",  alias: "-U", param: false },
-		simulate: { name: "--simulate",  alias: "-s", param: false },
 		list_formats: { name: "--list-formats",  alias: "-F", param: false },
-		print_traffic: { name: "--print-traffic", param: false },
+		; Verbosity and Simulation
+		quiet: { name: "--quiet", alias: "-q", param: false },
+		no_quiet: { name: "--no-quiet", param: false },
+		no_warnings: { name: "--no-warnings", param: false },
+		simulate: { name: "--simulate", alias: "-s", param: false },
+		no_simulate: { name: "--no-simulate", param: false },
+		ignore_no_formats_error: { name: "--ignore-no-formats-error", param: false },
+		no_ignore_no_formats_error: { name: "--no-ignore-no-formats-error", param: false },
+		skip_download: { name: "--skip-download", alias: "--no-download", param: false },
+		print: { name: "--print", alias: "-O", param: true },
+		print_to_file: { name: "--print-to-file", param: true },
+		dump_json: { name: "--dump-json", alias: "-j", param: false },
+		dump_single_json: { name: "--dump-single-json", alias: "-J", param: false },
 		newline: { name: "--newline", param: false },
-		verbose: { name: "--verbose", param: false },
+		no_progress: { name: "--no-progress", param: false },
+		progress: { name: "--progress", param: false },
+		verbose: { name: "--verbose", alias: "-v", param: false },
+		print_traffic: { name: "--print-traffic", param: false },
 		; Downloading Options
 		default_search: { name: "--default-search", param: true },
 		output: { name: "--output",  alias: "-o", param: true },
@@ -950,24 +1008,24 @@ class SongDownloader {
 		restrict_filenames: { name: "--restrict-filenames", param: false },
 		limit_rate: { name: "--limit-rate",  alias: "-r", param: true },
 		format: { name: "--format",  alias: "-f", param: true },
-		no_vid: { name: "--no-vid", param: false },
+		; no_vid: { name: "--no-vid", param: false }, ; this option was removed and no longer does anything
 		force_keyframes_at_cuts: { name: "--force-keyframes-at-cuts", param: false },
 		split_chapters: { name: "--split-chapters", param: false },
 		; Extra Data Options
-		skip_download: { name: "--skip-download", param: false },
 		write_description: { name: "--write-description", param: false },
 		write_info_json: { name: "--write-info-json", param: false },
 		write_comments: { name: "--write-comments", param: false },
 		write_thumbnail: { name: "--write-thumbnail", param: false },
 		write_subs: { name: "--write-subs", param: false },
-		dump_json: { name: "--dump-json",  alias: "-j", param: false },
-		dump_single_json: { name: "--dump-single-json",  alias: "-J", param: false },
 		; Authentification Options
 		username: { name: "--username",  alias: "-u", param: true },
 		password: { name: "--password",  alias: "-p", param: true },
 		twofactor: { name: "--twofactor",  alias: "-2", param: true },
 		cookies: { name: "--cookies",  param: true },
 		cookies_from_browser: { name: "--cookies-from-browser",  param: true },
+		netrc: { name: "--netrc",  alias: "-n", param: false },
+		netrc_location: { name: "--netrc-location",  param: true },
+		netrc_command: { name: "--netrc-cmd",  param: true },
 		; Post-Processing Options
 		ffmpeg_location: { name: "--ffmpeg-location",  param: true },
 		extract_audio: { name: "--extract-audio",  alias: "-x", param: false },
@@ -981,8 +1039,6 @@ class SongDownloader {
 		convert_thumbnail: { name: "--convert-thumbnail",  param: true },
 		postprocessor_args: { name: "--postprocessor-args",  alias:"--ppa", param: true },
 		sponsorblock_remove: { name: "--sponsorblock-remove",  alias:"--ppa", param: true },
-		no_warnings: { name: "--no-warnings", param: false },
-		print: { name: "--print",  param: true }
 	}
 
 	static ffprobeoptions := {
@@ -996,6 +1052,8 @@ class SongDownloader {
 		i: { name : "-i", param: true },
 		hide_banner: { name : "-hide_banner", param: false },
 		codec: { name : "-codec", param: true },
+		pix_fmt: { name : "-pix_fmt", param: true },
+		id3v2_version: { name : "-id3v2_version", param: true },
 	}
 
 	static TEMPLATES := {
@@ -1006,6 +1064,57 @@ class SongDownloader {
 		LOGFILE: "{}_log.txt",
 		METADATAFILE: "{}_metadata.json"
 	}
+
+	static defaultSettings => {
+		debug: true,
+		simulate: false,
+		useAliases: true,
+		useVisibleCMD: false,
+		outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
+		outputSubFolder: Format("p{:03}", 78),
+		logMetadata: true,
+		logFolder: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\Logs"),
+		metadataFields: ["title", "artist", "album", "genre"],
+		ytdl: {
+			embedThumbnail: true,
+			cropThumbnailToSquare: true,
+			skipOfftopic: true
+		}
+	}
+
+	static configs := {
+		ytdl: {
+			default: {
+				name: "yt-dlp without any options",
+				path: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
+				profile: [],
+			},
+			ytdl_cookies: {
+				name: "yt-dlp with cookies from firefox",
+				path: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
+				profile: [{ option: this.ytdloptions.cookies_from_browser, param: "firefox"}]
+			},
+			ytdl_rplay: {
+				name: "yt-dlp for rplay (uses cookies, netrc)",
+				path: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp-rplay.exe"),
+				profile: [
+					{ option: this.ytdloptions.cookies_from_browser, param: "firefox"},
+					{ option: this.ytdloptions.netrc_command, param: "pwsh -NoProfile -NonInteractive -File " normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\password.ps1")},
+				]
+			}
+		},
+		ffmpeg: {
+			name: "basic ffmpeg",
+			path: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffmpeg.exe"),
+			profile: []
+		},
+		ffprobe: {
+			name: "basic ffprobe",
+			path: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffprobe.exe"),
+			profile: []
+		}
+	}
+
 
 	static logAction(str, logID, addSeparator := true) {
 		if isAbsolutePath(logID)
