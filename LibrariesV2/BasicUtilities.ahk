@@ -974,7 +974,8 @@ doNothing(*) {
 printAlign(value, width := 128, padChar := ' ') => print(strFill(IsObject(value) ? toString(value) : value, width,,padChar),,,,,,0)
 pretty(value, options?, fallbackMsgbox := true) => print(value, options?, true, false, false, true, fallbackMsgbox)
 
-print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true, fallbackMsgbox := true) {
+print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true, fallbackGui := true, trimEmptyLines := true) {
+	static guiPrinter := 0
 	if IsObject(value) {
 		if value.HasMethod("toString") {
 			try value := value.toString()
@@ -986,15 +987,51 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		finalChar := '`n'
 	else
 		finalChar := ''
+	if trimEmptyLines
+		value := RegExReplace(value, "\n\s*$", "")
 	try 
 		FileAppend(value . finalChar, "*", options ?? "UTF-8")
-	catch Error 
-		if fallbackMsgbox
-			MsgBoxAsGui.fromConfig({
-				text: value,
-				addCopyButton: true
-			})
+	catch Error {
+		if fallbackGui {
+			if !WinExist(guiPrinter)
+				guiPrinter := createFallbackGui()
+			updateFallbackGui(value . finalChar)
+			; MsgBoxAsGui.fromConfig({
+			; 	text: str,
+			; 	addCopyButton: true
+			; })
+		}
+	}
 	return value
+
+	createFallbackGui() {
+		g := Gui('+Resize', 'Printer')
+		g.MarginX := g.MarginY := 0
+		g.SetFont('s12', 'Calibri')
+		g.AddText('Section x10 y10 w50', 'Prints: ')
+		g.AddText('x+5 yp w100 vPrints', '0')
+		cEdit := g.AddEdit('xm ys+30 w600 h400 vEdit ReadOnly')
+		cEdit.GetPos(, &y := unset)
+		g.AddButton("ys-7 x194 R1 w200", "Copy Full Output").OnEvent("Click", (*) => A_Clipboard := guiPrinter["Edit"].Value)
+		g.AddButton("ys-7 x398 R1 w200", "Copy Last Output").OnEvent("Click", (*) => A_Clipboard := value)
+		g.OnEvent('Size', (o, m, w, h) => cEdit.Move(, , w, h - y))
+		g.OnEvent('Escape', (*) => g.Destroy())
+		g.OnEvent('Close', (*) => g.Destroy())
+		g.show()
+		return g
+	}
+
+	updateFallbackGui(line, reset := 0) {
+		static fullOutput := ""
+		if reset {
+			fullOutput := ""
+			if !WinExist(guiPrinter) 
+				return guiPrinter := createFallbackGui()
+		}
+		fullOutput .= line
+		guiPrinter["Prints"].Value := Integer(guiPrinter["Prints"].Value) + 1
+		guiPrinter["Edit"].Value := fullOutput
+	}
 }
 
 /**
