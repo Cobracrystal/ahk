@@ -246,7 +246,7 @@ class SongDownloader {
 				if (this.settings.debug) {
 					if (!InStr(FileExist(A_WorkingDir "\SongDownloader"), "D"))
 						DirCreate(A_WorkingDir "\SongDownloader")
-					FileAppend(tOutput, A_WorkingDir "\SongDownloader\retLog_" FormatTime(A_Now, "yyyy-MM-dd_HH.mm.ss") ".txt", "UTF-8")
+					FileAppend(tOutput, A_WorkingDir "\SongDownloader\retLog_" FormatTime(A_Now, "yyyy-MM-dd_HH.mm.ss") "_metadata.txt", "UTF-8")
 				}
 				returnCallback(tOutput)
 			}
@@ -503,16 +503,28 @@ class SongDownloader {
 			if (gData.useVisibleCMD)
 				Run("wt cmd " (this.settings.debug ? "/k" : "/c") " chcp 65001 && title SongDownloader && echo " fullCommand " && " fullCommand)
 			else
-				CmdStdOutAsync(fullCommand, "UTF-8",,, doneHandler)
+				CmdStdOutAsync(fullCommand, "UTF-8", this.settings.debug ? callback : unset,, doneHandler)
 
 			doneHandler(output, success := 0) {
 				this.data.ongoingOperations -= 1
-				if !(this.settings.debug && (InStr(output, "[debug]") || RegExMatch(output, "^\[\S+\]")))
-					this.logAction(output, gData.OutputFolder)
-				if RegExMatch(output, "^\[*error")
-					this.onFinishMsgBox(gData.OutputFolder, 1)
+				if pos := RegExMatch(output, "mi)^\[?error")
+					return this.onFinishMsgBox(gData.OutputFolder, 1, SubStr(output, pos))
 				else 
 					this.onFinishMsgBox(gData.OutputFolder, 0)
+				if InStr(output, "`n")
+					output := strSplitOnNewLine(Trim(output, "`n`r`t "))[-1]
+				if !RegExMatch(output, "^\[\S+\]")
+					this.logAction(output, gData.OutputFolder)
+			}
+
+			callback(output, success := 0) {
+				static fullOutput := ""
+				if !this.settings.debug
+					return
+				fullOutput .= output
+				print(output)
+				if (success)
+					fullOutput := ""
 			}
 		}
 	}
@@ -695,9 +707,9 @@ class SongDownloader {
 		if errorNotify {
 			return MsgBoxAsGui.fromConfig({
 				text: "Got Error in Downloads:`n" info, 
-				title: "Done",
+				title: "Error",
 				funcObj: doneHandler, 
-				buttonNames: ["OK", "Open Folder", "Open Log", "Open Both"]
+				buttonNames: ["OK", "Open Folder"]
 			})
 		}
 		return MsgBoxAsGui.fromConfig({
@@ -747,8 +759,10 @@ class SongDownloader {
 	}
 
 	static constructLink(input) {
+		static ytBaseURL := "https://www.youtube.com/watch?v="
+		static ytMusicBaseURL := "https://music.youtube.com/watch?v="
 		if (id := this.getYTVideoID(input))
-			input := "https://www.youtube.com/watch?v=" . id
+			input := (instr(input, "music") ? ytMusicBaseURL : ytBaseURL) . id
 		return Trim(input)
 	}
 
@@ -758,7 +772,7 @@ class SongDownloader {
 			case "rplay.live":
 				return this.configs.ytdl.ytdl_rplay
 			default:
-				return this.configs.ytdl.ytdl_cookies
+				return this.configs.ytdl.default
 		}
 	}
 
@@ -1066,7 +1080,7 @@ class SongDownloader {
 	}
 
 	static defaultSettings => {
-		debug: true,
+		debug: false,
 		simulate: false,
 		useAliases: true,
 		useVisibleCMD: false,
