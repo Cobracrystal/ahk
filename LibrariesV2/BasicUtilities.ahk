@@ -975,7 +975,8 @@ printAlign(value, width := 128, padChar := ' ') => print(strFill(IsObject(value)
 pretty(value, options?, fallbackMsgbox := true) => print(value, options?, true, false, false, true, fallbackMsgbox)
 
 print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true, fallbackGui := true, trimEmptyLines := true) {
-	static guiPrinter := 0
+	static guiPrinterInstance := 0
+	static lastValue := ""
 	if IsObject(value) {
 		if value.HasMethod("toString") {
 			try value := value.toString()
@@ -989,13 +990,17 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		finalChar := ''
 	if trimEmptyLines
 		value := RegExReplace(value, "\n\s*$", "")
+	if !IsSpace(value)
+		lastValue := value
 	try 
 		FileAppend(value . finalChar, "*", options ?? "UTF-8")
 	catch Error {
 		if fallbackGui {
-			if !WinExist(guiPrinter)
-				guiPrinter := createFallbackGui()
-			updateFallbackGui(value . finalChar)
+			if !WinExist(guiPrinterInstance) {
+				guiPrinterInstance := createFallbackGui()
+				updateFallbackGui(guiPrinterInstance, "", 1)
+			}
+			updateFallbackGui(guiPrinterInstance, value . finalChar)
 			; MsgBoxAsGui.fromConfig({
 			; 	text: str,
 			; 	addCopyButton: true
@@ -1008,12 +1013,12 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		g := Gui('+Resize', 'Printer')
 		g.MarginX := g.MarginY := 0
 		g.SetFont('s12', 'Calibri')
-		g.AddText('Section x10 y10 w50', 'Prints: ')
-		g.AddText('x+5 yp w100 vPrints', '0')
+		g.AddText('Section x10 y10 w80 vPrints', 'Prints:    0')
+		g.AddText('x+5 yp w100 R1 vEmptyLines Hidden', '(0 Empty)')
 		cEdit := g.AddEdit('xm ys+30 w600 h400 vEdit ReadOnly')
 		cEdit.GetPos(, &y := unset)
-		g.AddButton("ys-7 x194 R1 w200", "Copy Full Output").OnEvent("Click", (*) => A_Clipboard := guiPrinter["Edit"].Value)
-		g.AddButton("ys-7 x398 R1 w200", "Copy Last Output").OnEvent("Click", (*) => A_Clipboard := value)
+		g.AddButton("ys-7 x194 R1 w200", "Copy Full Output").OnEvent("Click", copyAll.bind(g))
+		g.AddButton("ys-7 x398 R1 w200", "Copy Last Output").OnEvent("Click", copyValue.bind(g))
 		g.OnEvent('Size', (o, m, w, h) => cEdit.Move(, , w, h - y))
 		g.OnEvent('Escape', (*) => g.Destroy())
 		g.OnEvent('Close', (*) => g.Destroy())
@@ -1021,17 +1026,28 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		return g
 	}
 
-	updateFallbackGui(line, reset := 0) {
+	copyValue(g,*) => A_Clipboard := lastValue
+	copyAll(g,*) => A_Clipboard := g["Edit"].Value
+
+	updateFallbackGui(g, line, reset := 0) {
 		static fullOutput := ""
 		if reset {
 			fullOutput := ""
-			if !WinExist(guiPrinter) 
-				return guiPrinter := createFallbackGui()
+			g["Prints"].Value := 0
+			return
+		}
+		if IsSpace(line) {
+			RegExMatch(g["EmptyLines"].Value, "(\d+)", &o)
+			g["EmptyLines"].Value := Format("({} Empty)", Integer(o[1]) + 1)
+			if o[1] == "0"
+				g["EmptyLines"].Opt("-Hidden")
 		}
 		fullOutput .= line
-		guiPrinter["Prints"].Value := Integer(guiPrinter["Prints"].Value) + 1
-		guiPrinter["Edit"].Value := fullOutput
+		RegExMatch(g["Prints"].Value, "(\d+)", &o)
+		g["Prints"].Value := Format("Prints:  {:3}", Integer(o[1]) + 1)
+		g["Edit"].Value := fullOutput
 	}
+
 }
 
 /**
