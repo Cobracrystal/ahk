@@ -300,9 +300,10 @@ printCompareFolders(folder1, folder2) {
 }
 
 ffmpeg_convertToGif(filePath) {
-	static template1 := 'ffmpeg -i "{1}" -vf "palettegen" "{2}\palette_{3}.png"'
-	static template2 := 'ffmpeg -i "{1}" -i "{2}\palette_{3}.png" -filter_complex "paletteuse" -loop 0 "{2}\{4}.gif"'
+	static template1 := 'ffmpeg -i "{1}" -y -vf "palettegen" "{2}\palette_{3}.png"'
+	static template2 := 'ffmpeg -i "{1}" -i "{2}\palette_{3}.png" -filter_complex "paletteuse" -loop 0 -y "{2}\{4}.gif"'
 	static template3 := 'rm "{1}\palette_{2}.png"'
+	static printer := (t,*) => print(t)
 	if !getSplitPath(filePath).drive
 		filePath := A_WorkingDir "\" LTrim(filePath, "\")
 	f := getSplitPath(filePath)
@@ -310,10 +311,10 @@ ffmpeg_convertToGif(filePath) {
 	cmd1 := Format(template1, f.path, f.dir, time)
 	cmd2 := Format(template2, f.path, f.dir, time, f.nameNoExt)
 	cmd3 := Format(template3, f.dir, time)
-	cmdRetAsync(cmd1, ,,, (*) => (
-		cmdRetAsync(cmd2,,,,(*) => (
-			cmdRetAsync(cmd3,,,,(*) => (
-				MsgBoxAsGui("Done")
+	CmdStdOutAsync(cmd1,,printer,, (*) => (
+		CmdStdOutAsync(cmd2,,printer,, (*) => (
+			CmdStdOutAsync(cmd3,,printer,, (*) => (
+				print("Done!")
 			))
 		))
 	))
