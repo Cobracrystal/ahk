@@ -7,8 +7,11 @@
 SetWorkingDir(A_ScriptDir "\script_files\")
 
 class wpEngine {
+	; "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine"
 	static pathSteamfolder := "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine"
+	; "C:\Program Files (x86)\Steam\SteamApps\workshop\content\431960"
 	static pathWorkshop := "C:\Program Files (x86)\Steam\SteamApps\workshop\content\431960"
+	; "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine\projects\backup"
 	static pathBackup := "C:\Program Files (x86)\Steam\SteamApps\common\wallpaper_engine\projects\backup"
 	static pathDownloads := "C:\Program Files (x86)\Steam\SteamApps\workshop\downloads\431960"
 	static mainPaths := [this.pathWorkshop, this.pathBackup]
@@ -83,7 +86,8 @@ class wpEngine {
 		paths := objFilter(paths, (k, v) => FileExist(v)) 
 		paths := objDoForEach(paths, v => getFileInfo(v)) 
 		paths := objDoForEach(paths, v => !InStr(v.attrib, 'D') ? getFileInfo(v.dir) : v)
-		paths := objDoForEach(paths, v => (v.project := this.getConfigObjFromFolder(v.path), v))
+		paths := objDoForEachVoid(paths, v => v.project := this.getConfigObjFromFolder(v.path))
+		paths := objDoForEachVoid(paths, v => v.size := FileGetSize(v.path "\" v.project["file"]))
 		return paths
 	}
 
@@ -98,7 +102,7 @@ class wpEngine {
 			case 2, "title":
 				return arraySort(items, v => v.project["title"])
 			case 3, "size":
-				return arraySort(items, v => v.size)
+				return arraySort(items, v => v.size, "N")
 			case 4, "id":
 				return arraySort(items, v => v.project["id"])
 		}
@@ -285,4 +289,5 @@ id_array.forEach((id, index) => {
 });
 */
 ; NOTE: OPTION C: EDIT appworkshop_431960.acf
+; NOTE: ffmpeg -i input.mp4 -vcodec libx264 -crf 24 -threads 3 output.mp4 for background conversion
 ; Also, see if there's stuff with manifest: -1 in there (legacy installed item fix)

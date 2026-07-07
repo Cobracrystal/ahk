@@ -36,13 +36,13 @@ mainFunc() {
 }
 
 writeLog(folder, fileLog, verifyLog, verbose := false) {
-	str := ""
+	str := "`n===== " FormatTime(A_Now,"HH:mm:ss") " ====="
 	if (!verbose && fileLog.Length == 0 && verifyLog.Length == 1)
 		return
 	for i, e in fileLog
 		if (verbose || e.result != "Success")
 			str .= e.result ": " e.message ". URL:`n" e.url "`nFile: " e.fileName "." e.extension (e.origin ? " (Origin: " e.origin ")`n" : "`n")
-	str .= "=============`n"
+	str .= "--------------------`n"
 	for i, e in verifyLog {
 		if (e.result = "Info")
 			str .= e.result ": " e.message "`n"
@@ -147,7 +147,7 @@ betterFileNames(linkArray) {
 		linkArray[i].fileName := newFileName
 	}
 	newLinkArray := []
-	dupeURLs := objGetDuplicates(linkArray, e => e.url, false)
+	dupeURLs := objGetDuplicates(linkArray, e => e.url,, true)
 	for e in dupeURLs
 		Loop(e.Length - 1)
 			linkArray[e[A_Index + 1]].status := "Duplicate URL (URL " e[1] ")"

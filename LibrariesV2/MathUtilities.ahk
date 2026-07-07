@@ -454,7 +454,7 @@ factorial(n) {
 		r := BigInteger.ONE
 		Loop(n)
 			r := r.multiply(A_Index)
-		return r.toString()
+		return r
 	}
 	r := 1.0
 	Loop(n)
