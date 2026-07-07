@@ -866,7 +866,7 @@ customExit(ExitReason, ExitCode) {
 ^!Numpad5::{
 	static toggle := 0
 	if (toggle := !toggle)
-		Run("C:\Users\Simon\Desktop\programs\other\ProgramUtilities\AutoClicker-3.1.1.exe")
+		Run("C:\Standalone\Utilities\AutoClicker-3.1.1.exe")
 	else
 		try WinClose("OP Auto Clicker 3.1.1 ahk_exe AutoClicker-3.1.1.exe ahk_class 442")
 }

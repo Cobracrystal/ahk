@@ -1119,12 +1119,12 @@ class SongDownloader {
 		},
 		ffmpeg: {
 			name: "basic ffmpeg",
-			path: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffmpeg.exe"),
+			path: normalizePath("C:\Standalone\Utilities\ffmpeg\bin\ffmpeg.exe"),
 			profile: []
 		},
 		ffprobe: {
 			name: "basic ffprobe",
-			path: normalizePath(A_Desktop "\programs\other\ProgramUtilities\ffmpeg\bin\ffprobe.exe"),
+			path: normalizePath("C:\Standalone\Utilities\ffmpeg\bin\ffprobe.exe"),
 			profile: []
 		}
 	}
