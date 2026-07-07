@@ -192,10 +192,10 @@ objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) =>
  * @param {Boolean} whiteList Whether to treat filterValues as a white list instead 
  * @returns {Any} 
  */
-objFilterValues(obj, filterValues := [], whiteList := false) {
+objFilterArray(obj, filterValues := [], whiteList := false) {
 	isMap := (obj is Map)
 	if (obj is Array || !(isMap || IsObject(obj)))
-		throw(TypeError("objFilterValues does not handle type " . Type(obj)))
+		throw(TypeError("objFilterArray does not handle type " . Type(obj)))
 	filterList := Map()
 	for i, e in filterValues
 		filterList[e] := true
@@ -259,6 +259,7 @@ objDoForEachVoid(obj, transformer := (v => toString(v)), conditional := (itKey?,
 }
 
 objPer(obj, transformer := (v => toString(v)), conditional := (itKey?, itVal?) => true, useKeys := false) => objDoForEach(obj, transformer, conditional, useKeys)
+
 objDoForEach(obj, transformer := (v => toString(v)), conditional := (itKey?, itVal?) => true, useKeys := false) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
@@ -414,7 +415,7 @@ objRemoveDuplicates(obj, fn := (a => a), caseSense := true) {
 	return clone
 }
 
-objGetUniques(obj, fn := (a => a), caseSense := true) {
+objGetUniques(obj, transformer := (a => a), caseSense := true) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || IsObject(obj))
@@ -425,10 +426,46 @@ objGetUniques(obj, fn := (a => a), caseSense := true) {
 	for i, e in objGetEnumerator(obj) {
 		if !IsSet(e)
 			continue
-		v := fn(e)
+		v := transformer(e)
 		if !(uniques.Has(v)) {
 			uniques[v] := true
 			isArrLike ? (isMap ? clone[i] := e : clone.push(e)) : clone.%i% := e
+		}
+	}
+	return clone
+}
+
+/**
+ * Counts unique values in object and returns the same object type where each entry contains an array with t[1] = value, t[2] = count of value
+ * @param obj 
+ * @param {(a) => void} fn 
+ * @param {Integer} caseSense 
+ * @returns {Any} 
+ * @example
+ * objCountUniques([1,1,2,2,2,2,2,3,5,7]) => [[1,2], [2,5], [3,1], [5,1], [7,1]]
+ */
+objCountUniques(obj, transformer := (a => a), caseSense := true) {
+	isArrLike := (obj is Array || obj is Map)
+	isMap := (obj is Map)
+	if !(isArrLike || IsObject(obj))
+		throw(TypeError("objForEach does not handle type " . Type(obj)))
+	uniques := Map()
+	uniques.CaseSense := caseSense
+	clone := %Type(obj)%()
+	for i, e in objGetEnumerator(obj) {
+		if !IsSet(e)
+			continue
+		v := transformer(e)
+		if uniques.Has(v)
+			isArrLike ? clone[uniques[v].key][2]++ : clone.%uniques[v].key%[2]++
+		if !(uniques.Has(v)) {
+			if isMap || !isArrLike {
+				isMap ? clone[i] := [e,1] : clone.%i% := [e,1]
+				uniques[v] := {c:1,key:i}
+			} else {
+				clone.push([e,1])
+				uniques[v] := {c:1,key:clone.Length}
+			}
 		}
 	}
 	return clone
