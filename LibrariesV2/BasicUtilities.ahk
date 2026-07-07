@@ -974,6 +974,18 @@ doNothing(*) {
 printAlign(value, width := 128, padChar := ' ') => print(strFill(IsObject(value) ? toString(value) : value, width,,padChar),,,,,,0)
 pretty(value, options?, fallbackMsgbox := true) => print(value, options?, true, false, false, true, fallbackMsgbox)
 
+/**
+ * Prints text to console
+ * @param value What to print. May be object. May have .tostring() method.
+ * @param options option string for FileAppend (ie custom encoding)
+ * @param {Integer} putNewline Whether to put a final newline
+ * @param {Integer} compress Whether to compress a given object via toString
+ * @param {Integer} compact Whether to compact a given object via toString
+ * @param {Integer} strEscape Whether to escape strings in a given object via toString
+ * @param {Integer} fallbackGui 0,1,2: Whether to use a gui if no console is available, or whether to force use the gui (2)
+ * @param {Integer} trimEmptyLines Whether to ignore empty lines when printing. Will still print if value is entirely empty
+ * @returns {String} 
+ */
 print(value, options?, putNewline := true, compress := true, compact := false, strEscape := true, fallbackGui := true, trimEmptyLines := true) {
 	static guiPrinterInstance := 0
 	static lastValue := ""
@@ -992,6 +1004,14 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		value := RegExReplace(value, "\n\s*$", "")
 	if !IsSpace(value)
 		lastValue := value
+	if fallbackGui == 2 {
+		if !WinExist(guiPrinterInstance) {
+			guiPrinterInstance := createFallbackGui()
+			updateFallbackGui(guiPrinterInstance, "", 1)
+		}
+		updateFallbackGui(guiPrinterInstance, value . finalChar)
+		return value
+	}
 	try 
 		FileAppend(value . finalChar, "*", options ?? "UTF-8")
 	catch Error {
