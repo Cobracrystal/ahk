@@ -14,19 +14,23 @@ class BigIntegerUtils {
 		local factors := []
 		n := n.abs()
 		divisor := BigInteger.TWO
-		limit := n.sqrt(&rem)
-		if rem.compareTo(0) > 0
-			limit := limit.add(1)
+		limit := n.approx_sqrt()
+		flagUsedSqrt := false
 		while (!n.equals(1)) {
 			if (divisor.compareTo(limit) > 0) {
+				if (!flagUsedSqrt) {
+					limit := n.sqrt(&rem)
+					if rem.compareTo(0) > 0
+						limit := limit.add(1)
+					flagUsedSqrt := true
+					continue
+				}
 				factors.push(n)
 				break
 			}
 			if (n.mod(divisor, &quotient).equals(BigInteger.ZERO)) {
 				n := quotient
-				limit := n.sqrt(&rem)
-				if rem.compareTo(0) > 0
-					limit := limit.add(1)
+				limit := n.approx_sqrt()
 				factors.push(divisor)
 				continue
 			}
@@ -35,31 +39,31 @@ class BigIntegerUtils {
 		return factors
 	}
 
-	; /**
-	;  * Given integer, returns array of all its factors. Includes 1 and n itself.
-	;  * @param n Integer
-	;  * @returns {Array} Array of factors. 
-	;  */
-	; static factors(n) {
-	; 	_pfactors := this.primefactor(n)
-	; 	_factors := []
-	; 	pfactorExpos := []
-	; 	prev := 0
-	; 	for i, e in _pfactors {
-	; 		if (prev == e) {
-	; 			factExpos.push(e**factExpos.Length)
-	; 		} else {
-	; 			if (i != 1)
-	; 				pfactorExpos.push(factExpos)
-	; 			factExpos := [1, e]
-	; 		}
-	; 		prev := e
-	; 	}
-	; 	pfactorExpos.push(factExpos)
-	; 	for factArr in combinations(pfactorExpos)
-	; 		_factors.push(prod(factArr*))
-	; 	return objSortNumerically(_factors)
-	; }
+	/**
+	 * Given integer, returns array of all its factors. Includes 1 and n itself.
+	 * @param n Integer
+	 * @returns {Array} Array of factors. 
+	 */
+	static factor(n) {
+		primeFactors := this.primefactor(n)
+		allFactors := []
+		extendedPrimeFactors := [] ; for primefactors [2,3,5,5] this generates [2,3,5,25]
+		prev := BigInteger.ZERO
+		for i, e in primeFactors {
+			if (prev.equals(e)) {
+				exponentiatedFactors.push(e.pow(exponentiatedFactors.Length))
+			} else {
+				if (i != 1)
+					extendedPrimeFactors.push(exponentiatedFactors)
+				exponentiatedFactors := [1, e] ; factor e: [e^0, e^1, e^2...]
+			}
+			prev := e
+		}
+		extendedPrimeFactors.push(exponentiatedFactors)
+		for factArr in combinations(extendedPrimeFactors)
+			allFactors.push(this.Prod(factArr*))
+		return BigInteger.Sort(allFactors*)
+	}
 
 	; /**
 	;  * Gives the Least Common Multiple
@@ -276,13 +280,31 @@ class BigIntegerUtils {
 	; ALIAS SECTION
 	static pfactor(n) => this.primefactor(n)
 	static pfactors(n) => this.primefactor(n)
-	; static factor(n) => this.factors(n)
-	; static prime(n) => this.primetest(n)
+	static factors(n) => this.factor(n)
+	static prime(n, &foundfactor?) => this.primetest(n, &foundfactor?)
 	; static ggT(n) => this.gcd(n)
 	; static kgv(n) => this.lcm(n)
 	; static kgt(n) => this.lcd(n)
 	; static ggv(n) => this.gcm(n)
 	static choose(n,m) => this.binomialCoefficient(n,m)
-	; static Sum(vals*) => this.objgetsum(vals)
-	; static Prod(vals*) => this.objGetProd(vals)
+
+	static Sum(vals*) {
+		for i, bigInt in vals {
+			if i == 1
+				curSum := BigInteger.validateBigInteger(vals[1])
+			else
+				curSum := curSum.add(bigInt)
+		}
+		return curSum
+	}
+	
+	static Prod(vals*) {
+		for i, bigInt in vals {
+			if i == 1
+				curSum := BigInteger.validateBigInteger(vals[1])
+			else
+				curSum := curSum.multiply(bigInt)
+		}
+		return curSum
+	}
 }

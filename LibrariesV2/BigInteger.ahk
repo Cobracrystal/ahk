@@ -683,7 +683,6 @@ class BigInteger {
 			return BigInteger.ZERO
 		if this.signum == -1
 			throw BigInteger.Error.ILLEGAL_NEGATIVE['sqrt', this]
-		wantRemainder := !IsSet(remainder)
 		shift := Max(this.getBitLength() - 63, 0)
 		if shift & 0x1 ; equivalent to Ceil(shift/2) * 2, force it to be even.
 			shift++
@@ -700,6 +699,30 @@ class BigInteger {
 			}
 			xk := xk1
 		}
+	}
+
+	/**
+	 * Calculates a very fast approximate guess for the square root, with low but scaling precision.
+	 * @returns {BigInteger} 
+	 * @example
+	 * BigInteger(10000000).sqrt().toString() = 3162
+	 * BigInteger(10000000).approx_sqrt().toString() = 3163
+	 * BigInteger.TEN.pow(100).sqrt().toString() = 			100000000000000000000000000000000000000000000000000
+	 * BigInteger.TEN.pow(100).approx_sqrt().toString() = 	100000000002187376911958524996613302544568179228672
+	 */
+	approx_sqrt() {
+		if !this.signum
+			return BigInteger.ZERO
+		if this.signum == -1
+			throw BigInteger.Error.ILLEGAL_NEGATIVE['sqrt', this]
+		shift := Max(this.getBitLength() - 63, 0)
+		if shift & 0x1 ; equivalent to Ceil(shift/2) * 2, force it to be even.
+			shift++
+		guess := Float(this.shiftRight(Max(0,shift)).intValue())
+		; this is ~2**(log2(n)//2 + 1)
+		; if x = a^b, then sqrt(x) = a^(b/2). Halve shift and get approximate root of rest is better though, then shift back.
+		guess := BigInteger.valueOf(Ceil(sqrt(guess))).shiftLeft(Max(0,shift//2))
+		return guess
 	}
 
 	/**
