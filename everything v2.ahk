@@ -38,6 +38,7 @@ A_TrayMenu.Delete()
 #Include "TableFilter v2.ahk"
 #Include "DiscordClient.ahk"
 #Include "WallpaperEngineWorkshopManager.ahk"
+#Include "%A_ScriptDir%\Demo_Scripts\BooruDownloader.ahk"
 ; #Include "%A_ScriptDir%\not_mine_or_examples\AquaHotkey\AquaHotkey.ahk"
 ; #Include "External\jsongo.ahk"
 ; for windows in which ctrl+ should replace scrolling
@@ -1093,20 +1094,47 @@ loadTableAsHotstrings(filePath) {
 
 ^+!d::{	; Run download script for list of links to image/video sites
 	static turnSelfOff := toggleDLKeys.bind(0)
-	try {
-		toggleDLKeys()
+	static init := 0
+	if !(init) {
+		Hotkey("XButton1", booruDLCheck)
+		Hotkey("XButton2", (*) => BooruDownload.openFolder())
+		init := true
+	} else {
+		toggleDLKeys(-1)
 		SetTimer(turnSelfOff, -300000)
-	} catch {
-		Hotkey("XButton1", (*) => (SetTimer(turnSelfOff, -300000), Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")))
-		Hotkey("XButton2", (*) => Run('"' A_WorkingDir '\..\Demo_Scripts\download.ahk" --open-folder'))
 	}
-	if (RegExMatch(A_Clipboard, "\.(?:png|jpeg|jpg|webp|mp4|gif|mov|webm)"))
-		Run(A_WorkingDir "\..\Demo_Scripts\download.ahk")
 
 	toggleDLKeys(mode := -1) {
 		mode := (mode == -1 ? "Toggle" : (mode == 0 ? "Off" : "On"))
 		Hotkey("XButton1", mode)
 		Hotkey("XButton2", mode)
+	}
+
+	booruDLCheck(*) {
+		static currentSnapshot := getFolderAsArr(BooruDownload.basePath)
+		SetTimer(turnSelfOff, -300000)
+		text := A_Clipboard
+		text := Trim(text, " `t`n`r")
+		flagOK := true
+		for link in strSplitOnNewLine(text, "`r`t ") {
+			fname := BooruDownload.getFilenameFromURL(link)
+			if !fname
+				continue
+			if !(i := objContainsValue(currentSnapshot, fname, v => v.namenoext))
+				continue
+			tgui := Gui()
+			tgui.AddPicture("w350 h-1", currentSnapshot[i].path)
+			tgui.btnlink := currentSnapshot[i].dir
+			tgui.btnlink2 := currentSnapshot[i].path
+			tgui.AddButton("w300", "Open Folder").OnEvent("Click", (*) => Run('explorer "' tgui.btnlink '"'))
+			tgui.AddButton("yp w300", "Open Image").OnEvent("Click", (*) => Run('explorer "' tgui.btnlink2 '"'))
+			tgui.OnEvent("Escape", (*) => tgui.Destroy())
+			tgui.show()
+			SetTimer((*) => tgui.Destroy(), -10000)
+			flagOK := false
+		}
+		if flagOK
+			BooruDownload.main()
 	}
 }
 
@@ -1445,5 +1473,19 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 ^e::{
 	A_Clipboard := wpEngineHelpers.filterLinkList()
 	timedTooltip("Transformed to CSV")
+}
+#HotIf 
+#HotIf WinActive("Goon Lagoon ahk_exe discord.exe") || WinActive("Goon Lagoon ahk_exe vesktop.exe")
+^e::{
+	static currentSnapshot := getFolderAsArr(BooruDownload.basePath,,,3)
+	text := A_Clipboard
+	for link in strSplitOnNewLine(text, "`r`t ") {
+		fname := BooruDownload.getFilenameFromURL(link)
+		if !fname
+			throw Error("bad link")
+		if !(i := objContainsValue(currentSnapshot, fname, v => v.namenoext))
+			continue
+		MsgBoxAsGui(currentSnapshot[i].path)
+	}
 }
 #HotIf 
