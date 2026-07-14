@@ -4,7 +4,7 @@
  * @param folder Path to a folder
  * @param {String} filePattern Filepattern to filter for. By default all files are included
  * @param {String} mode F,D,R (Include Files, Include Directories, Recursive.) Defaults to Files no folders no recursive
- * @param {Integer} getMode 0 = all fileinfo, 1 = only name, 2 = only full path, 3 = name, ext, namenoext, size, dir
+ * @param {Integer} getMode 0 = all fileinfo, 1 = only name, 2 = only full path, 3 = name, path, dir, ext, namenoext, size
  * @returns {Array} Array containing objects of the following type:
  * 
  * obj := { name, nameNoExt, ext, path, shortPath shortName dir, attrib, size, sizeKB, sizeMB, timeModified, timeCreated, timeAccessed }

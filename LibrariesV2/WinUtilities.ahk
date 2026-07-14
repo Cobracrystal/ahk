@@ -58,7 +58,6 @@ class WinUtilities {
 	 * @returns {Object | Any} An object of the following form
 	 * 
 	 * obj := {
-	 * 
 	 *		hwnd ; window handle (STATIC)
 	 *		title ; window title
 	 *		class ; ahk_class (STATIC)

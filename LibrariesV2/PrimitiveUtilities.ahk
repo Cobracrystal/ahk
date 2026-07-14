@@ -589,7 +589,7 @@ strSplitRecursive(str, splits := StrLen(str)) {
 
 strSplitOnWhiteSpace(str) => StrSplit(str, [' ', '`t', '`n', '`r'], " `t`r`n")
 strSplitOnSpace(str) => StrSplit(str, " ")
-strSplitOnNewLine(str, omitCarriageReturn := true) => StrSplit(str, '`n', omitCarriageReturn ? '`r' : unset)
+strSplitOnNewLine(str, omitChars := '`r') => StrSplit(str, '`n', omitChars)
 
 class Uri {
 ; stolen from https://github.com/ahkscript/libcrypt.ahk/blob/master/src/URI.ahk

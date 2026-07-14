@@ -51,6 +51,7 @@ class wpEngine {
 		try obj := jsongo.Parse(str)
 		catch
 			return ""
+		try obj["file"] := StrReplace(obj["file"], "scene.json", "scene.pkg")
 		return obj
 	}
 
