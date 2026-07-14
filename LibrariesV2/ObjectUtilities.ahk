@@ -248,12 +248,8 @@ objDoForEachVoid(obj, transformer := (v => toString(v)), conditional := (itKey?,
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objDoForEach does not handle type " . Type(obj)))
 	for i, e in objGetEnumerator(obj) {
-		if !conditional(i, e?)
-			continue
-		if IsSet(e) && IsObject(e)
+		if conditional(i, e?)
 			transformer(e?)
-		else
-			isArrLike ? obj[i] := transformer(e?) : obj.%i% := transformer(e?)
 	}
 	return obj
 }
