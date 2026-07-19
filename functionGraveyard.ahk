@@ -568,6 +568,45 @@ calculateCompatibilityData() {
 	}
 }
 
+wordleAnagramAnalyzer() {
+	static list := strSplitOnNewLine(FileRead(A_WorkingDir "\Test\valid-wordle-words.txt", "UTF-8"))
+	dupes := objGetDuplicates(list, v => objCollectString(objSort(strsplit(v)),"", v=>v), false, true) ; finds anagrams by comparing all words in an alphabetically sorted form with each other
+	anagramList := []
+	; dupes contains indexes, this turns them into arrays of the anagrams
+	for i, keys in dupes
+		anagramList.push(objGetKeys(list, keys*)) 
+	yellowAnagramList := []
+	for i, anagrams in anagramList {
+		for baseIndex, baseWord in anagrams {
+			anagramsOfBase := arrayIgnoreIndex(anagrams, baseIndex)
+			yellowAnagrams := [baseWord]
+			for word in anagramsOfBase {
+				flagIsYellow := true
+				for _, compareYellowWord in yellowAnagrams {
+					loop(5) {
+						if substr(word, A_Index, 1) == substr(compareYellowWord, A_Index, 1) {
+							flagIsYellow := false
+							break
+						}
+					}
+					if !flagIsYellow
+						break
+				}
+				if flagIsYellow
+					yellowAnagrams.push(word)
+			}
+			if yellowAnagrams.Length > 1
+				yellowAnagramList.push(yellowAnagrams)
+		}
+	}
+
+	; yellowAnagramList := objFilter(yellowAnagramList, v => v.Length > 5)
+	yellowAnagramList := objsort(yellowAnagramList, a => a.length, "N R")
+	; yellowAnagramList := objGetUniques(yellowAnagramList, v => objCollectString(objSort(StrSplit(v[1])), "",v=>v))
+
+	print(yellowAnagramList)
+}
+
 getRandomDataDistributionHoloMemsGuessr() {
 	static memberData := MapToObj(jsongo.parse(FileRead(A_WorkingDir "\Test\holomemsguessrMemberData.json")))
 	static init := objDoForEachVoid(memberData, v => (v.songLink := StrSplit(v.songLink, ",", ' ')))
