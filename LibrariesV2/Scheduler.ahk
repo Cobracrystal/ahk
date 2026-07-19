@@ -411,7 +411,7 @@ class Scheduler {
 				if !rowN
 					return
 				key := this.LV.GetText(rowN, 5)
-				reminderObj := objFilterArray(this.core.timerList[key], [ "timer" ])
+				reminderObj := objExcludeKeys(this.core.timerList[key], [ "timer" ])
 				MsgBoxAsGui.fromConfig({
 					text: reminderObj,
 					title: "Reminder Object",

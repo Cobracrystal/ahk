@@ -21,25 +21,27 @@ objCountValue(obj, value, conditional := (itKey,itVal,setVal) => (itVal = setVal
  * Checks whether obj contains given value and returns index if found, else 0
  * @param obj 
  * @param value 
- * @param {Func} comparator 
+ * @param {Func} transformer 
+ * @param {Boolean} returnValue Whether to return the found value instead of the index (Useful when iterating through objects and match for a property of that object)
  * @returns {Integer} 
  */
-objContainsValue(obj, value, fn := (v => v), returnValue := false) {
+objContainsValue(obj, value, transformer := (v => v), returnValue := false) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objContainsValue does not handle type " . Type(obj)))
 	for i, v in objGetEnumerator(obj)
-		if fn(v) == value
+		if transformer(v) == value
 			return returnValue ? v : i
 	return 0
 }
 
+
 /**
- * Checks whether obj contains given value and returns index if found, else 0
+ * Checks whether object contains a value matching match and returns (all) index(es) if found.
  * @param obj 
- * @param value 
- * @param {Func} comparator 
- * @returns {Integer} 
+ * @param {(itKey, itVal) => Integer} match 
+ * @param {Integer} retAllMatches 
+ * @returns {Array | Integer} 
  */
 objContainsMatch(obj, match := (itKey,itVal) => (true), retAllMatches := 0) {
 	isArrLike := (obj is Array || obj is Map)
@@ -112,6 +114,7 @@ objClone(obj) {
 		return copy
 	}
 }
+
 /**
  * Merges obj2 into obj1 or creates a new object if desired. Prefers obj1 keys over obj2 unless specified.
  * This only works for Maps and Objects. For merging arrays, use arrayMerge instead.
@@ -192,10 +195,10 @@ objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) =>
  * @param {Boolean} whiteList Whether to treat filterValues as a white list instead 
  * @returns {Any} 
  */
-objFilterArray(obj, filterValues := [], whiteList := false) {
+objExcludeKeys(obj, filterValues := [], whiteList := false) {
 	isMap := (obj is Map)
 	if (obj is Array || !(isMap || IsObject(obj)))
-		throw(TypeError("objFilterArray does not handle type " . Type(obj)))
+		throw(TypeError("objExcludeKeys does not handle type " . Type(obj)))
 	filterList := Map()
 	for i, e in filterValues
 		filterList[e] := true
@@ -212,6 +215,28 @@ objFilterArray(obj, filterValues := [], whiteList := false) {
 	return clone
 }
 
+objGetKeys(obj, keys*) => objFilterIndices(obj, keys*)
+objGetIndices(obj, keys*) => objFilterIndices(obj, keys*)
+objFilterKeys(obj, keys*) => objFilterIndices(obj, keys*)
+objFilterIndices(obj, keys*) {
+	isArrLike := ((isArr := obj is Array) || obj is Map)
+	if !(isArrLike || IsObject(obj))
+		throw(TypeError("objFilterIndices does not handle type " . Type(obj)))
+	clone := %Type(obj)%()
+	if isArr {
+		clone.Capacity := keys.Length
+		for i, key in keys
+			clone.push(obj[key])
+	} else if isArrLike {
+		for i, key in keys
+			clone[key] := obj[key]
+	} else {
+		for i, key in keys
+			clone.%key% := obj.%key%
+	}
+	return clone
+}
+
 /**
  * Creates a new object containing only values matching filter.
  * @param obj 
@@ -221,7 +246,7 @@ objFilterArray(obj, filterValues := [], whiteList := false) {
 objFilter(obj, filter := (k, v) => (true)) {
 	isArrLike := ((isArr := obj is Array) || obj is Map)
 	if !(isArrLike || IsObject(obj))
-		throw(TypeError("objRemoveValue does not handle type " . Type(obj)))
+		throw(TypeError("objFilter does not handle type " . Type(obj)))
 	clone := %Type(obj)%()
 	lambda := filter.MaxParams == 1 ? (i, e) => filter(e) : (i, e) => filter(i, e)
 	if isArr
@@ -246,7 +271,7 @@ objDoForEachVoid(obj, transformer := (v => toString(v)), conditional := (itKey?,
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || IsObject(obj))
-		throw(TypeError("objDoForEach does not handle type " . Type(obj)))
+		throw(TypeError("objDoForEachVoid does not handle type " . Type(obj)))
 	for i, e in objGetEnumerator(obj) {
 		if conditional(i, e?)
 			transformer(e?)
