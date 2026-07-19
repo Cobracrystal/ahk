@@ -1114,7 +1114,6 @@ loadTableAsHotstrings(filePath) {
 		static currentSnapshot := getFolderAsArr(BooruDownload.basePath)
 		SetTimer(turnSelfOff, -300000)
 		text := A_Clipboard
-		text := Trim(text, " `t`n`r")
 		flagOK := true
 		for link in strSplitOnNewLine(text, "`r`t ") {
 			fname := BooruDownload.getFilenameFromURL(link)
@@ -1252,140 +1251,27 @@ WinSetVolume(level, target?) {
 #HotIf
 
 #HotIf WinActive("Revolution Idle")
-^e::{ ; Revo Idle: trash item under cursor
-	MouseGetPos(&x, &y)
-	Send("{LButton Down}")
-	Sleep(30)
-	MouseMove(767, 700)
-	Sleep(30)
-	Send("{LButton Up}")
-	Sleep(30)
-	MouseMove(x, y)
-}
-^w::RevoIdle.sacrificeUnderCursor()
-
-^NumpadDown::{	; RevoIdle: Loop refine
-	static toggle := false
-	if toggle := !toggle {
-		RevoIdle.instantExit := false
-		SetTimer(RevoIdle.bigLoop.bind(RevoIdle), 6000)
-		RevoIdle.bigLoop()
-	}
-	else
-		RevoIdle.instantExit := true
-}
-
-^NumpadEnd::RevoIdle.bigLoop()
-XButton1::RevoIdle.useTarotCardUnderCursor()
-Del::RevoIdle.trashMineralUnderCursor()
+^w::RevoIdle.trashSingZodiacUnderCursor()
 
 class RevoIdle {
-	static instantExit := false
-	static bigLoop() {
-		static num := String(199)
-		if this.instantExit
-			SetTimer(,0)
-		Critical(0)
-		this.clickNormalMinerals()
-		Sleep(50)
-		this.doRefinePrestige()
-		Sleep(50)
-		Loop(2) {
-			this.doPolishPrestige()
-			Sleep(350)
-		}
-		this.openRefineMenu()
-	}
-
-	static openPolishMenu() {
-		static polish := [1050, 1000]
-		if this.instantExit
-			Exit()
-		MouseClick("L", polish*)
-	}
-
-	static closePolishMenu() {
-		static polishexit := [1555, 255]
-		if this.instantExit
-			Exit()
-		MouseClick("L", polishexit*)
-	}
-
-	static doPolishPrestige() {
-		static polishPrestige := [1178, 362]
-		static polishPrestigeConfirm := [1180, 640]
-		if this.instantExit
-			Exit()
-		this.openPolishMenu()
-		sleep(75)
-		MouseClick("L", polishPrestige*)
-		Sleep(75)
-		MouseClick("L", polishPrestigeConfirm*)
-		Sleep(75)
-		this.closePolishMenu()
-	}
-
-	static clickNormalMinerals() {
-		static normalMinerals := [250, 380]
-		if this.instantExit
-			Exit()
-		MouseClick('L', normalMinerals*)
-	}
-
-	static doRefinePrestige() {
-		static refinePrestige := [1450, 410]
-		static refinePrestigeConfirm := [1200, 650]
-		if this.instantExit
-			Exit()
-		this.openRefineMenu()
-		Sleep(75)
-		MouseClick('L', refinePrestige*)
-		Sleep(75)
-		MouseClick('L', refinePrestigeConfirm*)
-		Sleep(75)
-		this.closeRefineMenu()
-	}
-	static openRefineMenu() {
-		static refine := [1441, 991]
-		if this.instantExit
-			Exit()
-		MouseClick('L', refine*)
-	}
-	static closeRefineMenu() {
-		static refineClose := [62, 260]
-		if this.instantExit
-			Exit()
-		MouseClick('L', refineClose*)
-	}
-
-	static sacrificeUnderCursor() {
+	static trashSingZodiacUnderCursor() {
+		static trashIcon := RevoIdle.coord(2068, 1300)
 		MouseGetPos(&x, &y)
 		Send("{LButton Down}")
-		Sleep(100)
-		MouseMove(680, 1000)
-		Sleep(100)
+		Sleep(50)
+		MouseMove(trashIcon.x, trashIcon.y)
+		Sleep(50)
 		Send("{LButton Up}")
-		Sleep(100)
+		Sleep(50)
 		MouseMove(x, y)
 	}
 
-	
-	static trashMineralUnderCursor() {
-		MouseGetPos(&x, &y)
-		MouseClick("Left",,,,,'D')
-		Sleep(100)
-		MouseMove(775, 700)
-		Sleep(100)
-		MouseClick("Left",,,,,'U')
-		Sleep(100)
-		MouseMove(x, y)
-	}
-
-	static useTarotCardUnderCursor() {
-		MouseGetPos(&x, &y)
-		MouseClick("Left", 1450, 1000)
-		Sleep(200)
-		MouseMove(x, y)
+	class coord {
+		static Call(x,y) {
+			this.x := x
+			this.y := y
+			return this
+		}
 	}
 }
 #HotIf

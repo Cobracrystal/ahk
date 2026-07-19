@@ -258,7 +258,6 @@ class BooruDownload {
 
 	static parseLinks(text) {
 		arr := []
-		text := Trim(text, " `t`n`r")
 		for line in strSplitOnNewLine(text) {
 			splits := StrSplit(line, "|", " `t")
 			arr.push({url: splits[1], fileName: splits.Length > 1 ? splits[2] : "", origin: "", status: "", extension: ""})
