@@ -190,26 +190,30 @@ objRemoveValues(obj, values, limit := 0, conditional := ((itKey,itVal,setVal) =>
 /**
  * Returns a shallow clone of an object with all but the in filterValues specified keys
  * @param obj 
- * @param {Array} filterValues 
- * @param {Boolean} whiteList Whether to treat filterValues as a white list instead 
+ * @param {Array} keyBlacklist 
  * @returns {Any} 
  */
-objExcludeKeys(obj, filterValues := [], whiteList := false) {
-	isMap := (obj is Map)
-	if (obj is Array || !(isMap || IsObject(obj)))
+objExcludeKeys(obj, keyBlacklist := []) {
+	isArrLike := ((isArr := obj is Array) || obj is Map)
+	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objExcludeKeys does not handle type " . Type(obj)))
-	filterList := Map()
-	for i, e in filterValues
-		filterList[e] := true
+	blacklist := Map()
+	for i, e in keyBlacklist
+		blacklist[e] := true
 	clone := %Type(obj)%()
-	if isMap {
-		for i, e in obj
-			if (whiteList && filterList.Has(i)) || (!whiteList && !filterList.Has(i))
-				clone[i] := e
+	if isArr {
+		clone.Capacity := obj.Length
+		for key, value in obj
+			if (!blacklist.Has(key))
+				clone.push(value)
+	} else if isArrLike {
+		for key, value in obj
+			if (!blacklist.Has(key))
+				clone[key] := value
 	} else {
-		for i, e in ObjOwnProps(obj)
-			if (whiteList && filterList.Has(i)) || (!whiteList && !filterList.Has(i))
-				clone.%i% := e
+		for key, value in obj
+			if (!blacklist.Has(key))
+				clone.%key% := value
 	}
 	return clone
 }

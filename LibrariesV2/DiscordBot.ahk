@@ -1,5 +1,5 @@
 #Include "DiscordClient.ahk"
-#Include "BasicUtilities.ahk"
+#Include "ObjectUtilities.ahk"
 #Include "External\jsongo.ahk"
 
 
@@ -16,7 +16,7 @@ class DiscordBot extends DiscordClient {
 	duplicateRole(serverID, roleID) {
 		role := this.getRoleById(serverID, roleID)
 		pos := role["position"]
-		; role := objRemoveValue(role, "")
+		role := objRemoveValue(role, "")
 		objRemoveValue(role["colors"], "")
 		duplRole := Map()
 		for e in ["name","permissions","colors","hoist","icon","unicode_emoji","mentionable"]

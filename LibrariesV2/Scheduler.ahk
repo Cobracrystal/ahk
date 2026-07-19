@@ -7,6 +7,7 @@
 #Include "ObjectUtilities.ahk"
 #Include "WinUtilities.ahk"
 #Include "DiscordBot.ahk"
+#Include "MsgBoxAsGui.ahk"
 #Include "External\jsongo.ahk"
 
 class Scheduler {

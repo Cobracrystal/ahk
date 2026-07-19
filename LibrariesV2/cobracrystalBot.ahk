@@ -1,4 +1,5 @@
 #Include "discordBot.ahk"
+#Include "MsgBoxAsGui.ahk"
 #Include "BasicUtilities.ahk"
 #Include "External\jsongo.ahk"
 
@@ -78,7 +79,7 @@ class CCBot extends DiscordBot {
 					if (rolesbyID.Has(i)) {
 						if (rolesbyID[i]["position"] < highestRole["position"]) {
 							this.modifyGuildRole(serverID, i, e)
-							print("Edit Role " i ": " rolesbyID[i]["name"] " => " (e.HasOwnProp("name") ? e.name : tostring(e,1,1)))
+							print("Edit Role " i ": " rolesbyID[i]["name"] " => " (e.HasOwnProp("name") ? e.name : e.id))
 							rolesEditedCount++ 
 						}
 						else

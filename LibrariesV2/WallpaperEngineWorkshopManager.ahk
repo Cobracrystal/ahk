@@ -4,6 +4,7 @@
 #Include "ObjectUtilities.ahk"
 #Include "FileUtilities.ahk"
 #Include "BasicUtilities.ahk"
+#Include "MsgBoxAsGui.ahk"
 SetWorkingDir(A_ScriptDir "\script_files\")
 
 class wpEngine {

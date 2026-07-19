@@ -15,6 +15,8 @@ fix dark mode for DDL/Dropdownlist via custom intercept function
 #Requires AutoHotkey >=v2.0 
 #SingleInstance Force
 #Include "BasicUtilities.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "MsgBoxAsGui.ahk"
 #Include "External\jsongo.ahk"
 #Include "TextEditMenu.ahk"
 

@@ -4,6 +4,7 @@
 #Include "BasicUtilities.ahk"
 #Include "FileUtilities.ahk"
 #Include "TimeUtilities.ahk"
+#Include "MsgBoxAsGui.ahk"
 #Include "External\WebSocket.ahk"
 #Include "External\httpserver.ahk"
 #Include "External\jsongo.ahk"

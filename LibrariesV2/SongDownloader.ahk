@@ -3,6 +3,7 @@
 #Include "WinUtilities.ahk"
 #Include "FileUtilities.ahk"
 #Include "unicodeData.ahk"
+#Include "MsgBoxAsGui.ahk"
 #Include "External\jsongo.ahk"
 #Include "External\cmdStdoutAsync.ahk"
 

@@ -2,6 +2,7 @@
 #Include "BasicUtilities.ahk"
 #Include "External\jsongo.ahk"
 #Include "unicodeData.ahk"
+#Include "MsgBoxAsGui.ahk"
 
 class TextEditMenu {
 

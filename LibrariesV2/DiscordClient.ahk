@@ -150,7 +150,7 @@ class DiscordClient {
 	}
 
 	getRoleById(serverID, roleID) {
-		roles := this.getroles(serverID)
+		roles := this.getGuildRoles(serverID)
 		if i := objContainsValue(roles, roleID, v => v["id"])
 			return roles[i]
 		return 0

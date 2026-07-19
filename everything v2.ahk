@@ -33,12 +33,17 @@ A_TrayMenu.Delete()
 #Include "AltDrag.ahk"
 #Include "MathUtilities.ahk"
 #Include "WinUtilities.ahk"
+#Include "FileUtilities.ahk"
 #Include "BasicUtilities.ahk"
+#Include "MsgBoxAsGui.ahk"
+#Include "DesktopState.ahk"
 #Include "HotstringLoader.ahk"
 #Include "TableFilter v2.ahk"
 #Include "DiscordClient.ahk"
 #Include "WallpaperEngineWorkshopManager.ahk"
-#Include "%A_ScriptDir%\Demo_Scripts\BooruDownloader.ahk"
+#Include "BooruDownloader.ahk"
+#Include "External\cmdStdoutAsync.ahk"
+#Include "External\jsongo.ahk"
 ; #Include "%A_ScriptDir%\not_mine_or_examples\AquaHotkey\AquaHotkey.ahk"
 ; #Include "External\jsongo.ahk"
 ; for windows in which ctrl+ should replace scrolling
@@ -66,7 +71,7 @@ if (StrCompare(A_OSVersion, "10.0.22000") < 0) {
 	TransparentTaskbar.setTimer(1)
 }
 ; Start keeping track of desktop window changes
-WindowManager.DesktopState.enable(60000)
+DesktopState.enable(60000)
 ; import custom blacklist into AltDrag
 AltDrag.addBlacklist([
 	"Satisfactory ahk_class UnrealWindow",
@@ -293,7 +298,7 @@ Alt & Capslock::{	; Switch to specified window
 ^+!J:: { ; Tiles Windows Vertically
 	static windowInfo, tileState := false
 	if (tileState := !tileState) {
-		WindowManager.DesktopState.save("TilingState")
+		DesktopState.save("TilingState")
 		shell := ComObject("Shell.Application")
 		switch MsgBoxAsGui.fromConfig({
 			text: "Tile Windows?", 
@@ -326,20 +331,20 @@ Alt & Capslock::{	; Switch to specified window
 	else if MsgBoxAsGui.fromConfig({
 		text: "Restore Previous State?", title: "Confirm Dialog", buttonStyle: 0x1, wait: true
 	}) == "OK"
-		WindowManager.DesktopState.restore("TilingState")
+		DesktopState.restore("TilingState")
 }
 
 ^+!L:: { ; save / restore desktop state
-	WindowManager.DesktopState.disable()
+	DesktopState.disable()
 	g := Gui("AlwaysOnTop", "DesktopState Manager")
 	g.OnEvent("Close", close)
 	g.OnEvent("Escape", close)
 	g.AddEdit("Section -Multi R1 w200 vName", A_Now)
 	g.AddButton("Center R1 w200 yp", "Save State").OnEvent("Click", saveState)
 	lv := g.AddListView("xs -Multi w500 R10", ["Name", "Timestamp", "Window Count"])
-	state := WindowManager.DesktopState.prevState
+	state := DesktopState.prevState
 	lv.add("+Focus +Select", state.name, state.timestamp, state.info.Length)
-	for i, state in WindowManager.DesktopState.customStates
+	for i, state in DesktopState.customStates
 		lv.add("+Focus +Select", state.name, state.timestamp, state.info.Length)
 	Loop(3)
 		lv.ModifyCol(A_Index, "AutoHdr")
@@ -349,13 +354,13 @@ Alt & Capslock::{	; Switch to specified window
 
 	saveState(ctrl, info) {
 		name := g["Name"].Value
-		if name == "" || WindowManager.DesktopState.customStates.Has(name) {
+		if name == "" || DesktopState.customStates.Has(name) {
 			res := MsgBoxAsGui.fromConfig({text: "No Valid name set. Store as current timestamp?", title: "Invalid name", buttonStyle: 1, defaultButton: 2, wait:true, owner: g.hwnd})
 			if res == "Cancel"
 				return
-			name := WindowManager.DesktopState.customStates.Has(A_Now) ? A_Now "." A_TickCount : A_Now
+			name := DesktopState.customStates.Has(A_Now) ? A_Now "." A_TickCount : A_Now
 		}
-		state := WindowManager.DesktopState.save(name)
+		state := DesktopState.save(name)
 		lv.add("+Focus +Select", state.name, state.timestamp, state.info.Length)
 	}
 
@@ -369,14 +374,14 @@ Alt & Capslock::{	; Switch to specified window
 		timedTooltip("Attempting to restore Desktop state...")
 		name := lv.GetText(rowN, 1)
 		if name == "Previous"
-			WindowManager.DesktopState.restore()
+			DesktopState.restore()
 		else
-			WindowManager.DesktopState.restore(name)
+			DesktopState.restore(name)
 	}
 
 	close(*) {
 		g.Destroy()
-		WindowManager.DesktopState.enable(60000)
+		DesktopState.enable(60000)
 	}
 }
 
