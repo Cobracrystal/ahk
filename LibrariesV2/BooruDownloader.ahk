@@ -1,7 +1,7 @@
 ﻿#Requires AutoHotkey v2.0
 #SingleInstance Off
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
+#Include "BasicUtilities.ahk"
+#Include "PrimitiveUtilities.ahk"
 if (A_LineFile == A_ScriptFullPath) {
 	CoordMode("ToolTip", "Screen")
 	BooruDownload.main()
