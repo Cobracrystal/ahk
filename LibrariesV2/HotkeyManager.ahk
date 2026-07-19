@@ -32,14 +32,13 @@ class HotkeyManager {
 			coords: {x: 300, y: 135}, 
 			savedHotkeysPath: A_WorkingDir "\HotkeyManager\SavedHotkeys.txt",
 		}
-		this.defaultEditor := this.vscode
-		this.customEditor := 0
+		this.editorProfileConfig := this.Editors.vscodium
 		; Tray Menu
 		guiMenu := TrayMenu.submenus["GUIs"]
 		guiMenu.Add("Open Hotkey Manager", this.hotkeyManager.Bind(this))
 		A_TrayMenu.Add("GUIs", guiMenu)
 		fileMenu := TrayMenu.submenus["Files"]
-		fileMenu.Add("Edit Hotkey File", (*) => this.runEditor(this.data.savedHotkeysPath))
+		fileMenu.Add("Edit Hotkey File", (*) => this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath))
 		A_TrayMenu.Add("Files", fileMenu)
 		; init class variables
 	}
@@ -58,25 +57,25 @@ class HotkeyManager {
 		this.tabObj.UseTab(1)
 			this.lv[1] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Keys", "Comment", "Source"])
 			this.guiListviewCreate(1, true, true)
-			this.lv[1].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.runEditor(A_ScriptFullPath, obj.GetText(rowN, 1)) : 0)
+			this.lv[1].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.Editors.runEditor(this.editorProfileConfig, A_ScriptFullPath, obj.GetText(rowN, 1)) : 0)
 		this.tabObj.UseTab(2)	
-			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["Keys","Program","Comment"])
+			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["Line", "Keys","Program","Comment"])
 			this.guiListviewCreate(2, true, true)
-			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.runEditor(this.data.savedHotkeysPath) : 0)
+			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath, obj.GetText(rowN, 1)) : 0)
 		this.tabObj.UseTab(3)
 			this.lv[3] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Options", "Text", "Correction", "Comment", "Source"])
 			this.guiListviewCreate(3, true, true)
-			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN && IsDigit(obj.GetText(rowN, 1)) ? this.runEditor(A_ScriptFullPath, obj.GetText(rowN, 1)) : 0)
+			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN && IsDigit(obj.GetText(rowN, 1)) ? this.Editors.runEditor(this.editorProfileConfig, A_ScriptFullPath, obj.GetText(rowN, 1)) : 0)
 		this.tabObj.UseTab(4)
 			this.gui.AddText("Section yp+10", "Command Line For Editing")
-			this.editRunCmd := this.gui.AddEdit("xs w500", this.defaultEditor.exe ' ' this.defaultEditor.path . this.defaultEditor.line)
-			this.gui.AddButton("xs w100", 'Save').OnEvent('Click', (*) => this.customEditor := this.editRunCmd.Value)
+			this.editRunCmd := this.gui.AddEdit("xs w500", this.Editors.cmdStringTemplate(this.editorProfileConfig))
+			this.gui.AddButton("xs w100", 'Save').OnEvent('Click', (*) => this.editorProfileConfig := this.editRunCmd.Value)
 		this.tabObj.UseTab()
 		this.gui.AddButton("Default Hidden", "A").OnEvent("Click", this.onEnter.bind(this))
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 	}
 
-	static guiListviewCreate(num, first := false, redraw := false) {
+	static guiListviewCreate(num, initialCreation := false, redraw := false) {
 		if (num < 1 || num > 3)
 			return 0
 		this.gui.Opt("+Disabled")
@@ -85,76 +84,63 @@ class HotkeyManager {
 		search := this.gui["EditFilterHotkeys"].Value
 		switch num {
 			case 1:
-				if (search == "") {
-					for i, e in this.data.hotkeys {
-						SplitPath(e.file, &fileName)
-						this.lv[1].Add(,e.line, e.hotkey, e.comment, fileName)
+				for i, hkey in this.data.hotkeys
+					if this.isIncludedInSearch(hkey, search) {
+						SplitPath(hkey.file, &fileName)
+						this.lv[1].Add(,hkey.line, hkey.hotkey, hkey.comment, fileName)
 					}
-				} else {
-					for i, e in this.data.hotkeys {
-						if (InStr(e.comment, search) || keywordMatch(e.hotkey, search)) {
-							SplitPath(e.file, &fileName)
-							this.lv[1].Add(,e.line, e.hotkey, e.comment, fileName)
-						}
-					}
-				}
 			case 2:
-				if (search == "") {
-					for i, e in this.data.savedHotkeys
-						this.lv[2].Add(,e.hotkey, e.program, e.comment)
-				} else {
-					for i, e in this.data.savedHotkeys
-						if (InStr(e.program, search) || InStr(e.comment, search) || keywordMatch(e.hotkey, search))
-							this.lv[2].Add(,e.hotkey, e.program, e.comment)
-				}
+				for i, hkey in this.data.savedHotkeys
+					if this.isIncludedInSearch(hkey, search)
+						this.lv[2].Add(,hkey.line, hkey.hotkey, hkey.program, hkey.comment)
 			case 3:
-				if (search == "") {
-					for i, e in this.data.hotstrings {
-						SplitPath(e.file, &fileName)
-						this.lv[3].Add(,e.line, e.options, e.hotstring, e.replaceString, e.comment, fileName)
+				for i, hstring in this.data.hotstrings
+					if this.isIncludedInSearch(hstring, search) {
+						SplitPath(hstring.file, &fileName)
+						this.lv[3].Add(,hstring.line, hstring.options, hstring.hotstring, hstring.replaceString, hstring.comment, fileName)
 					}
-				} else {
-					for i, e in this.data.hotstrings {
-						if (InStr(e.hotstring, search) || InStr(e.replacestring, search) || InStr(e.comment, search) || InStr(e.options, search)) {
-							SplitPath(e.file, &fileName)
-							this.lv[3].Add(,e.line, e.options, e.hotstring, e.replaceString, e.comment, fileName)
-						}
-					}
-				}
 			}
 		if (this.lv[num].GetCount() == 0)
 			this.LV[num].Add("", "/", "Nothing Found.")
-		if (first) {
-			if (num != 2)
-				this.lv[num].ModifyCol(1,"Integer")
-		}
 		if (redraw) {
-			Loop(this.lv[num].GetCount("Col"))
-				this.lv[num].ModifyCol(A_Index,"AutoHdr")
+			Loop(this.lv[num].GetCount("Col") - 1)
+				this.lv[num].ModifyCol(A_Index + 1,"AutoHdr")
+			this.lv[num].ModifyCol(1, 0)
 		}
+		if (initialCreation)
+			this.lv[num].ModifyCol(1,"Integer")
 		this.lv[num].Opt("+Redraw")
 		this.gui.Opt("-Disabled")
 		
 		
-		keywordMatch(haystack, needleString) {
-			for needle in strSplitOnWhiteSpace(needleString) {
-				if needle == "" 
-					continue
-				if !(pos := InStr(haystack, needle))
-					return false
-				else
-					haystack := SubStr(haystack, 1, pos - 1) . SubStr(haystack, pos + strlen(needle))
-			}
-			return true
-		}
 	}
 
-	static isIncludedInSearch(num, search, hkeyObj) {
-		for i, e in hkeyObj.OwnProps() {
-			if (InStr(e, search) && i != "file")
+	static isIncludedInSearch(hkeyObj, search) {
+		if search == ""
+			return true
+		if InStr(hkeyObj.comment, search)
+			return true
+		for i, str in hkeyObj.OwnProps() {
+			switch i {
+				case "file", "line":
+					continue
+				case "hotkey":
+					for needle in strSplitOnWhiteSpace(Trim(search)) {
+						if needle == "" 
+							continue
+						str := StrReplace(str, needle, '',, &replCount, 1)
+						if !replCount ; if we didn't replace anything, needle didn't match
+							continue 2
+					}
+					return true
+				default:
+					if InStr(str, search)
+						return true
+			}
+			if (InStr(str, search) && i != "file")
 				return true
 		}
-		return false 
+		return false
 	}
 
 	static onEnter(*) {
@@ -162,11 +148,11 @@ class HotkeyManager {
 		switch ctrl {
 			case this.lv[1], this.lv[3]:
 				if (rowN := ctrl.GetNext()) {
-					this.runEditor(A_ScriptFullPath, ctrl.getText(rowN, 1))
+					this.Editors.runEditor(this.editorProfileConfig, A_ScriptFullPath, ctrl.getText(rowN, 1))
 				}
 			case this.lv[2]:
 				if (ctrl.GetNext())	
-					this.runEditor(this.data.savedHotkeysPath)
+					this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath)
 		}
 	}
 
@@ -302,37 +288,59 @@ class HotkeyManager {
 		savedHotkeys := []
 		Loop Parse, savedHotkeysFull, "`n", "`r"
 			if RegExMatch(A_LoopField,"^(?!\s*;|//)Hotkey:\s*(.*)\s*,\s*(.*)\s*,\s*(.*)\s*", &match)
-				savedHotkeys.Push({hotkey:match[1], program:match[2], comment:(match[3] == "" ? "None" : match[3])})
+				savedHotkeys.Push({line:A_Index, hotkey:match[1], program:match[2], comment:(match[3] == "" ? "None" : match[3])})
 		return savedHotkeys
 	}
 
-	static runEditor(filePath, line?) {
-		if this.customEditor {
-			fullCmd := StrReplace(this.customEditor, '%PATH', filePath)
-			fullCmd := StrReplace(fullCmd, '%LINE', line ?? '')
-		} else {
-			path := StrReplace(this.defaultEditor.path, "%PATH", filePath)
-			line := IsSet(line) ? StrReplace(this.defaultEditor.line, "%LINE", line) : ''
-			fullCmd := this.defaultEditor.exe . " " path . line
+	class Editors {
+		
+		static runEditor(editor, filePath, line?) {
+			if editor is Object
+				fullCmd := this.cmdString(editor, filePath, line?)
+			else if editor is String {
+				fullCmd := StrReplace(editor, '%PATH', filePath)
+				fullCmd := StrReplace(fullCmd, '%LINE', line ?? '')
+			}
+			Run(fullCmd)
 		}
-		Run(fullCmd)
-	}
 
-	static notepad := {
-		exe: A_WinDir . '\system32\notepad.exe',
-		path: '"%PATH"',
-		line: '',
-	}
-	
-	static notepadplusplus := {
-		exe: 'Notepad++',
-		path: '"%PATH"',
-		line: ' -n%LINE',
-	}
-	
-	static vscode := {
-		exe: '"' Dependencies.normalizePath(A_AppData '\..\Local\Programs\Microsoft VS Code\Code.exe') '"',
-		path: '-g "%PATH"',
-		line: ':%LINE',
-	}
+		static cmdStringTemplate(config := this.notepad) {
+			return config.exe ' ' (config.params ? config.params ' ' : '') config.path . (config.line ? config.line : '')
+		}
+
+		static cmdString(config := this.notepad, path?, line?) {
+			return config.exe ' ' 
+				. (config.params ? config.params ' ' : '') 
+				. (IsSet(path) ? StrReplace(config.path, "%PATH", path) : '') 
+				. (IsSet(line) && config.line ? StrReplace(config.line, "%LINE", line) : '')
+		}
+
+		static notepad := {
+			exe: A_WinDir . '\system32\notepad.exe',
+			params: '',
+			path: '"%PATH"',
+			line: '',
+		}
+		
+		static notepadplusplus := {
+			exe: 'Notepad++',
+			params: '',
+			path: '"%PATH"',
+			line: ' -n%LINE',
+		}
+		
+		static vscode := {
+			exe: '"' Dependencies.normalizePath(A_AppData '\..\Local\Programs\Microsoft VS Code\Code.exe') '"',
+			params: '',
+			path: '-g "%PATH"',
+			line: ':%LINE',
+		}
+		
+		static vscodium := {
+			exe: '"' Dependencies.normalizePath(A_AppData '\..\Local\Programs\VSCodium\VSCodium.exe') '"',
+			params: '-r',
+			path: '-g "%PATH"',
+			line: ':%LINE',
+		}
+	} 
 }
