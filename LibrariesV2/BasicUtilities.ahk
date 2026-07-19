@@ -130,7 +130,7 @@ ExecHelperScript(expression, wait := true, void := false) {
 	input .= '#Include "' A_LineFile '\.."`n'
 	input .= '#Include "*i BasicUtilities.ahk"`n'
 	input .= '#Include "*i MathUtilities.ahk"`n'
-	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print(?:\(.*\)|\s+.*)') || RegexMatch(expression, 'i)\.Show\(.*\)'))
+	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print(?:\(.*\)|\s+.*)') || RegexMatch(expression, 'i)\.Show\(.*\)') || RegexMatch(expression, 'i)A_Clipboard\s*.?='))
 		input .= expression
 	else
 		input .= 'print(' expression ',,false,true)'
@@ -747,7 +747,7 @@ class MsgBoxAsGui {
 		NumPut("UInt", NCM_Size, NCM, Size_Offset)   ; Set the cbSize element of the NCM structure
 		; Get the system parameters and store them in the NONCLIENTMETRICS structure (NCM)
 		if !DllCall("SystemParametersInfo", "UInt", SPI_GETNONCLIENTMETRICS, "UInt", NCM_Size, "Ptr", NCM.Ptr, "UInt", 0)                        ; Don't update the user profile
-			return false                               ; Return false
+			return false
 		name   := StrGet(NCM.Ptr + MsgFont_Offset + FaceName_Offset, FACESIZE)          ; Get the font name
 		height := NumGet(NCM.Ptr + MsgFont_Offset + Height_Offset, "Int")               ; Get the font height
 		size   := DllCall("MulDiv", "Int", -Height, "Int", 72, "Int", A_ScreenDPI)   ; Convert the font height to the font size in points
@@ -823,7 +823,7 @@ class MsgBoxAsGui {
 		return [width, height]
 	}
 
-	; this is completely useless, just here to shut up the lexer. In fact the nonstatic ones don't even do anything since __New() is overwritten
+	; this does not serve any function, it exists solely so the ahk lexer by thqby stops complaining. In fact the nonstatic ones don't even do anything since __New() is overwritten
 	static guiNotify := 0
 	static finalEvent := 0
 	static cleanup := 0
@@ -1040,8 +1040,8 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		g.AddButton("ys-7 x194 R1 w200", "Copy Full Output").OnEvent("Click", copyAll.bind(g))
 		g.AddButton("ys-7 x398 R1 w200", "Copy Last Output").OnEvent("Click", copyValue.bind(g))
 		g.OnEvent('Size', (o, m, w, h) => cEdit.Move(, , w, h - y))
-		g.OnEvent('Escape', (*) => g.Destroy())
-		g.OnEvent('Close', (*) => g.Destroy())
+		g.OnEvent('Escape', (*) => guiPrinterInstance := 0)
+		g.OnEvent('Close', (*) => guiPrinterInstance := 0)
 		g.show()
 		return g
 	}
