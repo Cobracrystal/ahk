@@ -1,10 +1,10 @@
 #Requires AutoHotkey v2
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\FileUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\unicodeData.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\cmdStdoutAsync.ahk"
+#Include "BasicUtilities.ahk"
+#Include "WinUtilities.ahk"
+#Include "FileUtilities.ahk"
+#Include "unicodeData.ahk"
+#Include "External\jsongo.ahk"
+#Include "External\cmdStdoutAsync.ahk"
 
 ; todo: split video chapters into separate files option
 ; todo: attempt to parse artist/title from description if title/uploader doesn't seem correct
@@ -749,6 +749,7 @@ class SongDownloader {
 		profile := this.addRemoveProfile(profile,, config.profile)
 		for option in profile {
 			str .= (useAliases && option.option.has("alias") ? option.option.alias : option.option.name) . A_Space . (option.option.param ?  '"' StrReplace(option.param, '"', '\"') '"' A_Space : '')
+			; ; EQUIVALENT TO:
 			; if useAliases && option.option.has("alias")
 			; 	optionStr := option.option.alias
 			; else

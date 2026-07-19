@@ -1,6 +1,6 @@
-#Include "%A_LineFile%\..\..\LibrariesV2\discordBot.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
+#Include "discordBot.ahk"
+#Include "BasicUtilities.ahk"
+#Include "External\jsongo.ahk"
 
 class CCBot extends DiscordBot {
 

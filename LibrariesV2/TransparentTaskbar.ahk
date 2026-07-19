@@ -1,9 +1,9 @@
 ﻿; https://github.com/cobracrystal/ahk
 ; taskbar_Setattr by https://github.com/jNizM/AHK_TaskBar_SetAttr/
 
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
+#Include "BasicUtilities.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "WinUtilities.ahk"
 
 class TransparentTaskbar {
 	

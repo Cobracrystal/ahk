@@ -1,10 +1,10 @@
 ﻿; https://github.com/cobracrystal/ahk
 
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\cmdStdoutAsync.ahk"
+#Include "BasicUtilities.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "WinUtilities.ahk"
+#Include "External\jsongo.ahk"
+#Include "External\cmdStdoutAsync.ahk"
 
 class YoutubeDLGui {
 	static toggleGui(mode := "O") {

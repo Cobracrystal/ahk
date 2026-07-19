@@ -1,4 +1,4 @@
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
+#Include "ObjectUtilities.ahk"
 /**
  * Gets Specified Files in a folder as an array of filenames (if short) or array of objects with all their associated data
  * @param folder Path to a folder

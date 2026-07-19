@@ -2,12 +2,12 @@
 ; todo:
 ; custom functions -> text body of function that you write just gets saved in file, timer is set to run that file
 ; add function like .resume() or something that imports reminders from the cache of functions
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\TimeUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\DiscordBot.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
+#Include "BasicUtilities.ahk"
+#Include "TimeUtilities.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "WinUtilities.ahk"
+#Include "DiscordBot.ahk"
+#Include "External\jsongo.ahk"
 
 class Scheduler {
 	

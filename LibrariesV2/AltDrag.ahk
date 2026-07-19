@@ -48,9 +48,9 @@
 	AltDrag.borderlessFullscreenWindow()
 }
 ; */
-#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
+#Include "WinUtilities.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "PrimitiveUtilities.ahk"
 
 class AltDrag {
 

@@ -3,9 +3,9 @@
 ; settings: include files or not
 ; create search function in main gui
 
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\Dependencies.ahk"
+#Include "BasicUtilities.ahk"
+#Include "WinUtilities.ahk"
+#Include "Dependencies.ahk"
 
 class HotkeyManager {
 	

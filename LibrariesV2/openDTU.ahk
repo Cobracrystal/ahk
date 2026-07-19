@@ -1,6 +1,6 @@
 ; this should never be used in a serious setting, its a shitty temporary solution
-#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "External\jsongo.ahk"
+#Include "BasicUtilities.ahk"
 
 ; password := FileRead(A_ScriptDir "\..\script_files\openDTU\openDTUAuth.pw")
 ; onlineURL := FileRead(A_ScriptDir "\..\script_files\openDTU\openDTUurl.dt")

@@ -1,4 +1,4 @@
-#Include %A_LineFile%\..\..\LibrariesV2\BigInteger.ahk
+#Include BigInteger.ahk
 
 class BigIntegerUtils {
 

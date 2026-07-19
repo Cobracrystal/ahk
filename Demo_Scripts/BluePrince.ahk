@@ -1,8 +1,8 @@
 #Requires AutoHotkey >=v2.0
-#Include %A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk
-#Include %A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk
-#Include %A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk
-#Include %A_LineFile%\..\..\LibrariesV2\MathUtilities.ahk
+#Include ..\LibrariesV2\BasicUtilities.ahk
+#Include ..\LibrariesV2\ObjectUtilities.ahk
+#Include ..\LibrariesV2\PrimitiveUtilities.ahk
+#Include ..\LibrariesV2\MathUtilities.ahk
 mainfunc()
 
 ; this solves the numeric core puzzle in blue prince, by decoding words into numbers and solving the numeric core

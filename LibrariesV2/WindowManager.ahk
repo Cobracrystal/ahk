@@ -3,10 +3,12 @@
 ; fix spread windows
 ; add "show system info" somewhere in settings to show monitor sizes etc
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "*i %A_LineFile%\..\..\LibrariesV2\CustomWindowFunctions.ahk"
+
+#Include "%A_LineFile%\..\..\LibrariesV2"
+#Include "MsgBoxAsGui.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "WinUtilities.ahk"
+#Include "CustomWindowFunctions.ahk"
 ; Usage (if including this file as a library):
 ; ^+F11::WindowManager.windowManager("T")
 
@@ -933,68 +935,5 @@ class WindowManager {
 		DARK: "0x1E1E1E",
 		BLACK: "0x000000",
 		WHITE: "0xFFFFFF"
-	}
-
-
-	class DesktopState {
-		static __New() {
-			this.timer := this.save.bind(this)
-			this.prevState := { name: "Previous", timestamp: 0, info: [] }
-			this.prevStateTimestamp := 0
-			this.listLines := 0
-			this.customStates := Map()
-		}
-
-		static enable(period := 20000) {
-			SetTimer(this.timer, -1)
-			Sleep(10)
-			SetTimer(this.timer, period)
-		}
-
-		static disable() {
-			SetTimer(this.timer, 0)
-		}
-
-		static save(custom?) {
-			ListLines(this.listLines)
-			if (IsSet(custom)) {
-				return this.customStates[custom] := {
-					timestamp: A_Now,
-					name: custom,
-					info: WinUtilities.getAllWindowInfo()
-				}
-			}
-			else {
-				return this.prevState := {
-					timestamp: A_Now,
-					name: "Previous",
-					info: WinUtilities.getAllWindowInfo()
-				}
-			}
-		}
-
-		static restore(custom?) {
-			logString := ""
-			state := IsSet(custom) ? this.customStates[custom] : this.prevState
-			for i, e in state.info {
-				if (!WinExist(e.hwnd))
-					continue
-				try {
-					if (e.state == -1)
-						WinMinimize(e.hwnd)
-					else if (e.state == 1)
-						WinMaximize(e.hwnd)
-					else {
-						if WinGetMinMax(e.hwnd)
-							WinRestore(e.hwnd)
-						WinMove(e.xpos, e.ypos, e.width, e.height, e.hwnd)
-					}
-				}
-				catch OSError as err {
-					logString .= "Failed updating hwnd " e.hwnd ": " WinGetTitle(e.hwnd) . " with reason `"" err.Message "`" in function " err.What "`n"
-				}
-			}
-			MsgBoxAsGui(Format("Restored state {} from {}.", state.name, state.timestamp, logString ? "`nLog: " logString : ""))
-		}
 	}
 }

@@ -1,4 +1,4 @@
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "BasicUtilities.ahk"
 ; this class exists to generate german number names from a numeric string and vice versa.
 
 NumberNames.test()

@@ -1,7 +1,7 @@
 ﻿; https://github.com/cobracrystal/ahk
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\WebSocket.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "External\jsongo.ahk"
+#Include "External\WebSocket.ahk"
 
 class DiscordClient {
 	

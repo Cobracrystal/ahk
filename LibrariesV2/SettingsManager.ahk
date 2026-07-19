@@ -1,6 +1,6 @@
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\FileUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "FileUtilities.ahk"
+#Include "External\jsongo.ahk"
 
 class SettingsManager {
 	static defaultSettingsFile := "default_settings.json"

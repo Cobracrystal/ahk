@@ -1,9 +1,9 @@
 #Requires Autohotkey v2+
-#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\FileUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "External\jsongo.ahk"
+#Include "PrimitiveUtilities.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "FileUtilities.ahk"
+#Include "BasicUtilities.ahk"
 SetWorkingDir(A_ScriptDir "\script_files\")
 
 class wpEngine {

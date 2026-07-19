@@ -1,6 +1,6 @@
 ﻿; https://github.com/cobracrystal/ahk
 
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
+#Include "BasicUtilities.ahk"
 
 class TimestampConverter {
 

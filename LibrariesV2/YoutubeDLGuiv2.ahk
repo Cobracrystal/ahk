@@ -10,10 +10,10 @@ Add Setting:
 USE A LISTVIEW FOR [URL][TITLE][ARTIST][ALBUM][GENRE][IMAGEYESNO]
 */
 
-#Include "%A_LineFile%\..\..\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\WinUtilities.ahk"
-#Include "%A_LineFile%\..\..\LibrariesV2\External\jsongo.ahk"
+#Include "BasicUtilities.ahk"
+#Include "ObjectUtilities.ahk"
+#Include "WinUtilities.ahk"
+#Include "External\jsongo.ahk"
 
 class YoutubeDLGuiv2 {
 	ytdlGui(mode := "O") {
