@@ -1,4 +1,3 @@
-#Include "%A_LineFile%\..\..\LibrariesV2\PrimitiveUtilities.ahk"
 
 /**
  * Counts how many times a given value is included in an Object
@@ -769,7 +768,7 @@ toString(obj, compact := false, compress := true, strEscape := false, mapAsObj :
 		flagIsArr := obj is Array
 		flagIsObj := ((!flagIsArr && !flagIsMap) || objType == "Prototype" ? 1 : 0)
 		flagIsInstance := (objType != "Prototype" && objType != "Class" && Type(ObjGetBase(obj)) == "Prototype") ; we could also check whether obj doesn't have the proprety Prototype, but that relies on the object not being Primitive/Any
-		indent := (compress || compact)  ? '' : strMultiply(spacer, indentLevel)
+		indent := (compress || compact)  ? '' : StrReplace(Format("{:0" indentLevel "}",''), '0', spacer) ; strmultiply(str, count) => StrReplace(Format("{:0" count "}",''), '0', str) from PrimitiveUtilities.ahk
 		trspace := compress ? "" : A_Space
 		separator := (compact || compress) ? trspace : '`n' indent . spacer
 		sep2 := (compact || compress) ? trspace : '`n' indent
