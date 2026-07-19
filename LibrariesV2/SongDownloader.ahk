@@ -87,10 +87,10 @@ class SongDownloader {
 		}
 	}
 
-	static downloadSongWithGui(songLink) {
+	static downloadSongWithGui(songLink, configOverride?) {
 		ToolTip("Loading Metadata...")
 		this.data.ongoingOperations += 1
-		this.getRawMetadataFromLinks(songLink, callback, false)
+		this.getRawMetadataFromLinks(songLink, callback, false, configOverride?)
 		
 		callback(rawDataString) {
 			metaData := this.parseMetadata(rawDataString, true)
@@ -220,13 +220,12 @@ class SongDownloader {
 		this.getRawMetadataFromLinks(songLinks, rawDataString => callback(this.parseMetadata(rawDataString, allData)), withPlaylist)
 	}
 
-	static getRawMetadataFromLinks(songLinks, returnCallback, withPlaylist := false) {
+	static getRawMetadataFromLinks(songLinks, returnCallback, withPlaylist := false, configOverride?) {
 		if !(songLinks is Array)
 			songLinks := StrSplit(Trim(songLinks, "`n`r"), "`n", "`r")
 		songLinks := objDoForEach(songLinks, (e => this.constructLink(e)))
-		configs := objDoForEach(songLinks, (e => this.chooseConfigFromLink(e)))
-		; NOTE: choosing configs[1] here only works if all links are of the same type, ie don't require different configs. 
-		command := this.cmdStringBuilder(configs[1], this.PROFILE_GETMETADATA[withPlaylist, true],,songLinks*)
+		config := configOverride ?? this.chooseConfigFromLink(songLinks[1])
+		command := this.cmdStringBuilder(config, this.PROFILE_GETMETADATA[withPlaylist, true],,songLinks*)
 		if this.settings.debug
 			print(command)
 		CmdStdOutAsync(command, 'UTF-8', callback)
@@ -289,8 +288,6 @@ class SongDownloader {
 					if unicodeData.getIntPropertyValue(br[1], unicodeData.UProperty.UCHAR_BIDI_PAIRED_BRACKET_TYPE) != unicodeData.UBidiPairedBracketType.U_BPT_NONE && unicodeData.getBidiPairedBracket(br[1]) == br[2]
 						title := RegExReplace(title, "i)(\S)\s*ASMR\s*(\S)")
 				}
-				else
-					title := Trim(RegExReplace(title, "\s*Nightcore"))
 				genre := "ASMR"
 				album := "ASMR"
 			}
@@ -357,9 +354,18 @@ class SongDownloader {
 		if data.HasOwnProp("error") {
 			errEdit := g.AddEdit("w250 R10 ReadOnly", data.shortJson)
 			errEdit.SetFont("cRed Bold")
+			if InStr(data.shortJson, "cookies") || InStr(data.shortJson, "sign in") {
+				g.AddButton("w250 h30", "Retry with cookies").OnEvent("Click", retryWithCookies)
+			}
 		}
 		g.AddText("Section 0x200 R1.45", "Links | Current Folder: " )
-		outputFolder := this.settings.outputSubFolder
+		if (InStr(data.title, "ASMR") || data.genre == "ASMR") {
+			outputFolder := "..\ASMR"
+			cropThumbnailSquareLocal := false
+		} else {
+			outputFolder := this.settings.outputSubFolder
+			cropThumbnailSquareLocal := this.settings.ytdl.cropThumbnailToSquare
+		}
 		if IsSet(destination) {
 			outputFolder := Trim(StrReplace(destination, this.settings.outputBaseFolder), "\/")
 		}
@@ -387,7 +393,7 @@ class SongDownloader {
 		g.AddEdit("xs w250 vGenre", metadataVar.genre).OnEvent("Change", guiHandler)
 		g["Title"].Focus()
 		g.AddCheckbox("xs vEmbedThumbnail Checked" this.settings.ytdl.embedThumbnail, "Embed Thumbnail").OnEvent("Click", guiHandler)
-		g.AddCheckbox("xs+125 yp vCropThumbToSquare Checked" this.settings.ytdl.cropThumbnailToSquare, "Crop Thumb To Square").OnEvent("Click", guiHandler)
+		g.AddCheckbox("xs+125 yp vCropThumbToSquare Checked" cropThumbnailSquareLocal, "Crop Thumb To Square").OnEvent("Click", guiHandler)
 		g.AddCheckbox("xs vLogMetadata Checked" this.settings.logMetadata, "Log Metadata")
 		g.AddCheckbox("xs+125 yp vReuseData Checked" false, "Re-Use Data")
 		g.AddCheckbox("xs vOmitArtistName Checked" false, "Omit Artist in Filename").OnEvent("Click", guiHandler)
@@ -512,7 +518,7 @@ class SongDownloader {
 				else 
 					this.onFinishMsgBox(gData.OutputFolder, 0)
 				if InStr(output, "`n")
-					output := strSplitOnNewLine(Trim(output, "`n`r`t "))[-1]
+					output := strSplitOnNewLine(output, '`t`r ')[-1]
 				if !RegExMatch(output, "^\[\S+\]")
 					this.logAction(output, gData.OutputFolder)
 			}
@@ -526,6 +532,11 @@ class SongDownloader {
 				if (success)
 					fullOutput := ""
 			}
+		}
+
+		retryWithCookies(ctrlObj, info?) {
+			ctrlObj.gui.destroy()
+			this.downloadSongWithGui(data.link, this.configs.ytdl.ytdl_cookies)
 		}
 	}
 
@@ -753,7 +764,9 @@ class SongDownloader {
 	}
 
 	static getYTVideoID(input) {
-		if (RegExMatch(input, "(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})|^([A-Za-z0-9_-]{11})$", &o))
+		if (RegExMatch(input, "(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})", &o))
+			return o[1]
+		else if RegExMatch(input, "^([A-Za-z0-9_-]{11})$", &o)
 			return o[1]
 		return 0
 	}
@@ -767,8 +780,8 @@ class SongDownloader {
 	}
 
 	static chooseConfigFromLink(link) {
-		RegExMatch(link, "https:\/\/([^.]+\.[^\/]+)\/(.*)", &o)
-		switch o[1] {
+		domain := RegExMatch(link, "https:\/\/([^.]+\.[^\/]+)\/(.*)", &o) ? o[1] : ""
+		switch domain {
 			case "rplay.live":
 				return this.configs.ytdl.ytdl_rplay
 			default:
