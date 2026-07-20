@@ -14,8 +14,9 @@ SetWorkingDir(A_ScriptDir "\script_files\httpserver")
 
 ; this requires administrator permissions unless you add it in netsh before:
 ; netsh http add urlacl url=http://192.168.178.48:80/ user=Everyone
+; firewall issue: netsh advfirewall firewall add rule name="My HTTP Server (Port 3141)" dir=in action=allow protocol=TCP localport=3141
 CCServer.baseURLs.push('http://192.168.178.48')
-CCServer.Serve("3141")
+CCServer.Serve("3141", 0)
 ; testRequest()
 ; fuck off remoteaddress is still buggy
 
@@ -56,7 +57,7 @@ class CCServer {
 			ExitApp()
 		}
 		if (allIPs) {
-			this.serverURLs := [this.catchAllURL]
+			this.serverURLs := [this.catchAllURL ':' port]
 		} else {
 			for url in this.baseURLs
 				this.serverURLs.push( url ':' port)
@@ -212,7 +213,7 @@ class CCServer {
 			static URLorigin := "/music/"
 			this.t.logger(req)
 			vpath := StrReplace(SubStr(this.t.parsePath(req), StrLen(URLorigin)), "/", "\")
-			if (req.headers.get("CF-Connecting-IP", 0) == CCServer.publicIP)
+			if (req.headers.get("CF-Connecting-IP", 0) == CCServer.publicIP) || InStr(req.Headers.get("Host", ""), "localhost")
 				this.genericIndex(req, res, origin, vpath, "/music")
 			else {
 				res("Not allowed to see.", 200)
@@ -277,7 +278,7 @@ class CCServer {
 			res(toString(req, false, false, true,,, true, false, false, false))
 			return
 		}
-		logFile := A_WorkingDir . "\logWhoAmI.txt"
+		logFile := A_WorkingDir . "\logWhoAmI_v2.txt"
 		str := Format("
 		(
 			-----------------------------------------------------
@@ -312,7 +313,7 @@ class CCServer {
 	}
 
 	static logger(req) {
-		static logFile := A_WorkingDir . "\logAnyRequests.txt"
+		static logFile := A_WorkingDir . "\logAnyRequests_v2.txt"
 		str := Format("
 		( LTrim
 			-----------------------------------------------------

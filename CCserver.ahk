@@ -123,7 +123,7 @@ solar(ByRef req, ByRef res, ByRef server) {
 
 whoami(ByRef req, ByRef res, ByRef server) {
 	logger(req)
-	logFile := A_WorkingDir . "\fullRequestLog.txt"
+	logFile := A_WorkingDir . "\logWhoAmI_v1.txt"
 	str := "-----------------------------------------------------`n"
 	str .= "REQUEST MADE AT " . formatTimeFunc(,"dd-MM-yyyy HH:mm:ss.") . Mod(A_TickCount,1000) . " (System Time)`n"
 	str .= "-----------------------------------------------------`n"
@@ -144,7 +144,7 @@ whoami(ByRef req, ByRef res, ByRef server) {
 }
 
 logger(ByRef req) {
-	logFile := A_WorkingDir . "\logAllRequests.txt"
+	logFile := A_WorkingDir . "\logAnyRequests_v1.txt"
 	str := "-----------------------------------------------------`nNEW REQUEST MADE AT " . formatTimeFunc(,"dd-MM-yyyy HH:mm:ss.") . Mod(A_TickCount,1000) . " (System Time)`n"
 	str .= "Path: " . req.path . "`nIP: " req.headers["CF-Connecting-IP"] . (req.headers["CF-Connecting-IP"] == CURRENT_PUBLIC_IP ? " (Self) ": "") . " (Country: " . req.headers["CF-IPCountry"] . ")`nUser Agent: " . req.headers["user-agent"] . "`nQueries: "
 	for i, e in req.queries
@@ -168,7 +168,7 @@ handleMusicfiles(ByRef req, ByRef res, ByRef server) {
 	static origin := RegexReplace(A_MyDocuments, "\\[^\\]*$", "") . "\Music\Collections"
 	static URLorigin := "/music/"
 	vpath := StrReplace(SubStr(req.path, StrLen(URLorigin)), "/", "\")
-	if (req.headers["CF-Connecting-IP"] == CURRENT_PUBLIC_IP)
+	if (req.headers["CF-Connecting-IP"] == CURRENT_PUBLIC_IP) || Instr(req.headers.Host, "localhost")
 		indexFilesGeneric(req, res, server, origin, vpath, "/music")
 	else {
 		res.SetBodyText("Not allowed to see.")
