@@ -136,7 +136,7 @@ class WinUtilities {
 					try this.windowCache[hwnd].commandLine := this.winmgmt("CommandLine", "Where ProcessId = " this.windowCache[hwnd].pid)[1]
 				this.windowCache[hwnd].triedCommandline := true
 			}
-			return this.windowCache[hwnd]
+			return this.windowCache[hwnd].Clone()
 		} 
 		else {
 			try	winClass := WinGetClass(hwnd)
@@ -158,7 +158,7 @@ class WinUtilities {
 			}
 			if updateCache
 				this.windowCache[hwnd] := staticInfo
-			return staticInfo
+			return staticInfo.Clone()
 		}
 	}
 
