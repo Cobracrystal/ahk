@@ -71,7 +71,7 @@ if (StrCompare(A_OSVersion, "10.0.22000") < 0) {
 	TransparentTaskbar.setTimer(1)
 }
 ; Start keeping track of desktop window changes
-DesktopState.enable(60000)
+DesktopState.enableSnapshotHistory(60000)
 ; import custom blacklist into AltDrag
 AltDrag.addBlacklist([
 	"Satisfactory ahk_class UnrealWindow",
@@ -298,7 +298,7 @@ Alt & Capslock::{	; Switch to specified window
 ^+!J:: { ; Tiles Windows Vertically
 	static windowInfo, tileState := false
 	if (tileState := !tileState) {
-		DesktopState.save("TilingState")
+		DesktopState.takeSnapshot("TilingState")
 		shell := ComObject("Shell.Application")
 		switch MsgBoxAsGui.fromConfig({
 			text: "Tile Windows?", 
@@ -331,37 +331,39 @@ Alt & Capslock::{	; Switch to specified window
 	else if MsgBoxAsGui.fromConfig({
 		text: "Restore Previous State?", title: "Confirm Dialog", buttonStyle: 0x1, wait: true
 	}) == "OK"
-		DesktopState.restore("TilingState")
+		DesktopState.restoreSnapshot("TilingState")
 }
 
 ^+!L:: { ; save / restore desktop state
-	DesktopState.disable()
+	DesktopState.disableSnapshotHistory()
 	g := Gui("AlwaysOnTop", "DesktopState Manager")
 	g.OnEvent("Close", close)
 	g.OnEvent("Escape", close)
 	g.AddEdit("Section -Multi R1 w200 vName", A_Now)
 	g.AddButton("Center R1 w200 yp", "Save State").OnEvent("Click", saveState)
-	lv := g.AddListView("xs -Multi w500 R10", ["Name", "Timestamp", "Window Count"])
-	state := DesktopState.prevState
-	lv.add("+Focus +Select", state.name, state.timestamp, state.info.Length)
-	for i, state in DesktopState.customStates
-		lv.add("+Focus +Select", state.name, state.timestamp, state.info.Length)
+	lv := g.AddListView("xs -Multi w500 R10", ["Id", "Name", "Timestamp", "Window Count"])
+	for i, snapshot in DesktopState.snapshotHistory
+		lv.add("+Focus +Select", snapshot.id, snapshot.name, snapshot.timestamp, snapshot.info.Length)
+	for i, snapshot in DesktopState.customSnapshots
+		lv.add("+Focus +Select", snapshot.id, snapshot.name, snapshot.timestamp, snapshot.info.Length)
+	lv.ModifyCol(1, 0)
 	Loop(3)
-		lv.ModifyCol(A_Index, "AutoHdr")
+		lv.ModifyCol(A_Index + 1, "AutoHdr")
 	lv.OnEvent("DoubleClick", restoreState)
-	g.AddButton("Center R1 w200", "Restore State").OnEvent("Click", restoreState)
+	g.AddButton("Center Default R1 w200", "Restore State").OnEvent("Click", restoreState)
 	g.Show("AutoSize")
 
 	saveState(ctrl, info) {
 		name := g["Name"].Value
-		if name == "" || DesktopState.customStates.Has(name) {
-			res := MsgBoxAsGui.fromConfig({text: "No Valid name set. Store as current timestamp?", title: "Invalid name", buttonStyle: 1, defaultButton: 2, wait:true, owner: g.hwnd})
+		if (name == "" || DesktopState.customSnapshots.Has(name)) {
+			res := MsgBoxAsGui.fromConfig({text: "No Valid/Already existing name. Store as current timestamp?", title: "Invalid name", buttonStyle: 1, defaultButton: 2, wait:true, owner: g.hwnd})
 			if res == "Cancel"
 				return
-			name := DesktopState.customStates.Has(A_Now) ? A_Now "." A_TickCount : A_Now
+			name := DesktopState.customSnapshots.Has(A_Now) ? A_Now "." A_TickCount : A_Now
 		}
-		state := DesktopState.save(name)
-		lv.add("+Focus +Select", state.name, state.timestamp, state.info.Length)
+		snapshot := DesktopState.takeSnapshot(name)
+		lv.add("+Focus +Select", snapshot.id, snapshot.name, snapshot.timestamp, snapshot.info.Length)
+		lv.ModifyCol(2, "AutoHdr")
 	}
 
 	restoreState(ctrl, info) {
@@ -372,16 +374,18 @@ Alt & Capslock::{	; Switch to specified window
 		if rowN == 0
 			return
 		timedTooltip("Attempting to restore Desktop state...")
-		name := lv.GetText(rowN, 1)
-		if name == "Previous"
-			DesktopState.restore()
-		else
-			DesktopState.restore(name)
+		id := lv.GetText(rowN, 1)
+		for i, e in DesktopState.snapshotHistory
+			if e.id == id
+				DesktopState.restoreFromSnapshotHistory(i)
+		for i, e in DesktopState.customSnapshots
+			if e.id == id
+				DesktopState.restoreCustomSnapshot(i)
 	}
 
 	close(*) {
 		g.Destroy()
-		DesktopState.enable(60000)
+		DesktopState.enableSnapshotHistory()
 	}
 }
 

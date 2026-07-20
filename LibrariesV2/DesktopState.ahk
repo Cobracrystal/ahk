@@ -3,44 +3,47 @@
 
 class DesktopState {
 	static __New() {
-		this.timer := this.save.bind(this)
-		this.prevState := { name: "Previous", timestamp: 0, info: [] }
+		this.timer := this.updateSnapshotHistory.bind(this)
+		this.snapshotHistory := []
+		this.customSnapshots := Map()
 		this.listLines := 0
-		this.customStates := Map()
 	}
 
-	static enable(period := 20000) {
+	static enableSnapshotHistory(period := 60000) {
 		SetTimer(this.timer, -1)
 		Sleep(10)
 		SetTimer(this.timer, period)
 	}
 
-	static disable() {
+	static disableSnapshotHistory() {
 		SetTimer(this.timer, 0)
 	}
 
-	static save(custom?) {
-		ListLines(this.listLines)
-		if (IsSet(custom)) {
-			return this.customStates[custom] := {
-				timestamp: A_Now,
-				name: custom,
-				info: WinUtilities.getAllWindowInfo()
-			}
-		}
-		else {
-			return this.prevStates := {
-				timestamp: A_Now,
-				name: "Previous",
-				info: WinUtilities.getAllWindowInfo()
-			}
+	static takeSnapshot(name?, getHidden := false, useBlacklist := true) {
+		newSnapshot := this.Snapshot(name?, getHidden, useBlacklist)
+		this.customSnapshots[newSnapshot.name] := newSnapshot
+		return newSnapshot
+	}
+
+	static updateSnapshotHistory() {
+		static histCounter := 1
+		if (this.snapshotHistory.Length) >= 10 {
+			this.snapshotHistory.InsertAt(1, this.Snapshot("History_" histCounter++))
+			lastItem := this.snapshotHistory.Pop()
+		} else {
+			this.snapshotHistory.InsertAt(1, this.Snapshot("History_" histCounter++))
 		}
 	}
 
-	static restore(custom?) {
+	static getMostRecentSnapshot() => this.snapshotHistory[1]
+
+	static restoreFromSnapshotHistory(index := 1) => this.restoreSnapshot(this.snapshotHistory[1])
+
+	static restoreCustomSnapshot(name) => this.restoreSnapshot(this.customSnapshots[name])
+
+	static restoreSnapshot(snapshot) {
 		logString := ""
-		state := IsSet(custom) ? this.customStates[custom] : this.prevStates
-		for i, e in state.info {
+		for i, e in snapshot.info {
 			if (!WinExist(e.hwnd))
 				continue
 			try {
@@ -57,6 +60,19 @@ class DesktopState {
 			catch OSError as err {
 				logString .= "Failed updating hwnd " e.hwnd ": " WinGetTitle(e.hwnd) . " with reason `"" err.Message "`" in function " err.What "`n"
 			}
+		}
+	}
+
+	class Snapshot {
+		static counter := 1
+
+		static Call(name?, getHidden := false, useBlacklist := true) {
+			this := super()
+			this.id := DesktopState.Snapshot.counter++
+			this.name := name ?? this.id
+			this.timestamp := A_Now
+			this.info := WinUtilities.getAllWindowInfo(getHidden, useBlacklist ? unset : [])
+			return this
 		}
 	}
 }
