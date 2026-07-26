@@ -86,10 +86,17 @@ class AltDrag {
 	}
 
 	static moveWindow(overrideBlacklist := false) {
-		RegExMatch(A_ThisHotkey, "((?:#|!|\^|\+|<|>|\$|~)+)(.*)", &hkeyMatch)
-		cleanHotkey := hkeyMatch[2]
-		modifier := RegExReplace(hkeyMatch[1], "\$|~|<|>")
-		modSymbol := this.modifierKeyList.Has(modifier) ? this.modifierKeyList[modifier] : 'Alt'
+		if RegExMatch(A_ThisHotkey, "((?:#|!|\^|\+|<|>|\$|~)+)(.*)", &hkeyMatch) {
+			cleanHotkey := hkeyMatch[2]
+			modifier := RegExReplace(hkeyMatch[1], "\$|~|<|>")
+		} else if RegExMatch(A_ThisHotkey, "([A-Z-a-z0-9]+) & (.*)", &hkeyMatch) {
+			cleanHotkey := hkeyMatch[2]
+			modifier := hkeyMatch[1]
+		} else {
+			cleanHotkey := hkeyMatch
+			modifier := ""
+		}
+		modSymbol := this.modifierKeyList.Has(modifier) ? this.modifierKeyList[modifier] : modifier == '' ? 'Alt' : modifier
 		SetWinDelay(3)
 		CoordMode("Mouse", "Screen")
 		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
@@ -102,7 +109,7 @@ class AltDrag {
 			MouseGetPos(&mouseX2, &mouseY2)
 			nx := pos.x + mouseX2 - mouseX1
 			ny := pos.y + mouseY2 - mouseY1
-			if !this.snapOnlyWhileHoldingModifierKey || GetKeyState(modSymbol) {
+			if !this.snapOnlyWhileHoldingModifierKey || GetKeyState(modSymbol, 'P') {
 				if this.snapToWindowEdges
 					calculateWindowSnapping()
 				if this.snapToMonitorEdges
@@ -158,10 +165,17 @@ class AltDrag {
 	}
 
 	static resizeWindow(overrideBlacklist := false) {
-		RegExMatch(A_ThisHotkey, "((?:#|!|\^|\+|<|>|\$|~)+)(.*)", &hkeyMatch)
-		cleanHotkey := hkeyMatch[2]
-		modifier := RegExReplace(hkeyMatch[1], "\$|~|<|>")
-		modSymbol := this.modifierKeyList.Has(modifier) ? this.modifierKeyList[modifier] : 'Alt'
+		if RegExMatch(A_ThisHotkey, "((?:#|!|\^|\+|<|>|\$|~)+)(.*)", &hkeyMatch) {
+			cleanHotkey := hkeyMatch[2]
+			modifier := RegExReplace(hkeyMatch[1], "\$|~|<|>")
+		} else if RegExMatch(A_ThisHotkey, "([A-Z-a-z0-9]+) & (.*)", &hkeyMatch) {
+			cleanHotkey := hkeyMatch[2]
+			modifier := hkeyMatch[1]
+		} else {
+			cleanHotkey := hkeyMatch
+			modifier := ""
+		}
+		modSymbol := this.modifierKeyList.Has(modifier) ? this.modifierKeyList[modifier] : modifier == '' ? 'Alt' : modifier
 		SetWinDelay(-1)
 		CoordMode("Mouse", "Screen")
 		MouseGetPos(&mouseX1, &mouseY1, &wHandle)
@@ -185,7 +199,7 @@ class AltDrag {
 				ny += clamp(diffY, pos.h - limits.maxH, pos.h - limits.minH)
 			nw := clamp(resizeLeft ? pos.w - diffX : pos.w + diffX, limits.minW, limits.maxW)
 			nh := clamp(resizeUp ? pos.h - diffY : pos.h + diffY, limits.minH, limits.maxH)
-			if !this.snapOnlyWhileHoldingModifierKey || GetKeyState(modSymbol) {
+			if !this.snapOnlyWhileHoldingModifierKey || GetKeyState(modSymbol, 'P') {
 				if this.snapToWindowEdges
 					calculateWindowSnapping()
 				if this.snapToMonitorEdges
