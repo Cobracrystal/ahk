@@ -104,7 +104,34 @@ getFolderAsMapTree(folder, filePattern := "*", getMode := 3, sortedBy := "name")
 					dest.%e% := source.%e%
 		}
 	}
+}
 
+getFolderInfo(folderPath, filePattern := "*") {
+	totalSize := fileCount := subFolderCount := 0
+	newestFileCreationTime := newestFileModificationTime := 0
+	oldestFileCreationTime := oldestFileModificationTime := 99990101000000
+	loop files folderPath '\' filePattern, 'FDR' {
+		totalSize += A_LoopFileSize
+		if InStr(A_LoopFileAttrib, 'D')
+			subFolderCount++
+		else
+			fileCount++
+		oldestFileCreationTime := A_LoopFileTimeCreated < oldestFileCreationTime ? A_LoopFileTimeCreated : oldestFileCreationTime
+		oldestFileModificationTime := A_LoopFileTimeModified < oldestFileModificationTime ? A_LoopFileTimeModified : oldestFileModificationTime
+		newestFileCreationTime := A_LoopFileTimeCreated > newestFileCreationTime ? A_LoopFileTimeCreated : newestFileCreationTime
+		newestFileModificationTime := A_LoopFileTimeModified > newestFileModificationTime ? A_LoopFileTimeModified : newestFileModificationTime
+	}
+	folderInfo := getFileInfo(folderPath, 0)
+	folderInfo.size := totalSize,
+	folderInfo.sizeKB := Round(totalSize/1000),
+	folderInfo.sizeMB := Round(totalSize/1000000),
+	folderInfo.fileCount := fileCount,
+	folderInfo.subFolders := subFolderCount,
+	folderInfo.oldestFileCreated := oldestFileCreationTime,
+	folderInfo.oldestFileModified := oldestFileModificationTime,
+	folderInfo.newestFileCreated := newestFileCreationTime,
+	folderInfo.newestFileModified := newestFileModificationTime
+	return folderInfo
 }
 
 getFileInfo(filePath, getMode := 0) {
