@@ -116,7 +116,7 @@ class SongDownloader {
 		callback(jsonStr, success := 0) {
 			try {
 				tags := jsongo.parse(jsonStr)
-				tags := tags["format"].has("tags") ? MapToObj(tags["format"]["tags"]) : {}
+				tags := tags["format"].has("tags") ? mapToObj(tags["format"]["tags"]) : {}
 				metadata := {
 					artist: 		tags.HasOwnProp("artist") ? tags.artist : "",
 					title: 			tags.HasOwnProp("title") ? tags.title : "",
@@ -177,7 +177,7 @@ class SongDownloader {
 	; note: if jsonAsStr defines a file with title/artist containing illegal chars, the file will save correctly, but will obviously not match the json provided.
 	; maybe use an onfinish handler to take the file name outputted and write it (if it did contain illegal chars). This would require a path to a json being given though.
 	static downloadFromJson(jsonAsStr, outputFolder := this.settings.outputSubFolder, config := this.configs.ytdl.ytdl_cookies) {
-		data := MapToObj(jsongo.Parse(jsonAsStr))
+		data := mapToObj(jsongo.Parse(jsonAsStr))
 		if !(data is Array)
 			data := [data]
 		asyncQueueJson(0)
@@ -337,7 +337,7 @@ class SongDownloader {
 				genre: Trim(genre),
 				description: videoData["description"],
 				shortJson: keepJsonData ? videoData : unset,
-				thumbnails: MapToObj(thumbnails)
+				thumbnails: mapToObj(thumbnails)
 			})
 		}
 		if (receivedBadInfo.Length > 0 && !this.settings.debug) { ; if debug = true => verbose is always on when getting metadata
@@ -1228,7 +1228,7 @@ class SongDownloader {
 		folder := this.settings.outputBaseFolder "\" name
 		metadataFile := Format(this.TEMPLATES.METADATAFILE, name)
 		path := this.settings.logFolder "\" metadataFile
-		try metadataFilepath := MapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
+		try metadataFilepath := mapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
 		catch
 			return 0
 		this.compareFolderToData(folder, callback, metadataFilepath, true, false)
@@ -1319,7 +1319,7 @@ class SongDownloader {
 		if IsSet(customJsonObj)
 			data := customJsonObj
 		else if FileExist(path := Format(this.settings.logFolder '\' this.TEMPLATES.METADATAFILE, name))
-			data := MapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
+			data := mapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
 		else
 			return print("There's nothing to check against")
 		fields := arrayMerge(this.settings.metadataFields, ["link", "description"])
@@ -1366,7 +1366,7 @@ class SongDownloader {
 		SplitPath(folderToCheck, &name)
 		folder := this.settings.outputBaseFolder "\" name
 		if FileExist(path := Format(this.settings.logFolder '\' this.TEMPLATES.METADATAFILE, name))
-			data := MapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
+			data := mapToObj(jsongo.Parse(FileRead(path, "UTF-8")))
 		else
 			return print("There's nothing to check against")
 		fields := arrayMerge(this.settings.metadataFields, ["link", "description"])
@@ -1512,7 +1512,7 @@ class SongDownloader {
 		SplitPath(folder, &folderName)
 		SplitPath(filepath, &fname)
 		path := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILE, folderName)
-		metadata := MapToObj(jsongo.parse(FileRead(path, "UTF-8"))[index])
+		metadata := mapToObj(jsongo.parse(FileRead(path, "UTF-8"))[index])
 		this.editMetadata(filepath, metadata, "description", "link") ; manually add to edit description field
 	}
 

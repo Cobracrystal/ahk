@@ -218,9 +218,19 @@ objExcludeKeys(obj, keyBlacklist := []) {
 	return clone
 }
 
-objGetKeys(obj, keys*) => objFilterIndices(obj, keys*)
-objGetIndices(obj, keys*) => objFilterIndices(obj, keys*)
+/**
+ * Given an object obj, returns a clone of the obj with only the keys specified in keys*
+ * @param obj 
+ * @param keys 
+ * @returns {Any} 
+ */
 objFilterKeys(obj, keys*) => objFilterIndices(obj, keys*)
+/**
+ * Given an object obj, returns a clone of the obj with only the keys specified in keys*
+ * @param obj 
+ * @param keys 
+ * @returns {Any} 
+ */
 objFilterIndices(obj, keys*) {
 	isArrLike := ((isArr := obj is Array) || obj is Map)
 	if !(isArrLike || IsObject(obj))
@@ -1370,6 +1380,24 @@ objSort(obj, fn := (a => a), sortMode := "", noKeys := true) {
 
 
 /**
+ * Given a map with a casesense value, creates a new map with the given casesense value and returns it.
+ * @param {Map} mapObject 
+ * @param {Integer|String} caseSenseValue 
+ * @param {Default} newDefaultValue If not given, copies the default value of the given map.
+ */
+mapChangeCaseSense(mapObject, caseSenseValue := true, defaultValue?) {
+	newMap := Map()
+	newMap.CaseSense := caseSenseValue
+	if IsSet(defaultValue)
+		newMap.Default := defaultValue
+	else if mapObject.HasOwnProp("Default")
+		newMap.Default := mapObject.Default
+	for k, v in mapObject
+		newMap[k] := v
+	return newMap
+}
+
+/**
  * Creates a map from two given arrays, the first one becoming the keys of the other
  * @param keyArray 
  * @param valueArray 
@@ -1420,7 +1448,7 @@ mapFlip(mapObject) {
  * @param {Integer} recursive 
  * @returns {Object | Map | Array} 
  */
-MapToObj(obj, recursive := true) {
+mapToObj(obj, recursive := true) {
 	flagIsArray := obj is Array
 	if (!(obj is Object))
 		return obj
@@ -1429,9 +1457,9 @@ MapToObj(obj, recursive := true) {
 		objOutput.Length := obj.Length
 	for i, e in objGetEnumerator(obj) {
 		if (flagIsArray)
-			objOutput[i] := (recursive ? MapToObj(e, true) : e)
+			objOutput[i] := (recursive ? mapToObj(e, true) : e)
 		else
-			objOutput.%i% := (recursive ? MapToObj(e, true) : e)
+			objOutput.%i% := (recursive ? mapToObj(e, true) : e)
 	}
 	return (objOutput)
 }
@@ -1483,7 +1511,7 @@ objSyncObjectTypes(objBase, objToSync) {
 		}
 	} else if (Type(objBase) == "Object") {
 		if (Type(objToSync) == "Map")
-			objToSync := MapToObj(objToSync, false)
+			objToSync := mapToObj(objToSync, false)
 		for i, e in objToSync.OwnProps() {
 			if Type(e) == "Map" || Type(e) == "Array" || Type(e) == "Object"
 				objToSync.%i% := objSyncObjectTypes(objBase.%i%, e)
@@ -1493,4 +1521,4 @@ objSyncObjectTypes(objBase, objToSync) {
 }
 
 objToArrays(obj) => mapToArrays(objToMap(obj, false))
-objFromArrays(keyArray, valueArray) => MapToObj(mapFromArrays(keyArray, valueArray), false)
+objFromArrays(keyArray, valueArray) => mapToObj(mapFromArrays(keyArray, valueArray), false)

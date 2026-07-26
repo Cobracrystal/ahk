@@ -608,7 +608,7 @@ wordleAnagramAnalyzer() {
 }
 
 getRandomDataDistributionHoloMemsGuessr() {
-	static memberData := MapToObj(jsongo.parse(FileRead(A_WorkingDir "\Test\holomemsguessrMemberData.json")))
+	static memberData := mapToObj(jsongo.parse(FileRead(A_WorkingDir "\Test\holomemsguessrMemberData.json")))
 	static init := objDoForEachVoid(memberData, v => (v.songLink := StrSplit(v.songLink, ",", ' ')))
 	memberIds := Map()
 	loopiterations := 3000
