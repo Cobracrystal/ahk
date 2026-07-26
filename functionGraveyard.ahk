@@ -574,7 +574,7 @@ wordleAnagramAnalyzer() {
 	anagramList := []
 	; dupes contains indexes, this turns them into arrays of the anagrams
 	for i, keys in dupes
-		anagramList.push(objGetKeys(list, keys*)) 
+		anagramList.push(objFilterKeys(list, keys*)) 
 	yellowAnagramList := []
 	for i, anagrams in anagramList {
 		for baseIndex, baseWord in anagrams {
