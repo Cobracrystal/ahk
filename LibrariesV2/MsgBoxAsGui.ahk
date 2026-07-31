@@ -271,9 +271,11 @@ class MsgBoxAsGui {
 		miniGui.MarginX := miniGui.MarginY := 2
 		miniGui.SetFont(this.guiFontOptions, MsgBoxAsGui.MB_FONTNAME)
 		miniGui.AddEdit(Format(
-			"-E0x200 ReadOnly w{} h{}", this.guiWidth, this.whiteBoxHeight
+			"-E0x200 ReadOnly BackgroundFFFFFF w{} h{}", this.guiWidth, this.whiteBoxHeight
 		), this.text)
-		miniGui.show()
+		this.gui.GetPos(&gx, &gy)
+		this.gui["TextBox"].GetPos(&tx, &ty)
+		miniGui.show(Format("x{} y{}", gx+tx-5, gy+ty-2))
 	}
 
 	; necessary override since default .Bind requires this to be passed as a parameter
