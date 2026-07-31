@@ -283,16 +283,16 @@ objIterate(o,f) { ; this could be a oneliner
 	)
 }
 
-printCompareFolders(folder1, folder2) {
+printCompareFolders(folder1, folder2, sortBy := "size") {
 	comp := folderGetDiffs(folder1, folder2)
-	comp := objSort(comp, a => a.size, "N A")
+	comp := objSort(comp, a => a.%sortBy%, sortBy == "size" ? "N A" : "")
 	for e in comp
 		print((instr(e.attrib, "D") ? "Folder: " : "File:   ") . strfill( "[" e.size "] ", 15) e.path)
 	print("Total size: " objGetSum(comp, a => a.size))
 	print("Total count: "  comp.Length)
 
 	comp := folderGetDiffs(folder2, folder1)
-	comp := objSort(comp, a => a.size, "N A")
+	comp := objSort(comp, a => a.%sortBy%, sortBy == "size" ? "N A" : "")
 	for e in comp
 		print((instr(e.attrib, "D") ? "Folder: " : "File:   ") . strfill( "[" e.size "] ", 15) e.path)
 	print("Total size: " objGetSum(comp, a => a.size))
