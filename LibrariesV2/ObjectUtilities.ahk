@@ -211,7 +211,7 @@ objExcludeKeys(obj, keyBlacklist := []) {
 			if (!blacklist.Has(key))
 				clone[key] := value
 	} else {
-		for key, value in obj
+		for key, value in obj.OwnProps()
 			if (!blacklist.Has(key))
 				clone.%key% := value
 	}
@@ -1275,14 +1275,14 @@ arrayInReverse(arr) {
 	; }
 }
 
-arraySort(arr, fn := (a => a), sortMode := "") {
+arraySort(arr, transformer := (a => a), sortMode := "") {
 	sortedArr := []
 	indexMap := Map()
 	counterMap := Map()
 	if arr.Length == 0
 		return sortedArr
 	for i, e in arr {
-		v := String(fn(e))
+		v := String(transformer(e))
 		if (indexMap.Has(v))
 			indexMap[v].push(i)
 		else {
