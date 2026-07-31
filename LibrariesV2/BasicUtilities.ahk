@@ -595,7 +595,7 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		g.SetFont('s12', 'Calibri')
 		g.AddText('Section x10 y10 w80 vPrints', 'Prints:    0')
 		g.AddText('x+5 yp w100 R1 vEmptyLines Hidden', '(0 Empty)')
-		cEdit := g.AddEdit('xm ys+30 w600 h400 vEdit ReadOnly')
+		cEdit := g.AddEdit('xm ys+30 BackgroundFFFFFF w600 h400 vEdit ReadOnly')
 		cEdit.GetPos(, &y := unset)
 		g.AddButton("ys-7 x194 R1 w200", "Copy Full Output").OnEvent("Click", copyAll.bind(g))
 		g.AddButton("ys-7 x398 R1 w200", "Copy Last Output").OnEvent("Click", copyValue.bind(g))
