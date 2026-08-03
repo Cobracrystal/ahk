@@ -1386,7 +1386,7 @@ class SongDownloader {
 					queue.push(index)
 			}
 		}
-		queue := arraySortNumerically(queue, "N R")
+		queue := objSort(queue,, "N R")
 		for e in queue
 			data.RemoveAt(e)
 		if queue.length {

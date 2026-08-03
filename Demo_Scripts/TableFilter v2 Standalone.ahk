@@ -331,7 +331,7 @@ class TableFilter {
 		if (!rows.Length)
 			return
 		; reverse numerical sorting
-		sortedRows := arrayBasicSort(rows, "R N")
+		sortedRows := objBasicSort(rows, "R N")
 		for _, g in this.guis {
 			g.Opt("+Disabled")
 			rowsInLV := [], indexToRemove := []
@@ -3021,8 +3021,6 @@ arraySort(arr, fn := (a => a), sortMode := "") {
 	return sortedArr
 }
 
-arrayBasicSort(arr, sortMode := "") => objBasicSort(arr, sortMode)
-
 arrayContainsArray(arr, subArray, comparator := (arrVal,subArrVal) => (arrVal == subArrVal)) {
 	sequenceIndex := 1
 	if !subArray.length
@@ -3055,8 +3053,6 @@ objBasicSort(obj, sortMode := "") {
 	newStr := Sort(SubStr(str, 1, -1), sortMode . " D╦")
 	return StrSplit(newStr, "╦")
 }
-objSortNumerically(obj, sortMode := "N") => objDoForEach(objBasicSort(obj, sortMode), (e => Number(e)))
-
 
 objSort(obj, fn := (a => a), sortMode := "", noKeys := true) {
 	isArrLike := obj is Array || obj is Map

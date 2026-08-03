@@ -1232,7 +1232,7 @@ arrayIgnoreIndex(arr, index) {
 
 arrayIgnoreIndices(arr, indices*) {
 	arr2 := arr.Clone()
-	for i, e in arraySort(indices, "N R")
+	for i, e in objsort(indices, "N R")
 		arr2.RemoveAt(e)
 	return arr2
 }
@@ -1275,32 +1275,6 @@ arrayInReverse(arr) {
 	; }
 }
 
-arraySort(arr, transformer := (a => a), sortMode := "") {
-	sortedArr := []
-	indexMap := Map()
-	counterMap := Map()
-	if arr.Length == 0
-		return sortedArr
-	for i, e in arr {
-		v := String(transformer(e))
-		if (indexMap.Has(v))
-			indexMap[v].push(i)
-		else {
-			indexMap[v] := [i]
-			counterMap[v] := 1
-		}
-		str .= v . "╦"
-	}
-	sortMode := RegExReplace(sortMode, "D.")
-	valArr := StrSplit(Sort(SubStr(str, 1, -1), sortMode . " D╦"), "╦")
-	for v in valArr
-		sortedArr.push(arr[indexMap[v][counterMap[v]++]])
-	return sortedArr
-}
-
-arrayBasicSort(arr, sortMode := "") => objBasicSort(arr, sortMode)
-arraySortNumerically(arr, sortMode := "N") => objSortNumerically(arr, sortMode)
-
 arrayContainsArray(arr, subArray, comparator := (arrVal,subArrVal) => (arrVal == subArrVal)) {
 	if !subArray.length
 		return 1
@@ -1334,10 +1308,8 @@ objBasicSort(obj, sortMode := "") {
 	newStr := Sort(SubStr(str, 1, -1), sortMode . " D╦")
 	return StrSplit(newStr, "╦")
 }
-objSortNumerically(obj, sortMode := "N") => objDoForEach(objBasicSort(obj, sortMode), (e => Number(e)))
 
-
-objSort(obj, fn := (a => a), sortMode := "", noKeys := true) {
+objSort(obj, transformer := (a => a), sortMode := "", noKeys := true) {
 	isArrLike := obj is Array || obj is Map
 	sortedArr := []
 	sortedArr.Capacity := objGetValueCount(obj)
@@ -1346,7 +1318,7 @@ objSort(obj, fn := (a => a), sortMode := "", noKeys := true) {
 	if objGetValueCount(obj) == 0
 		return sortedArr
 	for i, e in objGetEnumerator(obj) {
-		v := String(fn(e))
+		v := String(transformer(e))
 		if (indexMap.Has(v))
 			indexMap[v].push(i)
 		else {

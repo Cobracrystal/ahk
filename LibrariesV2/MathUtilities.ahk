@@ -173,7 +173,7 @@ factors(n) {
 	pfactorExpos.push(factExpos)
 	for factArr in combinations(pfactorExpos)
 		_factors.push(prod(factArr*))
-	return objSortNumerically(_factors)
+	return objsort(_factors,,"N")
 }
 
 /**
@@ -595,7 +595,7 @@ streetInDice(streetLen, diceAmount) {
 		strDice := "["
 		Loop(sequence.Length)
 			strDice .= sequence[A_Index] . ","
-		seq := arrayBasicSort(objGetUniques(sequence), "N")
+		seq := objsort(objGetUniques(sequence),, "N")
 		strDice .= "] sorted ["
 		Loop(seq.Length)
 			strDice .= seq[A_Index] . ","

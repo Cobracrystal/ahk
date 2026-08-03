@@ -98,16 +98,17 @@ class wpEngine {
 		items := objFilter(items, (k, v) => comparator(v.project))
 		switch sortedBy {
 			case 0, "date", "created":
-				return arraySort(items, v => v.timeCreated)
+				lambda := v => v.timeCreated
 			case 1, "modified":
-				return arraySort(items, v => v.timeModified)
+				lambda := v => v.timeModified
 			case 2, "title":
-				return arraySort(items, v => v.project["title"])
+				lambda := v => v.project["title"]
 			case 3, "size":
-				return arraySort(items, v => v.size, "N")
+				lambda := v => v.size, "N"
 			case 4, "id":
-				return arraySort(items, v => v.project["id"])
+				lambda := v => v.project["id"]
 		}
+		return objSort(items, lambda,, true)
 	}
 
 	; this finds files that are included in both the backup and current subscriptions.

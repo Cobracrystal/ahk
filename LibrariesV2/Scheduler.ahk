@@ -414,7 +414,7 @@ class Scheduler {
 				key := this.LV.GetText(rowN, 5)
 				reminderObj := objExcludeKeys(this.core.timerList[key], [ "timer" ])
 				MsgBoxAsGui.fromConfig({
-					text: reminderObj,
+					text: toString(reminderObj,,0),
 					title: "Reminder Object",
 					addCopyButton: true,
 					owner: this.current.hwnd

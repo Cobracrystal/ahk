@@ -3,7 +3,7 @@
  * Gets Specified Files in a folder as an array of filenames (if short) or array of objects with all their associated data
  * @param folder Path to a folder
  * @param {String} filePattern Filepattern to filter for. By default all files are included
- * @param {String} mode F,D,R (Include Files, Include Directories, Recursive.) Defaults to Files no folders no recursive
+ * @param {String} mode F,D,R (Include Files, Include Directories, Recursive.) Defaults to FDR
  * @param {Integer} getMode 0 = all fileinfo, 1 = only name, 2 = only full path, 3 = name, path, dir, ext, namenoext, size
  * @returns {Array} Array containing objects of the following type:
  * 
@@ -51,7 +51,7 @@ getFilesAsArr(filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name
 	}
 	if disableSorting
 		return files
-	sorted := arraySort(files, getMode == 1 || getMode == 2 ? unset : a => a.%sortedBy%)
+	sorted := objSort(files, getMode == 1 || getMode == 2 ? a => a : a => a.%sortedBy%)
 	return sorted
 }
 
@@ -196,7 +196,7 @@ removeFileDuplicates(folder1, folder2) {
  * name, nameNoExt, ext, path, shortPath, shortName, dir, attrib, size, sizeKB, sizeMB, timeModified, timeCreated, timeAccessed
  * All keys listed must be equal between two items for them to count as a duplicate
  * @param {Integer} grouped 
- * @param {(v) => void} transformer 
+ * @param {Func} transformer 
  * @returns {Array} 
  */
 getFileDuplicates(folders, comparisonKeys := ["name", "ext"], recursive := true, getFoldersOnly := false, caseSense := false, grouped := true, transformer := (v => v)) {
@@ -211,7 +211,7 @@ getFileDuplicates(folders, comparisonKeys := ["name", "ext"], recursive := true,
 		if !validKeys.Has(e)
 			throw(ValueError("Invalid file property key specified: " e))
 	}
-	fn := comparator.bind(objClone(comparisonKeys), transformer)
+	fn := comparator.bind(comparisonKeys.Clone(), transformer)
 	indices := objGetDuplicates(fileList, v => fn(v), caseSense, grouped)
 	dupes := []
 	for e in indices {
