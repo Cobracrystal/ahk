@@ -470,38 +470,36 @@ objGetUniques(obj, transformer := (a => a), caseSense := true) {
 }
 
 /**
- * Counts unique values in object and returns the same object type where each entry contains an array with t[1] = value, t[2] = count of value
+ * Counts unique values in object and returns an array where each entry contains an array with objects of shape { c: count, v: transformed value }
  * @param obj 
- * @param {(a) => void} fn 
+ * @param {Func} fn 
  * @param {Integer} caseSense 
- * @returns {Any} 
+ * @param {Integer} sortByCount Whether to sort the array by count, in descending order. Otherwise will be sorted by order of appearance. 
+ * @returns {Array}
  * @example
- * objCountUniques([1,1,2,2,2,2,2,3,5,7]) => [[1,2], [2,5], [3,1], [5,1], [7,1]]
+ * tostring(objCountDuplicates([1,1,2,2,2,2,2,3,5,7]),1,1) = [{c:2,v:1},{c:5,v:2},{c:1,v:3},{c:1,v:5},{c:1,v:7}]
  */
-objCountUniques(obj, transformer := (a => a), caseSense := true) {
+objCountDuplicates(obj, transformer := (a => a), caseSense := true, sortByCount := 0) {
 	isArrLike := (obj is Array || obj is Map)
 	isMap := (obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
 	uniques := Map()
 	uniques.CaseSense := caseSense
-	clone := %Type(obj)%()
+	clone := []
 	for i, e in objGetEnumerator(obj) {
 		if !IsSet(e)
 			continue
 		v := transformer(e)
 		if uniques.Has(v)
-			isArrLike ? clone[uniques[v].key][2]++ : clone.%uniques[v].key%[2]++
+			clone[uniques[v].k].c++
 		if !(uniques.Has(v)) {
-			if isMap || !isArrLike {
-				isMap ? clone[i] := [e,1] : clone.%i% := [e,1]
-				uniques[v] := {c:1,key:i}
-			} else {
-				clone.push([e,1])
-				uniques[v] := {c:1,key:clone.Length}
-			}
+			clone.push({ v: v, c: 1})
+			uniques[v] := {c:1,k:clone.Length}
 		}
 	}
+	if sortByCount
+		return objsort(clone, a => a.c, "N R")
 	return clone
 }
 
