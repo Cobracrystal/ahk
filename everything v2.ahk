@@ -307,7 +307,7 @@ Alt & Capslock::{	; Switch to specified window
 			defaultButton: 4, 
 			wait: true, 
 			buttonNames: ["Vertically", "Horizontally", "Cascade", "No"]
-		}) {
+		}).result {
 			case "Vertically":
 				list := WinUtilities.getAllWindowInfo()
 				objRemoveValue(list,,,(key,a) => (WinGetMinMax(a) == -1))
@@ -330,7 +330,7 @@ Alt & Capslock::{	; Switch to specified window
 	}
 	else if MsgBoxAsGui.fromConfig({
 		text: "Restore Previous State?", title: "Confirm Dialog", buttonStyle: 0x1, wait: true
-	}) == "OK"
+	}).result == "OK"
 		DesktopState.restoreSnapshot("TilingState")
 }
 
@@ -356,8 +356,8 @@ Alt & Capslock::{	; Switch to specified window
 	saveState(ctrl, info) {
 		name := g["Name"].Value
 		if (name == "" || DesktopState.customSnapshots.Has(name)) {
-			res := MsgBoxAsGui.fromConfig({text: "No Valid/Already existing name. Store as current timestamp?", title: "Invalid name", buttonStyle: 1, defaultButton: 2, wait:true, owner: g.hwnd})
-			if res == "Cancel"
+			box := MsgBoxAsGui.fromConfig({text: "No Valid/Already existing name. Store as current timestamp?", title: "Invalid name", buttonStyle: 1, defaultButton: 2, wait:true, owner: g.hwnd})
+			if box.result == "Cancel"
 				return
 			name := DesktopState.customSnapshots.Has(A_Now) ? A_Now "." A_TickCount : A_Now
 		}

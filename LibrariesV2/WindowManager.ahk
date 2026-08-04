@@ -306,7 +306,7 @@ class WindowManager {
 				switch vKey {
 					case "46": 	;// Del/Entf Key -> Close that window
 						killFunc := GetKeyState("Shift") ? WinKill : WinClose
-						if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
+						if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", "OKCancel",,1).Result == "Cancel")
 							return
 						for i, wHandle in arrayInReverse(wHandles)
 							try killFunc(wHandle)
@@ -468,7 +468,7 @@ class WindowManager {
 				for wHandle in wHandles
 					WinUtilities.borderlessFullscreenWindow(wHandle)
 			case "Close Window":
-				if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", 0x1,,1) == "Cancel")
+				if(wHandles.Length > 1 && MsgBoxAsGui("Are you sure you want to close " wHandles.Length " windows at once?", "Confirmation Prompt", "OKCancel",,1).result == "Cancel")
 					return
 				rWH := arrayInReverse(wHandles)
 				for wHandle in rWH
@@ -635,15 +635,15 @@ class WindowManager {
 		; 	""
 		; ]
 		resetSettings(*) {
-			res := MsgBoxAsGui.fromConfig({
+			box := MsgBoxAsGui.fromConfig({
 				text: "Are you sure? This will reset all settings to their default values.", 
 				title: "Reset Settings", 
-				buttonStyle: 0x1, 
+				buttonStyle: "OKCancel", 
 				defaultButton: 2, 
 				wait: true,
 				owner: sGui.Hwnd
 			})
-			if (res == "Cancel")
+			if (box.result == "Cancel")
 				return
 			useConfig := this.config.useConfig
 			this.config := this.defaultConfig

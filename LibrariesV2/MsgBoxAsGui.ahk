@@ -114,8 +114,7 @@ class MsgBoxAsGui {
 	 * @param maxTextWidth 
 	 * @returns {String | Class Instance} 
 	 */
-	static Call(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := false, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {
-		this := super()
+	__New(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := false, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {
 		if MsgBoxAsGui.BUTTON_STYLE_ALIASES.Has(buttonStyle)
 			buttonStyle := MsgBoxAsGui.BUTTON_STYLE_ALIASES[buttonStyle]
 		if (buttonNames.Length == 0) {
@@ -418,29 +417,18 @@ class MsgBoxAsGui {
 		return [width, height]
 	}
 
-	; this does not serve any function, it exists solely so the ahk lexer by thqby stops complaining. In fact the nonstatic ones don't even do anything since __New() is overwritten
-	static guiNotify := 0
-	static finalEvent := 0
-	static cleanup := 0
-	static timeout := 0
-	static timeoutFObj := 0
-	static buttonNames := 0
-	static funcObj := 0
-	static notifyRegister := 0
-	static hwnd := 0
-	result := ""
-	text := ""
-	funcObj := 0
-	timeout := -1
-	timeoutFObj := 0
-	hwnd := 0
-	notifyRegister := 0
-	buttonNames := []
-	guiWidth := -1
-	guiFontOptions := ""
-	whiteBoxHeight := -1
+	; Maps with CaseSense 0 cannot be initialized in one single line.
+	static __New() {
+		t := this.BUTTON_STYLE_ALIASES
+		this.BUTTON_STYLE_ALIASES := Map()
+		this.BUTTON_STYLE_ALIASES.CaseSense := 0
+		for i, e in t
+			this.BUTTON_STYLE_ALIASES[i] := e
+	}
 }
 
 ; TODO: Better documentation
 ; TODO: Add option for AlwaysOnTop, SystemModal/TaskModal, Help Button (by supplying a function to run when that Help button is clicked), Right-justified/right-to-left
 ; TODO: Add a parser for regular MsgBox-style option strings to convert into config opjects (and supply those to the constructor)
+; TODO: Add coordinate options, ie. any of x, y. Size doesn't make sense.
+; TODO: Maybe custom colors, fonts etc?

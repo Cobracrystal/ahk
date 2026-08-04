@@ -1,5 +1,4 @@
 #Include WinUtilities.ahk
-#Include MsgBoxAsGui.ahk
 
 class DesktopState {
 	static __New() {

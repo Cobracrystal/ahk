@@ -452,7 +452,7 @@ class Scheduler {
 								buttonNames: rmObj.multi ? ["Only this time", "Remove Permanently", "Cancel"] : ["Remove Permanently", "Cancel"], 
 								wait: true
 							}
-							switch MsgBoxAsGui.fromConfig(config) {
+							switch MsgBoxAsGui.fromConfig(config).result {
 								case "Remove Permanently":
 									this.core.timerList.Delete(key)
 									this.core.exportReminders(this.core.settings.defaultCachePath)
@@ -480,7 +480,7 @@ class Scheduler {
 							buttonNames: rmObj.multi ? ["Only this time", "Remove Permanently", "Cancel"] : ["Remove Permanently", "Cancel"], 
 							wait: true
 						}
-						switch MsgBoxAsGui.fromConfig(config) {
+						switch MsgBoxAsGui.fromConfig(config).result {
 							case "Remove Permanently":
 								this.core.timerList.Delete(key)
 								this.core.exportReminders(this.core.settings.defaultCachePath)

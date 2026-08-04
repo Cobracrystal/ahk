@@ -67,10 +67,10 @@ class SongDownloader {
 		} else if FileExist(str) || (RegExMatch(str, '^(?:filelist:)?(")?(\w:\\.*?)\1?$', &o) && FileExist(o[2])) {
 			this.editMetadataWithGui(IsSet(o) ? o[2] : str)
 		} else if ((count := strCountStr(str, "`n")) > 1) { ; assume its multiple songs, so retrieve metadata
-			if !(MsgBoxAsGui.fromConfig({
+			if (MsgBoxAsGui.fromConfig({
 				text: "You are about to download metadata for " count " Links/Searches. Continue?", 
 				buttonStyle: 'YNC', defaultButton: 2, wait: true
-			}))
+			}).result == "No")
 				return
 			if (A_LineFile == A_ScriptFullPath) {
 				this.getMetadataFromLinks(str, MsgBoxAsGui.BindConfig({
@@ -1100,7 +1100,7 @@ class SongDownloader {
 		useAliases: true,
 		useVisibleCMD: false,
 		outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
-		outputSubFolder: Format("p{:03}", 78),
+		outputSubFolder: Format("p{:03}", 79),
 		logMetadata: true,
 		logFolder: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\Logs"),
 		metadataFields: ["title", "artist", "album", "genre"],
@@ -1291,7 +1291,7 @@ class SongDownloader {
 				)
 				res := MsgBoxAsGui.fromConfig({
 					text: text, title: "Confirm", buttonStyle: 0x1, wait: true, buttonNames: ["Overwrite", "Rename", "Cancel"] 
-				})
+				}).result
 				if res == "Cancel"
 					return
 				if res == "Rename" {
@@ -1348,7 +1348,7 @@ class SongDownloader {
 				; res := MsgBoxAsGui.fromConfig({
 				; 	text: "Choose Metadata that is embedded in the File or the one defined in the json?",
 				; 	wait: true, buttonNames: ["File", "JSON"]
-				; })
+				; }).result
 				; if (res == "JSON") {
 				; 	SongDownloader.writeMetadataToFile(folder, SongDownloader.settings.outputBaseFolder "\" folder "\" e.filename ".mp3", e.index)
 				; } else if res == "File" {
