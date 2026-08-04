@@ -368,8 +368,8 @@ class CCServer {
 
 testRequest() {
 	headers := Map("Sec-Fetch-Site", "same-origin", "Sec-Fetch-Mode", "navigate", "Sec-Fetch-Dest", "document", "Sec-Fetch-Dest2", "document")
-	html := sendRequest(CCServer.serverURLs, "POST",,,, headers)
-	html := sendRequest(CCServer.serverURLs "/whoami", "GET")
+	html := sendRequest(CCServer.serverURLs[1], "POST",,,, headers)
+	html := sendRequest(CCServer.serverURLs[1] "/whoami", "GET")
 	MsgBoxAsGui(html)
 	whr := ComObject('WinHttp.WinHttpRequest.5.1')
 	whr.Open('POST', 'http://localhost:3141/aa.htm?hsy=6&jss=6', 1)
