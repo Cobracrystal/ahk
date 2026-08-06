@@ -1,9 +1,11 @@
-#Include "%A_ScriptDir%\LibrariesV2\BasicUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\MathUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\ObjectUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\TimeUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\FileUtilities.ahk"
-#Include "%A_ScriptDir%\LibrariesV2\PrimitiveUtilities.ahk"
+#Include LibrariesV2
+#Include BasicUtilities.ahk
+#Include MathUtilities.ahk
+#Include ObjectUtilities.ahk
+#Include TimeUtilities.ahk
+#Include FileUtilities.ahk
+#Include PrimitiveUtilities.ahk
+#Include External\cmdStdoutAsync.ahk
 
 drawMouseCircle(radius, centerX?, centerY?, max_degrees := 360) {
 	MouseGetPos(IsSet(centerX) ? unset : &centerX, IsSet(centerY) ? unset : &centerY)

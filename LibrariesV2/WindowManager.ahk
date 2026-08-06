@@ -5,10 +5,11 @@
 ; needs to check if window is in admin mode, else most commands fail (eg winsettransparent). Also add button for that in settings
 
 #Include "%A_LineFile%\..\..\LibrariesV2"
-#Include "MsgBoxAsGui.ahk"
-#Include "ObjectUtilities.ahk"
-#Include "WinUtilities.ahk"
-#Include "CustomWindowFunctions.ahk"
+#Include MsgBoxAsGui.ahk
+#Include ObjectUtilities.ahk
+#Include WinUtilities.ahk
+#Include CustomWindowFunctions.ahk
+#Include BasicUtilities.ahk
 ; Usage (if including this file as a library):
 ; ^+F11::WindowManager.windowManager("T")
 

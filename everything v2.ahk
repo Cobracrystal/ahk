@@ -31,6 +31,7 @@ A_TrayMenu.Delete()
 #Include "TimestampConverter.ahk"
 #Include "FolderSwitch.ahk"
 #Include "AltDrag.ahk"
+#Include ExpressionCalculator.ahk
 #Include "MathUtilities.ahk"
 #Include "WinUtilities.ahk"
 #Include "FileUtilities.ahk"

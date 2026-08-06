@@ -1,4 +1,5 @@
 #Include BigInteger.ahk
+#Include MathUtilities.ahk
 
 class BigIntegerUtils {
 
@@ -182,7 +183,6 @@ class BigIntegerUtils {
 	; 		k += 2
 	; 		if primetest(k)
 	; 			return k
-	; 		print(k)
 	; 	}
 	; }
 	
