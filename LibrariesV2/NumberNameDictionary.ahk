@@ -27,7 +27,7 @@ class NumberNames {
 
 	static getValue(name) {
 		static dict := this.DE_DICT.FROM
-		name := Format("{:L}", name)
+		name := StrLower(name)
 		if name == "null"
 			return '0'
 		arr := StrSplit(name, " ")

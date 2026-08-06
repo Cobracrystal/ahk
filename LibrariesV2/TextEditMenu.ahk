@@ -23,9 +23,9 @@ class TextEditMenu {
 		replFN := (alphTo) => modifySelectedText(this.replaceCharacters.bind(this), "mixed", alphTo)
 		caseMenu := Menu()
 		caseMenu.Add("Random Case", (*) => modifySelectedText(this.randomCase.bind(this)))
-		caseMenu.Add("All Uppercase", (*) => modifySelectedText((t) => Format("{:U}", StrReplace(t, "ß", "ẞ"))))
-		caseMenu.Add("All Lowercase", (*) => modifySelectedText((t) => Format("{:L}", StrReplace(t, "ẞ", "ß"))))
-		caseMenu.Add("Proper Capitals", (*) => modifySelectedText((t) => Format("{:T}", t)))
+		caseMenu.Add("All Uppercase", (*) => modifySelectedText((t) => StrUpper(StrReplace(t, "ß", "ẞ"))))
+		caseMenu.Add("All Lowercase", (*) => modifySelectedText((t) => StrLower(StrReplace(t, "ẞ", "ß"))))
+		caseMenu.Add("Proper Capitals", (*) => modifySelectedText((t) => StrTitle(t)))
 		fontMenu := Menu()
 		fontMenu.Add("Serif Standard", (*) => replFN("serif"))
 		fontMenu.Default := "Serif Standard"
@@ -80,9 +80,9 @@ class TextEditMenu {
 		for i, e in StrSplitUTF8(text) {
 			caseFormat := Random(0, 1)
 			if (caseFormat)
-				c := Format("{:U}", e)
+				c := StrUpper(e)
 			else
-				c := Format("{:L}", e)
+				c := StrLower(e)
 			if (e = "i")
 				c := "i"
 			else if (e = "l")
@@ -146,7 +146,7 @@ class TextEditMenu {
 	}
 
 	static runify(text, language) {
-		runicStr := Format("{:L}", StrReplace(text, "ẞ", "ß"))
+		runicStr := StrLower(StrReplace(text, "ẞ", "ß"))
 		for needle, repl in this.dictionary["otherAlphabet"]["runes"]["to"][language]["multichar"]
 			runicStr := StrReplace(runicStr, needle, repl, 0)
 		for needle, repl in this.dictionary["otherAlphabet"]["runes"]["to"]["global"]["multichar"]

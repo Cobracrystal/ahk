@@ -512,7 +512,7 @@ calculateCompatibilityData() {
 				score := 0
 				for j, member in haremMembers
 					score += compData[haremMaster][member]
-				obj.push({ score: Round(score / members, 1), members: objDoForEach(haremMembers, v => Format("{:T}", names[v])), master: Format("{:T}", names[haremMaster])})
+				obj.push({ score: Round(score / members, 1), members: objDoForEach(haremMembers, v => StrTitle(names[v])), master: StrTitle(names[haremMaster])})
 			}
 		}
 		return obj
@@ -532,7 +532,7 @@ calculateCompatibilityData() {
 			score := 0
 			loop(n)
 				score += scoreFromIndexArr(listOfPairs[A_Index])
-			obj.push({ score: Round(score / n, 1), names: objDoForEach(memberIndexes, v => Format("{:T}", names[v]))})
+			obj.push({ score: Round(score / n, 1), names: objDoForEach(memberIndexes, v => StrTitle(names[v]))})
 		}
 		return obj
 	}

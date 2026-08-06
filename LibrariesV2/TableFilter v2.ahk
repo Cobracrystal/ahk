@@ -412,7 +412,7 @@ class TableFilter {
 			if (this.config.formatValues) {
 				switch e {
 					case "Wortart":
-						row[e] := Format("{:U}", row[e])
+						row[e] := StrUpper(row[e])
 				}
 			}
 			row[e] := Trim(row[e])
