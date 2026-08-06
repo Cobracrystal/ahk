@@ -186,7 +186,9 @@ Launch_App2:: ; Show Folderswitch Menu
 	YoutubeDLGui.toggleGui("T")
 }
 
-^!Numpad0:: {	; Toggle NumpadKeys to Move Cursor
+^!Numpad0:: 	; Toggle NumpadKeys to Move Cursor (Off)
+^!NumpadIns::{ 	; [Num0] Toggle NumpadKeys to Move Cursor (On)
+	Send("{NumLock}")
 	toggleNumpadMouseMove()
 }
 
@@ -874,7 +876,7 @@ customExit(ExitReason, ExitCode) {
 	}
 }
 
-^!Numpad5::{
+^!NumpadClear::{ ; [Num5] Open Auto Clicker
 	static toggle := 0
 	if (toggle := !toggle)
 		Run("C:\Standalone\Utilities\AutoClicker-3.1.1.exe")
@@ -883,7 +885,7 @@ customExit(ExitReason, ExitCode) {
 }
 
 #HotIf !WinExist("OP Auto Clicker 3.1.1 ahk_exe AutoClicker-3.1.1.exe ahk_class 442")
-^Numpad5::{	; Toggle Autoclicker
+^NumpadClear::{	; [Num5] Toggle Autoclicker
 	static timer := Click.Bind("L")
 	static toggle := 0
 	if (toggle := !toggle)
@@ -1020,12 +1022,6 @@ F11::Escape	; BTD6: Rebind Escape
 #HotIf WinActive('ahk_exe Skul.exe')
 p::Shift
 #HotIf
-
-; ###########################################################################
-; ############################ END OF SCRIPT ################################
-; ###########################################################################
-#HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
-
 
 getAllPermutations(str1, str2) {
 	if (StrLen(str1) != StrLen(str2))
@@ -1260,41 +1256,6 @@ WinSetVolume(level, target?) {
 ^!0::} ; GTNH: Fix Ctrl Alt
 #HotIf
 
-#HotIf WinActive("Revolution Idle")
-^w::RevoIdle.trashSingZodiacUnderCursor()
-
-class RevoIdle {
-	static trashSingZodiacUnderCursor() {
-		static trashIcon := RevoIdle.coord(2068, 1300)
-		MouseGetPos(&x, &y)
-		Send("{LButton Down}")
-		Sleep(50)
-		MouseMove(trashIcon.x, trashIcon.y)
-		Sleep(50)
-		Send("{LButton Up}")
-		Sleep(50)
-		MouseMove(x, y)
-	}
-
-	class coord {
-		static Call(x,y) {
-			this.x := x
-			this.y := y
-			return this
-		}
-	}
-}
-#HotIf
-
-^+!o::{	; decode Hex to text
-	text := A_Clipboard
-	text := RegExReplace(text, "[^A-Za-z0-9 `t]")
-	res := ''
-	for e in strSplitOnWhiteSpace(text)
-		res .= e ? Chr(Integer('0x' e)) : ''
-	MsgBoxAsGui(res)
-}
-
 #HotIf WinExist("ahk_exe left4dead2.exe")
 ^o::{
 	switch PathGetExt(A_Clipboard) {
@@ -1309,6 +1270,7 @@ class RevoIdle {
 	}
 }
 #HotIf 
+
 l4d2_copyVtf(path) {
 	static outputBase := A_MyDocuments "\..\Downloads\l4d2\sprays\todo"
 	static steamPath := "C:\Program Files (x86)\Steam\SteamApps\common\Left 4 Dead 2\left4dead2\materials\vgui\logos\custom\dynamic.vtf"
@@ -1371,7 +1333,8 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 	timedTooltip("Transformed to CSV")
 }
 #HotIf 
-#HotIf WinActive("Goon Lagoon ahk_exe discord.exe") || WinActive("Goon Lagoon ahk_exe vesktop.exe")
+
+#HotIf WinActive("Lagoon ahk_exe discord.exe") || WinActive("Lagoon ahk_exe vesktop.exe")
 ^e::{
 	static currentSnapshot := getFolderAsArr(BooruDownload.basePath,,,3)
 	text := A_Clipboard
@@ -1385,3 +1348,8 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 	}
 }
 #HotIf 
+
+; ###########################################################################
+; ############################ END OF SCRIPT ################################
+; ###########################################################################
+#HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
