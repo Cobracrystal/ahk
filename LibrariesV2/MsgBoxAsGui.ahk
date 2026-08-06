@@ -216,20 +216,17 @@ class MsgBoxAsGui {
 		if (wait) {
 			WinWait(this.hwnd)
 			WinWaitClose(this.hwnd)
-			this.gui := 0
-			this.cleanup()
-			return this.result
+			; the only way this returns before finalEvent finishes is if a different entity explicitly calls .Destroy() on the instance
 		}
-		return this
 	}
 	
 	finalEvent(buttonNumber, *) {
-		this.gui.Destroy()
-		this.gui := 0
 		if (this.timeout > 0)
 			SetTimer(this.timeoutFObj, 0)
-		this.cleanup()
 		this.result := buttonNumber == -1 ? "Timeout" : buttonNumber == 0 ? "Cancel" : this.buttonNames[buttonNumber]
+		this.gui.Destroy()
+		this.gui := 0
+		this.cleanup()
 		if (this.funcObj)
 			this.funcObj.Call(this.result)
 	}
