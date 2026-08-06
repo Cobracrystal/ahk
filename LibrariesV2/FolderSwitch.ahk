@@ -16,13 +16,15 @@ class FolderSwitch {
 		catch as e
 			return
 		clipboard := Trim(A_Clipboard, "`n`r`t '`"")
-		if !(attr := FileExist(clipboard))
+		if (attr := FileExist(clipboard)) {
+			if InStr(attr, "D")
+				clipboardPathArr := [clipboard]
+			else {
+				SplitPath(clipboard, &name, &dir)
+				clipboardPathArr := [dir]
+			}
+		} else {
 			clipboardPathArr := []
-		else if InStr(attr, "D")
-			clipboardPathArr := [clipboard]
-		else {
-			SplitPath(clipboard, &name, &dir)
-			clipboardPathArr := [dir]
 		}
 		if (wClass == "#32770" && fileDialogFunc := this.getFileDialog(hwnd, &editId))
 			flagContext := 0
