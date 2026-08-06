@@ -19,32 +19,32 @@ A_IsReloaded := (InStr(DllCall("GetCommandLine", "str"), "/restart") ? true : fa
 ; Delete Tray Menu Items before including files that may modify them
 A_TrayMenu.Delete()
 
-#Include "%A_ScriptDir%\LibrariesV2"
-#Include "TransparentTaskbar.ahk"
-#Include "HotkeyManager.ahk"
-#Include "WindowManager.ahk"
-#Include "Scheduler.ahk"
-#Include "YoutubeDLGui.ahk"
-#Include "SongDownloader.ahk"
-#Include "TextEditMenu.ahk"
-#Include "MacroRecorder.ahk"
-#Include "TimestampConverter.ahk"
-#Include "FolderSwitch.ahk"
-#Include "AltDrag.ahk"
+#Include LibrariesV2
+#Include TransparentTaskbar.ahk
+#Include HotkeyManager.ahk
+#Include WindowManager.ahk
+#Include Scheduler.ahk
+#Include YoutubeDLGui.ahk
+#Include SongDownloader.ahk
+#Include TextEditMenu.ahk
+#Include MacroRecorder.ahk
+#Include TimestampConverter.ahk
+#Include FolderSwitch.ahk
+#Include AltDrag.ahk
 #Include ExpressionCalculator.ahk
-#Include "MathUtilities.ahk"
-#Include "WinUtilities.ahk"
-#Include "FileUtilities.ahk"
-#Include "BasicUtilities.ahk"
-#Include "MsgBoxAsGui.ahk"
-#Include "DesktopState.ahk"
-#Include "HotstringLoader.ahk"
-#Include "TableFilter v2.ahk"
-#Include "DiscordClient.ahk"
-#Include "WallpaperEngineWorkshopManager.ahk"
-#Include "BooruDownloader.ahk"
-#Include "External\cmdStdoutAsync.ahk"
-#Include "External\jsongo.ahk"
+#Include MathUtilities.ahk
+#Include WinUtilities.ahk
+#Include FileUtilities.ahk
+#Include BasicUtilities.ahk
+#Include MsgBoxAsGui.ahk
+#Include DesktopState.ahk
+#Include HotstringLoader.ahk
+#Include TableFilter v2.ahk
+#Include DiscordClient.ahk
+#Include WallpaperEngineWorkshopManager.ahk
+#Include BooruDownloader.ahk
+#Include External\cmdStdoutAsync.ahk
+#Include External\jsongo.ahk
 ; #Include "%A_ScriptDir%\not_mine_or_examples\AquaHotkey\AquaHotkey.ahk"
 ; #Include "External\jsongo.ahk"
 ; for windows in which ctrl+ should replace scrolling
