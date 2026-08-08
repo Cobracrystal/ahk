@@ -179,7 +179,7 @@ removeFileDuplicates(folder1, folder2) {
 	loop files folder1 "\*", "R" {
 		relPath := StrReplace(A_LoopFilePath, folder1)
 		fSize := A_LoopFileSize
-		if (FileExist(folder2 . relPath) && fSize == FileGetSize(folder2 .1 relPath)) {
+		if (FileExist(folder2 . relPath) && fSize == FileGetSize(folder2 . relPath)) {
 			FileDelete(folder2 . relPath)
 			count++
 		}
@@ -331,7 +331,7 @@ folderGetDiffs(folder1, folder2, recursive := true) {
 	return arr
 }
 
-folderGetDupes(folder1, folder2, recursive := true) {
+folderGetDuplicates(folder1, folder2, recursive := true) {
 	arr := []
 	if !InStr(folder1, ":") || !InStr(folder2, ":")
 		throw(Error("Must be absolute paths"))

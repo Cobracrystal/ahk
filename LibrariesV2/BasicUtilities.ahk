@@ -105,25 +105,6 @@ parseHeaders(str) {
 	return headers
 }
 
-/**
- * Given a function fn, returns the largest possible value in given range where fn does not throw an error.
- * @param fn 
- * @param {Integer} lower 
- * @param {Integer} upper 
- */
-tryCatchBinarySearch(fn, lower := 1, upper := 100000) {
-	return binarySearch(newFn, lower, upper)
-	
-	newFn(param) {
-		try {
-			fn(param)
-			return true
-		}
-		catch 
-			return false
-	}
-}
-
 
 ExecHelperScript(expression, wait := true, void := false) {
 	input := '#Warn All, Off`n'
@@ -525,6 +506,32 @@ QPC() {
 	static Freq := 0, init := DllCall("QueryPerformanceFrequency", "Int64P", &Freq)
 	DllCall("QueryPerformanceCounter", "Int64P", &count := 0)
 	Return count / freq
+}
+
+timeFunctionQPC(fn, amount := 1) {
+	q := QPC()
+	Loop(amount)
+		fn
+	return QPC() - q
+}
+
+/**
+ * Given a function fn, returns the largest possible value in given range where fn does not throw an error.
+ * @param fn 
+ * @param {Integer} lower 
+ * @param {Integer} upper 
+ */
+tryCatchBinarySearch(fn, lower := 1, upper := 100000) {
+	return binarySearch(newFn, lower, upper)
+	
+	newFn(param) {
+		try {
+			fn(param)
+			return true
+		}
+		catch 
+			return false
+	}
 }
 
 doNothing(*) {

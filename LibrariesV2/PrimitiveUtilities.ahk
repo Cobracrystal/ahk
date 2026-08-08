@@ -101,10 +101,11 @@ strMultiply(str, count) {
 }
 
 strFill(str, width, alignRight := true, char := A_Space) {
-	s := strMultiply(char, width - StrLen(str))
-	if alignRight
-		return s . str
-	return str . s
+	toFill := width - StrLen(str)
+	if toFill <= 0
+		return str
+	s := strMultiply(char, toFill)
+	return alignRight ? s . str : str . s
 }
 
 strDoPerChar(text, fn := (e => e . " ")) {

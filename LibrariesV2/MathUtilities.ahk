@@ -72,6 +72,23 @@ factors(n) {
 	return objsort(_factors,,"N")
 }
 
+convertToBase() => 0
+
+
+/**
+ * Converts a number from base base
+ * @param {String} str 
+ * @param {Integer} base 
+ * @returns {unset} 
+ */
+convertFromBase(str, base) {
+	num := 0
+	for i, char in StrSplit(str) {
+
+	}
+	return num
+}
+
 /**
  * Given an array (or Map) containing arrays, returns all possible combinations of values from the subarrays, where each combinations contains one item from each subarray.
  * @param arr
