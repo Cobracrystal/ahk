@@ -55,7 +55,7 @@ class Scheduler {
 	 */
 	static setOnceIn(days := 0, hours := 0, minutes := 0, seconds := 0, function := "", fparams*) {
 		if (days < 0 || hours < 0 || minutes < 0 || seconds < 0)
-			throw (Error("Invalid Time specified:" days " Days, " hours " hours, " minutes " minutes, " seconds " seconds"))
+			throw Error("Invalid Time specified:" days " Days, " hours " hours, " minutes " minutes, " seconds " seconds")
 		time := DateAdd(A_Now, days, "Days")
 		time := DateAdd(time, hours, "Hours")
 		time := DateAdd(time, minutes, "Minutes")
@@ -76,10 +76,10 @@ class Scheduler {
 		flagTimeUnitObject := IsObject(time)
 		timestamp := flagTimeUnitObject ? nextMatchingTime(flattenTimeVariableObject(time)*) : time
 		if (!IsTime(timestamp))
-			throw (Error("Invalid Timestamp given: " . timestamp))
+			throw Error("Invalid Timestamp given: " . timestamp)
 		timeDiff := DateDiff(timestamp, A_Now, "Seconds")
 		if (timeDiff < 0)
-			throw (Error("Cannot create Reminder in the Past: " timestamp " is " timeDiff * -1 " seconds in the past."))
+			throw Error("Cannot create Reminder in the Past: " timestamp " is " timeDiff * -1 " seconds in the past.")
 		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
 		funcName := this.getFuncName(function)
 		callable := this.getCallableNotification(function,,, fparams*)

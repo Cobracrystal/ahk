@@ -787,7 +787,7 @@ class SongDownloader {
 			case "rplay.live":
 				return this.configs.ytdl.ytdl_rplay
 			default:
-				return this.configs.ytdl.default
+				return this.configs.ytdl.ytdl_cookies
 		}
 	}
 
