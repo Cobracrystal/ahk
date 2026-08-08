@@ -6,7 +6,7 @@
 #Include MsgBoxAsGui.ahk
 
 class Wordle {
-	static debug := true
+	static debug := 0
 
 	static validGuesses := strSplitOnNewLine(FileRead(A_LineFile "\..\..\script_files\Test\valid-wordle-words.txt", "UTF-8"))
 	static validAnswers := strSplitOnNewLine(FileRead(A_LineFile "\..\..\script_files\Test\wordle-answers-alphabetical.txt", "UTF-8"))
@@ -154,7 +154,7 @@ class Wordle {
 		 * @param {String} unknownPositionLetters "KED" 
 		 * @returns {Array} ["baked"]
 		 */
-		static find(greenLetters := Map(), yellowLetters := Map(), greyLetters := "", unknownPositionLetters := "", searchSpace := Wordle.validGuesses, silentError := false) {
+		static find(greenLetters := Map(), yellowLetters := Map(), greyLetters := "", unknownPositionLetters := "", searchSpace := Wordle.validGuesses) {
 			greyLetters := greyLetters is Map || greyLetters is Array ? greyLetters : StrSplit(greyLetters)
 			unknownPositionLetters := StrSplit(unknownPositionLetters)
 			list := searchSpace
@@ -165,8 +165,8 @@ class Wordle {
 			for i, e in greyLetters {
 				_index := i, _element := e
 				allowedCountYellow := objCountValue(yellowLetters, _element)
-				if allowedCountYellow && objContainsValue(yellowLetters, e) >= greyLetters {
-					if silentError
+				if allowedCountYellow && objContainsValue(yellowLetters, e) >= i {
+					if !Wordle.debug
 						return []
 					throw(Error("Invalid Pattern containing both grey and yellow in bad order"))
 				}
@@ -322,40 +322,39 @@ class Wordle {
 			return wordScoresSorted
 		}
 
-		static autoSolveWord(solution, strategy := this.STRATEGY.countLetterDistribution) {
-
+		static solveForWord(solution, strategy := this.STRATEGY.countLetterDistribution, searchSpace := Wordle.validGuesses) {
+			if this.fullSpacePrecalculations.Has(strategy)
+				initialGuesses := this.fullSpacePrecalculations[strategy]
+			else
+				initialGuesses := this.fullSpacePrecalculations[strategy] := strategy(searchSpace)
+			guess := initialGuesses[1].key
+			guesses := []
+			while guess != solution {
+				guess := (A_Index == 1) ? guess : strategy(searchSpace)[1].key
+				pattern := Wordle.Helpers.generatePattern(guess, solution)
+				searchSpace := Wordle.Helpers.findFromPattern(guess, pattern, searchSpace)
+				guesses.push(guess)
+			}
+			return {
+				solution: solution,
+				guesses: guesses,
+				count: guesses.Length
+			}
 		}
 
-		static benchmarkAutosolver(strategy := this.STRATEGY.countLetterDistribution, detailedPrints := false, amount := 100) {
-			initialSearchSpace := Wordle.validAnswers
-			initialGuesses := strategy(initialSearchSpace)
+		static benchmarkAutosolver(strategy := this.STRATEGY.countLetterDistribution, detailedPrints := false, amount := 1000, searchSpace := Wordle.validGuesses) {
 			guesses := []
-			Loop(1000) {
+			Loop(amount) {
 				solution := Wordle.Helpers.getRandomWord()
 				; solution := "fluff"
-				starter := initialGuesses[Random(1,3)].key
-				searchSpace := initialSearchSpace
-				guess := ""
-				count := 0
-				str := ""
-				str2 := ""
-				str3 := ""
-				while guess != solution {
-					guess := (A_Index == 1) ? starter : Wordle.EntropyAnalysis.shittyWordEntropyScores(searchSpace)[1].key
-					pattern := Wordle.Helpers.generatePattern(guess, solution)
-					patternE := Wordle.Helpers.generatePattern(guess, solution,1,Wordle.enum_emoji)
-					searchSpace := Wordle.Helpers.findFromPattern(guess, pattern, searchSpace)
-					; print("Guess #" A_Index ": " guess " | " patternE " | Searchspace Len: " searchSpace.Length " | " (searchSpace.Length < 15 ? toString(searchSpace,1,0) : ""))
-					str .= guess " -> "
-					str2 .= patternE " -> "
-					str3 .= searchSpace.Length " -> "
-					count++
-				}
-				guesses.Push(count)
-				if count == 2 {
-					print(Format("[{}] ({}) {}", solution, count, substr(str,1,-4)),,1)
-					print(Format("[{}] ({}) {}", solution, count, substr(str2,1,-4)),,1)
-					print(Format("[{}] ({}) {}", solution, count, substr(str3,1,-4)),,1)
+				game := this.solveForWord(solution, strategy, searchSpace)
+				if detailedPrints {
+					print("Game #" amount)
+					for i, e in game.guesses
+						print("Guess #" i ": " e " | " Wordle.Helpers.generatePattern(e, game.solution, 1, Wordle.enum_emoji))
+					print("")
+				} else {
+					print(Format("[{}] ({}) {}", solution, game.count, objCollectString(game.guesses, " > ")))
 				}
 			}
 			print objGetAverage(guesses)
