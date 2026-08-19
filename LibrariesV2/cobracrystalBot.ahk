@@ -10,6 +10,7 @@ class CCBot extends DiscordBot {
 		this.workingDir := A_ScriptDir "\script_files\discordBot\"
 		DirCreate(this.workingDir . "output")
 		this.themes := {roles: Map(), channels: Map()}
+		return this
 	}
 
 	/**

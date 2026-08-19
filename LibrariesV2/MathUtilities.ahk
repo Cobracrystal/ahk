@@ -76,15 +76,46 @@ convertToBase() => 0
 
 
 /**
- * Converts a number from base base
+ * Converts a number from base radix
  * @param {String} str 
- * @param {Integer} base 
+ * @param {Integer} radix 2 <= radix <= 64
  * @returns {unset} 
  */
-convertFromBase(str, base) {
+convertFromBaseStr(str, radix) {
+	str := Trim(str)
 	num := 0
-	for i, char in StrSplit(str) {
-
+	switch {
+		case radix == 1:
+			return StrLen(str)
+		case radix == 10:
+			return Integer(str)
+		case radix == 16:
+			return SubStr(str, 1, 2) == "0x" ? Integer(str) : Integer("0x" str)
+		case radix < 1:
+			throw(Error("Invalid radix specified: " radix))
+		case radix <= 10:
+			if radix == 2
+				str := LTrim(str, "b")
+			else if radix == 8
+				str := LTrim(str, "o")
+			len := StrLen(str)
+			for i, char in StrSplit(str) {
+				t := Integer(char)
+				if t >= radix
+					throw(Error("Invalid char encountered (" char ") given radix " radix))
+				num += radix**(len - i) * t
+			}
+		case radix <= 36:
+			str := StrUpper(str)
+			len := StrLen(str)
+			for i, char in StrSplit(str) {
+				t := IsAlpha(char) ? Ord(char) - 54 : Integer(char)
+				if t >= radix
+					throw(Error("Invalid char encountered (" char ": " t ") given radix " radix))
+				num += radix**(len - i) * t
+			}
+		default:
+			throw(Error("Invalid radix: " radix . " (Unknown Encoding)"))
 	}
 	return num
 }

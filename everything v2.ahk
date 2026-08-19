@@ -94,8 +94,12 @@ expressionCalculator.setWolframAlphaToken(FileRead(A_WorkingDir "\everything\wol
 ; replace the tray menu with my own
 customTrayMenu()
 ; Synchronize nextDNS IP
-if (!A_IsReloaded)
+if (!A_IsReloaded) {
 	connectNextDNS()
+if !fixNotepadStartupResolution() 
+	SetTimer(fixNotepadStartupResolution, -10000)
+}
+
 ; ###########################################################################
 ; ############################# CONTROL HOTKEYS #############################
 ; ###########################################################################
@@ -451,6 +455,14 @@ clickMouse(b, hold := 0, *) {
 	MouseClick(b, , , , , st?)
 }
 
+fixNotepadStartupResolution() {
+	if hwnd1 := WinExist("grand plan.txt ahk_exe notepad.exe")
+		WinMove(-775, 600, 650, 400)
+	if hwnd2 := WinExist("termine und so.txt ahk_exe notepad.exe")
+		WinMove(-775, 600, 650, 400)
+	return hwnd1 && hwnd2
+}
+
 closeWinRarNotification() {
 	Loop {
 		WinWait("ahk_group instantCloseWindows")
@@ -768,6 +780,7 @@ customExit(ExitReason, ExitCode) {
 	for e in ["^", "´", "``"]
 		Hotkey(e, "Toggle")
 }
+^BackSpace::Send("{Ctrl Down}{Shift Down}{Left}{Ctrl Up}{Shift Up}{Backspace}")
 
 :*?:=/=::≠
 :*?:+-::±
@@ -1338,13 +1351,16 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 ^e::{
 	static currentSnapshot := getFolderAsArr(BooruDownload.basePath,,,3)
 	text := A_Clipboard
-	for link in strSplitOnNewLine(text, "`r`t ") {
-		fname := BooruDownload.getFilenameFromURL(link)
-		if !fname
-			throw Error("bad link")
-		if !(i := objContainsValue(currentSnapshot, fname, v => v.namenoext))
-			continue
-		MsgBoxAsGui(currentSnapshot[i].path)
+	flag := 0
+	link := Trim(text, "`n`r`t ")
+	fname := BooruDownload.getFilenameFromURL(link)
+	if fname {
+		if (i := objContainsValue(currentSnapshot, fname, v => v.namenoext))
+			MsgBoxAsGui(currentSnapshot[i].path)
+		else
+			timedTooltip("Not found!", 300)
+	} else {
+		Send(A_ThisHotkey)
 	}
 }
 #HotIf 

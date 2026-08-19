@@ -36,16 +36,17 @@ class Wordle {
 		static entropy := Wordle.EntropyAnalysis
 		static helpers := Wordle.Helpers
 
-		static consoleGame(solution?, hardWords := false) {
+		static consoleGame(solution?, wordSpace := Wordle.validAnswers) {
 			guesses := []
 			patterns := []
-			solution := Wordle.Helpers.getRandomWord(hardWords)
+			solution := solution ?? Wordle.Helpers.getRandomWord(wordSpace)
 			solution := StrUpper(solution)
 			if Wordle.debug
-				possibleSolutions := hardWords ? Wordle.validGuesses : Wordle.validAnswers
+				possibleSolutions := wordSpace
 			hwnd := 0
 			Loop(6) {
 				word := InputBox("Enter Guess:").Value
+				word := StrUpper(word)
 				while (!IsAlpha(word) || StrLen(word) != 5 || !Wordle.completeWordMap.Has(word)) {
 					ib := InputBox("Invalid. Try Again:", "Guess Box")
 					if ib.Result == "Cancel"
@@ -61,10 +62,11 @@ class Wordle {
 					print "yay!!! you won!! it was ["  solution "]!!!"
 					break
 				}
-				if Wordle.debug
+				if Wordle.debug {
 					possibleSolutions := Wordle.Helpers.findFromPattern(word, patterns[-1],possibleSolutions)
 					if possibleSolutions.Length < 1000
 						hwnd := MsgBoxAsGui(toString(possibleSolutions)).hwnd
+				}
 			}
 			if word != solution {
 				print "booo!! you lost... :< Solution was [" solution "]"
@@ -72,8 +74,8 @@ class Wordle {
 		}
 
 		; unfortunately emojis don't render properly in this.
-		static guiGame(solution?, hardWords := false) {
-			solution := Wordle.Helpers.getRandomWord(hardWords)
+		static guiGame(solution?, searchSpace := Wordle.validGuesses) {
+			solution := Wordle.Helpers.getRandomWord(searchSpace)
 			solution := StrUpper(solution)
 			guesses := 0
 			g := Gui('+Resize', 'Printer')
@@ -232,7 +234,7 @@ class Wordle {
 			solution := solution is Array ? solution.Clone() : StrSplit(solution)
 			Loop(5) {
 				i := 6-A_Index
-				if word[i] == solution[i] {
+				if word[i] = solution[i] {
 					p[i] := enum.green
 					word[i] := 0
 					solution.RemoveAt(i)
@@ -243,7 +245,7 @@ class Wordle {
 			for pos, char in word {
 				if char != 0 {
 					for pos2, char2 in solution {
-						if char == char2 {
+						if char = char2 {
 							p[pos] := enum.yellow
 							solution.RemoveAt(pos2)
 							break
