@@ -1282,12 +1282,12 @@ l4d2_copyVtf(path) {
 l4d2_convertImgToVTF(path) {
 	static outputBase := A_MyDocuments "\..\Downloads\l4d2\sprays\todo"
 	static steamPath := "C:\Program Files (x86)\Steam\SteamApps\common\Left 4 Dead 2\left4dead2\materials\vgui\logos\custom\dynamic.vtf"
-	static spraySetPath := A_MyDocuments '\..\Downloads\l4d2\sprays\Left4Dead2SprayChange\set_spray.bat'
+	static spraySetPath := A_MyDocuments '\..\Downloads\l4d2\sprays\Left4Dead2SprayChange v4\compile_spray.bat'
 	if !FileExist(path)
 		return
 	pathInfo := getSplitPath(path)
 	output := cmdRet(Format('"{}" "{}"', spraySetPath, path))
-	if (InStr(output, "error"))
+	if (InStr(output, "error") || InStr(output, "failed"))
 		return timedTooltip("Failure")
 	timedTooltip("Success")
 	if !FileExist(outputBase "\" pathInfo.name)
