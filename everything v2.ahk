@@ -302,86 +302,75 @@ Alt & Capslock::{	; Switch to specified window
 	}
 }
 
-^+!J:: { ; Tiles Windows Vertically
-	static windowInfo, tileState := false
-	if (tileState := !tileState) {
-		DesktopState.takeSnapshot("TilingState")
-		shell := ComObject("Shell.Application")
-		switch MsgBoxAsGui.fromConfig({
-			text: "Tile Windows?", 
-			title: "Confirm Dialog", 
-			buttonStyle: 0x7, 
-			defaultButton: 4, 
-			wait: true, 
-			buttonNames: ["Vertically", "Horizontally", "Cascade", "No"]
-		}).result {
-			case "Vertically":
-				list := WinUtilities.getAllWindowInfo()
-				objRemoveValue(list,,,(key,a) => (WinGetMinMax(a) == -1))
-				; msgbox(ToString(list, false))
-				; Loop(list.Length) {
-				; 	a := 5
-				; }
-				; algorithm: for the number of windows we have, calculate the best integer multiplication (eg for 27: 7x4)
-				; then try both orientations (eg 7x4, 4x7), and choose the one where the calculated width/height ratio for the windows
-				; is smaller (as in, more quadratic).
-				; then, for the final column, extend the height so that the windows fit in anyway
-				shell.TileVertically()
-			case "Horizontally":
-				shell.TileHorizontally()
-			case "Cascade":
-				shell.CascadeWindows()
-			case "No":
-				return
-		}
-	}
-	else if MsgBoxAsGui.fromConfig({
-		text: "Restore Previous State?", title: "Confirm Dialog", buttonStyle: 0x1, wait: true
-	}).result == "OK"
-		DesktopState.restoreSnapshot("TilingState")
+^F10:: { ; save / restore desktop state
+	DesktopStateGUI.toggleGUI()
 }
 
-^+!L:: { ; save / restore desktop state
-	DesktopState.disableSnapshotHistory()
-	g := Gui("AlwaysOnTop", "DesktopState Manager")
-	g.OnEvent("Close", close)
-	g.OnEvent("Escape", close)
-	g.AddEdit("Section -Multi R1 w200 vName", A_Now)
-	g.AddButton("Center R1 w200 yp", "Save State").OnEvent("Click", saveState)
-	lv := g.AddListView("xs -Multi w500 R10", ["Id", "Name", "Timestamp", "Window Count"])
-	for i, snapshot in DesktopState.snapshotHistory
-		lv.add("+Focus +Select", snapshot.id, snapshot.name, snapshot.timestamp, snapshot.info.Length)
-	for i, snapshot in DesktopState.customSnapshots
-		lv.add("+Focus +Select", snapshot.id, snapshot.name, snapshot.timestamp, snapshot.info.Length)
-	lv.ModifyCol(1, 0)
-	Loop(3)
-		lv.ModifyCol(A_Index + 1, "AutoHdr")
-	lv.OnEvent("DoubleClick", restoreState)
-	g.AddButton("Center Default R1 w200", "Restore State").OnEvent("Click", restoreState)
-	g.Show("AutoSize")
-
-	saveState(ctrl, info) {
-		name := g["Name"].Value
-		if (name == "" || DesktopState.customSnapshots.Has(name)) {
-			box := MsgBoxAsGui.fromConfig({text: "No Valid/Already existing name. Store as current timestamp?", title: "Invalid name", buttonStyle: 1, defaultButton: 2, wait:true, owner: g.hwnd})
-			if box.result == "Cancel"
-				return
-			name := DesktopState.customSnapshots.Has(A_Now) ? A_Now "." A_TickCount : A_Now
+class DesktopStateGUI {
+	static gui := 0
+	static toggleGUI() {
+		if (WinExist(this.gui)) {
+			this.gui.destroy()
+			this.gui := 0
 		}
-		snapshot := DesktopState.takeSnapshot(name)
-		lv.add("+Focus +Select", snapshot.id, snapshot.name, snapshot.timestamp, snapshot.info.Length)
-		lv.ModifyCol(2, "AutoHdr")
+		else
+			this.guiCreate()
 	}
 
-	restoreState(ctrl, info) {
-		if ctrl is Gui.ListView
-			rowN := info
-		else
-			rowN := lv.GetNext(,"F")
+	static guiCreate() {
+		if flag := DesktopState.timerIsEnabled
+			DesktopState.disableSnapshotHistory()
+		flagPeriod := DesktopState.period
+		this.gui := Gui("AlwaysOnTop", "DesktopState Manager")
+		this.gui.OnEvent("Close", close)
+		this.gui.OnEvent("Escape", close)
+		this.gui.AddEdit("Section -Multi R1 w200 vName", FormatTime(A_Now, "HH:mm:ss"))
+		this.gui.AddButton("Center R1 w200 yp", "Save State").OnEvent("Click", this.saveState.bind(this))
+		lv := this.gui.AddListView("vLV xs -Multi w500 R10", ["Id", "Name", "Timestamp", "Window Count"])
+		this.refreshListView()
+		lv.OnEvent("DoubleClick", this.restoreState.bind(this))
+		this.gui.AddButton("Center Default R1 w200", "Restore State").OnEvent("Click", this.restoreState.bind(this))
+		this.gui.AddButton("yp Center R1 w200", "Tile Windows").OnEvent("Click", this.tileWindows.bind(this))
+		this.gui.Show("AutoSize")
+		
+		close(*) {
+			this.gui.Destroy()
+			this.gui := 0
+			if flag
+				DesktopState.enableSnapshotHistory(flagPeriod)
+		}
+	}
+
+	static refreshListView(headers := true) {
+		lv := this.gui["LV"]
+		lv.Delete()
+		for i, snapshot in DesktopState.snapshotHistory
+			lv.add("+Focus +Select", snapshot.id, snapshot.name, snapshot.timestamp, snapshot.info.Length)
+		for i, snapshot in DesktopState.customSnapshots
+			lv.add("+Focus +Select", snapshot.id, snapshot.name, snapshot.timestamp, snapshot.info.Length)
+		lv.ModifyCol(1, 0)
+		Loop(3)
+			lv.ModifyCol(A_Index + 1, "AutoHdr")
+	}
+
+	static saveState(ctrl, info) {
+		name := this.gui["Name"].Value
+		time := FormatTime(A_Now, "HH:mm:ss")
+		if (name == "" || DesktopState.customSnapshots.Has(name))
+			name := DesktopState.customSnapshots.Has(time) ? time "." A_TickCount : time
+		snapshot := DesktopState.takeSnapshot(name)
+		this.gui["Name"].Value := time
+		this.refreshListView()
+	}
+
+	static restoreState(ctrl, info) {
+		if !(ctrl is Gui.ListView)
+			ctrl := this.gui["LV"]
+		rowN := ctrl.GetNext(,"F")
 		if rowN == 0
 			return
 		timedTooltip("Attempting to restore Desktop state...")
-		id := lv.GetText(rowN, 1)
+		id := ctrl.GetText(rowN, 1)
 		for i, e in DesktopState.snapshotHistory
 			if e.id == id
 				DesktopState.restoreFromSnapshotHistory(i)
@@ -390,12 +379,30 @@ Alt & Capslock::{	; Switch to specified window
 				DesktopState.restoreCustomSnapshot(i)
 	}
 
-	close(*) {
-		g.Destroy()
-		DesktopState.enableSnapshotHistory()
+	static tileWindows(*) {
+		DesktopState.takeSnapshot("TilingStateBackup")
+		this.refreshListView()
+		switch MsgBoxAsGui.fromConfig({
+			text: "Tile Windows?", 
+			title: "Confirm Dialog", 
+			buttonStyle: 0x7, 
+			defaultButton: 4, 
+			wait: true, 
+			buttonNames: ["Vertically", "Horizontally", "Cascade", "Random Spread", "Cancel"]
+		}).result {
+			case "Vertically":
+				WinUtilities.tileWindows()
+			case "Horizontally":
+				WinUtilities.tileWindows(,1)
+			case "Cascade":
+				WinUtilities.cascadeWindows()
+			case "Random Spread":
+				WinUtilities.spreadWindows()
+			case "Cancel":
+				return
+		}
 	}
 }
-
 
 ^+!I:: { ; Center & Adjust Active Window
 	if WinActive("ahk_group cornerMusicPlayers")

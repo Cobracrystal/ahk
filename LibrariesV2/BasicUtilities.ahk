@@ -489,6 +489,45 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 	return Trim(StrGet(pData, length, encoding), "`n`r`t ")
 }
 
+
+urlFileGetSize(url, units := 0) {
+	static INTERNET_OPEN_TYPE_PRECONFIG_WITH_NO_AUTOPROXY := 4
+	static INTERNET_FLAG_DONT_CACHE := 0x4000000
+	static INTERNET_FLAG_RELOAD := 0x80000000
+	static HTTP_QUERY_CONTENT_LENGTH := 0x5
+	static HTTP_QUERY_FLAG_NUMBER := 0x20000005
+	hMod := DllCall("LoadLibrary", "wStr", "wininet.dll")
+	hIO := DllCall("wininet\InternetOpenW",
+		"wstr", "Microsoft Internet Explorer",
+		"uint", INTERNET_OPEN_TYPE_PRECONFIG_WITH_NO_AUTOPROXY,
+		"int", 0,
+		"int", 0,
+		"uint", 0
+	)
+
+	hIU := DllCall("wininet\InternetOpenUrlW",
+		"uint", hIO, "wstr", url, "int", 0, "int", 0,
+		"uint", INTERNET_FLAG_DONT_CACHE | INTERNET_FLAG_RELOAD,
+		"uint", 0
+	)
+	if (hIO & hIU) {
+		DllCall("wininet\HttpQueryInfoW", "uint", hiU,
+			"uint", HTTP_QUERY_CONTENT_LENGTH|HTTP_QUERY_FLAG_NUMBER,
+			"uint*", &fileSize := 0, 
+			"uint*", 4, 
+			"int", 0
+		)
+	}
+
+	DllCall("wininet\InternetCloseHandle", "uint", hIU)
+	DllCall("wininet\InternetCloseHandle", "uint", hIO)
+	DllCall("FreeLibrary", "uint", hMod)
+	if (units)
+		fileSize := round(fileSize / (1024 ** units), 2)
+	return fileSize
+}
+
+
 tryEditTextFile(editor := A_WinDir . "\system32\notepad.exe", params := "", *) {
 	if (InStr(editor, A_Space) && SubStr(editor, 1, 1) != '"' && SubStr(editor, -1, 1) != '"')
 		editor := '"' editor '"'
@@ -635,39 +674,3 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 
 }
 
-/**
- * tiles given or all windows
- * @param windowArray array of window HWNDs to be tiled
- * @param {Integer} tilingMode 0 or 1, vertical or horizontal
- * @param tileArea Area in which windows will be tiled. Given in the form [x1, y1, x2, y2]
- * @param {Integer} hwndParent HWND of parent window of the windows to be tiled
- * @returns {Integer} Count of tiled windows 
- */
-tileWindows(windowArray?, tilingMode := 0x0000, tileArea?, hwndParent := 0) {
-	static MDITILE_VERTICAL := 0x0000
-	static MDITILE_HORIZONTAL := 0x0001
-	static MDITILE_SKIPDISABLED := 0x0002
-	static MDITILE_ZORDER := 0x0004
-	flagTileArea := IsSet(tileArea)
-	if (flagTileArea)
-		lpRect := structRectCreate(tileArea*)
-	else
-		lpRect := 0
-	flagCustomWindows := IsSet(windowArray) && windowArray is Array
-	if (flagCustomWindows) {
-		cKids := windowArray.Length
-		lpKids := Buffer(windowArray.Length * 4) ; sizeof(int) == 4
-		for i, hwnd in windowArray
-			NumPut("Int", hwnd, lpKids, 4 * (i - 1))
-	} else {
-		cKids := 0
-		lpKids := 0
-	}
-	return DllCall("TileWindows",
-		"Int", hwndParent,
-		"UInt", tilingMode,
-		"UInt", flagTileArea ? lpRect.Ptr : 0,
-		"Int", cKids,
-		"Int", flagCustomWindows ? lpKids.Ptr : 0
-	)
-}

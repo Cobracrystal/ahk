@@ -3,6 +3,8 @@
 class DesktopState {
 	static __New() {
 		this.timer := this.updateSnapshotHistory.bind(this)
+		this.timerIsEnabled := 0
+		this.period := 0
 		this.snapshotHistory := []
 		this.customSnapshots := Map()
 		this.listLines := 0
@@ -12,13 +14,19 @@ class DesktopState {
 		SetTimer(this.timer, -1)
 		Sleep(10)
 		SetTimer(this.timer, period)
+		this.timerIsEnabled := true
+		this.period := period
 	}
 
 	static disableSnapshotHistory() {
 		SetTimer(this.timer, 0)
+		this.timerIsEnabled := false
+		this.period := 0
 	}
 
-	static takeSnapshot(name?, getHidden := false, useBlacklist := true) {
+	static takeSnapshot(name?, override := false, getHidden := false, useBlacklist := true) {
+		if this.customSnapshots.Has(name) && !override
+			throw Error("Snapshot of this name already exists")
 		newSnapshot := this.Snapshot(name?, getHidden, useBlacklist)
 		this.customSnapshots[newSnapshot.name] := newSnapshot
 		return newSnapshot
@@ -28,7 +36,7 @@ class DesktopState {
 		static histCounter := 1
 		if (this.snapshotHistory.Length) >= 10 {
 			this.snapshotHistory.InsertAt(1, this.Snapshot("History_" histCounter++))
-			lastItem := this.snapshotHistory.Pop()
+			return this.snapshotHistory.Pop()
 		} else {
 			this.snapshotHistory.InsertAt(1, this.Snapshot("History_" histCounter++))
 		}
@@ -70,7 +78,7 @@ class DesktopState {
 			this.id := DesktopState.Snapshot.counter++
 			this.name := name ?? this.id
 			this.timestamp := A_Now
-			this.info := WinUtilities.getAllWindowInfo(getHidden, useBlacklist ? unset : [])
+			this.info := WinUtilities.getAllWindowInfo(,getHidden, useBlacklist ? unset : [])
 			return this
 		}
 	}

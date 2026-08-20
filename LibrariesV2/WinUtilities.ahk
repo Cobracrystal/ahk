@@ -4,11 +4,11 @@ class WinUtilities {
 		this.monitorCache := Map()
 	}
 
-	static getAllWindows(getHidden := false, blacklist := this.defaultBlacklist) {
+	static getAllWindows(winTitle?,getHidden := false, blacklist := this.defaultBlacklist) {
 		windows := []
 		dHW := A_DetectHiddenWindows
 		DetectHiddenWindows(getHidden)
-		wHandles := WinGetList()
+		wHandles := WinGetList(winTitle?)
 		for wHandle in wHandles
 			if !this.winInBlacklist(wHandle, blacklist)
 				windows.push(wHandle)
@@ -17,9 +17,9 @@ class WinUtilities {
 	}
 
 	; this is not actually that much more performant than getAllWindowInfo.
-	static getBasicInfo(getHidden := false, blacklist := this.defaultBlacklist) {
+	static getBasicInfo(winTitle?,getHidden := false, blacklist := this.defaultBlacklist) {
 		infoArr := []
-		for i, hwnd in this.getAllWindows(getHidden, blacklist) {
+		for i, hwnd in this.getAllWindows(winTitle?,getHidden, blacklist) {
 			try {
 				wObj := this.WinGetPosEx(hwnd)
 				wObj.title := WinGetTitle(hwnd)
@@ -31,11 +31,11 @@ class WinUtilities {
 		return infoArr
 	}
 	
-	static getAllWindowInfo(getHidden := false, blacklist := this.defaultBlacklist, getCommandLine := false) {
+	static getAllWindowInfo(winTitle?, getHidden := false, blacklist := this.defaultBlacklist, getCommandLine := false) {
 		windows := []
 		dHW := A_DetectHiddenWindows
 		DetectHiddenWindows(getHidden)
-		wHandles := WinGetList()
+		wHandles := WinGetList(winTitle?)
 		for wHandle in wHandles
 			if !this.winInBlacklist(wHandle, blacklist)
 				windows.push(this.getWindowInfo(wHandle, getCommandLine))
@@ -55,26 +55,24 @@ class WinUtilities {
 	 * @param hwnd 
 	 * @param {Integer} getCommandline 
 	 * @param {Integer} updateCache 
-	 * @returns {Object | Any} An object of the following form
+	 * @returns {Object | Any} An object containing all of the following keys
 	 * 
-	 * obj := {
-	 *		hwnd ; window handle (STATIC)
-	 *		title ; window title
-	 *		class ; ahk_class (STATIC)
-	 *		state ; mmx: 1 maximized, 0 restored, -1 minimized 
-	 *		minX, minY, maxX, maxY ; x and y position while the window is min-/maximized (STATIC)
-	 *		minW, minH, maxW, maxH ; min-/maximum width and height to which the window can be resized (STATIC)
-	 *		xpos, ypos, width, height ; the current x, y, w, h values of the window
-	 *		res_xpos, res_ypos, res_width, res_height ; x, y, w, h of the window if it were restored
-	 *		clientxpos, clientypos, clientwidth, clientheight ; x, y, w, h of the client area of the window
-	 *		flags ; behaviour of the window while minimized (STATIC)
-	 *		pid ; process ID (STATIC)
-	 *		process ; process name (STATIC)
-	 *		processPath ; process path (STATIC)
-	 *		isElevated ; whether the process is elevated (STATIC)
-	 *		commandLine ; command line (if requested, otherwise blank) (STATIC)
-	 *		triedCommandline ; whether getWindowInfo tried retrieving the command line. This is relevant for caching.
-	 * }
+	 *	hwnd ; window handle (STATIC)
+	 *	title ; window title
+	 *	class ; ahk_class (STATIC)
+	 *	state ; mmx: 1 maximized, 0 restored, -1 minimized 
+	 *	minX, minY, maxX, maxY ; x and y position while the window is min-/maximized (STATIC)
+	 *	minW, minH, maxW, maxH ; min-/maximum width and height to which the window can be resized (STATIC)
+	 *	xpos, ypos, width, height ; the current x, y, w, h values of the window
+	 *	res_xpos, res_ypos, res_width, res_height ; x, y, w, h of the window if it were restored
+	 *	clientxpos, clientypos, clientwidth, clientheight ; x, y, w, h of the client area of the window
+	 *	flags ; behaviour of the window while minimized (STATIC)
+	 *	pid ; process ID (STATIC)
+	 *	process ; process name (STATIC)
+	 *	processPath ; process path (STATIC)
+	 *	isElevated ; whether the process is elevated (STATIC)
+	 *	commandLine ; command line (if requested, otherwise blank) (STATIC)
+	 *	triedCommandline ; whether getWindowInfo tried retrieving the command line. This is relevant for caching.
 	 */
 	static getWindowInfo(hwnd, getCommandline := false, updateCache := true) {
 		x := y := w := h := cx := cy := cw := ch := rx := ry := rw := rh := minX := minY := maxX := maxY := ""
@@ -229,6 +227,7 @@ class WinUtilities {
 	}
 
 	/**
+	 * Gets the position of the window as well as its borders as an object. Used in conjunction with WinMoveEx
 	 * Originally written by https://www.autohotkey.com/boards/viewtopic.php?f=6&t=3392
 	 * @param hwnd 
 	 * @returns {Object} { x: L, y: T, w: R - L, h: B - T, LB: leftBorder, TB: topBorder, RB: rightBorder, BB: bottomBorder}
@@ -254,6 +253,14 @@ class WinUtilities {
 		return { x: L, y: T, w: R - L, h: B - T, LB: leftBorder, TB: topBorder, RB: rightBorder, BB: bottomBorder}
 	}
 
+	/**
+	 * Moves a window taking window borders into account. Get these via WinGetPosEx
+	 * @param hwnd 
+	 * @param x 
+	 * @param y 
+	 * @param width 
+	 * @param height 
+	 */
 	static WinMoveEx(hwnd, x?, y?, width?, height?) {
 		if pos := this.WinGetPosEx(hwnd) {
 			if IsSet(x)
@@ -270,9 +277,23 @@ class WinUtilities {
 
 
 	/**
-	 * Retrieves coordinates of window of restored state even if it is maximized or minimized
+	 * Retrieves coordinates of window of its **restored** state. 
+	 * This works even if it is maximized or minimized
 	 * @param hwnd 
-	 * @returns {Object} 
+	 * @returns {Object} An Object with the properties
+	 * 
+	 *	x
+	 *	y
+	 *	w
+	 *	h
+	 *	mmx
+	 *	flags 
+	 *	minX
+	 *	minY
+	 *	maxX
+	 *	maxY
+	 *	cw OPTIONAL
+	 *	ch OPTIONAL
 	 */
 	static getWindowPlacement(hwnd, withClientPos := false) {
 		NumPut("Uint", 44, pos := Buffer(44, 0))
@@ -352,6 +373,126 @@ class WinUtilities {
 		maxWidth  := Max(maxWidth, sysMaxWidth)
 		maxHeight := Max(maxHeight, sysMaxHeight)
 		return { minW: minWidth, minH: minHeight, maxW: maxWidth, maxH: maxHeight }
+	}
+
+	/**
+	 * Tiles given or all windows
+	 * @param windowArray array of window HWNDs to be tiled
+	 * @param {Integer} tilingMode 0 or 1, vertical or horizontal
+	 * @param tileArea Area in which windows will be tiled. Given in the form [x1, y1, x2, y2]
+	 * @param {Integer} hwndParent HWND of parent window of the windows to be tiled
+	 * @returns {Integer} Count of tiled windows 
+	 */
+	static tileWindows(windowArray?, tilingMode := WinUtilities.TILE.MDITILE_VERTICAL, tileArea?, hwndParent := 0) {
+		flagTileArea := IsSet(tileArea)
+		if (flagTileArea)
+			NumPut("int", tileArea.x, "int", tileArea.y, "int", tileArea.x2, "int", tileArea.y2, lpRect := Buffer(16, 0), 0)
+		else
+			lpRect := 0
+		flagCustomWindows := IsSet(windowArray) && windowArray is Array
+		if (flagCustomWindows) {
+			cKids := windowArray.Length
+			lpKids := Buffer(cKids * A_PtrSize)
+			for i, hwnd in windowArray
+				NumPut("ptr", hwnd, lpKids, A_PtrSize * (i - 1))
+		} else {
+			cKids := 0
+			lpKids := 0
+		}
+		return DllCall("TileWindows",
+			"ptr", hwndParent,
+			"uint", tilingMode,
+			"ptr", flagTileArea ? lpRect : 0,
+			"uint", cKids,
+			"ptr", flagCustomWindows ? lpKids : 0
+		)
+	}
+
+	/**
+	 * Tiles given or all windows
+	 * @param windowArray array of window HWNDs to be tiled
+	 * @param {Integer} tilingMode 0 or 1, vertical or horizontal
+	 * @param tileArea Area in which windows will be tiled. Given in the form [x1, y1, x2, y2]
+	 * @param {Integer} hwndParent HWND of parent window of the windows to be tiled
+	 * @returns {Integer} Count of tiled windows 
+	 */
+	static cascadeWindows(windowArray?, tilingMode := WinUtilities.TILE.MDITILE_ZORDER, tileArea?, hwndParent := 0) {
+		flagTileArea := IsSet(tileArea)
+		if (flagTileArea)
+			NumPut("int", tileArea.x, "int", tileArea.y, "int", tileArea.x2, "int", tileArea.y2, lpRect := Buffer(16, 0), 0)
+		else
+			lpRect := 0
+		flagCustomWindows := IsSet(windowArray) && windowArray is Array
+		if (flagCustomWindows) {
+			cKids := windowArray.Length
+			lpKids := Buffer(cKids * A_PtrSize)
+			for i, hwnd in windowArray
+				NumPut("ptr", hwnd, lpKids, A_PtrSize * (i - 1))
+		} else {
+			cKids := 0
+			lpKids := 0
+		}
+		return DllCall("CascadeWindows",
+			"ptr", hwndParent,
+			"uint", tilingMode,
+			"ptr", flagTileArea ? lpRect : 0,
+			"uint", cKids,
+			"ptr", flagCustomWindows ? lpKids : 0
+		)
+	}
+
+	/**
+	 * Spreads windows randomly across the desktop or a specified area
+	 * @param windowArray The windows to spread. If not set, uses all.
+	 * @param tileArea The area in which to spread. If not given, behaviour depends on latter two flags
+	 * @param monitorNum If set, specifies the monitor on which to spread the windows. If unset, spreads across all monitors. This is ignored if tileArea is set.
+	 * @param {Integer} perMonitor If set windows will only be spread on the monitor they are already on. If both this and monitorNum are set, only windows on monitor num N are spread.
+	 */
+	static spreadWindows(windowArray?, tileArea?, monitorNum?, perMonitor := false, exact := false) {
+		windowArray := windowArray ?? WinUtilities.getAllWindows()
+		mons := this.monitorGetAll()
+		monHandles := this.monitorGetAllHandles()
+		if IsSet(monitorNum) {
+			for i, m in mons
+				if m.num == monitorNum
+					monToMoveTo := m
+			if !IsSet(monToMoveTo)
+				throw(Error("Invalid Monitor Number"))
+		}
+		if IsSet(tileArea) {
+			monToMoveTo := this.monitorGetInfoFromRect(tileArea.x, tileArea.y, tileArea.w, tileArea.h)
+			monitorNum := monToMoveTo.num
+		}
+		for idx, hwnd in windowArray {
+			info := WinUtilities.getWindowInfo(hwnd)
+			activeMonitor := WinUtilities.monitorGetInfoFromWindow(hwnd)
+			; select which monitor to move to
+			if !IsSet(monitorNum)
+				monToMoveTo := perMonitor ? activeMonitor : mons[monHandles[Random(1, mons.Count)]]
+			else if perMonitor && activeMonitor.num != monitorNum
+				continue ; ^ else its already set from the check at the beginning of the func
+			; select position to move to
+			if IsSet(tileArea)
+				l := tileArea.x, r := tileArea.x + tileArea.w, t := tileArea.y, b := tileArea.y + tileArea.h
+			else
+				l := monToMoveTo.wLeft, r := monToMoveTo.wRight, t := monToMoveTo.wTop, b := monToMoveTo.wBottom
+			if exact {
+				xTo := Random(l, r - info.res_width)
+				yTo := Random(t, b - info.res_height)
+			} else { ; not exact: exactly 0.25 of the window width may be outside of the edges. useful for monitors
+				xTo := Random(l - info.res_width // 4, r - (3 * info.res_width // 4))
+				yTo := Random(t - info.res_width // 4, b - (3 * info.res_height // 4))
+			}
+			this.setWindowPlacement(hwnd, xTo, yTo)
+			WinMoveTop(hwnd)
+		}
+	}
+
+	static TILE := {
+		MDITILE_VERTICAL: 0x0000,
+		MDITILE_HORIZONTAL: 0x0001,
+		MDITILE_SKIPDISABLED: 0x0002,
+		MDITILE_ZORDER: 0x0004
 	}
 
 	static resetWindowPosition(wHandle := Winexist("A"), sizePercentage?, monitorNum?) {

@@ -10,6 +10,7 @@
 #Include WinUtilities.ahk
 #Include CustomWindowFunctions.ahk
 #Include BasicUtilities.ahk
+#Include DesktopState.ahk
 ; Usage (if including this file as a library):
 ; ^+F11::WindowManager.windowManager("T")
 
@@ -172,7 +173,7 @@ class WindowManager {
 		}
 		this.LV.Delete()
 		if (update) {
-			this.data.currentWinInfo := WinUtilities.getAllWindowInfo(this.config.detectHiddenWindows, this.config.useBlacklist ? this.config.blacklist : [], this.config.getCommandLine)
+			this.data.currentWinInfo := WinUtilities.getAllWindowInfo(,this.config.detectHiddenWindows, this.config.useBlacklist ? this.config.blacklist : [], this.config.getCommandLine)
 			if !WinUtilities.isVisible(this.gui.hwnd)
 				this.data.currentWinInfo.InsertAt(1, WinUtilities.getWindowInfo(this.gui.Hwnd, this.config.getCommandLine))
 		}
@@ -497,8 +498,6 @@ class WindowManager {
 				})
 			case "Change Window Transparency":
 				this.transparencyGUI(wHandles)
-			; this.winSubMenu.Add("Spread Windows on all Screens", this.menuHandler.Bind(this))
-			; this.winSubMenu.Add("Spread Windows per Screen", this.menuHandler.Bind(this))
 			case "Move Windows to Position":
 				pg := Gui('AlwaysOnTop +ToolWindow +Owner' this.gui.hwnd, "Choose Position")
 				pg.OnEvent("Close", (*) => pg.Destroy())
@@ -521,8 +520,25 @@ class WindowManager {
 						WinMove(x?, y?, w?, h?, wHandle)
 					pg.Destroy()
 				}
-			case "Spread Windows":
-				tileWindows(wHandles)
+			case "Tile Windows":
+				DesktopState.takeSnapshot("TileBackup_" FormatTime(A_Now, "HH:mm:ss"))
+				switch MsgBoxAsGui.fromConfig({
+					text: "Snapshot of desktop stored in DesktopState.`nTile Windows?", 
+					title: "Confirm Dialog", 
+					buttonStyle: 0x7, 
+					defaultButton: 4, 
+					wait: true, 
+					buttonNames: ["Vertically", "Horizontally", "Cascade", "Cancel"]
+				}).result {
+					case "Vertically":
+						WinUtilities.tileWindows(wHandles)
+					case "Horizontally":
+						WinUtilities.tileWindows(wHandles,1)
+					case "Cascade":
+						WinUtilities.cascadeWindows(wHandles)
+				}
+			case "Randomly Spread Windows":
+				WinUtilities.spreadWindows(wHandles)
 			default: ; custom functions
 				if (this.menus.customFunctions.Has(itemName))
 					for i, wHandle in wHandles
@@ -545,7 +561,7 @@ class WindowManager {
 		}
 		if (itemName == this.columns.commandLine.name) {
 			if (this.config.getCommandLine := !this.config.getCommandLine)
-				WinUtilities.getAllWindowInfo(this.config.detectHiddenWindows, this.config.useBlacklist ? this.config.blacklist : [], true)
+				WinUtilities.getAllWindowInfo(,this.config.detectHiddenWindows, this.config.useBlacklist ? this.config.blacklist : [], true)
 		}
 		this.guiListviewCreate(true,false)
 	}
@@ -789,7 +805,7 @@ class WindowManager {
 			"Copy Window Title", "View Command Line", "View Window Text", "View Properties", "View Program Folder"
 		]
 		menus.subMenuFunctionNames := [
-			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Move Windows to Position", "Spread Windows", "Spread Windows on all Screens", "Spread Windows per Screen"]
+			"Change Window Transparency", "Move Windows to Monitor 1", "Move Windows to Monitor 2", "Move Windows to Position", "Randomly Spread Windows", "Tile Windows"]
 		menus.subMenuToggles := [
 			["Toggle Window Lock", "Set Window Lock", "Remove Window Lock"],
 			["Toggle Title Bar", "Add Title Bar", "Remove Title Bar"],
