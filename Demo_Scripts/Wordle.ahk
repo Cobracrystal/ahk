@@ -10,7 +10,7 @@ class Wordle {
 
 	static validGuesses := strSplitOnNewLine(FileRead(A_LineFile "\..\..\script_files\Test\valid-wordle-words.txt", "UTF-8"))
 	static validAnswers := strSplitOnNewLine(FileRead(A_LineFile "\..\..\script_files\Test\wordle-answers-alphabetical.txt", "UTF-8"))
-	static completeWordMap := mapFromArrays(this.validGuesses, this.validGuesses)
+	static completeWordMap := mapFromArrays(this.validGuesses, this.validGuesses, 0)
 	static enum := {
 		grey: 0,
 		green: 1,

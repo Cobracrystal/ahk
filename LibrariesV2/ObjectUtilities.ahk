@@ -698,11 +698,13 @@ objChain(objects*) {
 }
 
 objGetEnumerator(obj, getEnumFunction := false, numberParams?) {
-	enum := (obj is Array || obj is Map || obj is ComValue) ? obj : ObjOwnProps(obj)
+	enumerableObj := (obj is Array || obj is Map || obj is ComValue) ? obj : ObjOwnProps(obj)
 	if !getEnumFunction
-		return enum
+		return enumerableObj
 	try
-		enum := enum.__Enum(numberParams?)
+		enum := enumerableObj.__Enum(numberParams?)
+	catch
+		return enumerableObj
 	return enum
 }
 
@@ -1373,12 +1375,13 @@ mapChangeCaseSense(mapObject, caseSenseValue := true, defaultValue?) {
  * @param valueArray 
  * @returns {Map} 
  */
-mapFromArrays(keyArray, valueArray) {
+mapFromArrays(keyArray, valueArray, caseSense := true) {
 	if (!(keyArray is Array) || !(valueArray is Array))
 		throw(TypeError("mapFromArrays expected Arrays, got " Type(keyArray) ", " Type(valueArray)))
 	else if (keyArray.Length != valueArray.Length)
 		throw(ValueError("mapFromArrays expected Arrays of equal Length, got Lengths " keyArray.Length ", " valueArray.Length))
 	newMap := Map()
+	newMap.CaseSense := caseSense
 	for k, v in objZip(keyArray, valueArray)
 		newMap[k] := v
 	return newMap
