@@ -103,16 +103,16 @@ class MsgBoxAsGui {
 	 * @param {String} title The title to display.
 	 * @param {Integer|String} buttonStyle Button Style. May be 1,2,3,4,5,6 or any values defined in MsgBoxAsGui.BUTTON_STYLE_ALIASES. If both buttonNames and this option are set, buttonNames takes precedence
 	 * @param {Integer} defaultButton The number of the button which will be activated when pressing Enter. 1-Indexed.
-	 * @param {Integer} wait Whether the Call will return immediately or wait until the user has closed the MsgBox by closing it directly or selecting an option. This option uses WinWaitClose. While usually the class instance object is returned, if this option is set to true, the result is returned instead.
-	 * @param {Func} funcObj A function to be called when the GUI is closed through any means. Must have one parameter with which the result (the name of the button, ie "Yes", "Cancel") is returned. If the GUI is closed, it is called with the value "Cancel".
-	 * @param {Integer} owner HWND of the owner of the msgbox.
-	 * @param {Integer} addCopyButton Whether to add an extra button that, when clicked, copies the msgbox contents.
+	 * @param {Boolean} wait Whether the Call will return immediately or wait until the user has closed the MsgBox by closing it directly or selecting an option. This option uses WinWaitClose. While usually the class instance object is returned, if this option is set to true, the result is returned instead.
+	 * @param {Func?} funcObj A function to be called when the GUI is closed through any means. Must have one parameter with which the result (the name of the button, ie "Yes", "Cancel") is returned. If the GUI is closed, it is called with the value "Cancel".
+	 * @param {Integer?} owner HWND of the owner of the msgbox.
+	 * @param {Boolean?} addCopyButton Whether to add an extra button that, when clicked, copies the msgbox contents.
 	 * @param {Array} buttonNames An array of custom button names.
-	 * @param icon 
-	 * @param timeout 
-	 * @param maxCharsVisible 
-	 * @param maxTextWidth 
-	 * @returns {String | Class Instance} 
+	 * @param {Array|String|Integer} icon 
+	 * @param {Integer?} timeout 
+	 * @param {Integer?} maxCharsVisible 
+	 * @param {Integer?} maxTextWidth 
+	 * @returns {MsgBoxAsGui} Always returns the instance on which to use .result or any other property
 	 */
 	__New(text := "Press OK to continue", title := A_ScriptName, buttonStyle := 0, defaultButton := 1, wait := false, funcObj?, owner?, addCopyButton := false, buttonNames := [], icon?, timeout?, maxCharsVisible?, maxTextWidth?) {
 		if MsgBoxAsGui.BUTTON_STYLE_ALIASES.Has(buttonStyle)

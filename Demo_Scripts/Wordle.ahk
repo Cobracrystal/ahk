@@ -46,13 +46,14 @@ class Wordle {
 			hwnd := 0
 			Loop(6) {
 				word := InputBox("Enter Guess:").Value
-				word := StrUpper(word)
+				word := StrLower(word)
 				while (!IsAlpha(word) || StrLen(word) != 5 || !Wordle.completeWordMap.Has(word)) {
 					ib := InputBox("Invalid. Try Again:", "Guess Box")
 					if ib.Result == "Cancel"
 						break 2
 					word := ib.Value
 				}
+				word := StrUpper(word)
 				if WinExist(hwnd)
 					WinClose(hwnd)
 				guesses.push(word)
@@ -257,13 +258,13 @@ class Wordle {
 		}
 
 		static getPatternID(word, solution) {
-			hash := 0
+			id := 0
 			word := word is Array ? word.Clone() : StrSplit(word)
 			solution := solution is Array ? solution.Clone() : StrSplit(solution)
 			Loop(5) {
 				i := 6-A_Index
 				if word[i] == solution[i] {
-					hash += 3**(A_Index-1) * 1
+					id += 3**(A_Index-1) * 1
 					word[i] := 0
 					solution.RemoveAt(i)
 				}
@@ -272,14 +273,14 @@ class Wordle {
 				if char != 0 {
 					for pos2, char2 in solution {
 						if char == char2 {
-							hash += 3**(5-pos) * 2
+							id += 3**(5-pos) * 2
 							solution.RemoveAt(pos2)
 							break
 						}
 					}
 				}
 			}
-			return hash
+			return id
 		}
 	}
 	
