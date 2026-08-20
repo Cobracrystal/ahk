@@ -1,10 +1,14 @@
 /**
- * Given a function fn, returns the largest possible value in given range where fn returns true.
+ * Given a function fn, returns the largest possible value in given range where fn returns true, or lower if there is no such value
  * @param fn 
  * @param {Integer} lower 
  * @param {Integer} upper 
  */
 binarySearch(fn, lower := 0, upper := 100000) {
+	if fn(upper)
+		return upper
+	if !fn(lower)
+		return lower
 	n := lower + (upper - lower)//2
 	while(true) {
 		if (Abs(lower - upper) <= 1)
@@ -15,6 +19,8 @@ binarySearch(fn, lower := 0, upper := 100000) {
 			upper := n
 		n := lower + (upper - lower)//2
 	}
+	if fn(upper) ; one last check
+		return upper
 	return n
 }
 
@@ -88,6 +94,8 @@ strReverse(str) {
 	loop parse str
 		result := A_LoopField . (result ?? '')
 	return result
+	; dllCall("msvcrt.dll\_wcsrev","wstr",str,"CDECL")
+	; return str
 }
 
 strReverseGraphemes(str) {
