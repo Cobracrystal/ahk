@@ -45,8 +45,7 @@ class Wordle {
 				possibleSolutions := wordSpace
 			hwnd := 0
 			Loop(6) {
-				word := InputBox("Enter Guess:").Value
-				word := StrLower(word)
+				word := InputBox("Enter Guess #" A_Index).Value
 				while (!IsAlpha(word) || StrLen(word) != 5 || !Wordle.completeWordMap.Has(word)) {
 					ib := InputBox("Invalid. Try Again:", "Guess Box")
 					if ib.Result == "Cancel"

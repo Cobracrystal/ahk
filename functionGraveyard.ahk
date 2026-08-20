@@ -290,26 +290,6 @@ class Graveyard {
 		*/
 	}
 
-	static objIterate(o,f) { ; this could be a oneliner
-		return (
-			t(o,f,fl,en,*) => (
-				en(&i, &e) ? t(
-					o,
-					f,
-					fl,
-					en,
-					fl ? o[i] := f(e) : o.%i% := f(e)
-				) : o
-			),
-			t(
-				o.Clone(),
-				f,
-				fl := (o is Array || o is Map),
-				fl ? o.__Enum(2) : o.OwnProps().__Enum(2)
-			)
-		)
-	}
-
 	static printCompareFolders(folder1, folder2, sortBy := "size") {
 		comp := folderGetDiffs(folder1, folder2)
 		comp := objSort(comp, a => a.%sortBy%, sortBy == "size" ? "N A" : "")
@@ -326,25 +306,27 @@ class Graveyard {
 		print("Total count: "  comp.Length)
 	}
 
-	static ffmpeg_convertToGif(filePath) {
-		static template1 := 'ffmpeg -i "{1}" -y -vf "palettegen" "{2}\palette_{3}.png"'
-		static template2 := 'ffmpeg -i "{1}" -i "{2}\palette_{3}.png" -filter_complex "paletteuse" -loop 0 -y "{2}\{4}.gif"'
-		static template3 := 'rm "{1}\palette_{2}.png"'
-		static printer := (t,*) => print(t)
-		if !getSplitPath(filePath).drive
-			filePath := A_WorkingDir "\" LTrim(filePath, "\")
-		f := getSplitPath(filePath)
-		time := A_TickCount
-		cmd1 := Format(template1, f.path, f.dir, time)
-		cmd2 := Format(template2, f.path, f.dir, time, f.nameNoExt)
-		cmd3 := Format(template3, f.dir, time)
-		CmdStdOutAsync(cmd1,,printer,, (*) => (
-			CmdStdOutAsync(cmd2,,printer,, (*) => (
-				CmdStdOutAsync(cmd3,,printer,, (*) => (
-					print("Done!")
+	class FFMPEG {
+		static convertToGif(filePath) {
+			static template1 := 'ffmpeg -i "{1}" -y -vf "palettegen" "{2}\palette_{3}.png"'
+			static template2 := 'ffmpeg -i "{1}" -i "{2}\palette_{3}.png" -filter_complex "paletteuse" -loop 0 -y "{2}\{4}.gif"'
+			static template3 := 'rm "{1}\palette_{2}.png"'
+			static printer := (t,*) => print(t)
+			if !getSplitPath(filePath).drive
+				filePath := A_WorkingDir "\" LTrim(filePath, "\")
+			f := getSplitPath(filePath)
+			time := A_TickCount
+			cmd1 := Format(template1, f.path, f.dir, time)
+			cmd2 := Format(template2, f.path, f.dir, time, f.nameNoExt)
+			cmd3 := Format(template3, f.dir, time)
+			CmdStdOutAsync(cmd1,,printer,, (*) => (
+				CmdStdOutAsync(cmd2,,printer,, (*) => (
+					CmdStdOutAsync(cmd3,,printer,, (*) => (
+						print("Done!")
+					))
 				))
 			))
-		))
+		}
 	}
 
 	class AO3 {
@@ -687,7 +669,7 @@ class Graveyard {
 
 	
 
-	class SuperSeded {
+	class Superseded {
 		; replaced with dllcall
 		static convertFromBaseStrAhkNative(str, radix) {
 			str := Trim(str)
@@ -727,5 +709,45 @@ class Graveyard {
 			}
 			return num
 		}
+
+		; apart from being unreadable, this is also 5x slower than just a for-loop
+		static objIterate(o,f) => (t(o,f,fl,en,*) => (en(&i, &e) ? t(o,f,fl,en,fl ? o[i] := f(e) : o.%i% := f(e)) : o),t(o.Clone(),f,fl := (o is Array || o is Map),fl ? o.__Enum(2) : o.OwnProps().__Enum(2)))
+		/* 
+		static objIterateLong(obj,givenFunc) {
+			return (
+				recursive(obj,givenFunc,flagIsIterable,enum,*) => (
+					enum(&i, &e) ? recursive(
+						obj,
+						givenFunc,
+						flagIsIterable,
+						enum,
+						flagIsIterable ? obj[i] := givenFunc(e) : obj.%i% := givenFunc(e)
+					) : obj
+				),
+				recursive(
+					obj.Clone(),
+					givenFunc,
+					flagIsIterable := (obj is Array || obj is Map),
+					flagIsIterable ? obj.__Enum(2) : obj.OwnProps().__Enum(2)
+				)
+			)
+		}
+		; */
+		/* 
+		static objIterateAsFunc(obj,transformer) {
+			flagIsArrLike := (obj is Array || obj is Map)
+			enum := flagIsArrLike ? obj.__Enum(2) : obj.OwnProps().__Enum(2)
+			return recursive(obj.Clone())
+			; function def
+			recursive(obj,*) {
+				if !enum(&i, &e)
+					return obj
+				else
+					return recursive(obj,
+						flagIsArrLike ? obj[i] := transformer(e) : obj.%i% := transformer(e)
+					)
+			}
+		}
+		; */
 	}
 }
