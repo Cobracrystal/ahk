@@ -180,13 +180,13 @@ Launch_App2:: ; Show Folderswitch Menu
 	TransparentTaskbar.setTimer("T")
 }
 
-^+F11:: { ; Gives Key History
-	DetectHiddenWindows(1)
-	KeyHistory()
-	;	PostMessage(0x111, 65409,,, A_ScriptHwnd) ; this works too???
-}
+; ^+F11:: { ; Gives Key History
+; 	DetectHiddenWindows(1)
+; 	KeyHistory()
+; 	;	PostMessage(0x111, 65409,,, A_ScriptHwnd) ; this works too???
+; }
 
-^+F10:: {	; YTDL GUI
+^F9:: {	; YTDL GUI
 	YoutubeDLGui.toggleGui("T")
 }
 
