@@ -111,7 +111,7 @@ ExecHelperScript(expression, wait := true, void := false) {
 	input .= '#Include "' A_LineFile '\.."`n'
 	input .= '#Include "*i BasicUtilities.ahk"`n'
 	input .= '#Include "*i MathUtilities.ahk"`n'
-	if (void || RegexMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegexMatch(expression, 'i)print(?:\(.*\)|\s+.*)') || RegexMatch(expression, 'i)\.Show\(.*\)') || RegexMatch(expression, 'i)A_Clipboard\s*.?='))
+	if (void || RegExMatch(expression, 'i)FileAppend\(.*,\s*\"\*\"\)') || RegExMatch(expression, 'i)MsgBox(?:AsGui)?\(.+\)') || RegExMatch(expression, 'i)print(?:\(.*\)|\s+.*)') || RegExMatch(expression, 'i)\.Show\(.*\)') || RegExMatch(expression, 'i)A_Clipboard\s*.?='))
 		input .= expression
 	else
 		input .= 'print(' expression ',,false,true)'
@@ -133,8 +133,7 @@ runAsAdmin(scriptFile := A_ScriptFullPath) {
 	params := ""
 	for i, e in A_Args  ; For each parameter:
 		params .= A_Space . e
-	if !A_IsAdmin
-	{
+	if !A_IsAdmin {
 		if A_IsCompiled
 			v := DllCall("shell32\ShellExecute", "uint", 0, "str", "RunAs", "str", scriptFile, "str", params, "str", A_WorkingDir, "int", 1)
 		else
@@ -163,7 +162,7 @@ cmdRet(sCmd, callBackFuncObj?, encoding := "CP" . DllCall("GetOEMCP", "UInt")) {
 		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		DllCall("CloseHandle", "Ptr", hPipeWrite)
-		throw(OSError("CreateProcess has failed"))
+		throw (OSError("CreateProcess has failed"))
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
@@ -208,7 +207,7 @@ cmdRetAsync(sCmd, callBackFuncObj?, encoding := "CP" . DllCall('GetOEMCP', 'UInt
 		"Ptr", 0, "Ptr", 0, "Ptr", STARTUPINFO, "Ptr", PROCESS_INFORMATION) {
 		DllCall("CloseHandle", "Ptr", hPipeRead)
 		DllCall("CloseHandle", "Ptr", hPipeWrite)
-		throw(OSError("CreateProcess has failed"))
+		throw (OSError("CreateProcess has failed"))
 	}
 	DllCall("CloseHandle", "Ptr", hPipeWrite)
 	sTemp := Buffer(4096)
@@ -241,7 +240,7 @@ cmdRetAsync(sCmd, callBackFuncObj?, encoding := "CP" . DllCall('GetOEMCP', 'UInt
 
 execShell(command) {
 	shell := ComObject("WScript.Shell")
-	exec := shell.Exec(A_Comspec " /C " command)
+	exec := shell.Exec(A_ComSpec " /C " command)
 	return exec.StdOut.ReadAll()
 }
 
@@ -249,7 +248,7 @@ menu_RemoveSpace(menuHandle, applyToSubMenus := true) {
 	; http://msdn.microsoft.com/en-us/library/ff468864(v=vs.85).aspx
 	static MIsize := (4 * 4) + (A_PtrSize * 3)
 	MI := Buffer(MIsize, 0)
-	Numput("UInt", MIsize, MI, 0)
+	NumPut("UInt", MIsize, MI, 0)
 	NumPut("UInt", 0x00000010, MI, 4) ; MIM_STYLE = 0x00000010
 	DllCall("User32.dll\GetMenuInfo", "Ptr", menuHandle, "Ptr", MI, "UInt")
 	if (applyToSubMenus)
@@ -270,7 +269,7 @@ colorDialog(initialColor := 0, hwnd := 0, disp := false, startingColors*) {
 	disp := disp ? 0x3 : 0x1 ; init disp / 0x3 = full panel / 0x1 = basic panel
 
 	if (startingColors.Length > 16)
-		throw(Error("Too many custom colors.  The maximum allowed values is 16."))
+		throw (Error("Too many custom colors.  The maximum allowed values is 16."))
 
 	Loop (16 - startingColors.Length)
 		startingColors.Push(0) ; fill out custColorObj to 16 values
@@ -279,7 +278,7 @@ colorDialog(initialColor := 0, hwnd := 0, disp := false, startingColors*) {
 	CHOOSECOLOR := Buffer((p == 4) ? 36 : 72, 0) ; init dialog
 
 	for i, e in startingColors
-		NumPut("UInt", format_argb(e), CUSTOM, (i-1) * 4)
+		NumPut("UInt", format_argb(e), CUSTOM, (i - 1) * 4)
 
 	NumPut("UInt", CHOOSECOLOR.size, CHOOSECOLOR, 0)             ; lStructSize
 	NumPut("UPtr", hwnd, CHOOSECOLOR, p)             ; hwndOwner
@@ -307,43 +306,43 @@ colorDialog(initialColor := 0, hwnd := 0, disp := false, startingColors*) {
 
 colorGradientArr(amount, colors*) {
 	sColors := [], gradient := []
-	if (amount < colors.Length-2)
+	if (amount < colors.Length - 2)
 		return 0
-	else if (amount == colors.Length-2)
+	else if (amount == colors.Length - 2)
 		return colors
 	for index, color in colors
-		sColors.push({r:(color & 0xFF0000) >> 16, g: (color & 0xFF00) >> 8, b:color & 0xFF})
+		sColors.push({ r: (color & 0xFF0000) >> 16, g: (color & 0xFF00) >> 8, b: color & 0xFF })
 	; first color given, format with 6 padded 0s in case of black
-	gradient.push(format("0x{:06X}", colors[1]))
+	gradient.push(Format("0x{:06X}", colors[1]))
 	; amount of color gradients to perform
-	segments := colors.Length-1
-	Loop(amount) {
+	segments := colors.Length - 1
+	Loop (amount) {
 		; current gradient segment we are in
-		segment := floor((A_Index/(amount+1))*segments)+1
+		segment := Floor((A_Index / (amount + 1)) * segments) + 1
 		; percentage progress in the current gradient segment as decimal
-		segProgress := ((A_Index/(amount+1)*segments)-segment+1)
+		segProgress := ((A_Index / (amount + 1) * segments) - segment + 1)
 		; RGB obtained via percentage * (end of gradient - start of gradient), then adding current RGB value again.
-		r := round((segProgress * (sColors[segment+1].r-sColors[segment].r))+sColors[segment].r)
-		g := round((segProgress * (sColors[segment+1].g-sColors[segment].g))+sColors[segment].g)
-		b := round((segProgress * (sColors[segment+1].b-sColors[segment].b))+sColors[segment].b)
-		gradient.Push(format("0x{1:02X}{2:02X}{3:02X}", r, g, b))
+		r := Round((segProgress * (sColors[segment + 1].r - sColors[segment].r)) + sColors[segment].r)
+		g := Round((segProgress * (sColors[segment + 1].g - sColors[segment].g)) + sColors[segment].g)
+		b := Round((segProgress * (sColors[segment + 1].b - sColors[segment].b)) + sColors[segment].b)
+		gradient.Push(Format("0x{1:02X}{2:02X}{3:02X}", r, g, b))
 	}
 	; last color given, same as first
-	gradient.Push(format("0x{:06X}", colors[-1]))
+	gradient.Push(Format("0x{:06X}", colors[-1]))
 	; return array of amount+2 colors
 	return gradient
 }
 
 rainbowArr(num, intensity := 0xFF) {
 	if (num < 7)
-		throw(ValueError("Invalid num"))
+		throw (ValueError("Invalid num"))
 	if (intensity < 0 || intensity > 255)
-		throw(ValueError("Invalid Intensity"))
-	intensity := format("{:#x}", intensity)
+		throw (ValueError("Invalid Intensity"))
+	intensity := Format("{:#x}", intensity)
 	r := intensity * 0x010000
 	g := intensity * 0x000100
 	b := intensity * 0x000001
-	return colorGradientArr(num-2, r, r|g//2, r|g, g, g|b, g//2|b, b, b|r//2, b|r, b//2|r, r)
+	return colorGradientArr(num - 2, r, r | g // 2, r | g, g, g | b, g // 2 | b, b, b | r // 2, b | r, b // 2 | r, r)
 }
 
 /**
@@ -374,13 +373,13 @@ format_argb(color, reverse := true, alpha?) {
 	if (reverse)
 		color := (color & 0xFF) << 16 | (color & 0xFF00) | ((color & 0xFF0000) >> 16)
 	;	clr := (clr >> 16 & 0xFF) | (clr & 0xFF00) | (clr << 16 & 0xFF0000) ; equivalent to above
-	clrAlpha := IsSet(alpha) ? (alpha == -1 ? 0 : alpha): (color & 0xFF000000) >> 24
+	clrAlpha := IsSet(alpha) ? (alpha == -1 ? 0 : alpha) : (color & 0xFF000000) >> 24
 	return (clrAlpha << 24 | color)
 }
 
 timedTooltip(text := "", durationMS := 1000, x?, y?, whichTooltip?) {
 	ToolTip(text, x?, y?, whichTooltip?)
-	SetTimer(IsSet(whichTooltip) ? stopTooltip.bind(whichTooltip) : stopTooltip, -durationMS)
+	SetTimer(IsSet(whichTooltip) ? stopTooltip.Bind(whichTooltip) : stopTooltip, -durationMS)
 
 	stopTooltip(whichTooltip?) {
 		ToolTip(, , , whichTooltip?)
@@ -399,7 +398,7 @@ scrollbarGetPosition(ctrlHwnd) {
 	static SB_BOTH := 3
 	static SB_BOTTOM := 7
 	static WM_VSCROLL := 0x115
-	
+
 	NumPut("UInt", 28, ScrollInfo := Buffer(28, 0))
 	NumPut("UInt", SIF_ALL, ScrollInfo, 4)
 	DllCall("GetScrollInfo", "uint", ctrlHwnd, "int", SB_VERT, "Ptr", ScrollInfo)
@@ -429,10 +428,10 @@ base64Encode(str, encoding := "UTF-8") {
 
 	binary := strBuffer(str, encoding)
 	if !(DllCall("crypt32\CryptBinaryToStringW", "Ptr", binary, "UInt", binary.Size - 1, "UInt", (CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF), "Ptr", 0, "UInt*", &size := 0))
-		throw(OSError())
+		throw (OSError())
 	base64 := Buffer(size << 1, 0)
 	if !(DllCall("crypt32\CryptBinaryToStringW", "Ptr", binary, "UInt", binary.Size - 1, "UInt", (CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF), "Ptr", base64, "UInt*", size))
-		throw(OSError())
+		throw (OSError())
 	return StrGet(base64)
 }
 
@@ -440,10 +439,10 @@ base64Decode(base64, encoding := "UTF-8") {
 	static CRYPT_STRING_BASE64 := 0x00000001
 
 	if !(DllCall("crypt32\CryptStringToBinaryW", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", 0, "UInt*", &size := 0, "Ptr", 0, "Ptr", 0))
-		throw(OSError())
+		throw (OSError())
 	str := Buffer(size)
 	if !(DllCall("crypt32\CryptStringToBinaryW", "Str", base64, "UInt", 0, "UInt", CRYPT_STRING_BASE64, "Ptr", str, "UInt*", size, "Ptr", 0, "Ptr", 0))
-		throw(OSError())
+		throw (OSError())
 	return StrGet(str, "UTF-8")
 }
 
@@ -459,7 +458,7 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 	)
 	if (async) {
 		if (callBackFuncObj == "")
-			throw(ValueError("No callback function provided for async request."))
+			throw (ValueError("No callback function provided for async request."))
 		whr := ComObject("Msxml2.XMLHTTP")
 		whr.Open(method, url, true)
 		if IsSet(headers) {
@@ -503,14 +502,14 @@ tryEditTextFile(editor := A_WinDir . "\system32\notepad.exe", params := "", *) {
 
 ; returns a microseconds-precise float representing to seconds elapsed since start of the system
 QPC() {
-	static Freq := 0, init := DllCall("QueryPerformanceFrequency", "Int64P", &Freq)
+	static freq := 0, init := DllCall("QueryPerformanceFrequency", "Int64P", &freq)
 	DllCall("QueryPerformanceCounter", "Int64P", &count := 0)
 	Return count / freq
 }
 
 timeFunctionQPC(fn, amount := 1) {
 	q := QPC()
-	Loop(amount)
+	Loop (amount)
 		fn
 	return QPC() - q
 }
@@ -523,13 +522,12 @@ timeFunctionQPC(fn, amount := 1) {
  */
 tryCatchBinarySearch(fn, lower := 1, upper := 100000) {
 	return binarySearch(newFn, lower, upper)
-	
+
 	newFn(param) {
 		try {
 			fn(param)
 			return true
-		}
-		catch 
+		} catch
 			return false
 	}
 }
@@ -538,7 +536,7 @@ doNothing(*) {
 	return
 }
 
-printAlign(value, width := 128, padChar := ' ') => print(strFill(IsObject(value) ? toString(value) : value, width,,padChar),,,,,,0)
+printAlign(value, width := 128, padChar := ' ') => print(strFill(IsObject(value) ? toString(value) : value, width, , padChar), , , , , , 0)
 pretty(value, options?, fallbackMsgbox := true) => print(value, options?, true, false, false, true, fallbackMsgbox)
 
 /**
@@ -579,7 +577,7 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		updateFallbackGui(guiPrinterInstance, value . finalChar)
 		return value
 	}
-	try 
+	try
 		FileAppend(value . finalChar, "*", options ?? "UTF-8")
 	catch Error {
 		if fallbackGui {
@@ -604,8 +602,8 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		g.AddText('x+5 yp w100 R1 vEmptyLines Hidden', '(0 Empty)')
 		cEdit := g.AddEdit('xm ys+30 BackgroundFFFFFF w600 h400 vEdit ReadOnly')
 		cEdit.GetPos(, &y := unset)
-		g.AddButton("ys-7 x194 R1 w200", "Copy Full Output").OnEvent("Click", copyAll.bind(g))
-		g.AddButton("ys-7 x398 R1 w200", "Copy Last Output").OnEvent("Click", copyValue.bind(g))
+		g.AddButton("ys-7 x194 R1 w200", "Copy Full Output").OnEvent("Click", copyAll.Bind(g))
+		g.AddButton("ys-7 x398 R1 w200", "Copy Last Output").OnEvent("Click", copyValue.Bind(g))
 		g.OnEvent('Size', (o, m, w, h) => cEdit.Move(, , w, h - y))
 		g.OnEvent('Escape', (*) => guiPrinterInstance := 0)
 		g.OnEvent('Close', (*) => guiPrinterInstance := 0)
@@ -613,8 +611,8 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
 		return g
 	}
 
-	copyValue(g,*) => A_Clipboard := lastValue
-	copyAll(g,*) => A_Clipboard := g["Edit"].Value
+	copyValue(g, *) => A_Clipboard := lastValue
+	copyAll(g, *) => A_Clipboard := g["Edit"].Value
 
 	updateFallbackGui(g, line, reset := 0) {
 		static fullOutput := ""
@@ -645,11 +643,11 @@ print(value, options?, putNewline := true, compress := true, compact := false, s
  * @param {Integer} hwndParent HWND of parent window of the windows to be tiled
  * @returns {Integer} Count of tiled windows 
  */
-tileWindows(windowArray?, tilingMode := 0x0000, tileArea?, hwndParent := 0)  {
-	static MDITILE_VERTICAL 	:= 0x0000
-	static MDITILE_HORIZONTAL 	:= 0x0001
+tileWindows(windowArray?, tilingMode := 0x0000, tileArea?, hwndParent := 0) {
+	static MDITILE_VERTICAL := 0x0000
+	static MDITILE_HORIZONTAL := 0x0001
 	static MDITILE_SKIPDISABLED := 0x0002
-	static MDITILE_ZORDER 		:= 0x0004
+	static MDITILE_ZORDER := 0x0004
 	flagTileArea := IsSet(tileArea)
 	if (flagTileArea)
 		lpRect := structRectCreate(tileArea*)
@@ -660,17 +658,16 @@ tileWindows(windowArray?, tilingMode := 0x0000, tileArea?, hwndParent := 0)  {
 		cKids := windowArray.Length
 		lpKids := Buffer(windowArray.Length * 4) ; sizeof(int) == 4
 		for i, hwnd in windowArray
-			NumPut("Int", hwnd, lpKids, 4 * (i-1))
-	}
-	else {
+			NumPut("Int", hwnd, lpKids, 4 * (i - 1))
+	} else {
 		cKids := 0
 		lpKids := 0
 	}
-	return DllCall("TileWindows", 
-		"Int", hwndParent, 
-		"UInt", tilingMode, 
-		"UInt", flagTileArea ? lpRect.Ptr : 0, 
-		"Int", cKids, 
+	return DllCall("TileWindows",
+		"Int", hwndParent,
+		"UInt", tilingMode,
+		"UInt", flagTileArea ? lpRect.Ptr : 0,
+		"Int", cKids,
 		"Int", flagCustomWindows ? lpKids.Ptr : 0
 	)
 }
