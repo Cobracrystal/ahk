@@ -130,7 +130,7 @@ class Wordle {
 		 */
 		static findFromPattern(guess, pattern, searchSpace := Wordle.validAnswers) {
 			guessArr := strsplit(guess)
-			patternArr := pattern is Array ? pattern : StrSplitUTF8(pattern)
+			patternArr := pattern is Array ? pattern : StrSplitGraphemes(pattern)
 			_green := Map()
 			_yellow := Map()
 			_grey := Map()
@@ -203,7 +203,7 @@ class Wordle {
 		static getWordsForPattern(pattern := "", solution := "", searchSpace := Wordle.validGuesses) {
 			solution := StrLower(solution)
 			solArr := StrSplit(solution)
-			patternArr := StrSplitUTF8(pattern)
+			patternArr := StrSplitGraphemes(pattern)
 			enum := this.selectEnum(patternArr)
 			_green := Map()
 			for i, n in patternArr

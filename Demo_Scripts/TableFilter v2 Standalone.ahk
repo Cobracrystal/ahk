@@ -1618,7 +1618,7 @@ stringssInStr(HayStack, SearchTexts, CaseSense, StartPos := 1, Occurence := 1) {
 
 strReverse(str) {
 	result := ""
-	for i, e in StrSplitUTF8(str)
+	for i, e in StrSplitGraphemes(str)
 		result := e . result
 	return result
 }
@@ -1641,7 +1641,7 @@ strFill(str, width, alignRight := true, char := A_Space) {
 
 strDoPerChar(text, fn := (e => e . " ")) {
 	result := ""
-	for i, e in StrSplitUTF8(text)
+	for i, e in StrSplitGraphemes(text)
 		result .= fn(e)
 	return RTrim(result)
 }
@@ -1664,7 +1664,7 @@ replaceCharacters(text, replacer) {
 		return text
 	result := ""
 	isMap := replacer is Map
-	for i, e in StrSplitUTF8(text) {
+	for i, e in StrSplitGraphemes(text) {
 		if (isMap)
 			result .= (replacer.Has(e) ? replacer[e] : e)
 		else
@@ -2001,7 +2001,7 @@ strGetContext(str, startIndex, endIndex := startIndex, radius := 15, &reachedSta
  * @param {Integer} withDelim 
  * @returns {Array} 
  */
-StrSplitUTF8(str, delim := "", omit := "", withDelim := false) {
+StrSplitGraphemes(str, delim := "", omit := "", withDelim := false) {
 	arr := []
 	skip := false
 	count := 0
@@ -6034,7 +6034,7 @@ parseHeaders(str) {
 	headersAsText := RTrim(str, "`r`n")
 	headers := Map()
 	Loop Parse headersAsText, "`n", "`r" {
-		arr := StrSplitUTF8(A_LoopField, ":")
+		arr := StrSplitGraphemes(A_LoopField, ":")
 		headers[Trim(arr[1])] := Trim(arr[2])
 	}
 	return headers
@@ -7040,7 +7040,7 @@ class TextEditMenu {
 		textModifyMenu.Add("Flip", (*) => modifySelectedText(this.flip.bind(this)))
 		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(strDoPerChar, " "))
 		textModifyMenu.Add("Add Zalgo", (*) => modifySelectedText(this.zalgo.bind(this), 5))
-		textModifyMenu.Add("Get Char Names", (*) => MsgBoxAsGui(objCollect(objDoForEach(StrSplitUTF8(fastCopy()), e => e " | " unicodeData.charName(e)), (b,e) => (b . "`n" . e)), "Character Names",,,,,,1))
+		textModifyMenu.Add("Get Char Names", (*) => MsgBoxAsGui(objCollect(objDoForEach(StrSplitGraphemes(fastCopy()), e => e " | " unicodeData.charName(e)), (b,e) => (b . "`n" . e)), "Character Names",,,,,,1))
 		;	menu_RemoveSpace(textModifyMenu.Handle) ; this also decreases vertical spacing.
 		this.menu := textModifyMenu
 	}
@@ -7050,7 +7050,7 @@ class TextEditMenu {
 	static randomCase(text) {
 		result := ""
 		c := ""
-		for i, e in StrSplitUTF8(text) {
+		for i, e in StrSplitGraphemes(text) {
 			caseFormat := Random(0, 1)
 			if (caseFormat)
 				c := StrUpper(e)
@@ -7073,7 +7073,7 @@ class TextEditMenu {
 		result := ""
 		foundAlphabets := [] ; TODO: COLLECT ENCOUNTERED ALPHABETS. THEN, IF alphnameTo is "SWAP" AND ALPHABETS ARE EXACTLY TWO, SWAP THEM. USE FOR MIRROR, FLIP ETC.
 		if (alphNameFrom == "mixed") {
-			for i, e in StrSplitUTF8(text) {
+			for i, e in StrSplitGraphemes(text) {
 				serifSymbol := e
 				if !(objContainsValue(this.dictionary["otherAlphabet"]["serif"], e))
 					for alphName, alphMap in this.dictionary["fromAlphabet"] {
@@ -7089,7 +7089,7 @@ class TextEditMenu {
 			if !(this.dictionary["fromAlphabet"].Has(alphNameFrom))
 				return text
 			alph := this.dictionary["fromAlphabet"][alphNameFrom]
-			for i, e in StrSplitUTF8(text) {
+			for i, e in StrSplitGraphemes(text) {
 				if (alph.Has(e))
 					serif .= alph[e]
 				else
@@ -7110,7 +7110,7 @@ class TextEditMenu {
 	static zalgo(str, intensity) {
 		len := this.dictionary["otherAlphabet"]["zalgo"].length
 		newStr := ""
-		for i, e in StrSplitUTF8(str) {
+		for i, e in StrSplitGraphemes(str) {
 			newStr .= e
 			Loop (intensity)
 				newStr .= this.dictionary["otherAlphabet"]["zalgo"][Random(1, len)]
@@ -7172,12 +7172,12 @@ class TextEditMenu {
 		; https://milde.users.sourceforge.net/LUCR/Math/unimathsymbols.pdf
 		; https://en.wikipedia.org/wiki/Mathematical_Alphanumeric_Symbols
 		for i, e in toStrings {
-			toAlphabet[i] := mapFromArrays(StrSplitUTF8(serif), StrSplitUTF8(e))
-			fromAlphabet[i] := mapFromArrays(StrSplitUTF8(e), StrSplitUTF8(serif))
+			toAlphabet[i] := mapFromArrays(StrSplitGraphemes(serif), StrSplitGraphemes(e))
+			fromAlphabet[i] := mapFromArrays(StrSplitGraphemes(e), StrSplitGraphemes(serif))
 		}
 		otherAlphabet := Map()
 		otherAlphabet["zalgo"] := ["̾", "̿", "̀", "́", "͂", "̓", "̈́", "ͅ", "͆", "͇", "͈", "͉", "͊", "͋", "͌", "͍", "͎", "͏", "͐", "͑", "͒", "͓", "͔", "͕", "͖", "͗", "͘", "͙", "͚", "͛", "͜", "͝", "͞", "͟", "͠", "͡", "͢", "ͣ", "ͤ", "ͥ", "ͦ", "ͧ", "ͨ", "ͩ", "ͪ", "ͫ", "ͬ", "ͭ", "ͮ"]
-		otherAlphabet["serif"] := StrSplitUTF8(serif)
+		otherAlphabet["serif"] := StrSplitGraphemes(serif)
 		; RUNES
 		runes := Map("to", Map( "DE", Map("multichar", Map(), "singlechar", Map()), 
 								"EN", Map("multichar", Map(), "singlechar", Map()),

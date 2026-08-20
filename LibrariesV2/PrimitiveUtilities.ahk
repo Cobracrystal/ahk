@@ -85,10 +85,17 @@ stringsInStr(HayStack, SearchTexts, CaseSense := 0, StartPos := 1, Occurence := 
 }
 
 strReverse(str) {
-	result := ""
-	for i, e in StrSplitUTF8(str)
-		result := e . result
+	loop parse str
+		result := A_LoopField . (result ?? '')
 	return result
+}
+
+strReverseGraphemes(str) {
+	while RegExMatch(str, "\X", &m, pos := pos ?? 1) {
+		rev := m[0] . (rev ?? '')
+		pos += StrLen(m[0])
+	}
+	return rev
 }
 
 strRotate(str, offset := 0) {
@@ -110,7 +117,7 @@ strFill(str, width, alignRight := true, char := A_Space) {
 
 strDoPerChar(text, fn := (e => e . " ")) {
 	result := ""
-	for i, e in StrSplitUTF8(text)
+	for i, e in StrSplitGraphemes(text)
 		result .= fn(e)
 	return RTrim(result)
 }
@@ -133,7 +140,7 @@ replaceCharacters(text, replacer) {
 		return text
 	result := ""
 	isMap := replacer is Map
-	for i, e in StrSplitUTF8(text) {
+	for i, e in StrSplitGraphemes(text) {
 		if (isMap)
 			result .= (replacer.Has(e) ? replacer[e] : e)
 		else
@@ -478,33 +485,23 @@ strGetContext(str, startIndex, endIndex := startIndex, radius := 15, &reachedSta
 }
 
 /**
- * Behaves exactly as strsplit without optional parameters except that it doesn't split unicode characters in two.
+ * Behaves exactly as strsplit without optional parameters except that it doesn't split unicode characters in multiples.
  * @param str 
  * @returns {Array} 
  */
-StrSplitUTF8(str) {
-	arr := []
-	skip := false
+StrSplitGraphemes(str) {
+	result := []
 	pos := 1
-	Loop Parse str {
-		if (skip) {
-			skip := false
-			continue
-		}
-		if (isClamped(Ord(A_LoopField), 0xD7FF, 0xDC00)) {
-			arr.push(A_LoopField . SubStr(str, pos + 1, 1))
-			skip := true
-			pos += 2
-			continue
-		}
-		arr.push(A_LoopField)
-		pos++
+	while RegExMatch(str, "\X", &m, pos) {
+		g := m[0]
+		result.Push(g)
+		pos += StrLen(g)
 	}
-	return arr
+	return result
 }
 
 StrLenUTF8(str) {
-	RegExReplace(str, "s).", "", &i) ; yes this is actually the fastest way to do so.
+	RegExReplace(str, "s)\X", "", &i)
 	return i
 }
 

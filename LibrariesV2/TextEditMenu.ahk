@@ -62,8 +62,13 @@ class TextEditMenu {
 		textModifyMenu.Add("Flip", (*) => modifySelectedText(this.flip.bind(this)))
 		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(strDoPerChar, " "))
 		textModifyMenu.Add("Add Zalgo", (*) => modifySelectedText(this.zalgo.bind(this), 5))
+		textModifyMenu.Add("Get Codepoint Names", (*) => MsgBoxAsGui.fromConfig({
+			text: objCollectString(StrSplit(fastCopy()), '`n', e => e " | " unicodeData.charName(e)), 
+			title: "Character Names",
+			addCopyButton: 1
+		}))
 		textModifyMenu.Add("Get Char Names", (*) => MsgBoxAsGui.fromConfig({
-			text: objCollectString(StrSplitUTF8(fastCopy()), '`n', e => e " | " unicodeData.charName(e)), 
+			text: objCollectString(StrSplitGraphemes(fastCopy()), '`n', e => e " | " unicodeData.charName(e)), 
 			title: "Character Names",
 			addCopyButton: 1
 		}))
@@ -77,7 +82,7 @@ class TextEditMenu {
 	static randomCase(text) {
 		result := ""
 		c := ""
-		for i, e in StrSplitUTF8(text) {
+		for i, e in StrSplitGraphemes(text) {
 			caseFormat := Random(0, 1)
 			if (caseFormat)
 				c := StrUpper(e)
@@ -100,7 +105,7 @@ class TextEditMenu {
 		result := ""
 		foundAlphabets := [] ; TODO: COLLECT ENCOUNTERED ALPHABETS. THEN, IF alphnameTo is "SWAP" AND ALPHABETS ARE EXACTLY TWO, SWAP THEM. USE FOR MIRROR, FLIP ETC.
 		if (alphNameFrom == "mixed") {
-			for i, e in StrSplitUTF8(text) {
+			for i, e in StrSplitGraphemes(text) {
 				serifSymbol := e
 				if !(objContainsValue(this.dictionary["otherAlphabet"]["serif"], e))
 					for alphName, alphMap in this.dictionary["fromAlphabet"] {
@@ -116,7 +121,7 @@ class TextEditMenu {
 			if !(this.dictionary["fromAlphabet"].Has(alphNameFrom))
 				return text
 			alph := this.dictionary["fromAlphabet"][alphNameFrom]
-			for i, e in StrSplitUTF8(text) {
+			for i, e in StrSplitGraphemes(text) {
 				if (alph.Has(e))
 					serif .= alph[e]
 				else
@@ -137,7 +142,7 @@ class TextEditMenu {
 	static zalgo(str, intensity) {
 		len := this.dictionary["otherAlphabet"]["zalgo"].length
 		newStr := ""
-		for i, e in StrSplitUTF8(str) {
+		for i, e in StrSplitGraphemes(str) {
 			newStr .= e
 			Loop (intensity)
 				newStr .= this.dictionary["otherAlphabet"]["zalgo"][Random(1, len)]
@@ -215,12 +220,12 @@ class TextEditMenu {
 		toAlphabet := Map()
 		fromAlphabet := Map()
 		for i, e in unicodeFonts {
-			toAlphabet[i] := mapFromArrays(StrSplitUTF8(serif), StrSplitUTF8(e))
-			fromAlphabet[i] := mapFromArrays(StrSplitUTF8(e), StrSplitUTF8(serif))
+			toAlphabet[i] := mapFromArrays(StrSplitGraphemes(serif), StrSplitGraphemes(e))
+			fromAlphabet[i] := mapFromArrays(StrSplitGraphemes(e), StrSplitGraphemes(serif))
 		}
 		otherAlphabet := Map()
 		otherAlphabet["zalgo"] := zalgo
-		otherAlphabet["serif"] := StrSplitUTF8(serif)
+		otherAlphabet["serif"] := StrSplitGraphemes(serif)
 		; RUNES
 		runes := Map(
 			"to", Map(
