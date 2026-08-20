@@ -780,7 +780,9 @@ customExit(ExitReason, ExitCode) {
 	for e in ["^", "´", "``"]
 		Hotkey(e, "Toggle")
 }
+#HotIf WinActive("ahk_exe explorer.exe")
 ^BackSpace::Send("{Ctrl Down}{Shift Down}{Left}{Ctrl Up}{Shift Up}{Backspace}")
+#HotIf 
 
 :*?:=/=::≠
 :*?:+-::±
