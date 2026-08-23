@@ -73,7 +73,8 @@ class SongDownloader {
 			}).result == "No")
 				return
 			if (A_LineFile == A_ScriptFullPath) {
-				this.getMetadataFromLinks(str, MsgBoxAsGui.BindConfig({
+				this.getMetadataFromLinks(str, (metadataArr) => MsgBoxAsGui.fromConfig({
+					text: toString(metadataArr,0,0),
 					title: "Metadata",
 					defaultButton: 0,
 					addCopyButton: true,
@@ -91,15 +92,15 @@ class SongDownloader {
 	static downloadSongWithGui(songLink, configOverride?) {
 		ToolTip("Loading Metadata...")
 		this.data.ongoingOperations += 1
-		this.getRawMetadataFromLinks(songLink, callback, false, configOverride?)
+		this.getMetadataFromLinks(songLink, callback, true, false, configOverride?)
 		
-		callback(rawDataString) {
-			metaData := this.parseMetadata(rawDataString, true)
+		callback(metaDataArr) {
 			ToolTip()
-			if !metaData || !objGetValueCount(metadata)
+			if !metaDataArr || !objGetValueCount(metaDataArr)
 				return 0
 			this.data.ongoingOperations -= 1
-			this.songDLGui(metaData)
+			for i, data in metaDataArr
+				this.songDLGui(data)
 		}
 	}
 
@@ -217,11 +218,12 @@ class SongDownloader {
 		}
 	}
 	
-	static getMetadataFromLinks(songLinks, callback, allData := false, withPlaylist := false) {
-		this.getRawMetadataFromLinks(songLinks, rawDataString => callback(this.parseMetadata(rawDataString, allData)), withPlaylist)
+	; Wrapper for this.getMetadataJSONStrFromLinks => this.parseMetadata => callback
+	static getMetadataFromLinks(songLinks, callback, keepJsonData := false, withPlaylist := false, configOverride?) {
+		this.getMetadataJSONStrFromLinks(songLinks, rawDataString => callback(this.parseMetadata(rawDataString, keepJsonData)), withPlaylist, configOverride?)
 	}
 
-	static getRawMetadataFromLinks(songLinks, returnCallback, withPlaylist := false, configOverride?) {
+	static getMetadataJSONStrFromLinks(songLinks, returnCallback, withPlaylist := false, configOverride?) {
 		if !(songLinks is Array)
 			songLinks := StrSplit(Trim(songLinks, "`n`r"), "`n", "`r")
 		songLinks := objDoForEach(songLinks, (e => this.constructLink(e)))
@@ -268,13 +270,14 @@ class SongDownloader {
 				isError := InStr(jsonStr, "ERROR:") ? true : false
 				if isError { ; if its a warning, metadata should still be parsed next iteration
 					lnk := RegExMatch(jsonStr, "\[youtube\]\s+([A-Za-z0-9_-]{11}):", &o) ? o[1] : ""
-					metaData.push({ link: this.constructLink(lnk), title: "", artist: "", album:"", genre:"",description:"",error:1, shortJson: jsonStr})
+					metaData.push({ link: this.constructLink(lnk), title: "", artist: "", album:"", genre:"",description:"", error:1, shortJson: jsonStr})
 				}
 				receivedBadInfo.push(jsonStr)
 				continue
 			}
 			title := videoData.Has("track") ? videoData["track"] : videoData["title"]
 			album := videoData.Has("album") ? videoData["album"] : ""
+			track := videoData.Has("playlist_index") ? videoData["playlist_index"] : unset
 			genre := ""
 			if (InStr(title, "Nightcore")) {
 				if RegExMatch(title, "i)Nightcore\s*(?:-|–|—)\s*")
@@ -335,8 +338,9 @@ class SongDownloader {
 				artist: Trim(artist),
 				album: Trim(album),
 				genre: Trim(genre),
+				track: track?,
 				description: videoData["description"],
-				shortJson: keepJsonData ? videoData : unset,
+				shortJson: keepJsonData ? jsongo.Stringify(videoData) : unset,
 				thumbnails: mapToObj(thumbnails)
 			})
 		}
@@ -344,8 +348,6 @@ class SongDownloader {
 			str := objCollectString(receivedBadInfo, '`n')
 			print("Received issues while parsing Metadata. Received`n`n" str)
 		}
-		if (metaData.Length == 1)
-			metaData := metaData[1]
 		return metaData
 	}
 
@@ -476,6 +478,7 @@ class SongDownloader {
 			songData := {
 				title: gData.Title, artist: gData.Artist,
 				album: gData.Album, genre: gData.Genre,
+				track: data.HasOwnProp("track") ? data.track : unset,
 				link: gData.Link, description: Trim(data.Description, " `t`r`n")
 			}
 			config := availableConfigs[objContainsValue(availableConfigs, gData.CurrentConfig, v => v.name)]
@@ -652,11 +655,11 @@ class SongDownloader {
 			if (!metadata.link)
 				return MsgBoxAsGui("No Link set to retrieve thumbnail from and retrieving it from metadata is not yet implemented.")
 			timedTooltip('Retrieving thumbnails...')
-			this.getRawMetadataFromLinks(metadata.link, callback.bind(metadata))
+			this.getMetadataFromLinks(metadata.link, callback.bind(metadata))
 			return
 
-			callback(metadata, dataStr) {
-				metadata.thumbnails := this.parseMetadata(dataStr).thumbnails
+			callback(oldMetadata, newMetadataArr) { ; assume metadata.link is not a playlist obviously
+				oldMetadata.thumbnails := newMetadataArr[1].thumbnails
 				if retry
 					this.thumbnailPreviewer(metadata, false)
 			}
@@ -884,7 +887,8 @@ class SongDownloader {
 				{ option: this.ffmpegoptions.id3v2_version, param: "3"}
 			]
 			for tag in this.settings.metadataFields
-				profile.push( { option: this.ffmpegoptions.metadata, param: tag "=" metadata.%tag%})
+				if metadata.HasOwnProp(tag) && metadata.%tag%
+					profile.push( { option: this.ffmpegoptions.metadata, param: tag "=" metadata.%tag%})
 			for tag in extraFields
 				profile.push( { option: this.ffmpegoptions.metadata, param: tag "=" metadata.%tag%})
 			return profile
@@ -994,7 +998,7 @@ class SongDownloader {
 		get {
 			profile := []
 			for fieldName in this.settings.metadataFields {
-				if (songData.%fieldName%) {
+				if (songData.HasOwnProp(fieldName) && songData.%fieldName%) {
 					parser_string := Format("#{}#:#%(meta_{})s#", StrReplace(songData.%fieldName%, ":", "\:"), fieldName)
 					profile.push({ option: this.ytdloptions.parse_metadata, param: parser_string })
 				}
@@ -1095,15 +1099,15 @@ class SongDownloader {
 	}
 
 	static defaultSettings => {
-		debug: false,
+		debug: true,
 		simulate: false,
 		useAliases: true,
 		useVisibleCMD: false,
 		outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
-		outputSubFolder: Format("p{:03}", 79),
+		outputSubFolder: Format("p{:03}", 80),
 		logMetadata: true,
 		logFolder: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\Logs"),
-		metadataFields: ["title", "artist", "album", "genre"],
+		metadataFields: ["title", "artist", "album", "genre", "track"],
 		ytdl: {
 			embedThumbnail: true,
 			cropThumbnailToSquare: true,
@@ -1323,10 +1327,10 @@ class SongDownloader {
 		else
 			return print("There's nothing to check against")
 		fields := arrayMerge(this.settings.metadataFields, ["link", "description"])
-		for v in data
-			for field in fields
-				if !v.HasOwnProp(field)
-					v.%field% := ""
+		for expectedEntry in data
+			for fieldTag in fields
+				if !expectedEntry.HasOwnProp(fieldTag)
+					expectedEntry.%fieldTag% := ""
 		this.compareFolderToData(folder, callback, data, verifyMetadata, onlyReturnMismatches)
 		
 		callback(comparisons) {
@@ -1535,4 +1539,17 @@ class SongDownloader {
 		}
 		return dupls
 	}
+}
+
+
+class SongDownloaderGUI {
+
+}
+
+class SongDownloader_ {
+
+}
+
+class YTDLP {
+
 }
