@@ -749,5 +749,106 @@ class Graveyard {
 			}
 		}
 		; */
+
+		; See console
+		class consoleViaDLL {
+			static isInit := false
+
+			static initConsole(freePreviousConsole := true) {
+				DllCall("FreeConsole")
+				DllCall("AllocConsole")
+				this.handles := { 
+					out: DllCall("GetStdHandle", "UInt", -11, "Ptr"),
+					in: DllCall("GetStdHandle", "UInt", -10, "Ptr") 
+				}
+				DllCall("GetConsoleMode", "Ptr", this.handles.in, "UInt*", &mode := 0)
+				DllCall("SetConsoleMode", "Ptr", this.handles.in, "UInt", mode | 0x0006)
+				this.isInit := true
+			}
+
+			static stdOutHandle {
+				get {
+					if !this.isInit
+						this.initConsole()
+					return this.handles.out
+				}
+			}
+
+			static stdInHandle {
+				get {
+					if !this.isInit
+						this.initConsole()
+					return this.handles.in
+				}
+			}
+
+			static write(text) {
+				DllCall("WriteConsole", "Ptr", this.stdOutHandle, "Str", text, "UInt", StrLen(text), "UInt*", &written := 0, "Ptr", 0)
+				return written
+			}
+
+			static writeLine(text) {
+				DllCall("WriteConsole", "Ptr", this.stdOutHandle, "Str", text . '`r`n', "UInt", StrLen(text) + 2, "UInt*", &written := 0, "Ptr", 0)
+				return written
+			}
+
+			static readLine(maxCharsToRead := 1024) {
+				strBuf := Buffer(maxCharsToRead * 2, 0)
+				charsRead := 0
+				DllCall("ReadConsole", "ptr", this.stdInHandle, "ptr", strBuf, "uint", maxCharsToRead, "int*", &charsRead, "ptr", 0)
+				return Trim(StrGet(strBuf, charsRead, "UTF-16"), "`n`r`t ")
+			}
+
+			static flush() {
+				DllCall("FlushFileBuffers", "Ptr", this.stdOutHandle)
+			}
+		}
+
+		; In here because it is rather easy to just do this manually, with the only difficulty being to remember to call .read(0) after every print.
+		class console {
+			static isInit := false
+			static initConsole(freePreviousConsole := true) {
+				DllCall("FreeConsole")
+				DllCall("AllocConsole")
+				this.handles := { 
+					out: FileOpen('*', "w"),
+					in: FileOpen('*', "r")
+				}
+				; DllCall("GetConsoleMode", "Ptr", this.handles.in, "UInt*", &mode := 0)
+				; DllCall("SetConsoleMode", "Ptr", this.handles.in, "UInt", mode | 0x0006)
+				this.isInit := true
+				return this.handles
+			}
+
+			static write(text) {
+				this.stdOutHandle.Write(text)
+				this.stdOutHandle.read(0)
+			} 
+
+			static writeLine(text := '') {
+				this.stdOutHandle.WriteLine(text)
+				this.stdOutHandle.read(0)
+			} 
+
+			static ReadLine() => this.stdInHandle.ReadLine()
+
+			static stdOutHandle {
+				get {
+					if !this.isInit
+						this.initConsole()
+					return this.handles.out
+				}
+			}
+
+			static stdIOHandle => (!this.isInit ? this.initConsole() : this.handles)
+
+			static stdInHandle {
+				get {
+					if !this.isInit
+						this.initConsole()
+					return this.handles.in
+				}
+			}
+		}
 	}
 }
