@@ -170,6 +170,50 @@ getFileInfo(filePath, getMode := 0) {
 }
 
 
+/**
+ * Returns a Bitmap Handle to a thumbnail of the given file as shown in windows explorer
+ * @param path 
+ * @param {Integer} size 
+ * @returns {Integer} 
+ */
+getFileThumbnail(path, size := 256) {
+	; IShellItemImageFactory GUID
+	IID_IShellItemImageFactory := "{bcc18b79-ba16-442f-80c4-8a59c30c463b}"
+	GUID := Buffer(16)
+	DllCall("ole32\CLSIDFromString", "WStr", IID_IShellItemImageFactory, "Ptr", GUID)
+
+	pIShellItemImageFactory := 0
+
+	hr := DllCall("Shell32\SHCreateItemFromParsingName"
+		, "WStr", path
+		, "Ptr", 0
+		, "Ptr", GUID
+		, "Ptr*", &pIShellItemImageFactory := 0)
+
+	if (hr != 0 || !pIShellItemImageFactory)
+		return 0 ; Failed to find file or interface
+
+	hBitmap := 0
+
+	; SIZE struct
+	packedSize := size | (size << 32)
+
+	; 0x00 = Resize to fit.
+	; 0x08 for Thumbnail Only
+	SIIGBF_FLAGS := 0x00
+
+	; IShellItemImageFactory::GetImage (vtable index 3)
+	hr := ComCall(3, pIShellItemImageFactory
+		, "Int64", packedSize
+		, "Int", SIIGBF_FLAGS
+		, "Ptr*", &hBitmap := 0)
+
+	; com object doesn't get immediately garbaged
+	ObjRelease(pIShellItemImageFactory)
+
+	return (hr == 0) ? hBitmap : 0
+}
+
 removeFileDuplicates(folder1, folder2) {
 	count := 0
 	if !InStr(folder1, ":") || !InStr(folder2, ":")
@@ -331,6 +375,14 @@ folderGetDiffs(folder1, folder2, recursive := true) {
 	return arr
 }
 
+/**
+ * Compares folder contents
+ * Returns items of folder1 which are also present in folder2
+ * @param folder1 
+ * @param folder2 
+ * @param {Integer} recursive 
+ * @returns {Array} 
+ */
 folderGetDuplicates(folder1, folder2, recursive := true) {
 	arr := []
 	if !InStr(folder1, ":") || !InStr(folder2, ":")
@@ -341,8 +393,9 @@ folderGetDuplicates(folder1, folder2, recursive := true) {
 	for i, fl in files1 {
 		relPath := StrReplace(fl.path, folder1)
 		if InStr(fl.attrib, "D") {
-			if DirExist(folder2 . relPath)
-				arr.push(fl)
+			continue
+			; if DirExist(folder2 . relPath)
+			; 	arr.push(fl)
 		} else if (FileExist(folder2 . relPath) && fl.size == FileGetSize(folder2 . relPath))
 			arr.push(fl)
 	}

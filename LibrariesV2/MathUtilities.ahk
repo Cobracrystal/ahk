@@ -222,6 +222,14 @@ permutations(arr) {
 	return permutationArr
 }
 
+randomPermutation(arr) {
+	clone := arr.Clone()
+	permutedClone := []
+	Loop clone.Length
+		permutedClone.push(clone.RemoveAt(Random(1, clone.Length)))
+	return permutedClone
+}
+
 /**
  * Gives the greatest Common Divisor of specified Numbers using the Euclidean algorithm
  * @param additionalNums 
