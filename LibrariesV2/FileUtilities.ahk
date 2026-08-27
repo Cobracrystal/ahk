@@ -5,9 +5,22 @@
  * @param {String} filePattern Filepattern to filter for. By default all files are included
  * @param {String} mode F,D,R (Include Files, Include Directories, Recursive.) Defaults to FDR
  * @param {Integer} getMode 0 = all fileinfo, 1 = only name, 2 = only full path, 3 = name, path, dir, ext, namenoext, size
- * @returns {Array} Array containing objects of the following type:
+ * @returns {Array} Array containing objects with some of the following attributes
  * 
- * obj := { name, nameNoExt, ext, path, shortPath shortName dir, attrib, size, sizeKB, sizeMB, timeModified, timeCreated, timeAccessed }
+ *	name
+ *	nameNoExt
+ *	ext
+ *	path,
+ *	shortPath
+ *	shortName
+ *	dir
+ *	attrib
+ *	size
+ *	sizeKB
+ *	sizeMB
+ *	timeModified
+ *	timeCreated
+ *	timeAccessed
  */
 getFolderAsArr(folder, filePattern := "*", mode := 'FDR', getMode := 3, sortedBy := "name") => getFilesAsArr(folder "\" filePattern, mode, getMode, sortedBy)
 

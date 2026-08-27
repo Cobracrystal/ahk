@@ -1378,3 +1378,14 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 ; ############################ END OF SCRIPT ################################
 ; ###########################################################################
 #HotIf ; DON'T REMOVE THIS, THE AUTOMATIC HOTKEYS SHOULD ALWAYS BE ACTIVE
+
+
+#HotIf WinActive("Guess The.Game")
+^r::{
+	url := A_Clipboard
+	if !RegExMatch(url, "(\d+)$", &o)
+		return
+	newUrl := "https://api.guessthe.game/api/get_stats/" o[1] "/gtg/"
+	run(newUrl)
+}
+#HotIf 

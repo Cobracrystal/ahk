@@ -31,6 +31,8 @@ class Wordle {
 		return 0
 	}
 
+	static find(greenLetters := Map(), yellowLetters := Map(), greyLetters := "", unknownPositionLetters := "", searchSpace := Wordle.validGuesses) => this.Helpers.find(greenLetters, yellowLetters, greyLetters, unknownPositionLetters, searchSpace)
+
 	class Game {
 		static origin := Wordle
 		static entropy := Wordle.EntropyAnalysis

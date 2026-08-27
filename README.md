@@ -6,6 +6,6 @@ As autohotkey lacks support for proper package imports, note that this repo cont
 Most scripts in *Libraries* are not written by me;
 
 Scripts in *LibrariesV2* are written by me, with the exception of the scripts located in LibrariesV2\External:
-- *jsongo.ahk* by [@GroggyOtter](https://github.com/GroggyOtter)
+- *jsongo\*.ahk* by [@GroggyOtter](https://github.com/GroggyOtter)
 - *cmdStdOutAsync* by [teadrinker](https://www.autohotkey.com/boards/viewtopic.php?t=112734) 
-- *Websocket, httpserver, ctypes, OVERLAPPED* by [@thqby](https://github.com/thqby)
+- *Websocket, httpserver, ctypes, compress, OVERLAPPED* by [@thqby](https://github.com/thqby)

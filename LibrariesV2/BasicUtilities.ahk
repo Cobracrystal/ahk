@@ -480,7 +480,7 @@ sendRequest(url := "https://icanhazip.com/", method := "GET", encoding := "UTF-8
 	for i, e in defaultHeaders
 		whr.setRequestHeader(i, e)
 	whr.Send()
-	whr.WaitForResponse()
+	whr.WaitForResponse(-1)
 	if !(whr.ResponseBody)
 		return ""
 	arr := whr.ResponseBody

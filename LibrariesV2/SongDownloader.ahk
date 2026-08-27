@@ -177,7 +177,7 @@ class SongDownloader {
 
 	; note: if jsonAsStr defines a file with title/artist containing illegal chars, the file will save correctly, but will obviously not match the json provided.
 	; maybe use an onfinish handler to take the file name outputted and write it (if it did contain illegal chars). This would require a path to a json being given though.
-	static downloadFromJson(jsonAsStr, outputFolder := this.settings.outputSubFolder, config := this.configs.ytdl.ytdl_cookies) {
+	static downloadFromJson(jsonAsStr, outputFolder := this.settings.outputSubFolder, config := this.configs.ytdl.default) {
 		data := mapToObj(jsongo.Parse(jsonAsStr))
 		if !(data is Array)
 			data := [data]
@@ -790,7 +790,7 @@ class SongDownloader {
 			case "rplay.live":
 				return this.configs.ytdl.ytdl_rplay
 			default:
-				return this.configs.ytdl.ytdl_cookies
+				return this.configs.ytdl.default
 		}
 	}
 
@@ -941,6 +941,7 @@ class SongDownloader {
 	static PROFILE_AUDIO_FORMAT => [
 		{ option: this.ytdloptions.no_playlist },
 		{ option: this.ytdloptions.format, param: "bestaudio/best" },
+		{ option: this.ytdloptions.format_sort, param: "abr,filesize" },
 		{ option: this.ytdloptions.ffmpeg_location, param: this.configs.ffmpeg.path },
 		{ option: this.ytdloptions.ffmpeg_location, param: this.configs.ffprobe.path },
 		{ option: this.ytdloptions.extract_audio },
@@ -1041,6 +1042,7 @@ class SongDownloader {
 		restrict_filenames: { name: "--restrict-filenames", param: false },
 		limit_rate: { name: "--limit-rate",  alias: "-r", param: true },
 		format: { name: "--format",  alias: "-f", param: true },
+		format_sort: { name: "--format-sort",  alias: "-S", param: true },
 		; no_vid: { name: "--no-vid", param: false }, ; this option was removed and no longer does anything
 		force_keyframes_at_cuts: { name: "--force-keyframes-at-cuts", param: false },
 		split_chapters: { name: "--split-chapters", param: false },
@@ -1099,7 +1101,7 @@ class SongDownloader {
 	}
 
 	static defaultSettings => {
-		debug: true,
+		debug: false,
 		simulate: false,
 		useAliases: true,
 		useVisibleCMD: false,

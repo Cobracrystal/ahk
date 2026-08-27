@@ -17,7 +17,11 @@ class BooruDownload {
 	static main(text := A_Clipboard) {
 		folderPath := this.getCurrentPath()
 		linkArray := this.parseLinks(text)
-		this.extractLinksFromLandingPages(linkArray)
+		try this.extractLinksFromLandingPages(linkArray)
+		catch {
+			timedTooltip("Invalid Link Protocol: Aborting")
+			return 0
+		}
 		this.fixLinks(linkArray)
 		this.generateFileNames(linkArray)
 		downloadLog := this.downloadLinks(folderPath, linkArray)
@@ -216,7 +220,7 @@ class BooruDownload {
 				linkObject.extension := info.ext
 			}
 			else { ; we are on a landing page. (probably.)
-				Loop(2) {
+				Loop(2) { 
 					ToolTip("Extracting Links.. " (100*i//linkArray.Length) "% done", 3, 3)
 					headers := Map("Sec-Fetch-Site", "same-origin", "Sec-Fetch-Mode", "navigate", "Sec-Fetch-Dest", "document", "referer", RegExReplace(linkObject.url, "i)(^https?:\/\/[^\/]+\/?).*", "$1"))
 					html := StrReplace(sendRequest(linkObject.url, ,,,, headers), "`n")
