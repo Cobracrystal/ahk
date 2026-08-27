@@ -313,7 +313,7 @@ class WindowManager {
 						for i, wHandle in arrayInReverse(wHandles)
 							try killFunc(wHandle)
 						for i, wHandle in arrayInReverse(wHandles)
-							if WinWaitClose(wHandle, , 0.5) {
+							if !WinExist(wHandle) || WinWaitClose(wHandle, , 0.5) {
 								try this.LV.Delete(rowNums[i])
 								try objRemoveValue(this.data.currentWinInfo, wHandle,, (it, itV) => (itV.hwnd == wHandle))
 							}
@@ -333,12 +333,11 @@ class WindowManager {
 							if (A_Index != guiRowIndex)
 								this.LV.Modify(A_Index, "+Select")
 					case "67": ; ctrl C
+						if !GetKeyState("Ctrl")
+							return
 						switch {
-							case GetKeyState("Ctrl") && GetKeyState("Alt") && GetKeyState("Shift"):
-								for rowN in rowNums
-									str .= this.LV.GetText(rowN, 2) "`n"
-								A_Clipboard := RTrim(str, "`n")
-							case GetKeyState("Ctrl") && GetKeyState("Shift"):
+							; ctrl alt shift C to get formatted json objects of window
+							case GetKeyState("Alt") && GetKeyState("Shift"):
 								wInfoArray := []
 								for rowN in rowNums {
 									wInfo := {}
@@ -353,11 +352,8 @@ class WindowManager {
 									wInfoArray.push(wInfo)
 								}
 								A_Clipboard := toString(wInfoArray, false, false, true)
-							case GetKeyState("Ctrl") && GetKeyState("Alt"): ; ctrl + alt C to get title only
-								for rowN in rowNums
-									str .= this.LV.GetText(rowN, 3) "`n"
-								A_Clipboard := Trim(str, "`n")
-							case GetKeyState("Ctrl"): ; ctrl C to get identifier
+							; ctrl shift c to get ahk style identifier
+							case  GetKeyState("Shift"):
 								for i, e in this.config.columnsProfile {
 									switch e.key {
 										case "class":
@@ -371,8 +367,18 @@ class WindowManager {
 								for rowN in rowNums 
 									str .= this.LV.GetText(rowN, indexTitle) " ahk_exe " this.LV.GetText(rowN, indexProcess) " ahk_class " this.LV.GetText(rowN, indexClass) . "`n"
 								A_Clipboard := Trim(str, "`n")
+							; ctrl + alt C to get window titles
+							case GetKeyState("Alt"): 
+								for rowN in rowNums
+									str .= this.LV.GetText(rowN, 3) "`n"
+								A_Clipboard := Trim(str, "`n")
+							; ctrl c to get hwnds
+							default:
+								for rowN in rowNums
+									str .= this.LV.GetText(rowN, 2) "`n"
+								A_Clipboard := RTrim(str, "`n")
 						}
-					case "77":
+					case "77": ; M
 						for rowN in rowNums
 							WinMaximize(Integer(this.LV.GetText(rowN, 2)))
 					case "116":	; F5 Key -> Refresh LV
@@ -476,7 +482,7 @@ class WindowManager {
 				for wHandle in rWH
 					try WinClose(wHandle)
 				for i, wHandle in rWH
-					if WinWaitClose(wHandle, , 0.5) {
+					if !WinExist(wHandle) || WinWaitClose(wHandle, , 0.5) {
 						try this.LV.Delete(rowNums[rowNums.Length - i + 1])
 						try objRemoveValue(this.data.currentWinInfo, wHandle,, (it, itVal) => (itVal.hwnd == wHandle))
 					}
