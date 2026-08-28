@@ -866,47 +866,58 @@ toString(obj, compact := false, compress := true, strEscape := false, mapAsObj :
 varsToString(vars*) => toString(vars,0,1,1)
 
 ; Unreliable, may only work in ahk versions around ~2.0.9
-BoundFnName(Obj) {
-	Address := ObjPtr(Obj)
-	n := NumGet(Address, 5 * A_PtrSize + 16, "Ptr")
-	Obj := ObjFromPtrAddRef(n)
-	return Obj.Name
+getBoundFuncName(boundFuncObj) {
+	address := ObjPtr(boundFuncObj)
+	n := NumGet(address, 5 * A_PtrSize + 16, "Ptr")
+	funcObj := ObjFromPtrAddRef(n)
+	return funcObj.Name
 }
 
-getFuncFromName(functionName) {
-	if Type(functionName) == "Func" || Type(functionName) == "BoundFunc"
-		return functionName
-	try { ; name of a function that exists
-		f := %functionName%
-		if Type(f) == "Func"
-			return f
+; Given a string ClassA.ClassB.Thing.Thing2, returns the value of Thing2
+getValueFromName(objName) {
+	if !(objName is String)
+		throw(Error("Obj Name was of Type " Type(objName)))
+	try { ; iterates through names and returns if its a function
+		subClassNameArr := StrSplit(objName, ".")
+		for i, subMemberName in subClassNameArr
+			classObj := i == 1 ? %subMemberName% : classObj.%subMemberName%
+		return classObj ?? 0
+	} catch {
+		return 0
 	}
-	if functionName is String && InStr(functionName, ".") { ; name of a class function that exists
-		try {
-			cNames := StrSplit(functionName, ".")
-			obj := %cNames[1]%
-			loop (cnames.Length - 1) ; eg Scheduler.Notification.Toast -> %Scheduler%.%Notification%.%Toast%
-				obj := obj.%cNames[A_Index + 1]%
-			if Type(obj) == "Func"
-				return obj
-		}
-	}
-	return 0
 }
 
-; for obj = ClassA.ClassB.Func, returns ClassA.ClassB as the object (not the name)
-getClassFromMember(function) {
-	if Instr(function.name, ".") {
-		try {
-			cNames := StrSplit(function.Name, ".")
-			classObj := %cNames[1]%
-			Loop (cNames.Length - 2)
-				classObj := classObj.%cNames[A_Index + 1]%
-			return classObj
-		}
+; Given a string ClassA.ClassB.Thing.Thing2, returns the ClassA.ClassB.Thing object
+getLowerObjFromName(objName) {
+	if !(objName is String)
+		throw(Error("Obj Name was of Type " Type(objName)))
+	try { ; iterates through names and returns if its a function
+		subClassNameArr := StrSplit(objName, ".")
+		Loop(subClassNameArr.Length - 1)
+			classObj := A_Index == 1 ? %subClassNameArr[A_Index]% : classObj.%subClassNameArr[A_Index]%
+		return classObj
+	} catch {
+		return 0
 	}
-	return 0
-} 
+}
+
+; Given a string ClassA.ClassB.Thing.Thing2, returns the ClassA.ClassB object
+getLowerClassFromName(objName) {
+	if !(objName is String)
+		throw(Error("Obj Name was of Type " Type(objName)))
+	try { ; iterates through names and returns if its a function
+		subClassNameArr := StrSplit(objName, ".")
+		for i, subMemberName in subClassNameArr {
+			newClassObj := i == 1 ? %subMemberName% : classObj.%subMemberName%
+			if !(newClassObj is class)
+				return classObj ?? 0
+			classObj := newClassObj
+		}
+		return newClassObj
+	} catch {
+		return 0
+	}
+}
 
 range(startOrEnd, end?, step?, inclusiveEnd := true) {
 	start := IsSet(end) ? startOrEnd : 1
@@ -1416,7 +1427,7 @@ mapFlip(mapObject) {
  */
 mapToObj(obj, recursive := true) {
 	flagIsArray := obj is Array
-	if (!(obj is Object))
+	if !(obj is Object)
 		return obj
 	objOutput := flagIsArray ? Array() : {}
 	if (flagIsArray)
@@ -1427,7 +1438,7 @@ mapToObj(obj, recursive := true) {
 		else
 			objOutput.%i% := (recursive ? mapToObj(e, true) : e)
 	}
-	return (objOutput)
+	return objOutput
 }
 
 /**

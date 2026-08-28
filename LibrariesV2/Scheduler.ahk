@@ -73,17 +73,18 @@ class Scheduler {
 	 */
 	static setOnceOn(time, function := "", fparams*) {
 		MSec := A_MSec
+		Now := A_Now
 		flagTimeUnitObject := IsObject(time)
-		timestamp := flagTimeUnitObject ? nextMatchingTime(flattenTimeVariableObject(time)*) : time
+		timestamp := flagTimeUnitObject ? nextMatchingTime(Now, flattenTimeVariableObject(time)*) : time
 		if (!IsTime(timestamp))
 			throw Error("Invalid Timestamp given: " . timestamp)
-		timeDiff := DateDiff(timestamp, A_Now, "Seconds")
+		timeDiff := DateDiff(timestamp, Now, "Seconds")
 		if (timeDiff < 0)
 			throw Error("Cannot create Reminder in the Past: " timestamp " is " timeDiff * -1 " seconds in the past.")
 		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
 		funcName := this.getFuncName(function)
 		callable := this.getCallableNotification(function,,, fparams*)
-		listKey := format("{:012}", nextTimeMS * -1) '_' A_Now . MSec . '_' . 0 . objCollect(fparams, (a,b) => (a '_' b),,'') '_' Random(0,2**32)
+		listKey := format("{:012}", nextTimeMS * -1) '_' Now . MSec . '_' . 0 . objCollect(fparams, (a,b) => (a '_' b),,'') '_' Random(0,2**32)
 		if (nextTimeMS > -4294967296)
 			timerObj := this._handleTimer.bind(this, callable, listKey, 0)
 		else {
@@ -163,7 +164,7 @@ class Scheduler {
 	static getCallableNotification(function, missedNotification := 0, oldTimestamp?, fparams*) {
 		if Type(function) == "String"
 			function := this.parseFunction(function)
-		if (Type(function) == "Func" && (classObj := getClassFromMember(function)))
+		if (Type(function) == "Func" && (classObj := getLowerClassFromName(function.Name)))
 			function := function.bind(classObj)
 		function := function.bind({missed: missedNotification, oldTimestamp: oldTimestamp?})
 		function := function.bind(fparams*)
@@ -180,7 +181,7 @@ class Scheduler {
 			name := this.parseFunction(function).Name
 		} else if (function is BoundFunc) {
 			try
-				name := BoundFnName(function)
+				name := getBoundFuncName(function)
 			catch Error
 				name := "/ (Unknown)"
 		} else {
@@ -202,7 +203,7 @@ class Scheduler {
 			case "Combined", "All":
 				return this.Notification.all
 			default:
-				if (fn := getFuncFromName(function))
+				if (fn := getValueFromName(function))
 					return fn
 				return returnDefault
 		}
