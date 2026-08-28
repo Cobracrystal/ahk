@@ -650,37 +650,135 @@ class Graveyard {
 		return s
 	}
 
-	static getGuessTheGameStatistics() {
-		static localStorage := jsongo.parse(FileRead(A_WorkingDir "\Test\guessTheGameLocalStorageData.json"))
-		listWin := []
-		listLose := []
-		for i, e in localStorage {
-			if RegexMatch(i, "^(\d+)_gamestate$", &o) {
-				if e == "win"
-					listWin.push(o[1])
-				else
-					listLose.Push(o[1])
+	class GuessTheGame {
+
+		static baseUrl := "https://guessthe.game/p/{}"
+		static apiUrl := "https://api.guessthe.game/api/get_stats/{}/gtg/"
+		static localStorageFile := "Test\guessTheGameLocalStorageData.json"
+		static formattedLocalStorageFile := "Test\guessTheGameLocalStorageFormatted.json"
+		static guessTheGameData := "Test\guessTheGameData.json"
+
+		static scrapeGameStats(idArray?, refresh := false) {
+			currentData := jsongo.parse(FileRead(this.guessTheGameData))
+			failed := []
+			if IsSet(idArray) {
+				for i, id in objsort(idArray,,"N") {
+					id := String(id)
+					if !refresh && currentData.Has(id)
+						continue
+					globStats := this.getGlobalStatsOfDay(id)
+					if globStats is Object {
+						currentData[id] := globStats
+						str := jsongo.Stringify(currentData)
+						t := FileOpen(this.guessTheGameData, "w", "UTF-8")
+						t.Write(str)
+						t.Close()
+					}
+					else
+						failed.push(id)
+				}
+			} else {
+				Loop {
+					id := String(A_Index)
+					if !refresh && currentData.Has(id)
+						continue
+					print("Getting/Refreshing ID " id)
+					globStats := this.getGlobalStatsOfDay(id)
+					if globStats is Object {
+						currentData[id] := globStats
+						str := jsongo.Stringify(currentData)
+						t := FileOpen(this.guessTheGameData, "w", "UTF-8")
+						t.write(str)
+						t.Close()
+					}
+					else if globStats == -1
+						failed.push(id)
+					else
+						break
+				}
 			}
+			str := jsongo.Stringify(currentData)
+			FileOpen(this.guessTheGameData, "w", "UTF-8").Write(str)
+			return currentData
 		}
-		print listWin.Length
-		print listLose.Length
-		; ids := [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,20,22,23,24,25,26,27,28,33,35,36,37,38,39,40,41,42,43,44,48,49,53,54,56,60,61,62,63,66,67,68,69,71,72,73,74,76,81,84,85,86,87,88,90,91,93,97,103,107,108,110,111,117,118,119,120,122,123,124,125,127,128,129,130,131,132,133,134,135,137,138,139,140,141,142,143,144,145,146,147,148,150,151,153,154,155,156,157,161,162,166,167,170,171,173,174,176,177,179,180,182,183,184,185,186,187,189,191,192,194,197,198,199,200,201,205,207,209,210,213,215,216,217,219,220,222,223,224,227,228,229,231,237,238,239,240,241,242,244,245,249,252,253,254,259,260,262,263,265,266,267,268,270,271,274,275,276,280,281,283,285,286,287,288,291,294,295,296,297,299,303,304,305,307,308,314,315,316,317,320,321,322,325,326,327,328,330,331,332,334,337,338,340,341,342,343,345,346,347,348,352,354,355,359,360,361,362,364,365,366,367,369,370,375,376,377,380,381,382,384,388,390,400,666,800,1000,1014,1016,1017,1021,1022,1025,1026,1027,1028,1033,1035,1038,1100,1164,1165,1171,1174,1177,1178,1180,1185,1186,1189,1193,1196,1197,1198,1199,1202,1203,1205,1206,1207,1210,1211,1214,1215,1227,1228,1231,1233,1234,1235,1236,1259,1263,1264,1266,1268,1269,1270,1294,1297,1300,1302,1304,1308,1309,1310,1335,1338,1350,1351,1353,1355,1386,1495,1496,1497,1500,1503,1505,1508,1509,1510,1511,1514,1517,1524,1525,1528,1530,1532,1535,1537,1539,1542,1546,1556,1557,1560,1561,1563,1564,1565]
-		; inc_map := []
-		; for i, e in ids {
-		; 	; if e <= 390
-		; 	; 	continue
-		; 	url := "https://api.guessthe.game/api/get_stats/" e "/gtg/"
-		; 	json := sendRequest(url,,,false, printer.bind(e))
-		; 	printer(e, json)
-		; }
-		; inc_map_sorted := objsort(inc_map, v => v.inc, "N R")
-		; print inc_map_sorted
-		; printer(index, output) {
-		; 	obj := jsongo.parse(output)
-		; 	inc := Float(obj["results"]["guesses_percentages_members"]["Incorrect"])
-		; 	inc_map.push({index: index, inc: inc})
-		; 	print(index ": https://guessthe.game/p/" index ": " obj["results"]["guesses_percentages_members"]["Incorrect"])
-		; }
+
+		static getGlobalStatsOfDay(dayID) {
+			Loop {
+				try
+					json := sendRequest(Format(this.apiUrl, dayID))
+				catch as e {
+					if InStr(e.Message, "Das Zeitlimit für den Vorgang wurde erreicht.")
+						continue
+					return -1
+				}
+				break
+			}
+			try 
+				return jsongo.parse(json)
+			catch
+				return 0
+		}
+
+		static getStats() {
+			ourStats := jsongo.parse(FileRead(this.formattedLocalStorageFile))
+			ids := this.getFinishedGameIDs()
+			storedData := jsongo.Parse(FileRead("Test\guessTheGameDataFinal.json"))
+			inc_map := Map()
+			for i, e in ids {
+				if storedData.Has(String(e))
+					stats := storedData[String(e)]
+				else {
+					Loop(3) {
+						try {
+							json := sendRequest(Format(this.apiUrl, e))
+							stats := jsongo.parse(json)
+							print("Get " e " ( " i "/" ids.Length ")")
+							break
+						}
+					}
+				}
+				inc_map[String(e)] := { global_stats: stats, player_stats: ourStats[String(e)] }
+			}
+			return inc_map
+		}
+
+		static getFinishedGameIDs(filterState?) {
+			str := FileRead(this.formattedLocalStorageFile)
+			obj := jsongo.parse(str)
+			ids := []
+			for i, e in obj {
+				if !e || e["state"] == -1
+					continue
+				if !IsSet(filterState)
+					ids.push(i)
+				else if e["state"] == filterState
+					ids.push(i)
+			}
+			return objSort(ids, , "N")
+		}
+
+		static transformLocalstorageData() {
+			localStorage := jsongo.parse(FileRead(this.localStorageFile))
+			formattedData := Map()
+			Loop(2500) {
+				keyStr := A_Index "_gamestate"
+				gameStateObj := {  guesses: []}
+				if localStorage.Has(keyStr) {
+					gameStateObj.state := localStorage[keyStr] == "win" ? 1 : localStorage[keyStr] == "lose" ? 0 : -1
+					i := A_Index
+					Loop(6) {
+						str := i "_guess" A_Index
+						if !localStorage.Has(str)
+							break
+						gameStateObj.guesses.push(localStorage[str])
+					}
+					formattedData[String(A_Index)] := gameStateObj
+				}
+				else
+					formattedData[String(A_Index)] := 0
+			}
+			return formattedData
+		}
 	}
 
 
