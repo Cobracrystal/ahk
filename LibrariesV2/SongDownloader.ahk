@@ -287,7 +287,7 @@ class SongDownloader {
 				genre := "Nightcore"
 				album := "Nightcore"
 			}
-			if (InStr(title, "ASMR")) {
+			if (InStr(title, "ASMR") || InStr(videoData["webpage_url"], "ASMR") || InStr(videoData["webpage_url"], "soundgasm")) {
 				if RegExMatch(title, "i)(\S)\s*ASMR\s*(\S)", &br) { ; theorethically, this should search for brackets before and after eg. (silent ASMR m4f)
 					if unicodeData.getIntPropertyValue(br[1], unicodeData.UProperty.UCHAR_BIDI_PAIRED_BRACKET_TYPE) != unicodeData.UBidiPairedBracketType.U_BPT_NONE && unicodeData.getBidiPairedBracket(br[1]) == br[2]
 						title := RegExReplace(title, "i)(\S)\s*ASMR\s*(\S)")
