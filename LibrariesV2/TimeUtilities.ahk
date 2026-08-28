@@ -20,19 +20,19 @@ DateAddW(dateTime, amount, timeUnit) {
 		case "Weeks":
 			return DateAdd(dateTime, amount * 7, "D")
 		case "Months":
-			curMonth := parseTime(dateTime, "Mo")
+			curMonth := parseTimePart(dateTime, "Mo")
 			newMonth := Mod(curMonth + amount, 12)
 			newMonth := Format("{:02}", (newMonth > 0 ? newMonth : 12 + newMonth))
 			nextMonth := Format("{:02}", Mod(newMonth, 12) + 1)
-			newYear := parseTime(dateTime, "Y") + Floor((curMonth + amount - 1) / 12)
+			newYear := parseTimePart(dateTime, "Y") + Floor((curMonth + amount - 1) / 12)
 			newTime := newYear . newMonth . SubStr(dateTime, 7)
 			if (!IsTime(newTime)) {
-				newDay := parseTime(dateTime, "D") - DateDiff(newYear . nextMonth, newYear . newMonth, "D")
+				newDay := parseTimePart(dateTime, "D") - DateDiff(newYear . nextMonth, newYear . newMonth, "D")
 				newTime := newYear . nextMonth . Format("{:02}", newDay) . SubStr(dateTime, 9)
 			}
 			return newTime
 		case "Years":
-			newYear := (parseTime(dateTime, "Y") + amount)
+			newYear := (parseTimePart(dateTime, "Y") + amount)
 			newTime := newYear . SubStr(dateTime, 5)
 			if !IsTime(newTime) ; leap day
 				newTime := newYear . SubStr(DateAdd(dateTime, 1, "D"), 5)
@@ -57,17 +57,41 @@ DateDiffW(dateTime1, dateTime2, timeUnit) {
 		case "Weeks":
 			diff := DateDiff(dateTime1, dateTime2, "Days") // 7
 		case "Months":
-			yDiff := parseTime(dateTime1, "Y") - parseTime(dateTime2, "Y")
-			diff := 12 * yDiff + parseTime(dateTime1, "Mo") - parseTime(dateTime2, "Mo")
+			yDiff := parseTimePart(dateTime1, "Y") - parseTimePart(dateTime2, "Y")
+			diff := 12 * yDiff + parseTimePart(dateTime1, "Mo") - parseTimePart(dateTime2, "Mo")
 			newDate := DateAddW(dateTime2, diff, "Months")
 			if DateDiff(dateTime1, newDate, "Seconds") >= 0
 				diff--
 		case "Years":
-			diff := parseTime(dateTime1, "Y") - parseTime(dateTime2, "Y")
+			diff := parseTimePart(dateTime1, "Y") - parseTimePart(dateTime2, "Y")
 			if DateDiff(dateTime1, DateAddW(dateTime2, diff, "Years"), "Seconds") >= 0
 				diff--
 	}
 	return diff
+}
+
+/**
+ * Checks whether the given time units could be part of a valid date-
+ * @param years 
+ * @param months 
+ * @param days 
+ * @param hours 
+ * @param minutes 
+ * @param seconds
+ * @return {Integer} 1|0 
+ */
+checkValidDateEligibility(years?, months?, days?, hours?, minutes?, seconds?) {
+	seconds := seconds ?? 1
+	minutes := minutes ?? 1
+	hours := hours ?? 1
+	days := days ?? 1
+	months := months ?? 1
+	years := years ?? 2000 ; leap year
+	if seconds > 60 || minutes > 60 || hours > 24 || months > 12
+		return 0
+	if days > enumerateMonthDays(months, years) ; if neither are given, checks again jan 2000, ie 31 days. if month but not year is given, checks leap year. Otherwise checks given units.
+		return 0
+	return 1
 }
 
 /*
@@ -75,128 +99,97 @@ DateDiffW(dateTime1, dateTime2, timeUnit) {
 ; of the earliest possible time in the future when all given parts match
 * Examples: The current time is 27th December, 2023, 17:16:34
 * nextMatchingTime() -> A_Now
-* nextMatchingTime(2023,12) -> A_Now.
-* nextMatchingTime(2023, , 27) -> A_Now.
-* nextMatchingTime(2023, , 28) -> 20231228000000.
+* nextMatchingTime(,2023,12) -> A_Now.
+* nextMatchingTime(,2023, , 27) -> A_Now.
+* nextMatchingTime(,2023, , 28) -> 20231228000000.
 * nextMatchingTime(, 2, 29) -> 20240229000000 (next leap year).
-* nextMatchingTime(2022, ...) -> 0.
-* nextMatchingTime(2025, 02, 29) -> throw Error: Invalid Date
+* nextMatchingTime(,2022, ...) -> 0.
+* nextMatchingTime(,2025, 02, 29) -> throw Error: Invalid Date
 * nextMatchingTime(, 1, , , 19) -> 20240101001900
 */
-nextMatchingTime(years?, months?, days?, hours?, minutes?, seconds?) {
-	Now := A_Now
-	local paramInfo := getTimeUnitInfo(years?, months?, days?, hours?, minutes?, seconds?)
-	switch paramInfo.first {
-		case 0:
-			return Now
-		case 1:
-			if (years == A_Year && paramInfo.gap) { ; why compare to current year? leap year stuff
-				tStamp := nextMatchingTime(, months?, days?, hours?, minutes?, seconds?)
-				return (parseTime(tStamp, "Y") == years) ? tStamp : 0
-			}
-			tStamp := years tf(months ?? 1) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
-			if (!IsTime(tStamp)) {
-				if (!IsSet(years) && IsSet(months) && months == 2 && IsSet(days) && days == 29) ; correct leap year
-					tStamp := (A_Year + 4 - Mod(A_Year, 4)) . SubStr(tStamp, 5)
-				else if (!IsSet(months) && days > 29) ; correct possible month error. no need for mod, since dec has 31 days
-					tStamp := SubStr(tStamp 1, 4) . tf(A_MM + 1) . SubStr(tStamp, 7)
-				if (!IsTime(tStamp))
-					throw(ValueError("Invalid date specified."))
-			}
-			if (DateDiff(tStamp, Now, "S") >= 0) ; year is in the future
+nextMatchingTime(offset := A_Now, years?, months?, days?, hours?, minutes?, seconds?) {
+	timeParamArr := [years?, months?, days?, hours?, minutes?, seconds?]
+	if !checkValidDateEligibility(timeParamArr*)
+		throw(ValueError("Invalid date specified"))
+	if !IsTime(offset)
+		throw(ValueError("Invalid Offset specified"))
+	_Year := parseTimePart(offset, "Y")
+	_Month := parseTimePart(offset, "Mo")
+	_Day := parseTimePart(offset, "D")
+	_Hour := parseTimePart(offset, "H")
+	_Min := parseTimePart(offset, "m")
+	_Sec := parseTimePart(offset, "s")
+	switch {
+		case IsSet(years): ; years
+			years := Integer(years)
+			if years < _Year
+				return 0
+			if years > _Year ; we know that the units can form a valid date, so this must be valid.
+				return mergePartialTimeStamp(Format("{:04}", years), 4, months ?? 1, days ?? 1, hours ?? 0, minutes ?? 0, seconds ?? 0)
+			tStamp := nextMatchingTime(offset, , months?, days?, hours?, minutes?, seconds?)
+			return parseTimePart(tStamp, "Y") == years ? tStamp : 0
+		case IsSet(months):
+			months := Integer(months)
+			tStamp := mergePartialTimeStamp(offset, 4, months, days ?? 1, hours ?? 0, minutes ?? 0, seconds ?? 0)
+			if months > _Month
 				return tStamp
-			; this case is ONLY for when year is in the present AND there is no gap present (if year is in the future, datediff must be positive.)
-			if (paramInfo.last < 6) ; populate unset vars with current time before giving up
-				return nextMatchingTime(years, months ?? A_MM, days ?? A_DD, hours ?? A_Hour, minutes ?? A_Min, seconds ?? A_Sec)
-			return 0 ; a year in the past will never occur again
-		case 2:
-			if (tf(months) == A_MM && paramInfo.gap) {
-				tStamp := nextMatchingTime(, , days?, hours?, minutes?, seconds?)
-				return parseTime(tStamp, "Mo") == tf(months) ? tStamp : DateAddW(tStamp, 1, "Y")
-			}
-			tStamp := A_Year tf(months) tf(days ?? 1) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
-			if (!IsTime(tStamp)) {
-				if (tf(months) == "02" && IsSet(days) && days == 29) ; leap year
-					tStamp := (A_Year + 4 - Mod(A_Year, 4)) . SubStr(tStamp, 5)
-				if (!IsTime(tStamp))
-					throw(ValueError("Invalid date specified."))
-			}
-			if (DateDiff(tStamp, Now, "S") >= 0)
-				return tStamp
-			nStamp := A_Year tf(months) tf(days??A_DD) tf(hours??0) tf(minutes ?? 0) tf(seconds ?? 0)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
-			nStamp := A_Year tf(months) tf(days??A_DD) tf(hours??A_Hour) tf(minutes ?? 0) tf(seconds ?? 0)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
-			nStamp := A_Year tf(months) tf(days??A_DD) tf(hours??A_Hour) tf(minutes ?? A_Min) tf(seconds ?? 0)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
-			nStamp := A_Year tf(months) tf(days??A_DD) tf(hours??A_Hour) tf(minutes ?? A_Min) tf(seconds ?? A_Sec)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
+			tStampGuess := nextMatchingTime(offset, , , days?, hours?, minutes?, seconds?)
+			if parseTimePart(tStampGuess, "Mo") == months
+				return tStampGuess
+			if !IsTime(tStamp) ; the only way for this to occur is if we are not in a leap year and we have Feb 29 specified
+				return (_Year + 4 - Mod(_Year, 4)) . SubStr(tStamp, 5)
 			return DateAddW(tStamp, 1, "Y")
-		case 3:
-			if (days == A_DD && paramInfo.gap) {
-				tStamp := nextMatchingTime(, , , hours?, minutes?, seconds?)
-				return (parseTime(tStamp, "D") == days) ? tStamp : DateAddW(tStamp, 1, "Mo")
-			}
-			tStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? 0) tf(minutes ?? 0) tf(seconds ?? 0)
-			if (!IsTime(tStamp)) {
-				if (A_MM == 02 && days == 29) ; leap year
-					tStamp := (A_Year + 4 - Mod(A_Year, 4)) . SubStr(tStamp, 5)
-				else if (days > 29) ; correct possible month error. no need for mod, since dec has 31 days
-					tStamp := SubStr(tStamp 1, 4) . tf(A_MM + 1) . SubStr(tStamp, 7)
-				if (!IsTime(tStamp))
-					throw(ValueError("Invalid date specified."))
-			}
-			if (DateDiff(tStamp, Now, "S") >= 0)
+		case IsSet(days):
+			days := Integer(days)
+			tStamp := mergePartialTimeStamp(offset, 6, days, hours ?? 0, minutes ?? 0, seconds ?? 0)
+			maxDaysThisMonth := enumerateMonthDays(parseTimePart(offset, "Mo"), parseTimePart(offset, "Y"))
+			if days > _Day && days <= maxDaysThisMonth ; we are in the future and its still a valid date this month
 				return tStamp
-			nStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? A_Hour) tf(minutes ?? 0) tf(seconds ?? 0)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
-			nStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? A_Hour) tf(minutes ?? A_Min) tf(seconds ?? 0)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
-			nStamp := SubStr(Now, 1, 6) tf(days) tf(hours ?? A_Hour) tf(minutes ?? A_Min) tf(seconds ?? A_Sec)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
-			return DateAddW(tStamp, 1, "Mo")
-		case 4:
-			if (tf(hours) == A_Hour && paramInfo.gap) { ; minutes are missing, so just increase seconds until it matches
-				tStamp := nextMatchingTime(, , , , , seconds?)
-				return (parseTime(tStamp, "H") == tf(hours)) ? tStamp : DateAddW(tStamp, 1, "D") ; might be 59:xx but specified <xx -> +1D
-			}
-			tStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? 0) tf(seconds ?? 0)
-			if (DateDiff(tStamp, Now, "S") >= 0)
+			tStampGuess := nextMatchingTime(offset, , , , hours?, minutes?, seconds?)
+			if parseTimePart(tStampGuess, "D") == days
+				return tStampGuess
+			if days <= maxDaysThisMonth ; safe tStamp date -> safe addition
+				return DateAddW(tStamp, 1, "Mo")
+			; tstamp is invalid. since every second month has 31 days, we manually add a month and are done.
+			; Since december has 31 days, _Month+1 is always <= 12 and the addition is safe
+			return SubStr(offset, 1, 4) tf(_Month+1) SubStr(tStamp, 7)
+		case IsSet(hours):
+			hours := Integer(hours)
+			tStamp := mergePartialTimeStamp(offset, 8, hours, minutes ?? 0, seconds ?? 0)
+			if hours > _Hour
 				return tStamp
-			nStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? A_Min) tf(seconds ?? 0)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
-			nStamp := SubStr(Now, 1, 8) tf(hours) tf(minutes ?? A_Min) tf(seconds ?? A_Sec)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
-			return DateAddW(tStamp, 1, "D")
-		case 5:
-			if (tf(minutes) == A_Min) {
-				tStamp := nextMatchingTime(, , , , , seconds?)
-				return parseTime(tStamp, "M") == tf(minutes) ? tStamp : 0
-			}
-			tStamp := SubStr(Now, 1, 10) tf(minutes) tf(seconds ?? 0)
-			if (DateDiff(tStamp, Now, "S") >= 0)
+			tStampGuess := nextMatchingTime(offset,,,,,minutes?,seconds?)
+			if parseTimePart(tStampGuess, "H") == hours
+				return tStampGuess
+			return DateAdd(tStamp, 1, "D")
+		case IsSet(minutes):
+			minutes := Integer(minutes)
+			tStamp := mergePartialTimeStamp(offset, 10, minutes, seconds ?? 0)
+			if minutes > _Min
 				return tStamp
-			nStamp := SubStr(Now, 1, 10) tf(minutes) tf(seconds ?? A_Sec)
-			if (DateDiff(nStamp, Now, "S") >= 0)
-				return nStamp
-			return DateAddW(tStamp, 1, "H")
-		case 6:
-			tStamp := SubStr(Now, 1, 12) . tf(seconds)
-			if (DateDiff(tStamp, Now, "S") >= 0)
-				return tStamp
-			return DateAddW(tStamp, 1, "M")
+			tStampGuess := nextMatchingTime(offset, , , , , , seconds?)
+			if parseTimePart(tStampGuess, "M") == minutes ; returned timestamp is in current minute
+				return tStampGuess
+			return DateAdd(tStamp, 1, "H")
+		case IsSet(seconds):
+			tStamp := mergePartialTimeStamp(offset, 12, seconds)
+			if isInPast(tStamp, offset)
+				return DateAdd(tStamp, 1, "M")
+			return tStamp
+		default: ; no unit is set
+			return offset
 	}
-	tf(n) => Format("{:02}", n)
 
+	tf(value) => Format("{:02}", value)
+	isInPast(timestamp, now) => DateDiff(timestamp, now, "S") < 0
+	mergePartialTimeStamp(timestamp, length, units*) {
+		tStamp := SubStr(timestamp, 1, length)
+		for unit in units
+			tStamp .= Format("{:02}", unit)
+		if StrLen(tStamp) != "14"
+			throw(Error("WEEWOOWEEWOO"))
+		return tStamp
+	}
 }
 
 /**
@@ -218,18 +211,23 @@ flattenTimeVariableObject(timeObject) {
 
 ; Returns the index of the first set unit, the index of the last set unit, and whether there is a gap between them
 getTimeUnitInfo(y?, mo?, d?, h?, m?, s?) {
-	mapA := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?)
-	first := 0, last := 0
-	for i, e in mapA {
-		if (A_Index == 1)
+	unitMap := Map(1, y?, 2, mo?, 3, d?, 4, h?, 5, m?, 6, s?)
+	first := 0, last := 0, gap := false
+	for i, e in unitMap {
+		if (A_Index == 1) ; the first set key will always be iterated first.
 			first := i
 		last := i
-		if (first + A_Index - 1 != i)
-			return { first: first, after: last, gap: true }
+		if (first + A_Index - 1 < i) ; if i increases faster than A_Index, then we jumped over a unit
+			gap := true
 	}
-	return {first: first, last: last, gap: false}
+	return {first: first, last: last, gap: gap, count: unitMap.Count}
 }
 
+/**
+ * Given a validated time unit, returns the index of this unit in a A_Now-like timestamp, eg. Years -> 1, Months -> 2
+ * @param unit 
+ * @returns {Integer | void} 
+ */
 enumerateTimeUnits(unit) {
 	unit := validateTimeUnit(unit)
 	switch unit {
@@ -307,9 +305,9 @@ getNextPeriodicTimestamp(time, intervalLength, intervalUnit) {
 			if (DateDiff(time, Now, "Seconds") < 0)
 				time := DateAddW(time, intervalLength, "Seconds")
 		case "Months", "Years":
-			unitDiff := parseTime(Now, intervalUnit) - parseTime(time, intervalUnit)
+			unitDiff := parseTimePart(Now, intervalUnit) - parseTimePart(time, intervalUnit)
 			if (intervalUnit == "Months")
-				unitDiff += (parseTime(Now, "Years") - parseTime(time, "Years")) * 12
+				unitDiff += (parseTimePart(Now, "Years") - parseTimePart(time, "Years")) * 12
 			unitsSinceLastInterval := Mod(unitDiff, intervalLength)
 			unitsSinceLastInterval := unitsSinceLastInterval > 0 ? unitsSinceLastInterval : intervalLength
 			time := DateAddW(time, unitDiff + intervalLength - unitsSinceLastInterval, intervalUnit)
@@ -320,12 +318,16 @@ getNextPeriodicTimestamp(time, intervalLength, intervalUnit) {
 }
 
 /**
- * Given a timestamp and a unit, returns that value for the respective unit
+ * Given a full timestamp and a unit, returns that value for the respective unit
  * @param time timestamp
  * @param timeUnit
  * @returns {Integer}
+ * 
+ *	parseTime(20260503121301, "Y") => 2026
+ *	parseTime(20260503121301, "Mo") => 5
+ *	parseTime(20260503121301, "D") => 3
  */
-parseTime(time, timeUnit) {
+parseTimePart(time, timeUnit) {
 	if (!IsTime(time))
 		throw(ValueError("Invalid Timestamp"))
 	timeUnit := validateTimeUnit(timeUnit)
@@ -386,25 +388,24 @@ enumerateMonthDays(month, year?) {
 validateTimeUnit(timeUnit) {
 	switch timeUnit, 0 {
 		case "S", "Sec", "Secs", "Second", "Seconds":
-			timeUnit := "Seconds"
+			return "Seconds"
 		case "M", "Min", "Mins", "Minute", "Minutes":
-			timeUnit := "Minutes"
+			return "Minutes"
 		case "H", "Hr", "Hrs", "Hour", "Hours":
-			timeUnit := "Hours"
+			return "Hours"
 		case "D", "Day", "Days":
-			timeUnit := "Days"
+			return "Days"
 		case "W", "Wk", "Wks", "Week", "Weeks":
-			timeUnit := "Weeks"
+			return "Weeks"
 		case "Mo", "Month", "Months":
-			timeUnit := "Months"
+			return "Months"
 		case "Y", "A", "Yr", "Yrs", "Year", "Years":
-			timeUnit := "Years"
+			return "Years"
 		case "YDay":
-			timeUnit := "YDay"
+			return "YDay"
 		default:
 			throw(Error("Invalid Period Unit: " . timeUnit))
 	}
-	return timeUnit
 }
 
 convertToSeconds(amount, unit) {
@@ -418,7 +419,11 @@ randomTime(timestamp1 := "16010101000000", timestamp2 := A_Now) {
 	return DateAdd(timestamp1, r, "Seconds")
 }
 
+; dddd, dd.MM.yyyy, HH:mm:ss
 formatTimeLongDateTimeUS(timestamp := A_Now) => FormatTime(timestamp " L1033", "dddd, dd.MM.yyyy, HH:mm:ss")
+; dd.MM.yyyy_HH:mm:ss
 formatTimeDateTime(timestamp := A_Now, dateTimeSep := '_') => FormatTime(timestamp, "dd.MM.yyyy" dateTimeSep "HH:mm:ss")
+; yyyy-MM-ddTHH:mm:ss
 formatTimeISO8601(timestamp := A_Now, dateTimeSep := 'T') => FormatTime(timestamp, "yyyy-MM-dd" dateTimeSep "HH:mm:ss")
+; yyyy-MM-ddTHH-mm-ss
 formatTimeISO8601File(timestamp := A_Now, dateTimeSep := 'T') => FormatTime(timestamp, "yyyy-MM-dd" dateTimeSep "HH-mm-ss")

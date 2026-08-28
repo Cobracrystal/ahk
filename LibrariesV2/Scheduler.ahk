@@ -1,4 +1,4 @@
-﻿; https://github.com/cobracrystal/ahk
+; https://github.com/cobracrystal/ahk
 ; todo:
 ; custom functions -> text body of function that you write just gets saved in file, timer is set to run that file
 ; add function like .resume() or something that imports reminders from the cache of functions
@@ -384,7 +384,7 @@ class Scheduler {
 						return
 				}
 				try {
-					time := nextMatchingTime(, 
+					time := nextMatchingTime(, ,
 						vars.%names.months% != "" ? vars.%names.months% : unset,
 						vars.%names.days% != "" ? vars.%names.days% : unset,
 						vars.%names.hours% != "" ? vars.%names.hours% : unset,
@@ -561,7 +561,7 @@ class Scheduler {
 							seconds: IsInteger(vars.%names.seconds%) ? vars.%names.seconds% : unset
 						}
 						if (useFlatTimestamp) {
-							timestamp := nextMatchingTime(flattenTimeVariableObject(units)*)
+							timestamp := nextMatchingTime(,flattenTimeVariableObject(units)*)
 							this.core.setOnAndRepeat(timestamp, period, periodUnit,, message)
 						} else {
 							this.core.setOnAndRepeat(units, period, periodUnit,, message)
@@ -600,7 +600,7 @@ class Scheduler {
 							minutes: IsInteger(vars.%names.minutes%) ? vars.%names.minutes% : unset,
 							seconds: IsInteger(vars.%names.seconds%) ? vars.%names.seconds% : unset
 						}
-						timestamp := nextMatchingTime(flattenTimeVariableObject(units)*)
+						timestamp := nextMatchingTime(,flattenTimeVariableObject(units)*)
 						this.core.setOnAndRepeat(timestamp, period, periodUnit,, message)
 					}
 					catch Error {
@@ -670,7 +670,7 @@ class Scheduler {
 			} else {
 				timeParam := o.units
 				unitArr := flattenTimeVariableObject(timeParam)
-				earliestTimestamp := nextMatchingTime(unitArr*)
+				earliestTimestamp := nextMatchingTime(,unitArr*)
 			}
 			if o.HasOwnProp("function") && (fn := this.parseFunction(o.function, 0))
 				function := fn
