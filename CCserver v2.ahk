@@ -294,7 +294,7 @@ class CCServer {
 			req.CookedUrl.AbsPath,
 			req.Verb,
 			req.RemoteAddress,
-			objCollect(req.Headers, (b, e) => (b . "`n" e), (k, v) => ("`t" k ": " v),"",, true),
+			objCollect(req.Headers, (b, e) => (b . "`n" e), (k, v) => ("`t" k ": " v),""),
 			req.CookedUrl.QueryString || "",
 			StrGet(req.body, 'UTF-8')
 		)

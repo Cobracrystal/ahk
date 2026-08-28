@@ -42,11 +42,11 @@ objContainsValue(obj, value, transformer := (v => v), returnValue := false) {
  * @param {Integer} retAllMatches 
  * @returns {Array | Integer} 
  */
-objContainsMatch(obj, match := (itKey,itVal) => (true), retAllMatches := 0) {
+objContainsMatch(obj, condition := (itKey,itVal) => (true), retAllMatches := 0) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objContainsMatch does not handle type " . Type(obj)))
-	lambda := match.MaxParams == 1 ? (i, e) => match(e) : (i, e) => match(i, e)
+	lambda := condition.MaxParams == 1 ? (i, e) => condition(e) : (i, e) => condition(i, e)
 	if retAllMatches {
 		arr := []
 		for i, e in objGetEnumerator(obj)
@@ -336,31 +336,23 @@ objRecurseAndDo(obj, operation := v => v, recurseIf := v => IsObject(v), recTran
  * @param {Any} initialBase Initial value of the base on which fn operates. If not given, first element in object becomes base. Set this if fn operators onto properties or items of enumerable values.
  * @param {Any} value Optional Value to check conditional upon
  * @param {Func} conditional Optional Comparator to determine which values to include in collection.
- * @param {Boolean} useKeys if checked true, transformer will receive key and value from the iteration, ie (k, v) => (k . ": " . v)
  * @returns {Any} Collected Value
  */
-objCollect(obj, collector := ((base, e) => (base ", " e)), transformer := (a => a), initialBase?, conditional := (itKey, itVal?) => IsSet(itVal), useKeys := false) {
+objCollect(obj, collector := ((base, v) => (base ", " v)), transformer := (a => a), initialBase?, conditional := (itKey, itVal?) => IsSet(itVal)) {
 	isArrLike := (obj is Array || obj is Map)
 	if !(isArrLike || IsObject(obj))
 		throw(TypeError("objForEach does not handle type " . Type(obj)))
-	flagInitialBase := IsSet(initialBase)
-	if (flagInitialBase) {
+	lambdaTransform := transformer.MaxParams == 1 ? (i, e?) => transformer(e?) : transformer
+	lambdaConditional := conditional.MaxParams == 1 ? (i, e?) => conditional(e?) : conditional
+	if (IsSet(initialBase))
 		base := initialBase
-		j := 0
-	} else {
-		for i, e in objGetEnumerator(obj) {
-			if !conditional(i,e?)
-				continue
-			base := useKeys ? transformer(i, e) : transformer(e)
-			j := i
-			break
-		}
-	}
 	for i, e in objGetEnumerator(obj) {
-		if i == j && !flagInitialBase
-			continue
-		if (conditional(i, e?))
-			base := (useKeys ? collector(base, transformer(i?, e?)) : collector(base, transformer(e?)))
+		if (lambdaConditional(i, e?)) {
+			if !IsSet(base)
+				base := lambdaTransform(i, e?)
+			else
+				base := collector(base, lambdaTransform(i, e?))
+		}
 	}
 	return base ?? ""
 }
@@ -372,10 +364,11 @@ objCollect(obj, collector := ((base, e) => (base ", " e)), transformer := (a => 
  * @param {Integer} keys 
  * @returns {Array} 
  */
-objFlatten(obj, fn := (e => e), keys := false) {
+objFlatten(obj, fn := (v => v), keys := false) {
 	arr := []
-	for key, e in objGetEnumerator(obj)
-		arr.push(keys ? fn(key) : fn(e))
+	lambda := fn.MaxParams > 1 ? fn : keys ? (i, e?) => fn(i) : (i, e?) => fn(e?)
+	for key, val in objGetEnumerator(obj)
+		arr.push(lambda(key, val?))
 	return arr
 }
 
