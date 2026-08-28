@@ -121,7 +121,7 @@ class Scheduler {
 		Now := A_Now
 		periodUnit := validateTimeUnit(periodUnit)
 		flagTimeUnitObject := IsObject(time)
-		timestamp := flagTimeUnitObject ? nextMatchingTime(flattenTimeVariableObject(time)*) : time
+		timestamp := flagTimeUnitObject ? nextMatchingTime(Now, flattenTimeVariableObject(time)*) : time
 		nextTime := getNextPeriodicTimestamp(timestamp, period, periodUnit)
 		timeDiff := DateDiffW(nextTime, Now, "Seconds")
 		nextTimeMS := (timeDiff == 0 ? MSec - 1000 : timeDiff * -1000 + MSec - 10)
