@@ -105,7 +105,7 @@ class wpEngine {
 			case 2, "title":
 				lambda := v => v.project["title"]
 			case 3, "size":
-				lambda := v => v.size, "N"
+				lambda := v => v.size
 				sortMode := "N"
 			case 4, "id":
 				lambda := v => v.project["id"]
@@ -217,6 +217,7 @@ class wpEngineHelpers {
 	
 	static playWPEngineItemsFromFolderInVLC(folderName, tag?, sortedBy := "size") {
 		files := wpEngine.getItemsFromFolder(folderName, tag?, sortedBy)
+		print files
 		this.playItemsInVLC(files)
 	}
 

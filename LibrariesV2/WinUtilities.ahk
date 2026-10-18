@@ -544,7 +544,7 @@ class WinUtilities {
 		if cache
 			this.monitorCache := monitors
 		this.DeleteProp("tempcallbackObject238947")
-		return monitors
+		return monitors.Clone()
 
 		enumProc(monitorHandle, HDC, PRECT, *) {
 			this.tempcallbackObject238947[monitorHandle] := this.monitorGetInfo(monitorHandle, false)

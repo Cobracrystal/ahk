@@ -1635,6 +1635,10 @@ class BigInteger {
 				r3 := this.shiftMagnitudeLeft(r2, 32*half)
 				r4 := this.addMagnitudes(r3, p2)
 				return r4
+				; xl := getLower(mag1, half)
+				; xh := getUpper(mag1, half)
+				; yl := getLower(mag2, half)
+				; yh := getUpper(mag2, half)
 				; p1 := xh.multiply(yh) 
 				; p2 := xl.multiply(yl)
 				; p3 := xh.add(xl).multiply(yh.add(yl))

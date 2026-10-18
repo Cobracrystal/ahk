@@ -15,7 +15,7 @@ class FolderSwitch {
 		try wClass := WinGetClass(hwnd)
 		catch as e
 			return
-		clipboard := Trim(A_Clipboard, "`n`r`t '`"")
+		clipboard := Trim(A_Clipboard, "`n`r`t\ '`"")
 		if (attr := FileExist(clipboard)) {
 			if InStr(attr, "D")
 				clipboardPathArr := [clipboard]

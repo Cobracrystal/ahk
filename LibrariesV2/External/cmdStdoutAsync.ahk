@@ -113,7 +113,7 @@ class CmdStdOutAsync {
 			this.info := info
 			this.CreatePipes()
 			if !this.PID := this.CreateProcess(cmd) {
-				classObj.clear() ; MODIFIED: Remove circular reference
+				try classObj.clear() ; MODIFIED: Remove circular reference
 				throw MethodError('Failed to create process')
 			}
 		}

@@ -1119,7 +1119,7 @@ arrayIsSorted(arr, downwards := false, strict := false) {
 }
 
 /**
- * Inserts a value into a sorted (ascending) array, inserting it so that the array remains sorted. Requires O(log(n)) on average due to binary search. (O(n) worst case)
+ * Inserts a value into a sorted (ascending) array, inserting it so that the array remains sorted.
  * @param {Array} arr 
  * @param value 
  * @param {(itVal) => (itVal)} transformer 
