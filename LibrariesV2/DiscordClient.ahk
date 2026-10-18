@@ -46,6 +46,10 @@ class DiscordClient {
 			queries .= "&around=" mTypes["around"]
 		return this.callApi("GET", "/channels/" channelID . "/messages?" queries)
 	}
+
+	searchMessages(guildID, queries*) {
+		return this.callApi("GET", "/guilds/" guildID "/messages/search?" queries)
+	}
 	
 	getMessage(channelID, messageID) {
 		return this.callApi("GET", "/channels/" channelID . "/messages/" messageID)

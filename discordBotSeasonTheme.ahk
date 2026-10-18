@@ -8,9 +8,11 @@ SetWorkingDir(A_ScriptDir "\script_files\discordBot")
 mainchat := Main.servers["clegends"]["channels"]["main"]
 ; bot.sendMessage(mainchat, {content: "<@" users["dev"] "> Ho Ho Ho. You forgot to remove this message."})
 ; Main.applyTheme("Original")
+Main.applyTheme("Spooky 2023")
 ; notes: use admin role because manage channels is somehow broken and doesn't grant permission / discord revokes access
 ; notes: shitposting -> jingle-hell
-
+; notes: daily-games -> daily-oujia-ritual
+; notes: pets-plants-plushies-pics -> beasts-herbs-dolls-paintings
 class Main {
 	static __New() {
 		this.servers := jsongo.Parse(FileRead("servers.json", "UTF-8"))
@@ -35,12 +37,10 @@ class Main {
 		static clBotChID := this.servers["clegends"]["channels"]["bots"]
 		this.bot.loadThemes(A_WorkingDir "\CLegends Colour Management - Season Themes (Roles Only).csv",
 					A_WorkingDir "\CLegends Colour Management - Season Themes (Channels Only).csv", 1)
-		print("Attempting to Apply Theme _" themeName "_")
-		this.bot.sendMessage(clBotChID, {content:"Attempting to Apply Theme _" themeName "_"},)
-		errorlog := this.bot.applyTheme(this.servers["clegends"], themeName, true)
-		print("Errorlog: " errorlog)
-		FileAppend(errorlog, "/output/errorlog_" themeName "_" A_Now ".txt", "UTF-8")
-		this.bot.sendMessage(clBotChID, {content: "Errorlog: " errorlog})
+		this.log("Attempting to Apply Theme _" themeName "_")
+		errorlog := this.bot.applyTheme(clID, themeName, true)
+		FileAppend(errorlog, A_WorkingDir "\output\errorlog_" themeName "_" A_Now ".txt", "UTF-8")
+		this.log("Errorlog: " errorlog)
 		this.logServerState(themeName)
 	}
 

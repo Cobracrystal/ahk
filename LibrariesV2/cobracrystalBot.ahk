@@ -61,7 +61,7 @@ class CCBot extends DiscordBot {
 			throw(Error("Bot is not in given Server."))
 		errorlog := ""
 		userRoles := this.getGuildMember(serverID, this.me["id"])["roles"]
-		guildRoles := this.getRoles(serverID)
+		guildRoles := this.getGuildRoles(serverID)
 		if (this.themes.roles.Has(themeName)) {
 			if (!this.hasPermissionInServer(userRoles, guildRoles, "ANY", Permissions.ADMINISTRATOR, Permissions.MANAGE_ROLES)) {
 				if (silentError)
@@ -113,7 +113,7 @@ class CCBot extends DiscordBot {
 				for i, e in channelTheme {
 					if (this.inArr(channelIDs, i)) {
 						this.modifyChannel(i, e)
-						print("Edit Channel " i ": " ( channelThemeOriginal.Has(i) ? channelThemeOriginal[i] : "Unknown" ) " => " (e.HasOwnProp("name") ? e.name : tostring(e,1,1)))
+						print("Edit Channel " i ": " ( channelThemeOriginal.Has(i) ? (channelThemeOriginal[i].HasOwnProp("name") ? channelThemeOriginal[i].name : tostring(channelThemeOriginal[i],1,1)) : "Unknown" ) " => " (e.HasOwnProp("name") ? e.name : tostring(e,1,1)))
 						channelsEditedCount++
 					}
 					else
