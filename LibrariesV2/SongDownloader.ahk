@@ -718,7 +718,7 @@ class SongDownloader {
 		}
 	}
 
-	static onFinishMsgBox(logID, errorNotify := false, info := "") {
+	static onFinishMsgBox(outputFolderPath, errorNotify := false, info := "") {
 		if errorNotify {
 			return MsgBoxAsGui.fromConfig({
 				text: "Got Error in Downloads:`n" info, 
@@ -737,14 +737,15 @@ class SongDownloader {
 		doneHandler(ret) {
 			flagFolder := (ret == "Open Folder" || ret == "Open Both")
 			flagLog := (ret == "Open Log" || ret == "Open Both")
+			SplitPath(isAbsolutePath(outputFolderPath) ? outputFolderPath : this.settings.outputBaseFolder '\' outputFolderPath,,&folderPath,,&folderName)
 			if flagFolder {
-				if (WinExist(logID " ahk_class CabinetWClass"))
-					WinActivate(logID " ahk_class CabinetWClass")
+				if (WinExist(folderName " ahk_class CabinetWClass"))
+					WinActivate(folderName " ahk_class CabinetWClass")
 				else
-					Run('explorer.exe "' this.settings.outputBaseFolder "\" logID '"')
+					Run('explorer.exe "' folderPath "\" folderName '"')
 			}
 			if flagLog
-				tryEditTextFile("notepad", Format(this.settings.logFolder "\" this.TEMPLATES.LOGFILE, logID))
+				tryEditTextFile("notepad", Format(this.settings.logFolder "\" this.TEMPLATES.LOGFILE, folderName))
 		}
 	}
 
@@ -1106,7 +1107,7 @@ class SongDownloader {
 		useAliases: true,
 		useVisibleCMD: false,
 		outputBaseFolder: normalizePath(A_Desktop  "\..\Music\Collections"),
-		outputSubFolder: Format("p{:03}", 80),
+		outputSubFolder: Format("p{:03}", 81),
 		logMetadata: true,
 		logFolder: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\Logs"),
 		metadataFields: ["title", "artist", "album", "genre", "track"],
@@ -1121,20 +1122,20 @@ class SongDownloader {
 		ytdl: {
 			default: {
 				name: "yt-dlp without any options",
-				path: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
+				path: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\bin\yt-dlp.exe"),
 				profile: [],
 			},
 			ytdl_cookies: {
 				name: "yt-dlp with cookies from firefox",
-				path: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp.exe"),
+				path: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\bin\yt-dlp.exe"),
 				profile: [{ option: this.ytdloptions.cookies_from_browser, param: "firefox"}]
 			},
 			ytdl_rplay: {
 				name: "yt-dlp for rplay (uses cookies, netrc)",
-				path: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\yt-dlp-rplay.exe"),
+				path: normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\bin\yt-dlp-rplay.exe"),
 				profile: [
 					{ option: this.ytdloptions.cookies_from_browser, param: "firefox"},
-					{ option: this.ytdloptions.netrc_command, param: "pwsh -NoProfile -NonInteractive -File " normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\password.ps1")},
+					{ option: this.ytdloptions.netrc_command, param: "pwsh -NoProfile -NonInteractive -File " normalizePath(A_Desktop "\..\Music\ConvertMusic\ytdl\authentification\password.ps1")},
 				]
 			}
 		},
@@ -1152,23 +1153,22 @@ class SongDownloader {
 
 
 	static logAction(str, logID, addSeparator := true) {
-		if isAbsolutePath(logID)
-			SplitPath(logID,,,,&logID)
-		path := Format(this.settings.logFolder "\" this.TEMPLATES.LOGFILE, logID)
-		SplitPath(path, &name, &dir)
-		if !DirExist(dir)
-			DirCreate(dir)
+		filePath := isAbsolutePath(logID) ? logID : this.settings.outputBaseFolder '\' logID
+		SplitPath(filePath,,,,&logID)
+		logPath := Format(this.settings.logFolder "\" this.TEMPLATES.LOGFILE, logID)
+		if !DirExist(this.settings.logFolder)
+			DirCreate(this.settings.logFolder)
 		fullStr := Format("[{}] {}`n", FormatTime(A_Now, "dd.MM.yyyy, ~HH:mm:ss"), Trim(str, " `t`r`n"))
 		if addSeparator
 			fullStr .= strMultiply("=", 22) "`n"
-		FileAppend(fullStr, path, "UTF-8")
+		FileAppend(fullStr, logPath, "UTF-8")
 		if this.settings.debug
 			print(fullStr)
 	}
 
 	static logMetadata(metadata, action, logID) {
-		if isAbsolutePath(logID)
-			SplitPath(logID,,,,&logID)
+		filePath := isAbsolutePath(logID) ? logID : this.settings.outputBaseFolder '\' logID
+		SplitPath(filePath,,,,&logID)
 		metadatapath := Format(this.settings.logFolder "\" this.TEMPLATES.METADATAFILE, logID)
 		switch action {
 			case 0, "add":
