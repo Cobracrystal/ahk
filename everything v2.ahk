@@ -186,7 +186,7 @@ Launch_App2:: ; Show Folderswitch Menu
 ; 	;	PostMessage(0x111, 65409,,, A_ScriptHwnd) ; this works too???
 ; }
 
-^F9:: {	; YTDL GUI
+^F10:: {	; YTDL GUI
 	YoutubeDLGui.toggleGui("T")
 }
 
@@ -281,28 +281,28 @@ Alt & Capslock::{	; Switch to specified window
 	m.show()
 }
 
-^!H:: {	; Change Window Shape
-	static toggle := false, shapedWindow, depth := 5
-	if (toggle := !toggle) {
-		MouseGetPos(&xPosCircle, &yPosCircle, &shapedWindow)
-		WinGetPos(&x, &y, &w, &h, shapedWindow)
-		; xPosCircle -= 100
-		; yPosCircle -= 100
-		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", circleWindow)
-		;	duoRect := "200-200 1500-200 1500-900 200-900 200-550 850-200 1500-550 850-900 200-550"
-		str := sierpinskiCoords(w // 2, 50, w - 50, h - 60, depth := Mod(depth + 1, 6))
-		WinSetStyle("-0xC00000", shapedWindow)
-		WinSetAlwaysOnTop(1, shapedWindow)
-		WinSetRegion(str, shapedWindow)
-	}
-	else {
-		WinSetRegion(, shapedWindow)
-		WinSetStyle("+0xC00000", shapedWindow)
-		WinSetAlwaysOnTop(0, shapedWindow)
-	}
-}
+; ^+!H:: {	; Change Window Shape
+; 	static toggle := false, shapedWindow, depth := 5
+; 	if (toggle := !toggle) {
+; 		MouseGetPos(&xPosCircle, &yPosCircle, &shapedWindow)
+; 		WinGetPos(&x, &y, &w, &h, shapedWindow)
+; 		; xPosCircle -= 100
+; 		; yPosCircle -= 100
+; 		;	WinSetRegion(xPosCircle "-" yPosCircle " w200 h200 E", circleWindow)
+; 		;	duoRect := "200-200 1500-200 1500-900 200-900 200-550 850-200 1500-550 850-900 200-550"
+; 		str := sierpinskiCoords(w // 2, 50, w - 50, h - 60, depth := Mod(depth + 1, 6))
+; 		WinSetStyle("-0xC00000", shapedWindow)
+; 		WinSetAlwaysOnTop(1, shapedWindow)
+; 		WinSetRegion(str, shapedWindow)
+; 	}
+; 	else {
+; 		WinSetRegion(, shapedWindow)
+; 		WinSetStyle("+0xC00000", shapedWindow)
+; 		WinSetAlwaysOnTop(0, shapedWindow)
+; 	}
+; }
 
-^F10:: { ; save / restore desktop state
+^F9:: { ; save / restore desktop state
 	DesktopStateGUI.toggleGUI()
 }
 
@@ -418,7 +418,7 @@ class DesktopStateGUI {
 	WinSetTransparent((toggle := !toggle) ? 120 : "Off", "A")
 }
 
-^+H:: { ; Make Taskbar invisible
+#H:: { ; Make Taskbar invisible
 	TransparentTaskbar.setInvisibility("T", 0)
 }
 
@@ -1202,22 +1202,26 @@ loadTableAsHotstrings(filePath) {
 
 ^+WheelUp::{ ; Increase Volume of current Window by +5
 	MouseGetPos(,,&hwnd)
-	timedTooltip(WinSetVolume("+5", hwnd), 300)
+	response := WinSetVolume("+5", hwnd)
+	; timedTooltip(response, 300)
 }
 
 ^+WheelDown::{ ; Decrease Volume of current Window by -5
 	MouseGetPos(,,&hwnd)
-	timedTooltip(WinSetVolume("-5", hwnd), 300)
+	response := WinSetVolume("-5", hwnd)
+	; timedTooltip(response, 300)
 }
 
 ^+!WheelUp::{ ; Increase Volume of current Window by +1
 	MouseGetPos(,,&hwnd)
-	timedTooltip(WinSetVolume("+1", hwnd), 300)
+	response := WinSetVolume("+1", hwnd)
+	timedTooltip(response, 300)
 }
 
 ^+!WheelDown::{ ; Decrease Volume of current Window by -1
 	MouseGetPos(,,&hwnd)
-	timedTooltip(WinSetVolume("-1", hwnd), 300)
+	response := WinSetVolume("-1", hwnd)
+	timedTooltip(response, 300)
 }
 
 WinSetVolume(level, target?) {
@@ -1279,14 +1283,15 @@ WinSetVolume(level, target?) {
 #HotIf
 
 #HotIf WinExist("ahk_exe left4dead2.exe")
-^o::{
-	switch PathGetExt(A_Clipboard) {
+^o::{	; L4D2: convert gif, png, vtf
+	str := Trim(A_Clipboard, "`"`'")
+	switch PathGetExt(str) {
 		case "gif":
-			l4d2_convertGifToVTF(A_Clipboard)
+			l4d2_convertGifToVTF(str)
 		case "png", "jpeg", "jpg":
-			l4d2_convertImgToVTF(A_Clipboard)
+			l4d2_convertImgToVTF(str)
 		case "vtf":
-			l4d2_CopyVtf(A_Clipboard)
+			l4d2_CopyVtf(str)
 		default:
 			return
 	}
@@ -1349,15 +1354,15 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 	}
 }
 
-#HotIf WinActive("Steam ahk_exe vivaldi.exe")
-^e::{
+#HotIf WinActive("Steam ahk_exe vivaldi.exe") || WinActive("Steam Workshop ahk_exe firefox.exe")
+^e::{	; if vivaldi/steam active: filter links -> csv
 	A_Clipboard := wpEngineHelpers.filterLinkList()
 	timedTooltip("Transformed to CSV")
 }
 #HotIf 
 
 #HotIf WinActive("Lagoon ahk_exe discord.exe") || WinActive("Lagoon ahk_exe vesktop.exe")
-^e::{
+^e::{	; if discord active: compare images
 	static currentSnapshot := getFolderAsArr(BooruDownload.basePath,,,3)
 	text := A_Clipboard
 	flag := 0
@@ -1381,7 +1386,7 @@ l4d2_convertGifToVTF(path, frameDelayMS := 200, setInGame := true) {
 
 
 #HotIf WinActive("Guess The.Game")
-^r::{
+^e::{ ; Guess The Game: Open API Stats 
 	url := A_Clipboard
 	if !RegExMatch(url, "(\d+)$", &o)
 		return
