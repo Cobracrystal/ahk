@@ -11,15 +11,7 @@ class expressionCalculator {
 	
 	static calculateExpression(mode := "print") {
 		expression := fastCopy()
-		if (SubStr(expression, 1, 2) == "w:")
-			result := this.giveUpAndCallWolframalpha(SubStr(expression, 3))
-		else if (SubStr(expression, 1, 2) == "b:")
-			return ExecHelperScript(this.replaceConstants(SubStr(expression, 3)), false, true)
-		else
-			result := this.readableFormat(ExecHelperScript(this.replaceConstants(expression)))
-		; READ THE ERROR STREAM. IF THERE'S SOME ERROR IN THERE, ALSO GIVE IT TO WOLFRAMALPHA
-		; ADD A CONTEXT MENU OPTION FOR THIS, EITHER WOLFRAM OR SOMETHING ELSE OR LOCAL
-	;	result := this.giveUpAndCallWolframalpha(expression)
+		result := this.resolveExpression(expression)
 		if (result = "")
 			return
 		Send("{Right}")
@@ -41,7 +33,7 @@ class expressionCalculator {
 		return numStr
 	}
 	
-	static giveUpAndCallWolframalpha(expression) {
+	static wolframAlphaCall(expression) {
 		static baseURL := "https://api.wolframalpha.com/v2/query?input=" 
 		static queryParameters := "&format=plaintext&output=JSON&appid="
 		if !(this.token)
@@ -95,12 +87,52 @@ class expressionCalculator {
 		}
 	}
 
-	static replaceConstants(expression) {
-		list := [{ key: "\pi", val: "3.141592653589793" }, { key: "\phi", val: "((1+sqrt(5))/2)" }, { key: "\e", val: "2.718281828459045" }
+	static resolveExpression(expression) {
+		expression := Trim(expression, "`n`r`t ")
+		mode := -1
+		if RegExMatch(expression, "^([a-z]):", &o) {
+			mode := o[1]
+			expression := SubStr(expression, 3)
+		}
+		flagGiveUp := false
+		try {
+			switch mode {
+				case 'w': ; address wolfram alpha
+					try result := this.wolframAlphaCall(expression)
+					catch
+						return ''
+				case 'b', 'v': ; run as void, under the assumption that the program displays its results on its own somehow
+					processedExpression := this.preprocess(expression)
+					result := ExecHelperScript(processedExpression, false, true, &err)
+				default:
+					processedExpression := this.preprocess(expression)
+					result := this.readableFormat(ExecHelperScript(processedExpression, &err))			
+			}
+		} catch {
+			flagGiveUp := true
+		}
+		if flagGiveUp || (err ?? 0)
+			try result := this.wolframAlphaCall(expression)
+			catch 
+				result := ''
+		; for this to fully work, ExecHelperScript should wrap the program in try {} catch { print error to stderr } because by default stderr only contains pre-runtime errors
+		return result
+	}
+
+	static preprocess(expression) {
+		; constants
+		static list := [
+			{ k: "\pi", v: "3.141592653589793" }, 
+			{ k: "π", v: "3.141592653589793" }, 
+			{ k: "\phi", v: "((1+sqrt(5))/2)" }, 
+			{ k: "φ", v: "((1+sqrt(5))/2)" }, 
+			{ k: "\e", v: "2.718281828459045" }
 		]
 		for i, e in list
-			expression := StrReplace(expression, e.key, e.val)
-		expression := Trim(expression, "`n`r`t ")
+			expression := StrReplace(expression, e.k, e.v)
+		; factorials
+		while RegExMatch(expression, "(\d+)!", &o) 
+			expression := RegExReplace(expression, "(\d+)!", factorial(Integer(o[1])),,1)
 		return expression
 	}
 }

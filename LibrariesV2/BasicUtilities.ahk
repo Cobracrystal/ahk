@@ -106,7 +106,7 @@ parseHeaders(str) {
 }
 
 
-ExecHelperScript(expression, wait := true, void := false) {
+ExecHelperScript(expression, wait := true, void := false, &err := 0) {
 	input := '#Warn All, Off`n'
 	input .= '#Include "' A_LineFile '\.."`n'
 	input .= '#Include "*i BasicUtilities.ahk"`n'
@@ -115,17 +115,18 @@ ExecHelperScript(expression, wait := true, void := false) {
 		input .= expression
 	else
 		input .= 'print(' expression ',,false,true)'
-	return ExecScript(input, wait)
+	return ExecScript(input, wait, &err)
 }
 
-ExecScript(input, Wait := true) {
+ExecScript(input, wait := true, &err := 0) {
 	static shell := ComObject("WScript.Shell")
 	exec := shell.Exec(A_AhkPath " /ErrorStdOut *")
 	exec.StdIn.Write(strChangeEncoding(input, 'UTF-8', 'CP0'))
 	exec.StdIn.Close()
-	if !Wait
+	if !wait
 		return
 	output := exec.StdOut.ReadAll()
+	err := exec.StdErr.ReadAll()
 	return RTrim(strChangeEncoding(output, 'CP0', 'UTF-8'), " `t`n")
 }
 
