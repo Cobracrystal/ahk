@@ -20,6 +20,7 @@ class TransparentTaskbar {
 				TrayMenu.submenus["Timers"].Uncheck("Taskbar Transparency Timer")
 				this.data.isRunning := false
 			case 1, "On":
+				this.updateTaskbars(1) ; force update
 				SetTimer(this.timer, this.config.period)
 				TrayMenu.submenus["Timers"].Check("Taskbar Transparency Timer")
 				this.data.isRunning := true
@@ -222,39 +223,19 @@ class TransparentTaskbar {
 	static setInvisibility(mode := 0, taskbarMode := 0) {
 		if !this.verifyMonitorData()
 			this.setMonitorData()
-		relevantHandles := []
 		switch taskbarMode {
-			case 0:
-				for h, v in this.monitorData
-					if v.primary
-						relevantHandles.push(v.trayHandle)
-			case 1:
-				for h, v in this.monitorData
-					if !v.primary
-						relevantHandles.push(v.trayHandle)
-			case 2:
-				relevantHandles := objFlatten(this.monitorData, v => v.trayHandle)
+			case 0: relevant := objFilter(this.monitorData, (k, v) => v.primary)
+			case 1: relevant := objFilter(this.monitorData, (k, v) => !v.primary)
+			case 2: relevant := this.monitorData
 		}
-		mode := SubStr(mode, 1, 1)
-		switch mode {
-			case 0:
-				fn := WinShow
-			case 1:
-				fn := WinHide
-			case -1, "T":
-				if WinUtilities.isVisible(relevantHandles[1]) {
-					fn := WinHide
-					mode := 1
-				}
-				else {
-					fn := WinShow
-					mode := 0
-				}
+		for i, mon in relevant {
+			if mode == -1 || SubStr(mode, 1, 1) = "T"
+				mode := WinUtilities.isVisible(mon.trayHandle)
+			if mode
+				WinHide(mon.trayHandle)
+			else
+				WinShow(mon.trayHandle)
 		}
-		for e in relevantHandles
-			fn(e)
-		if mode == 0
-			this.setTaskbarsToMode(relevantHandles, this.config.offMode, this.config.offColor, this.config.offTransparency)
 	}
 
 	; En-/Disables Windows Setting 'Only show Taskbar when hovering over it with Mouse'. mode = 0 -> Off, 1 -> On
