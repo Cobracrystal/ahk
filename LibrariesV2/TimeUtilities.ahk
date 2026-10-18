@@ -113,14 +113,9 @@ nextMatchingTime(offset := A_Now, years?, months?, days?, hours?, minutes?, seco
 		throw(ValueError("Invalid date specified"))
 	if !IsTime(offset)
 		throw(ValueError("Invalid Offset specified"))
-	_Year := parseTimePart(offset, "Y")
-	_Month := parseTimePart(offset, "Mo")
-	_Day := parseTimePart(offset, "D")
-	_Hour := parseTimePart(offset, "H")
-	_Min := parseTimePart(offset, "m")
-	_Sec := parseTimePart(offset, "s")
+	_Year := parseTimePart(offset, "Y"), _Month := parseTimePart(offset, "Mo"), _Day := parseTimePart(offset, "D"), _Hour := parseTimePart(offset, "H"), _Min := parseTimePart(offset, "m"), _Sec := parseTimePart(offset, "s")
 	switch {
-		case IsSet(years): ; years
+		case IsSet(years):
 			years := Integer(years)
 			if years < _Year
 				return 0
@@ -192,6 +187,32 @@ nextMatchingTime(offset := A_Now, years?, months?, days?, hours?, minutes?, seco
 	}
 }
 
+earliestMatchingTime(years?, months?, days?, hours?, minutes?, seconds?) {
+	if (months??1) == 2 && (days??1) == 29 && !IsSet(years)
+		return Format("{:04}", years ?? 1604) . tf(months ?? 1) . tf(days ?? 1) . tf(hours ?? 0) . tf(minutes ?? 0) . tf(seconds ?? 0)
+	return Format("{:04}", years ?? 1601) . tf(months ?? 1) . tf(days ?? 1) . tf(hours ?? 0) . tf(minutes ?? 0) . tf(seconds ?? 0)
+	tf(n) => Format("{:02}", n)
+}
+
+
+/**
+ * Given a set of time units which MUST be in the past, returns a YYYYMMDDHH24MISS timestamp of the last possible time in the past when all given parts match
+ * @param years 
+ * @param months 
+ * @param days 
+ * @param hours 
+ * @param minutes 
+ * @param seconds 
+ * @returns {String} 
+ */
+lastMatchingTime(years, months?, days?, hours?, minutes?, seconds?) {
+	timestamp := Format("{:04}", years) . tf(months ?? 12) . tf(days ?? (IsSet(months) ? enumerateMonthDays(months, years) : 31)) . tf(hours ?? 23) . tf(minutes ?? 59) . tf(seconds ?? 59)
+	if !IsTime(timestamp)
+		throw(ValueError("Invalid time given: " timestamp))
+	return timestamp
+	tf(n) => Format("{:02}", n)
+}
+
 /**
  * Transforms an object with time unit properties into an array of Length six, containing these in descending order.
  * @param timeObject 
@@ -224,74 +245,16 @@ getTimeUnitInfo(y?, mo?, d?, h?, m?, s?) {
 }
 
 /**
- * Given a validated time unit, returns the index of this unit in a A_Now-like timestamp, eg. Years -> 1, Months -> 2
- * @param unit 
- * @returns {Integer | void} 
- */
-enumerateTimeUnits(unit) {
-	unit := validateTimeUnit(unit)
-	switch unit {
-		case "Years":
-			return 1
-		case "Months":
-			return 2
-		case "Days":
-			return 3
-		case "Hours":
-			return 4
-		case "Minutes":
-			return 5
-		case "Seconds":
-			return 6
-	}
-}
-
-enumerateTimeUnitIndex(unitIndex) {
-	switch unitIndex {
-		case 1:
-			return "Years"
-		case 2:
-			return "Months"
-		case 3:
-			return "Days"
-		case 4:
-			return "Hours"
-		case 5:
-			return "Minutes"
-		case 6:
-			return "Seconds"
-		default:
-			throw(Error("Invalid Unit Index: " . unitIndex))
-	}
-}
-
-/**
-* Given a set of time units which MUST be in the past, returns a YYYYMMDDHH24MISS timestamp
-; of the last possible time in the past when all given parts match
- * @param y
- * @param mo 
- * @param d 
- * @param h 
- * @param m 
- * @param s 
- */
-lastMatchingTime(y, mo?, d?, h?, m?, s?) {
-	return y . tf(mo ?? 12) . tf(d ?? (IsSet(mo) ? enumerateMonthDays(mo, y) : 31)) . tf(h??23) . tf(m??59) . tf(s??59)
-	tf(n) => Format("{:02}", n)
-}
-
-/**
  * Given a timestamp and a time interval, adds time interval to [time] until the new timestamp is in the future. If [time] is already in the future, returns it.
  * @param time 
  * @param intervalAmount 
  * @param intervalUnit 
  */
-getNextPeriodicTimestamp(time, intervalLength, intervalUnit) {
+getNextPeriodicTimestamp(time, intervalLength, intervalUnit, offset := A_Now) {
 	if (!IsTime(time))
 		throw(ValueError("Invalid Timestamp"))
 	intervalUnit := validateTimeUnit(intervalUnit)
-	Now := A_Now
-	secsDiff := DateDiff(Now, time, "Seconds")
+	secsDiff := DateDiff(offset, time, "Seconds")
 	if secsDiff < 0
 		return time
 	if intervalLength <= 0
@@ -302,16 +265,16 @@ getNextPeriodicTimestamp(time, intervalLength, intervalUnit) {
 			secsSinceLastInterval := Mod(secsDiff, intervalLengthSecs)
 			secsSinceLastInterval := secsSinceLastInterval > 0 ? secsSinceLastInterval : intervalLengthSecs 
 			time := DateAddW(time, secsDiff + intervalLengthSecs - secsSinceLastInterval, "Seconds")
-			if (DateDiff(time, Now, "Seconds") < 0)
+			if (DateDiff(time, offset, "Seconds") < 0)
 				time := DateAddW(time, intervalLength, "Seconds")
 		case "Months", "Years":
-			unitDiff := parseTimePart(Now, intervalUnit) - parseTimePart(time, intervalUnit)
+			unitDiff := parseTimePart(offset, intervalUnit) - parseTimePart(time, intervalUnit)
 			if (intervalUnit == "Months")
-				unitDiff += (parseTimePart(Now, "Years") - parseTimePart(time, "Years")) * 12
+				unitDiff += (parseTimePart(offset, "Years") - parseTimePart(time, "Years")) * 12
 			unitsSinceLastInterval := Mod(unitDiff, intervalLength)
 			unitsSinceLastInterval := unitsSinceLastInterval > 0 ? unitsSinceLastInterval : intervalLength
 			time := DateAddW(time, unitDiff + intervalLength - unitsSinceLastInterval, intervalUnit)
-			if (DateDiff(time, Now, "Seconds") < 0)
+			if (DateDiff(time, offset, "Seconds") < 0)
 				time := DateAddW(time, intervalLength, intervalUnit)
 	}
 	return time
