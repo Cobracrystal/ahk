@@ -508,7 +508,7 @@ StrSplitGraphemes(str) {
 	return result
 }
 
-StrLenUTF8(str) {
+StrLenGraphemes(str) {
 	RegExReplace(str, "s)\X", "", &i)
 	return i
 }
@@ -626,6 +626,31 @@ class Uri {
 			pos += StrLen(decoded)+1
 		}
 		return uri
+	}
+}
+
+SplitURL(url, &protocol?, &host?, &path?, &query?, &fragment?) {
+	RegExMatch(url, "^(([^:\/?#]+):)?(\/\/([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?", &m) ; https://www.rfc-editor.org/rfc/rfc3986#appendix-B RFC Standard, with escaped backslashes
+	;       Match     12             3    4           5       6  7        8 9
+	protocol := m[2]
+	host := m[4]
+	hostSplit := StrSplit(host, ":")
+	hostname := hostSplit.Length > 1 ? hostSplit[1] : m[4]
+	port := hostSplit.Length > 1 ? hostSplit[2] : ''
+	path := m[5]
+	query := m[7]
+	fragment := m[9]
+	return {
+		scheme: m[1],
+		protocol: protocol,
+		hostname: hostname,
+		port: port,
+		tld: SubStr(hostname, InStr(hostname, ".",,,-1) + 1),
+		path: path,
+		search: m[6],
+		query: query,
+		hash: m[8],
+		fragment: m[9]
 	}
 }
 

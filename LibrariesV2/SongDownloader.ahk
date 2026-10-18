@@ -1292,8 +1292,8 @@ class SongDownloader {
 				oldJson := FileRead(path, "UTF-8")
 				text := Format("{} already exists. Overwrite, Rename existing file to {} or Cancel?`nLength of existing file: {} Characters / {} Lines / {} Objects`nLength of new file: {} Characters / {} Lines / {} Objects",
 					filename, newName,
-					StrLenUTF8(oldJson), strCountStr(oldJson, "`n") + 1, strCountStr(oldJson, '"title":'), 
-					StrLenUTF8(json), strCountStr(json, "`n") + 1, folderMetadata.Length
+					StrLenGraphemes(oldJson), strCountStr(oldJson, "`n") + 1, strCountStr(oldJson, '"title":'), 
+					StrLenGraphemes(json), strCountStr(json, "`n") + 1, folderMetadata.Length
 				)
 				res := MsgBoxAsGui.fromConfig({
 					text: text, title: "Confirm", buttonStyle: 0x1, wait: true, buttonNames: ["Overwrite", "Rename", "Cancel"] 
