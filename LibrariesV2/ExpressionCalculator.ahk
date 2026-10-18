@@ -1,5 +1,6 @@
 #Include MathUtilities.ahk
 #Include BasicUtilities.ahk
+#Include MsgBoxAsGui.ahk
 #Include External\jsongo.ahk
 
 class expressionCalculator {

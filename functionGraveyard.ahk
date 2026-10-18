@@ -5,6 +5,7 @@
 #Include TimeUtilities.ahk
 #Include FileUtilities.ahk
 #Include PrimitiveUtilities.ahk
+#Include MsgBoxAsGui.ahk
 #Include External\cmdStdoutAsync.ahk
 
 class Graveyard {
