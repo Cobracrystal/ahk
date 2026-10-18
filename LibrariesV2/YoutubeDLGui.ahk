@@ -216,15 +216,23 @@ class YoutubeDLGui {
 
 	static mainButton() {
 		links := this.controls.editInput.Value
-		if (this.settings.ytdlPath == "") {
-			Msgbox("Please set YoutubeDL path.")
+		if (this.settings.ytdlPath == "") || !FileExist(this.settings.ytdlPath) {
+			Msgbox("Please set valid YoutubeDL path.")
 			this.settingsGUI()
 			return
 		}
 		this.ytdlOptionHandler()
-		fullRuncmd := this.controls.editCmdConfig.value . "`"" StrReplace(Trim(links, " `t`n`r"), "`n", "`" `"") "`""
+		str := ''
+		for i, link in strSplitOnNewLine(links, '`r`t ')
+			str .= '"' fixLink(link) '"'
+		fullRuncmd := this.controls.editCmdConfig.value . str
 		CmdStdOutAsync(fullRuncmd, 'UTF-8', this.updateGuiOutput2.bind(this, links))
 		
+		fixLink(link) {
+			if RegExMatch(link, "reddit\.com\/media\?url=(.*)", &o)
+				return o[1]
+			return link
+		}
 	}
 
 	static settingsGUI(*) {
