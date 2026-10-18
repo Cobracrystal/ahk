@@ -15,7 +15,7 @@ TraySetIcon(A_WorkingDir "\everything\Icons\Potet Think.ico", , true)
 Hotstring("EndChars", "-()[]{}:;`'`"/\,.?!" . A_Space . A_Tab)
 
 A_IsReloaded := (InStr(DllCall("GetCommandLine", "str"), "/restart") ? true : false)
-
+A_IsDebug := (InStr(DllCall("GetCommandLine", "str"), "/debug") ? true : false)
 ; Delete Tray Menu Items before including files that may modify them
 A_TrayMenu.Delete()
 
@@ -63,7 +63,7 @@ GroupAdd("nonMenuWindows", "Little Witch Nobeta ahk_exe LittleWitchNobeta.exe")
 GroupAdd("nonMenuWindows", "ahk_exe javaw.exe")
 Scheduler.setOptions(0, token := Trim(FileRead(A_WorkingDir . "\discordBot\discordBotToken.token", "UTF-8")), 86400)
 ; Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded,, Scheduler.Notification.all, "245189840470147072")
-Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded, A_IsReloaded)
+Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReloaded || A_IsDebug, A_IsReloaded || A_IsDebug)
 ; reminders.setPeriodicTimerOn(parseTime(, , , 3, 30, 0), 1, "Days", "Its 3:30, Go Sleep", remInst.discordReminder.bind(0, token, "CHANNELID"))
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
@@ -99,6 +99,7 @@ if (!A_IsReloaded) {
 if !fixNotepadStartupResolution() 
 	SetTimer(fixNotepadStartupResolution, -10000)
 }
+OnClipboardChange(clipboardTracker)
 
 ; ###########################################################################
 ; ############################# CONTROL HOTKEYS #############################
@@ -669,28 +670,30 @@ getSelfIp() {
 ; ############################# META FUNCTIONS ##############################
 ; ###########################################################################
 
-; clipboardTracker(type) {
-; 	try {
-; 		if (type == 1) {
-; 			if (StrLen(A_Clipboard) < 200) {
-; 				if (RegexMatch(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)")) {
-; 					A_Clipboard := RegexReplace(A_Clipboard, "youtube\.com\/shorts\/([0-9a-zA-Z\_\-]+)", "youtube.com/watch?v=$1")
-; 				}
-; 				else if (RegexMatch(A_Clipboard, "(?:youtube\.com\/watch\?v=|youtu\.be\/)([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&(?:pp|si|sl)=\S*")) {
-; 					A_Clipboard := RegexReplace(A_Clipboard, "(?:youtube\.com\/watch\?v=|youtu\.be\/)([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&(?:pp|si|sl)=\S*", "youtube.com/watch?v=$1$2")
-; 				}
-; 				else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*")) {
-; 					A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
-; 				}
-; 				else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?preview\.redd\.it\/(.*)\.([^\s?%]*)[\?|%]?\S*")) {
-; 					A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?preview\.redd\.it\/(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
-; 				}
-; 			}
-; 		}
-; 	} catch Error as e {
-; 		timedTooltip("tried modifying clipboard, but failed")
-; 	}
-; }
+clipboardTracker(type) {
+	if type != 1 || StrLen(A_Clipboard) > 200
+		return
+	try {
+		clip := A_Clipboard
+		if InStr(clip, "youtube.com") {
+			if flag1 := RegExMatch(clip, "&list=WL(?:&index=\d+)?")
+				clip := RegExReplace(clip, "&list=WL(?:&index=\d+)?")
+			if flag2 := RegExMatch(clip, "((\?|&)(pp|si|sl)=[^?&\s]*)+")
+				clip := RegExReplace(clip, "((\?|&)(pp|si|sl)=[^?&\s]*)+")
+			if flag1 || flag2
+				A_Clipboard := clip
+		}
+		; if (RegexMatch(A_Clipboard, "(?:youtube\.com\/watch\?v=|youtu\.be\/)([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&(?:pp|si|sl)=\S*")) {
+		; 	A_Clipboard := RegexReplace(A_Clipboard, "(?:youtube\.com\/watch\?v=|youtu\.be\/)([0-9a-zA-Z\_\-]+)(&t=[0-9]+s?)?&(?:pp|si|sl)=\S*", "youtube.com/watch?v=$1$2")
+		; }
+		; else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*")) {
+		; 	A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?reddit\.com\/media\?url=https%3A%2F%2F(?:i|preview)\.redd\.it%2F(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
+		; }
+		; else if (RegexMatch(A_Clipboard, "(?:https:\/\/)?(?:www\.)?preview\.redd\.it\/(.*)\.([^\s?%]*)[\?|%]?\S*")) {
+		; 	A_Clipboard := RegexReplace(A_Clipboard, "(?:https:\/\/)?(?:www\.)?preview\.redd\.it\/(.*)\.([^\s?%]*)[\?|%]?\S*", "https://i.redd.it/$1.$2")
+		; }
+	}
+}
 
 customTrayMenu() {
 	suspendMenu := TrayMenu.submenus["SuspendMenu"]
@@ -837,7 +840,7 @@ customExit(ExitReason, ExitCode) {
 
 #f:: ; Open Everything Search Window
 *^LWin Up:: { ; Open Everything Search Window
-	static everythingWinIdentifier := "Everything (1.5a) ahk_exe Everything.exe ahk_class EVERYTHING_(1.5a)"
+	static everythingWinIdentifier := "Everything ahk_exe Everything.exe ahk_class EVERYTHING"
 	static currentTimer := 0
 	static currentWin := 0
 	static monPos := WinUtilities.monitorGetPrimaryInfo()
@@ -853,7 +856,7 @@ customExit(ExitReason, ExitCode) {
 		return
 	}
 	list := WinGetList(everythingWinIdentifier) ; get potentially existing current windows
-	Run('"C:\Program Files\Everything 1.5a\Everything.exe" -newwindow -minimized')
+	Run('"C:\Program Files\Everything\Everything.exe" -newwindow -minimized')
 	while ((newList := WinGetList(everythingWinIdentifier)).Length == list.Length) ; wait until window exists. can't use winwait since it might be multiple windows.
 		Sleep(50)
 	for i, e in newList {
