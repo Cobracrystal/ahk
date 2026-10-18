@@ -2,7 +2,7 @@
  * @description A class for dynamic MsgBox-style GUIs
  * @author github.com/cobracrystal
  * @date 2026/07/20
- * @version 0.9.0
+ * @version 0.9.1
  ***********************************************************************/
 
 class MsgBoxAsGui {
@@ -39,7 +39,7 @@ class MsgBoxAsGui {
 		'CancelTryAgainContinue', 	6, 'C/T/C', 6, 'CTC', 6,
 	)
 	static MB_FONTNAME := 0, MB_FONTSIZE := 0, MB_FONTWEIGHT := 0, MB_FONTISITALIC := 0
-	static MB_HASFONTINFORMATION := this.getMsgBoxFontInfo(&MB_FONTNAME, &MB_FONTSIZE, &MB_FONTWEIGHT, &MB_FONTISITALIC)
+	static MB_HASFONTINFORMATION := -1
 
 	static gap := 26			; Spacing above and below text in top area of the Gui
 	static buttonMargin := 12	; Left Gui margin
@@ -130,6 +130,8 @@ class MsgBoxAsGui {
 		this.timeout := timeout ?? -1
 		totalButtonWidth := MsgBoxAsGui.buttonSpace * (this.buttonNames.Length + (addCopyButton ? 1 : 0))
 		ownerStr := IsSet(owner) ? "+Owner" owner : ''
+		if MsgBoxAsGui.MB_HASFONTINFORMATION == -1
+			MsgBoxAsGui.MB_HASFONTINFORMATION := MsgBoxAsGui.getMsgBoxFontInfo(&MB_FONTNAME, &MB_FONTSIZE, &MB_FONTWEIGHT, &MB_FONTISITALIC)
 		this.guiFontOptions := MsgBoxAsGui.MB_HASFONTINFORMATION ? "S" MsgBoxAsGui.MB_FONTSIZE " W" MsgBoxAsGui.MB_FONTWEIGHT (MsgBoxAsGui.MB_FONTISITALIC ? " italic" : "") : ""
 		this.gui := Gui("+ToolWindow -Resize -MinimizeBox -MaximizeBox " ownerStr, title)
 		this.hwnd := this.gui.Hwnd
