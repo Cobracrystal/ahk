@@ -19,7 +19,7 @@ class HotkeyManager {
 				this.data.coords := WinUtilities.getWindowPlacement(this.gui.hwnd)
 				this.gui.destroy()
 				this.gui := -1
-				this.LV := [-1,-1,-1]
+				this.lv := [-1,-1,-1]
 			}
 		}
 		else if (mode != "C")
@@ -28,7 +28,7 @@ class HotkeyManager {
 
 	static __New() {
 		this.gui := -1
-		this.LV := [-1,-1,-1]
+		this.lv := [-1,-1,-1]
 		this.data := { 
 			coords: {x: 300, y: 135}, 
 			savedHotkeysPath: A_WorkingDir "\HotkeyManager\SavedHotkeys.txt",
@@ -45,9 +45,10 @@ class HotkeyManager {
 	}
 
 	static guiCreate() {
-		this.gui := Gui("+Border", "Hotkey Manager")
+		this.gui := Gui("+Border +Resize", "Hotkey Manager")
 		this.gui.OnEvent("Escape", (*) => this.hotkeyManager("Close"))
 		this.gui.OnEvent("Close", (*) => this.hotkeyManager("Close"))
+		this.gui.OnEvent("Size", this.onResize.bind(this))
 		OnMessage(0x0100, this.onKeyPress.bind(this))
 		this.gui.AddEdit("vEditFilterHotkeys").OnEvent("Change", (ctrlObj, Info) => this.guiListviewCreate(this.tabObj.Value, false, false))
 		this.data.scripts := this.getScripts(A_ScriptFullPath)
@@ -98,7 +99,7 @@ class HotkeyManager {
 						this.lv[3].Add(,hstring.line, hstring.options, hstring.hotstring, hstring.replaceString, hstring.comment, PathGetFileName(hstring.source))
 			}
 		if (this.lv[tabNum].GetCount() == 0)
-			this.LV[tabNum].Add("", "/", "Nothing Found.")
+			this.lv[tabNum].Add("", "/", "Nothing Found.")
 		if (redraw) {
 			Loop(this.lv[tabNum].GetCount("Col") - 1)
 				this.lv[tabNum].ModifyCol(A_Index + 1,"AutoHdr")
@@ -160,7 +161,7 @@ class HotkeyManager {
 		if (ctrl := GuiCtrlFromHwnd(hwnd)) {
 			if (ctrl.gui == this.gui) {
 				switch wParam {
-					case "8":
+					case "8": ; ctrl backspace
 						if (GetKeyState("Ctrl") && ctrl.hwnd == this.gui["EditFilterHotkeys"].hwnd)
 							SetTimer((*) => Send("{Backspace}^{Left}^{Delete}"), -10)
 					case "70": ; ctrl F
@@ -174,6 +175,20 @@ class HotkeyManager {
 				}
 			}
 		}
+	}
+
+	static onResize(g, mmx, w, h) {
+		if (mmx == -1) ; minimized
+			return
+		this.tabObj.Move(,,w-20,h-39)
+		for lv in this.lv
+			lv.Move(,,w-46,h-86)
+		/*
+		initial values:
+		546 539 gui
+		526 500 tab
+		500 453 lv
+		*/
 	}
 
 	static getScripts(path := A_ScriptFullPath) {
