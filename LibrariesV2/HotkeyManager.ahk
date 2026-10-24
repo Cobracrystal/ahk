@@ -57,17 +57,17 @@ class HotkeyManager {
 		this.data.hotstrings := this.getHotstrings()
 		this.tabObj := this.gui.AddTab3("w526 h500", ["AHK Hotkeys", "Other Hotkeys", "Hotstrings", "Settings"])
 		this.tabObj.UseTab(1)
-			this.lv[1] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Keys", "Comment", "Source"])
+			this.lv[1] := this.gui.AddListView("R25 w500 -Multi", ["ID", "Line", "Keys", "Comment", "Source"])
 			this.guiListviewCreate(1, true, true)
-			this.lv[1].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.Editors.runEditor(this.editorProfileConfig, A_ScriptFullPath, obj.GetText(rowN, 1)) : 0)
+			this.lv[1].OnEvent("DoubleClick", this.onEnter.bind(this))
 		this.tabObj.UseTab(2)	
-			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["Line", "Keys", "Comment", "Program"])
+			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["ID", "Line", "Keys", "Comment", "Program"])
 			this.guiListviewCreate(2, true, true)
-			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath, obj.GetText(rowN, 1)) : 0)
+			this.lv[2].OnEvent("DoubleClick", this.onEnter.bind(this))
 		this.tabObj.UseTab(3)
-			this.lv[3] := this.gui.AddListView("R25 w500 -Multi", ["Line", "Options", "Text", "Correction", "Comment", "Source"])
+			this.lv[3] := this.gui.AddListView("R25 w500 -Multi", ["ID", "Line", "Options", "Text", "Correction", "Comment", "Source"])
 			this.guiListviewCreate(3, true, true)
-			this.lv[3].OnEvent("DoubleClick", (obj, rowN) => rowN && IsDigit(obj.GetText(rowN, 1)) ? this.Editors.runEditor(this.editorProfileConfig, A_ScriptFullPath, obj.GetText(rowN, 1)) : 0)
+			this.lv[3].OnEvent("DoubleClick", this.onEnter.bind(this))
 		this.tabObj.UseTab(4)
 			this.gui.AddText("Section yp+10", "Command Line For Editing")
 			this.editRunCmd := this.gui.AddEdit("xs w500", this.Editors.cmdStringTemplate(this.editorProfileConfig))
@@ -88,25 +88,26 @@ class HotkeyManager {
 			case 1:
 				for i, hkey in this.data.hotkeys
 					if this.isIncludedInSearch(hkey, search)
-						this.lv[1].Add(,hkey.line, hkey.hotkey, hkey.comment, PathGetFileName(hkey.source))
+						this.lv[1].Add(,i,hkey.line, hkey.hotkey, hkey.comment, PathGetFileName(hkey.source))
 			case 2:
 				for i, hkey in this.data.savedHotkeys
 					if this.isIncludedInSearch(hkey, search)
-						this.lv[2].Add(,hkey.line, hkey.hotkey, hkey.comment, hkey.source)
+						this.lv[2].Add(,i,hkey.line, hkey.hotkey, hkey.comment, hkey.source)
 			case 3:
 				for i, hstring in this.data.hotstrings
 					if this.isIncludedInSearch(hstring, search)
-						this.lv[3].Add(,hstring.line, hstring.options, hstring.hotstring, hstring.replaceString, hstring.comment, PathGetFileName(hstring.source))
+						this.lv[3].Add(,i,hstring.line, hstring.options, hstring.hotstring, hstring.replaceString, hstring.comment, PathGetFileName(hstring.source))
 			}
 		if (this.lv[tabNum].GetCount() == 0)
 			this.lv[tabNum].Add("", "/", "Nothing Found.")
 		if (redraw) {
-			Loop(this.lv[tabNum].GetCount("Col") - 1)
-				this.lv[tabNum].ModifyCol(A_Index + 1,"AutoHdr")
-			this.lv[tabNum].ModifyCol(1, 0)
+			Loop(this.lv[tabNum].GetCount("Col") - 2)
+				this.lv[tabNum].ModifyCol(A_Index + 2,"AutoHdr")
+			this.lv[tabNum].ModifyCol(2, 0)
 		}
+		this.lv[tabNum].ModifyCol(1, 0)
 		if (initialCreation)
-			this.lv[tabNum].ModifyCol(1,"Integer")
+			this.lv[tabNum].ModifyCol(2,"Integer")
 		this.lv[tabNum].Opt("+Redraw")
 		this.gui.Opt("-Disabled")
 	}
@@ -146,14 +147,21 @@ class HotkeyManager {
 
 	static onEnter(*) {
 		ctrl := this.gui.FocusedCtrl
+		rowN := ctrl.GetNext()
+		if !rowN
+			return
+		id := ctrl.GetText(rowN, 1)
+		line := ctrl.GetText(rowN, 2)
 		switch ctrl {
-			case this.lv[1], this.lv[3]:
-				if (rowN := ctrl.GetNext()) {
-					this.Editors.runEditor(this.editorProfileConfig, A_ScriptFullPath, ctrl.getText(rowN, 1))
-				}
+			case this.lv[1]:
+				this.Editors.runEditor(this.editorProfileConfig, this.data.hotkeys[id].source, line)
 			case this.lv[2]:
-				if (ctrl.GetNext())	
-					this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath)
+				this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath, line)
+			case this.lv[3]:
+				if !IsDigit(rowN)
+					return
+				this.Editors.runEditor(this.editorProfileConfig, this.data.hotstrings[id].source, line)
+
 		}
 	}
 
