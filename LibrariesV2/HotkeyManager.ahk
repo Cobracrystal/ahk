@@ -19,7 +19,7 @@ class HotkeyManager {
 				this.data.coords := WinUtilities.getWindowPlacement(this.gui.hwnd)
 				this.gui.destroy()
 				this.gui := -1
-				this.lv := [-1,-1,-1]
+				this.lv := [-1,-1]
 			}
 		}
 		else if (mode != "C")
@@ -28,7 +28,7 @@ class HotkeyManager {
 
 	static __New() {
 		this.gui := -1
-		this.lv := [-1,-1,-1]
+		this.lv := [-1,-1]
 		this.data := { 
 			coords: {x: 300, y: 135}, 
 			savedHotkeysPath: A_WorkingDir "\HotkeyManager\SavedHotkeys.txt",
@@ -55,20 +55,16 @@ class HotkeyManager {
 		this.data.hotkeys := this.getHotkeys()
 		this.data.savedHotkeys := this.getSavedHotkeys()	
 		this.data.hotstrings := this.getHotstrings()
-		this.tabObj := this.gui.AddTab3("w526 h500", ["AHK Hotkeys", "Other Hotkeys", "Hotstrings", "Settings"])
+		this.tabObj := this.gui.AddTab3("w625 h725", ["Hotkeys", "Hotstrings", "Settings"])
 		this.tabObj.UseTab(1)
-			this.lv[1] := this.gui.AddListView("R25 w500 -Multi", ["ID", "Line", "Keys", "Comment", "Source"])
+			this.lv[1] := this.gui.AddListView("w500 h675 -Multi", ["ID", "Line", "Keys", "Comment", "Source"])
 			this.guiListviewCreate(1, true, true)
 			this.lv[1].OnEvent("DoubleClick", this.onEnter.bind(this))
-		this.tabObj.UseTab(2)	
-			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["ID", "Line", "Keys", "Comment", "Program"])
+		this.tabObj.UseTab(2)
+			this.lv[2] := this.gui.AddListView("w500 h675 -Multi", ["ID", "Line", "Options", "Text", "Correction", "Comment", "Source"])
 			this.guiListviewCreate(2, true, true)
 			this.lv[2].OnEvent("DoubleClick", this.onEnter.bind(this))
 		this.tabObj.UseTab(3)
-			this.lv[3] := this.gui.AddListView("R25 w500 -Multi", ["ID", "Line", "Options", "Text", "Correction", "Comment", "Source"])
-			this.guiListviewCreate(3, true, true)
-			this.lv[3].OnEvent("DoubleClick", this.onEnter.bind(this))
-		this.tabObj.UseTab(4)
 			this.gui.AddText("Section yp+10", "Command Line For Editing")
 			this.editRunCmd := this.gui.AddEdit("xs w500", this.Editors.cmdStringTemplate(this.editorProfileConfig))
 			this.gui.AddButton("xs w100", 'Save').OnEvent('Click', (*) => this.editorProfileConfig := this.editRunCmd.Value)
@@ -78,8 +74,6 @@ class HotkeyManager {
 	}
 
 	static guiListviewCreate(tabNum, initialCreation := false, redraw := false) {
-		if (tabNum < 1 || tabNum > 3)
-			return 0
 		this.gui.Opt("+Disabled")
 		this.lv[tabNum].Opt("-Redraw")
 		this.lv[tabNum].Delete()
@@ -88,15 +82,14 @@ class HotkeyManager {
 			case 1:
 				for i, hkey in this.data.hotkeys
 					if this.isIncludedInSearch(hkey, search)
-						this.lv[1].Add(,i,hkey.line, hkey.hotkey, hkey.comment, PathGetFileName(hkey.source))
-			case 2:
+						this.lv[1].Add(,i,hkey.line, hkey.hotkey, PathGetFileName(hkey.source), hkey.comment)
 				for i, hkey in this.data.savedHotkeys
 					if this.isIncludedInSearch(hkey, search)
-						this.lv[2].Add(,i,hkey.line, hkey.hotkey, hkey.comment, hkey.source)
-			case 3:
+						this.lv[1].Add(,i,hkey.line, hkey.hotkey, hkey.source, hkey.comment)
+			case 2:
 				for i, hstring in this.data.hotstrings
 					if this.isIncludedInSearch(hstring, search)
-						this.lv[3].Add(,i,hstring.line, hstring.options, hstring.hotstring, hstring.replaceString, hstring.comment, PathGetFileName(hstring.source))
+						this.lv[2].Add(,i,hstring.line, hstring.options, hstring.hotstring, hstring.replaceString, hstring.comment, PathGetFileName(hstring.source))
 			}
 		if (this.lv[tabNum].GetCount() == 0)
 			this.lv[tabNum].Add("", "/", "Nothing Found.")
@@ -154,10 +147,11 @@ class HotkeyManager {
 		line := ctrl.GetText(rowN, 2)
 		switch ctrl {
 			case this.lv[1]:
-				this.Editors.runEditor(this.editorProfileConfig, this.data.hotkeys[id].source, line)
+				if isAbsolutePath(source := this.data.hotkeys[id].source)
+					this.Editors.runEditor(this.editorProfileConfig, source, line)
+				else
+					this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath, line)
 			case this.lv[2]:
-				this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath, line)
-			case this.lv[3]:
 				if !IsDigit(rowN)
 					return
 				this.Editors.runEditor(this.editorProfileConfig, this.data.hotstrings[id].source, line)
@@ -190,7 +184,7 @@ class HotkeyManager {
 			return
 		this.tabObj.Move(,,w-20,h-39)
 		for lv in this.lv
-			lv.Move(,,w-46,h-86)
+			lv.Move(,,w-50,h-86)
 		/*
 		initial values:
 		546 539 gui
