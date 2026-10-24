@@ -75,14 +75,14 @@ class HotkeyManager {
 		this.gui.Show(Format("x{1}y{2} Autosize", this.data.coords.x, this.data.coords.y))
 	}
 
-	static guiListviewCreate(num, initialCreation := false, redraw := false) {
-		if (num < 1 || num > 3)
+	static guiListviewCreate(tabNum, initialCreation := false, redraw := false) {
+		if (tabNum < 1 || tabNum > 3)
 			return 0
 		this.gui.Opt("+Disabled")
-		this.lv[num].Opt("-Redraw")
-		this.lv[num].Delete()
+		this.lv[tabNum].Opt("-Redraw")
+		this.lv[tabNum].Delete()
 		search := this.gui["EditFilterHotkeys"].Value
-		switch num {
+		switch tabNum {
 			case 1:
 				for i, hkey in this.data.hotkeys
 					if this.isIncludedInSearch(hkey, search) {
@@ -100,19 +100,17 @@ class HotkeyManager {
 						this.lv[3].Add(,hstring.line, hstring.options, hstring.hotstring, hstring.replaceString, hstring.comment, fileName)
 					}
 			}
-		if (this.lv[num].GetCount() == 0)
-			this.LV[num].Add("", "/", "Nothing Found.")
+		if (this.lv[tabNum].GetCount() == 0)
+			this.LV[tabNum].Add("", "/", "Nothing Found.")
 		if (redraw) {
-			Loop(this.lv[num].GetCount("Col") - 1)
-				this.lv[num].ModifyCol(A_Index + 1,"AutoHdr")
-			this.lv[num].ModifyCol(1, 0)
+			Loop(this.lv[tabNum].GetCount("Col") - 1)
+				this.lv[tabNum].ModifyCol(A_Index + 1,"AutoHdr")
+			this.lv[tabNum].ModifyCol(1, 0)
 		}
 		if (initialCreation)
-			this.lv[num].ModifyCol(1,"Integer")
-		this.lv[num].Opt("+Redraw")
+			this.lv[tabNum].ModifyCol(1,"Integer")
+		this.lv[tabNum].Opt("+Redraw")
 		this.gui.Opt("-Disabled")
-		
-		
 	}
 
 	static isIncludedInSearch(hkeyObj, search) {

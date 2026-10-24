@@ -397,6 +397,7 @@ class YoutubeDLGui {
 		youtubeDLOptions["username"] := { alias: "-u", param: "" }
 		youtubeDLOptions["password"] := { alias: "-p", param: "" }
 		youtubeDLOptions["twofactor"] := { alias: "-2", param: "" }
+		youtubeDLOptions["cookies-from-browser"] := { param: "firefox" }
 		; Post-Processing Options
 		youtubeDLOptions["ffmpeg-location"] := { param: "" }
 		youtubeDLOptions["extract-audio"] := { alias: "-x" }
@@ -412,7 +413,7 @@ class YoutubeDLGui {
 		youtubeDLOptions["print"] := { param: "after_move:filepath" }
 		for i, e in youtubeDLOptions
 			youtubeDLOptions[i].selected := false
-		for i, e in ["ignore-config", "output", "no-overwrites", "no-playlist", "retries", "limit-rate", "format", "ffmpeg-location", "merge-output-format", "no-warning", "print"]
+		for i, e in ["ignore-config", "output", "no-overwrites", "no-playlist", "retries", "limit-rate", "format", "ffmpeg-location", "cookies-from-browser", "merge-output-format", "no-warning", "print"]
 			youtubeDLOptions[e].selected := true
 		return youtubeDLOptions
 	}

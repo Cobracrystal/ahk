@@ -95,9 +95,9 @@ expressionCalculator.setWolframAlphaToken(FileRead(A_WorkingDir "\everything\wol
 customTrayMenu()
 ; Synchronize nextDNS IP
 if (!A_IsReloaded) {
-	connectNextDNS()
-if !fixNotepadStartupResolution() 
-	SetTimer(fixNotepadStartupResolution, -10000)
+	; connectNextDNS()
+	if !fixNotepadStartupResolution() 
+		SetTimer(fixNotepadStartupResolution, -10000)
 }
 OnClipboardChange(clipboardTracker)
 
@@ -944,7 +944,7 @@ customExit(ExitReason, ExitCode) {
 #HotIf WinActive("ahk_exe Image Eye.exe")
 Up::Send("{WheelUp}") ; Image Eye: Scroll Up
 Down::Send("{WheelDown}") ; Image Eye: Scroll Down
-Del::Send("^x") ; Image Eye: Deöete
+Del::Send("^x") ; Image Eye: Delete
 #HotIf
 
 #HotIf WinActive("Minecraft ahk_exe javaw.exe")
