@@ -5,6 +5,7 @@
 
 #Include "BasicUtilities.ahk"
 #Include "WinUtilities.ahk"
+#Include "FileUtilities.ahk"
 #Include "Dependencies.ahk"
 
 class HotkeyManager {
@@ -59,7 +60,7 @@ class HotkeyManager {
 			this.guiListviewCreate(1, true, true)
 			this.lv[1].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.Editors.runEditor(this.editorProfileConfig, A_ScriptFullPath, obj.GetText(rowN, 1)) : 0)
 		this.tabObj.UseTab(2)	
-			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["Line", "Keys","Program","Comment"])
+			this.lv[2] := this.gui.AddListView("R25 w500 -Multi",["Line", "Keys", "Comment", "Program"])
 			this.guiListviewCreate(2, true, true)
 			this.lv[2].OnEvent("DoubleClick", (obj, rowN) => rowN ? this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath, obj.GetText(rowN, 1)) : 0)
 		this.tabObj.UseTab(3)
@@ -85,20 +86,16 @@ class HotkeyManager {
 		switch tabNum {
 			case 1:
 				for i, hkey in this.data.hotkeys
-					if this.isIncludedInSearch(hkey, search) {
-						SplitPath(hkey.file, &fileName)
-						this.lv[1].Add(,hkey.line, hkey.hotkey, hkey.comment, fileName)
-					}
+					if this.isIncludedInSearch(hkey, search)
+						this.lv[1].Add(,hkey.line, hkey.hotkey, hkey.comment, PathGetFileName(hkey.source))
 			case 2:
 				for i, hkey in this.data.savedHotkeys
 					if this.isIncludedInSearch(hkey, search)
-						this.lv[2].Add(,hkey.line, hkey.hotkey, hkey.program, hkey.comment)
+						this.lv[2].Add(,hkey.line, hkey.hotkey, hkey.comment, hkey.source)
 			case 3:
 				for i, hstring in this.data.hotstrings
-					if this.isIncludedInSearch(hstring, search) {
-						SplitPath(hstring.file, &fileName)
-						this.lv[3].Add(,hstring.line, hstring.options, hstring.hotstring, hstring.replaceString, hstring.comment, fileName)
-					}
+					if this.isIncludedInSearch(hstring, search)
+						this.lv[3].Add(,hstring.line, hstring.options, hstring.hotstring, hstring.replaceString, hstring.comment, PathGetFileName(hstring.source))
 			}
 		if (this.lv[tabNum].GetCount() == 0)
 			this.LV[tabNum].Add("", "/", "Nothing Found.")
@@ -120,8 +117,13 @@ class HotkeyManager {
 			return true
 		for i, str in hkeyObj.OwnProps() {
 			switch i {
-				case "file", "line":
-					continue
+				case "source":
+					if hkeyObj.type == this.enum.customHotkey || hkeyObj.type == this.enum.customHotstring {
+						if InStr(str, search)
+							return true
+					} else {
+						continue
+					}
 				case "hotkey":
 					for needle in strSplitOnWhiteSpace(Trim(search)) {
 						if needle == "" 
@@ -131,12 +133,12 @@ class HotkeyManager {
 							continue 2
 					}
 					return true
-				default:
+				case "hotstring", "options", "replacestring":
 					if InStr(str, search)
 						return true
+				default: ; line, type
+					continue
 			}
-			if (InStr(str, search) && i != "file")
-				return true
 		}
 		return false
 	}
@@ -193,7 +195,6 @@ class HotkeyManager {
 		]
 		for i, e in this.data.scripts {
 			script := e.script
-			SplitPath(e.path, &fileName)
 			Loop Parse, script, "`n", "`r" { ; loop parse > strsplit for memory
 				if !(InStr(A_Loopfield, "::")) ; skip non-hotkeys. Hotkey(asd) is ignored.
 					continue
@@ -206,7 +207,7 @@ class HotkeyManager {
 				if RegExMatch(A_LoopField,"^((?!(?:\s*;|:.*:.*::|(?!.*\s&\s|^\s*[\^+!#<>~*$]*`").*`".*::)).*)::\s*{?(?:.*;)?\s*(.*)", &match)	{
 					comment := match[2]
 					hkey := LTrim(match[1])
-					obj := {line:A_Index, comment:comment, file:e.path}
+					obj := {line:A_Index, comment:comment, source:e.path, type: this.enum.ahkHotkey}
 					; single key can't be a modifier ~> symbol is hotkey
 					; if duo hotkey, modifiers are impossible so push
 					if (InStr(hkey, " & ") || StrLen(hkey) == 1)
@@ -251,7 +252,7 @@ class HotkeyManager {
 					}
 					if RegexMatch(modifiers, ".*b0.*")
 						rString := hString . rString
-					hotstrings.Push({line:A_Index, options:modifiers, hotstring:hString, replacestring:rString, comment:match[4], file:e.path})
+					hotstrings.Push({line:A_Index, options:modifiers, hotstring:hString, replacestring:rString, comment:match[4], source:e.path, type: this.enum.ahkHotstring})
 				}
 			}
 		}
@@ -265,7 +266,8 @@ class HotkeyManager {
 							hotstring: hString["string"], 
 							replacestring: hString["replacement"], 
 							comment: "Group: " name, 
-							file: e.file
+							source: e.file,
+							type: this.enum.hotstringLoaderHotstring
 						})		
 					}
 				}
@@ -286,8 +288,16 @@ class HotkeyManager {
 		savedHotkeys := []
 		Loop Parse, savedHotkeysFull, "`n", "`r"
 			if RegExMatch(A_LoopField,"^(?!\s*;|//)Hotkey:\s*(.*)\s*,\s*(.*)\s*,\s*(.*)\s*", &match)
-				savedHotkeys.Push({line:A_Index, hotkey:match[1], program:match[2], comment:(match[3] == "" ? "None" : match[3])})
+				savedHotkeys.Push({line:A_Index, hotkey:match[1], source:match[2], comment:(match[3] == "" ? "None" : match[3]), type: this.enum.customHotkey})
 		return savedHotkeys
+	}
+
+	static enum := {
+		ahkHotkey: 0,
+		customHotkey: 1,
+		ahkHotstring: 2,
+		customHotstring: 3,
+		hotstringLoaderHotstring: 4
 	}
 
 	class Editors {

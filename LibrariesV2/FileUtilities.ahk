@@ -570,11 +570,7 @@ class FGP {
 	}
 }
 
-
-isAbsolutePath(path) {
-	SplitPath(path, &name, &dir, &ext, &noExt, &drive)
-	return (drive != "")
-}
+isAbsolutePath(path) => (PathGetDrive(path) != "")
 
 PathGetFullSplit(path) => StrSplit(path, "\")
 
