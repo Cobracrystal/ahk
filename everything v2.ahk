@@ -252,7 +252,7 @@ Launch_App2:: ; Show Folderswitch Menu
 }
 
 !XButton2:: {	; Borderless Fullscreen Window
-	AltDrag.borderlessFullscreenWindow()
+	AltDrag.borderlessFullscreenWindow(,,true)
 }
 
 ^NumpadSub:: { ; Clip mouse to active windows client area
