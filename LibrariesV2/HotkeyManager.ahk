@@ -57,7 +57,7 @@ class HotkeyManager {
 		this.data.hotstrings := this.getHotstrings()
 		this.tabObj := this.gui.AddTab3("w625 h725", ["Hotkeys", "Hotstrings", "Settings"])
 		this.tabObj.UseTab(1)
-			this.lv[1] := this.gui.AddListView("w500 h675 -Multi", ["ID", "Line", "Keys", "Comment", "Source"])
+			this.lv[1] := this.gui.AddListView("w500 h675 -Multi", ["ID", "Line", "Keys", "Source", "Comment"])
 			this.guiListviewCreate(1, true, true)
 			this.lv[1].OnEvent("DoubleClick", this.onEnter.bind(this))
 		this.tabObj.UseTab(2)
@@ -85,7 +85,7 @@ class HotkeyManager {
 						this.lv[1].Add(,i,hkey.line, hkey.hotkey, PathGetFileName(hkey.source), hkey.comment)
 				for i, hkey in this.data.savedHotkeys
 					if this.isIncludedInSearch(hkey, search)
-						this.lv[1].Add(,i,hkey.line, hkey.hotkey, hkey.source, hkey.comment)
+						this.lv[1].Add(,this.data.hotkeys.Length+i,hkey.line, hkey.hotkey, hkey.source, hkey.comment)
 			case 2:
 				for i, hstring in this.data.hotstrings
 					if this.isIncludedInSearch(hstring, search)
@@ -147,8 +147,8 @@ class HotkeyManager {
 		line := ctrl.GetText(rowN, 2)
 		switch ctrl {
 			case this.lv[1]:
-				if isAbsolutePath(source := this.data.hotkeys[id].source)
-					this.Editors.runEditor(this.editorProfileConfig, source, line)
+				if id <= this.data.hotkeys.Length
+					this.Editors.runEditor(this.editorProfileConfig, this.data.hotkeys[id].source, line)
 				else
 					this.Editors.runEditor(this.editorProfileConfig, this.data.savedHotkeysPath, line)
 			case this.lv[2]:
@@ -326,6 +326,7 @@ class HotkeyManager {
 				fullCmd := StrReplace(editor, '%PATH', filePath)
 				fullCmd := StrReplace(fullCmd, '%LINE', line ?? '')
 			}
+			print fullCmd
 			Run(fullCmd)
 		}
 
