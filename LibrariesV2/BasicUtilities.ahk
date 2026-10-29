@@ -548,9 +548,12 @@ QPC() {
 }
 
 timeFunctionQPC(fn, amount := 1) {
-	q := QPC()
+	q := Round(QPC(), 6)
+	print("Starting time: " q)
 	Loop (amount)
-		fn
+		fn()
+	q2 := Round(QPC(), 6)
+	print("Ending time:   " q2 ". ELAPSED: " q2-q "s")
 	return QPC() - q
 }
 
