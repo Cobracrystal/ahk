@@ -60,8 +60,9 @@ class TextEditMenu {
 		textModifyMenu.Add("Reverse", (*) => modifySelectedText(strReverse))
 		textModifyMenu.Add("Mirror", (*) => modifySelectedText(this.mirror.bind(this)))
 		textModifyMenu.Add("Flip", (*) => modifySelectedText(this.flip.bind(this)))
-		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(strDoPerChar, " "))
+		textModifyMenu.Add("Spaced Text", (*) => modifySelectedText(strDoPerChar, v => v . " "))
 		textModifyMenu.Add("Add Zalgo", (*) => modifySelectedText(this.zalgo.bind(this), 5))
+		textModifyMenu.Add("DeZalgo", (*) => modifySelectedText(this.deZalgo.bind(this)))
 		textModifyMenu.Add("Get Codepoint Names", (*) => MsgBoxAsGui.fromConfig({
 			text: objCollectString(StrSplit(fastCopy()), '`n', e => e " | " unicodeData.charName(e)), 
 			title: "Character Names",
@@ -147,6 +148,16 @@ class TextEditMenu {
 			Loop (intensity)
 				newStr .= this.dictionary["otherAlphabet"]["zalgo"][Random(1, len)]
 		}
+		return newStr
+	}
+
+	static deZalgo(str) {
+		newStr := ''
+		for i, e in this.dictionary["otherAlphabet"]["zalgo"]
+			str := StrReplace(str, e, '')
+		for i, e in StrSplit(str)
+			if !InStr(unicodeData.charName(e), "COMBINING")
+				newStr .= e
 		return newStr
 	}
 
