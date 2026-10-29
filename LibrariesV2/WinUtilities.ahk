@@ -202,28 +202,26 @@ class WinUtilities {
 			return false
 	}
 
-	static borderlessFullscreenWindow(wHandle) {
-		WinGetPos(&x, &y, &w, &h, wHandle)
-		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
-		mHandle := DllCall("MonitorFromWindow", "Ptr", wHandle, "UInt", 0x2, "Ptr")
-		monitor := this.monitorGetInfo(mHandle)
-		WinMove(
-			monitor.left + (x - cx),
-			monitor.top + (y - cy),
-			monitor.right - monitor.left + (w - cw),
-			monitor.bottom - monitor.top + (h - ch),
-			wHandle
-		)
+	static borderlessFullscreenWindow(wHandle, alignBottomRight := false) {
 		WinGetPos(&x, &y, &w, &h, wHandle)
 		WinGetClientPos(&cx, &cy, &cw, &ch, wHandle)
 		monitor := this.monitorGetInfoFromWindow(wHandle)
-		WinMove(
-			monitor.left + (x - cx),
-			monitor.top + (y - cy),
-			monitor.right - monitor.left + (w - cw),
-			monitor.bottom - monitor.top + (h - ch),
-			wHandle
-		)
+		nX := monitor.left + (x - cx)
+		nY := monitor.top + (y - cy)
+		nW := monitor.right - monitor.left + (w - cw)
+		nH := monitor.bottom - monitor.top + (h - ch)
+		minmax := this.getMinMaxResizeCoords(wHandle)
+		if minmax.maxW < nW { ; if the resize isn't actually valid, return 0 and potentially align differently
+			flag := true
+			if alignBottomRight
+				nX += (nW - minMax.maxW)
+		} else if minmax.maxH < nH {
+			flag := true
+			if alignBottomRight
+				nY += (nH - minMax.maxH)
+		}
+		WinMove(nX, nY, nW, nH, wHandle)
+		return flag ?? false
 	}
 
 	/**

@@ -343,12 +343,12 @@ class AltDrag {
 		}
 	}
 
-	static borderlessFullscreenWindow(wHandle := WinExist('A'), overrideBlacklist := false) {
+	static borderlessFullscreenWindow(wHandle := WinExist('A'), overrideBlacklist := false, alignBottomRight := false) {
 		if (WinUtilities.winInBlacklist(wHandle, this.blacklist) && !overrideBlacklist)
 			return
 		if (WinGetMinMax(wHandle))
 			WinRestore(wHandle)
-		WinUtilities.borderlessFullscreenWindow(wHandle)
+		WinUtilities.borderlessFullscreenWindow(wHandle, alignBottomRight)
 	}
 
 	static getWindowRects(exceptForwHandle) {
