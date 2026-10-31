@@ -68,7 +68,7 @@ Scheduler.importReminders(A_WorkingDir . "\Reminders\reminders.json", A_IsReload
 ; reminders.exportReminders(A_WorkingDir . "\Reminders\reminders2.json")
 ; Launch Transparent Taskbar at 50ms frequency
 if (StrCompare(A_OSVersion, "10.0.22000") < 0) {
-	TransparentTaskbar.setMode(4, 2, 50)
+	TransparentTaskbar.setMode(TransparentTaskbar.modes.RGB, TransparentTaskbar.modes.TRANSPARENT, 50)
 	TransparentTaskbar.setTimer(1)
 }
 ; Start keeping track of desktop window changes
