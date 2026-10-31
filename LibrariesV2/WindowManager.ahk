@@ -385,8 +385,9 @@ class WindowManager {
 						this.guiListviewCreate(false, true)
 				}
 			case "ContextMenu":
+				MouseGetPos(,,,&ctrl)
 				rowN := NumGet(param, 24, "int") + 1 ; rowN is sometimes 0 if you click on the first row instead of header. fix how?
-				if (rowN == 0 || rowN > this.LV.getCount()) { ; clicked header. 
+				if (ctrl == "SysHeader321" || rowN == 0 || rowN > this.LV.getCount()) { ; clicked header. 
 					this.menus.columnsMenu.show()
 					return
 				}
